@@ -1,6 +1,6 @@
-# Session 2 gate — OPEN
+# Session 2 gate — PASS
 
-Session 1 is PASS. Session 2 implementation is under verification; do not begin Session 2.5 or Session 3 until this gate is PASS. The accepted next revision is `SESSION_2_5.md`, including its latest design constraints.
+Session 1 is PASS. Session 2 is verified on Android 34 AOSP. Session 2.5 may now begin; do not begin Session 3. The accepted next revision is `SESSION_2_5.md`, including its latest design constraints.
 
 ## Required acceptance evidence
 
@@ -12,8 +12,8 @@ Session 1 is PASS. Session 2 implementation is under verification; do not begin 
 | Every committed batch reconciles or is quarantined | PASS | Exact bigint opening/sum/closing check; mismatching batch status quarantined; commit rejects it. Payslip gross-tax-deductions=net, with allowances included in gross. |
 | Transfers appear in neither income nor spending | PASS | Unique reciprocal transfer fixture, same currency/amount within three days; dedicated totals exclusion assertion. Ambiguous or unlabelled same-amount pairs are not guessed as transfers. |
 | Rollback batch two preserves batches one and three | PASS | Actual SQLite transactions, sources, coverage, merchants and categories equal the independently imported surviving documents. |
-| Missing week is explicit and excluded from averages | PASS | Gap/coverage/average tests; coverage UI spells out missing date ranges and shows a patterned gap. Native visual review remains pending. |
-| Failures name what could not be read and provide an action | OPEN | Parser, normalization, balance and review paths are tested. Complete the real Android picker/OCR/import flow and inspect failure/review screens before final acceptance. |
+| Missing week is explicit and excluded from averages | PASS | Gap/coverage/average tests; coverage UI spells out missing date ranges and shows a patterned gap. Native coverage screenshots reviewed in both themes. |
+| Failures name what could not be read and provide an action | PASS | Native quarantine, stated-balance correction, row correction and successful import/rollback verified in both themes; 14 import screenshots reviewed. |
 
 ## Build and regression coverage
 
@@ -38,3 +38,15 @@ Run `34750695931` on `41a4c715b785e8eb4c951bb8a22340afae49b440`: 77 source tests
 Run `34751227338` on `e62d7c24caaf42d9aa5c72de659827192ba176cd` remains FAIL at picker return. Its retained screenshot shows the file was not selected, correcting the prior interpretation that only Open confirmation was missing. The helper now waits for idle, activates the clickable ancestor of the named row, retries after discarded transition input, and retains clickable/resource identifiers in failure diagnostics. No production or expected acceptance behavior changes.
 
 Run `34751641982` on `04146640136f0486d391d84b98faa2dee495c81b`: the picker now returns and the CSV reaches encrypted staging. Import details then fail with “Choose the account this statement belongs to.” Account data can reload after the review component mounts; its initial empty account ID did not match the visibly selected first option. File review now derives the same default account for display and submission, with a delayed-account regression test. No ledger writes occur before review confirmation. Native completion remains OPEN.
+
+## Final passing evidence
+
+- Tested commit: `282460630e9ae5419f7224b8cf8e63d174334e40`. [Workflow 34752125659](https://github.com/macdarenz-droid/kairos-money/actions/runs/34752125659).
+- 78 source tests, including 10,000 randomized money sequences; lint, TypeScript, production build and generated schema/token checks PASS.
+- Six native tests PASS: two foundation, two import/OCR, one export/resume, one post-delete. Offline OCR output parsed to exact amounts/dates and payslip totals for all four scans.
+- Real Android picker → encrypted staging → quarantine → balance/row correction → commit → coverage → rollback PASS in light and dark.
+- All 27 screenshots reviewed: 14 import screens and 13 foundation/lock screens. Correct screen/theme, readable controls, no covering system dialogs.
+- Native encryption, PIN rejection, timed background lock, real document export, deletion and fresh setup PASS.
+- APK SHA-256: `f3eff12e4756800b753ed6f7eb8678d400df30b7837afd6418f42fcb1d114506`. Signature verification passed in CI.
+- Evidence artifact 10316382125 SHA-256: `ec6ee3a9747845bc5aaba3d605a7dea521ab1edd26455f7124c93e653c35451c`. APK archive artifact 10316771071 SHA-256: `fe532e663eee89b570cdbf5f5e9ffb8088dc16822e95d59a7d6a36d596d74c89`. Downloaded hashes match GitHub.
+- Earlier OPEN/FAIL entries above are historical attempts, superseded by this final result. Baseline acceptance files are frozen in `SESSION_2_BASELINE.json`.

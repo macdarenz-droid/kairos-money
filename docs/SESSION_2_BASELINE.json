@@ -1,0 +1,12 @@
+{
+  "tests/money.test.ts": "6ff72af408867d2d4b2f836387fbb2fa3e61da8e69bf82da2a01d461b8bce961",
+  "tests/ui.test.tsx": "b8b900e8b4bb36b8c72bb68f89f892629e990b3fecd0ba2b92339a18af39c713",
+  "tests/ingest.test.ts": "45cca70d793a26ffa272cce8bd51d8d6c621f3aa25cc603dc16538cd6e0d12c3",
+  "tests/ocr-layout.test.ts": "004e1ee42b2f9af84edc2010163659cc083f950ab4790ba26b3ab7f924c9a74e",
+  "tests/xlsx.test.ts": "f273efdb18bfd8d24e53e61aaa7c5bd132d93cf74039714a99055facca5a18e6",
+  "tests/import-golden.test.ts": "41d50d6153431ead8e035c410f7ca28882201af99d98d58ca467ece95b629eb6",
+  "tests/privacy.test.ts": "e2c480b22f08b4f4c2f9e9e97a97507431e07059fc2222b576a3a683ede4a6db",
+  "tests/import-ui.test.tsx": "d87d5bd3ce8c2a38d4f895f0c2aa81723998100eeb920fb4eb41696756eab53c",
+  "tests/database.test.ts": "41bb769a999ff82ca42ebce9b04e0fb184efbb52767288b3312945baeeb49870",
+  "android/app/src/androidTest/java/app/kairos/money/ImportInstrumentedTest.java": "93c92116f169a850e2a6be91a4032b93a8b1987e3188fb3ec79fd78b33365477"
+}

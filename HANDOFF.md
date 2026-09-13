@@ -1,10 +1,10 @@
-# Kairos Money Tracker — Session 2 in progress
+# Kairos Money Tracker — Session 2 PASS; Session 2.5 next
 
 ## State
 
-Session 1 PASS. Session 2 OPEN pending its final native import/OCR gate and screenshot review. Session 2.5 is accepted and recorded, but cannot begin before Session 2 PASS. Do not start Session 3.
+Sessions 1–2 PASS. Session 2 passed on commit 282460630e9ae5419f7224b8cf8e63d174334e40, workflow 34752125659: 78 source tests, six native tests and 27 reviewed screenshots. Session 2.5 is accepted and is next. Do not start Session 3.
 
-Repository: `macdarenz-droid/kairos-money`. Active local source: `/workspace/scratch/4b0b7f8b9437/kairos-money`, branch `codex/session2-import`. The GitHub connector and local Git have different commit IDs; always use the current remote head as the parent of connector commits.
+Repository: `macdarenz-droid/kairos-money`. Active local source: `/workspace/scratch/19f118d9b907/kairos-money`, branch `codex/session2-import`. The GitHub connector and local Git have different commit IDs; always use the current remote head as the parent of connector commits.
 
 ## Built this session
 
@@ -19,11 +19,10 @@ Repository: `macdarenz-droid/kairos-money`. Active local source: `/workspace/scr
 
 `docs/GATE_SESSION_2.md` is authoritative. Source tests cover all six import orders (15 randomized amounts), overlap, idempotence, balance quarantine, transfers, middle rollback, interrupted commit, pending-to-posted review, payslip linking, formats/golden files and both-theme import UI. Android app and instrumentation compile and lint; actual device gate and screenshots remain to be verified.
 
-1. Finish `npm run check` and ensure generated SCHEMA/CONTRAST/tokens match.
-2. Publish source and run `.github/workflows/android.yml`, including `ImportInstrumentedTest` between foundation and export/delete checks.
-3. Inspect all four native OCR scans and file-picker → staging → review → commit → rollback evidence, then review new dark/light screenshots. Fix any failure without changing expected behavior to hide it.
-4. Deliver the tested signed debug APK and mark Session 2 PASS only with exact evidence. Preserve its acceptance tests unmodified from that point onward.
-5. Implement `docs/SESSION_2_5.md` next. The latest revision adds explicit design constraints: in-place dense mapping, one Update accounts sheet, muted staleness and plain result sentences using existing primitives. Then run its regression/mixed-source/supersession/inference/tier/freshness gate before Session 3.
+1. Implement `docs/SESSION_2_5.md` using the latest design constraints.
+2. Preserve the acceptance baseline in `docs/SESSION_2_BASELINE.json` unmodified. Add revision tests separately.
+3. Verify all mixed-source, overlap, supersession, inference, integrity-tier, adapter and freshness criteria; review new UI in both themes and deliver the tested APK.
+4. Update schema, ADRs, gate report and handoff. Do not start Session 3.
 
 ## Known scope and deferred work
 
