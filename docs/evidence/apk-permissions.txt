@@ -1,0 +1,5 @@
+package: app.kairos.money
+uses-permission: name='android.permission.USE_BIOMETRIC'
+uses-permission: name='android.permission.USE_FINGERPRINT'
+permission: app.kairos.money.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+uses-permission: name='app.kairos.money.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'

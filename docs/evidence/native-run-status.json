@@ -1,0 +1,9 @@
+{
+  "status": "BLOCKED",
+  "installed": false,
+  "instrumentation_executed": false,
+  "reason": "No /dev/kvm; software Android 34 emulator did not finish booting within 480 seconds.",
+  "native_encryption_proven": false,
+  "native_delete_proven": false,
+  "next_runner": "Android 34 device or accelerated GitHub Actions emulator"
+}

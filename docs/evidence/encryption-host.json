@@ -1,0 +1,9 @@
+{
+  "scope": "Host SQLCipher; Android proof is a separate gate",
+  "cipher_version": "4.12.0 community",
+  "plain_sqlite_rejected": true,
+  "wrong_key_rejected": true,
+  "sentinel_absent_from_raw_file": true,
+  "correct_key_reads_exact_minor_units": true,
+  "fixture_files_after_delete": 0
+}

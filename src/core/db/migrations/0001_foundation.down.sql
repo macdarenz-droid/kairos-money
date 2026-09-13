@@ -1,0 +1,16 @@
+DROP TABLE app_settings;
+DROP TABLE privacy_log;
+DROP TABLE insights;
+DROP TABLE profiles;
+DROP TABLE signals;
+DROP TABLE goals;
+DROP TABLE payslips;
+DROP TABLE staging_rows;
+DROP TABLE transaction_sources;
+DROP TABLE transactions;
+DROP TABLE rules;
+DROP TABLE merchants;
+DROP TABLE categories;
+DROP TABLE coverage_ranges;
+DROP TABLE import_batches;
+DROP TABLE accounts;

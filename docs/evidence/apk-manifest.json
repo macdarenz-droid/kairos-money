@@ -1,0 +1,15 @@
+{
+  "application_id": "app.kairos.money",
+  "version": "0.1.0",
+  "build": "debug",
+  "signature_verified": true,
+  "sha256": "cdc149209946adc47bf418aa4912b0482a72193b9a39fb066d439793d8479a8c",
+  "bytes": 18831205,
+  "instrumentation_apk_bytes": 646461,
+  "web_assets_match_build": 13,
+  "internet_permission": false,
+  "lint_errors": 0,
+  "lint_warnings": 12,
+  "installed_and_launched": false,
+  "device_gate": "BLOCKED \u2014 emulator boot timeout; GitHub access required for CI"
+}

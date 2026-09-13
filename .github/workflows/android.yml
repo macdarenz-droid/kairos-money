@@ -1,0 +1,95 @@
+name: Android foundation gate
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kairos-money-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: node scripts/test-money-lint.mjs
+      - run: npm run dev:fixtures
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install sqlcipher3-binary==0.6.0
+      - run: python scripts/verify-encryption.py
+      - run: git diff --exit-code -- docs/SCHEMA.md docs/CONTRAST.md src/ui/design/tokens.css
+  android-gate:
+    needs: source-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Preserve development signing identity
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: kairos-money-debug-signing-v1
+      - run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+      - run: npm ci
+      - run: npm run android:sync
+      - name: Build signed debug and instrumentation APKs
+        working-directory: android
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --no-daemon
+      - name: Verify APK signature
+        run: "$ANDROID_HOME/build-tools/34.0.0/apksigner verify --verbose android/app/build/outputs/apk/debug/app-debug.apk"
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Native encryption, app flow and theme gate
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            cd android
+            ./gradlew :app:connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.class=app.kairos.money.FoundationInstrumentedTest
+            adb pull /sdcard/Android/data/app.kairos.money/files/evidence ../docs/evidence/android-screens
+            cd ..
+            python scripts/verify-android-delete.py
+      - name: Upload signed debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kairos-money-debug-${{ github.sha }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload gate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kairos-money-gate-${{ github.sha }}
+          path: |
+            android/app/build/reports/
+            android/app/build/outputs/androidTest-results/
+            docs/evidence/
+          retention-days: 30

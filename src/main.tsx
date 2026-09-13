@@ -1,0 +1,12 @@
+import React, { Suspense } from 'react';
+import ReactDOM from 'react-dom/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '@fontsource-variable/inter';
+import './ui/design/styles.css';
+import App from './ui/App';
+import { SessionProvider } from './ui/session';
+import { Skeleton } from './ui/design/primitives';
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false, staleTime: 30000 }, mutations: { retry: false } } });
+const KitchenSink = import.meta.env.DEV ? React.lazy(() => import('./ui/screens/KitchenSink')) : null;
+const root = document.getElementById('root'); if (!root) throw new Error('Application root is missing.');
+ReactDOM.createRoot(root).render(<QueryClientProvider client={queryClient}>{KitchenSink && location.pathname === '/dev/kitchen-sink' ? <Suspense fallback={<Skeleton/>}><KitchenSink/></Suspense> : <SessionProvider><App/></SessionProvider>}</QueryClientProvider>);

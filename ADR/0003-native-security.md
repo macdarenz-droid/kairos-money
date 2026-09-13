@@ -1,0 +1,13 @@
+# 0003 — Native vault, device storage and application deletion
+
+Decision: Android holds PIN verification material and a random 256-bit database secret in EncryptedSharedPreferences protected by Android Keystore. PBKDF2-HMAC-SHA256 (210,000 iterations, random 32-byte salt) verifies 6–12 digit PINs using constant-time comparison. Failed attempts have a persisted escalating cooldown. No PIN or key is persisted in WebView storage. Strong biometrics are an explicit optional unlock path after PIN setup.
+
+The SQLCipher plugin stores its own Keystore-protected copy of the random database secret. Database access is not initialized before the native vault unlocks. A native and JS 60-second resume check, immediate UI masking, query-cache clearing and connection closing implement the app lock. FLAG_SECURE obscures Android screenshots/recents. This protects ordinary on-device access, not a rooted device or a debugger trusted by its owner.
+
+Minimum Android is API 26 for the selected PBKDF2 implementation; minimum Android System WebView is 111 for OKLCH and the bundled modern JavaScript. An offline error page explains the WebView requirement. iOS has the Capacitor/SQLite boundary configured, but requires a Keychain/LocalAuthentication implementation before it can run securely. No insecure web or iOS vault fallback is supplied.
+
+Delete all data invokes Android's clearApplicationUserData operation after closing the DB. Android removes application storage and terminates the process. Installation assets are not user data; externally chosen exports are outside the app's ownership and are explained in the confirmation. Export uses the Android document picker and writes the requested JSON/CSV ZIP directly to the selected URI without an intermediate app file. No internet permission or analytics SDK is included.
+
+Alternatives: JavaScript PIN hashes; PIN-derived low-entropy DB keys; plaintext browser fallback; row-only deletion. All undermine the requested privacy or deletion guarantee. The native gate remains separate from host SQLCipher and simulated-boundary tests.
+
+Android 12+ has explicit cloud-backup and device-transfer exclusions for all five storage domains used by this app (root, files, database, preferences and app-owned external files), alongside allowBackup=false/fullBackupContent=false for older versions. The app uses credential-protected storage only and does not enable Direct Boot or create device-protected storage. This prevents system migration from quietly copying a financial database whose Keystore secret cannot travel with it. A user-chosen encrypted backup is deferred to Session 4. Configuration follows the [Android backup rules documentation](https://developer.android.com/identity/data/autobackup).
