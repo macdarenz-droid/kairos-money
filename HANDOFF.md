@@ -31,7 +31,7 @@ Destination: **macdarenz-droid/kairos-money** only. No trading-journal repositor
 
 Run 34746295447 on 489d916b is green for both source and Android jobs. Both foundation tests, the export/resume acceptance test, OS deletion verification and post-deletion setup test pass. The real document picker saves JSON plus 16 CSV tables. OS deletion leaves zero of 61 app-owned files and no database. Native security/export/delete are proved.
 
-Session 1 remains OPEN only for completion of native visual evidence: `light-insights.png` captures Ledger and `today-initial.png` captures the earlier opening state. These frames are rejected. The capture helper now waits for a committed frame after clearing the synthetic screenshot flag. Monitor the next CI run, review every image, then update the gate and deliver the APK. Do not rerun completed repository setup or alter app functionality to fix a capture timing issue. See `ci-functional-pass-visual-pending.json` and ADR 0007.
+Session 1 remains OPEN only for completion of native visual evidence: `light-insights.png` captures Ledger and `today-initial.png` captures the earlier opening state. These frames are rejected. The capture helper now waits for a committed frame after clearing the synthetic screenshot flag. The next run (34746823229) correctly rejected a first-boot Quickstep ANR, before capture. The runner now waits for idle boot broadcasts and verifies a clean launcher before installing Kairos; see ci-launcher-readiness.json. Monitor the latest CI run, review every image, then update the gate and deliver the APK. Do not rerun completed repository setup or alter app functionality to fix a capture timing issue. See `ci-functional-pass-visual-pending.json` and ADR 0007.
 
 ## Exact next steps
 

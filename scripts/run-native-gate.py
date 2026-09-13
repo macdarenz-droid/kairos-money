@@ -30,6 +30,26 @@ def instrumentation(name, count):
 log_stream = None
 log_file = None
 try:
+    # First-boot HOME input can stall Launcher before BOOT_COMPLETED receivers finish.
+    # Prepare only the disposable test device, before installing or launching Kairos.
+    adb('shell', 'cmd', 'connectivity', 'airplane-mode', 'enable')
+    boot_idle = adb('shell', 'am', 'wait-for-broadcast-idle', timeout=120)
+    if 'All broadcast queues are idle' not in boot_idle:
+        raise RuntimeError('Android boot broadcasts did not become idle: ' + boot_idle)
+    adb('shell', 'am', 'force-stop', 'com.android.launcher3')
+    adb('shell', 'am', 'start', '-W', '-a', 'android.intent.action.MAIN', '-c', 'android.intent.category.HOME')
+    adb('shell', 'am', 'wait-for-broadcast-idle', timeout=120)
+    adb('shell', 'uiautomator', 'dump', '/sdcard/kairos-device-ready.xml', timeout=60)
+    hierarchy = adb('shell', 'cat', '/sdcard/kairos-device-ready.xml')
+    adb('shell', 'rm', '/sdcard/kairos-device-ready.xml')
+    (EVIDENCE / 'android-device-ready.xml').write_text(hierarchy)
+    if 'com.android.launcher3' not in hierarchy or 'android:id/aerr_' in hierarchy:
+        raise RuntimeError('Android launcher is not ready or a system error dialog is visible; see android-device-ready.xml')
+    (EVIDENCE / 'android-device-ready.json').write_text(json.dumps({
+        'status': 'PASS', 'boot_broadcasts_idle': True,
+        'launcher_restarted_before_app_install': 'com.android.launcher3',
+        'launcher_visible_without_error_dialog': True,
+    }, indent=2) + '\n')
     for name in ['android/app/build/outputs/apk/debug/app-debug.apk',
                  'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk']:
         result = adb('install', '-r', str(ROOT / name))

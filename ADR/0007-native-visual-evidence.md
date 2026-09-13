@@ -13,3 +13,7 @@ Validation: full local APK, instrumentation and lint build passes. CI and clean 
 ## Frame presentation follow-up
 
 Run 34746295447 passes the complete functional gate, including real export and zero-file deletion. Visual inspection still rejects two stale frames: light Insights shows Ledger, and initial Today shows the preceding opening state. Android's [VisualStateCallback](https://developer.android.com/reference/android/webkit/WebView.VisualStateCallback) signals readiness for a subsequent draw; it does not prove that frame has been presented. Clear the synthetic capture window flag before the wait, request a draw and require the [frame commit callback](https://developer.android.com/reference/android/view/ViewTreeObserver#registerFrameCommitCallback(java.lang.Runnable)) before capturing. The production APK is unchanged by this instrumentation repair.
+
+## First-boot launcher readiness
+
+Run 34746823229 correctly rejected the first screenshot because Quickstep's ANR dialog was foreground. The launcher timed out before BOOT_COMPLETED receivers finished, before Kairos launched. Before installing Kairos on the fresh AOSP emulator, the runner now waits for broadcast queues to become idle, restarts only `com.android.launcher3` once, opens HOME and checks its accessibility hierarchy for a visible launcher with no error dialog. This is test-device preparation, not an app retry or an ANR-dialog suppression policy. Any failure during the app tests still fails the gate.

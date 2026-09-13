@@ -1,0 +1,11 @@
+{
+  "run_id": 34746823229,
+  "commit": "fab3c1fb1663687d8570230c35011bf8520d415e",
+  "source_gate": "PASS",
+  "build_and_signature": "PASS",
+  "native_gate": "FAIL",
+  "reason": "Foreground screenshot guard rejected android window; screenshot shows Quickstep is not responding.",
+  "log_evidence": "Launcher ANR at 08:10:28; BOOT_COMPLETED receivers finished at 08:10:37; first MainActivity start at 08:10:48 UTC.",
+  "repair": "Before app installation, wait for boot broadcasts to become idle, restart only the AOSP launcher once, and require a launcher hierarchy without an error dialog. No ANR suppression or app retry is introduced.",
+  "previous_functional_pass": 34746295447
+}
