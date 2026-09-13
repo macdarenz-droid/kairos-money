@@ -42,6 +42,24 @@ it('refuses to overwrite a populated ledger', async () => {
   await expect(repo.restoreBackup(original)).rejects.toThrow('empty ledger');
   expect((await repo.exportAll()).tables).toEqual(original.tables);
 });
+it('restores after Today has calculated empty-installation signals and profiles', async () => {
+  const { repo } = await seeded(); const original = await repo.exportAll();
+  const { driver } = memoryDriver(); await migrate(driver); const fresh = repository(driver);
+  await fresh.intelligence.analyse('2026-07-01', 'AUD');
+  expect(await driver.query('SELECT * FROM signals')).toHaveLength(24);
+  expect(await driver.query('SELECT * FROM profiles')).toHaveLength(1);
+  await fresh.restoreBackup(original);
+  expect((await fresh.exportAll()).tables).toEqual(original.tables);
+});
+it('still protects a goal-only installation after empty-ledger analysis', async () => {
+  const { repo } = await seeded(); const original = await repo.exportAll();
+  const { driver } = memoryDriver(); await migrate(driver); const fresh = repository(driver);
+  await fresh.intelligence.analyse('2026-07-01', 'AUD');
+  await fresh.intelligence.saveGoal({ id: 'g', name: 'Synthetic goal', target: '50000', funded: '0', date: '2026-12-01', kind: 'goal', currency: 'AUD' });
+  const before = (await fresh.exportAll()).tables;
+  await expect(fresh.restoreBackup(original)).rejects.toThrow('empty ledger');
+  expect((await fresh.exportAll()).tables).toEqual(before);
+});
 it('rejects invalid columns, broken links, missing tables and inexact money without partial writes', async () => {
   const { repo } = await seeded(); const snapshot = await repo.exportAll();
   for (const kind of ['columns','links','tables','money']) {
@@ -56,7 +74,9 @@ it('rejects invalid columns, broken links, missing tables and inexact money with
 });
 it('rolls back an interrupted restore, including its earlier inserted accounts', async () => {
   const { repo } = await seeded(); const snapshot = await repo.exportAll();
-  const { driver } = memoryDriver(); await migrate(driver); const before = await repository(driver).exportAll();
+  const { driver } = memoryDriver(); await migrate(driver);
+  await repository(driver).intelligence.analyse('2026-07-01', 'AUD');
+  const before = await repository(driver).exportAll();
   const failing: Driver = { ...driver, async execute(sql, values) { if (sql.startsWith('INSERT INTO coverage_ranges')) throw new Error('Synthetic storage interruption'); await driver.execute(sql, values); } };
   await expect(repository(failing).restoreBackup(snapshot)).rejects.toThrow('Synthetic storage interruption');
   expect((await repository(driver).exportAll()).tables).toEqual(before.tables);

@@ -27,7 +27,10 @@ export async function restoreSnapshot(driver: Driver, snapshot: unknown): Promis
   const tables = validate(snapshot);
   await driver.transaction(async () => {
     for (const table of tableNames) {
-      if (table !== 'categories' && table !== 'app_settings' && Number((await driver.query(`SELECT COUNT(*) AS count FROM ${table}`))[0]?.count) > 0)
+      // Today calculates these derived tables even before the first account exists.
+      // They are replaced atomically with the backup, not treated as user ledger data.
+      const generated = ['categories', 'app_settings', 'signals', 'profiles', 'insights'].includes(table);
+      if (!generated && Number((await driver.query(`SELECT COUNT(*) AS count FROM ${table}`))[0]?.count) > 0)
         throw new Error('Restore requires an empty ledger. Export or back up this installation before resetting it.');
       const columns = (await driver.query(`PRAGMA table_info(${table})`)).map(row => String(row.name));
       for (const row of tables[table] ?? []) if (Object.keys(row).length !== columns.length || columns.some(column => !Object.hasOwn(row, column)))

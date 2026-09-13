@@ -1,5 +1,7 @@
 # Kairos Money — Session 3 under verification
 
+Latest run 34781012976 confirms picker review retention and wrong-code zero-write refusal. Correct restore exposed a fresh-installation bug: generated signals/profiles were counted as user ledger data. The restore guard now permits atomic replacement of derived tables while retaining protection for accounts, transactions, imports, goals and other user tables. New real-SQLite regressions cover analysed empty installations, goal-only refusal and rollback of calculated data. Complete source checks and publish to authorized CI; worker stays off.
+
 Current repair after run 34778870575: reset is now proven (zero app files, external backup preserved). Restore lost its sheet when Android's picker backgrounded Kairos. App now retains that hidden transient view until authenticated resume; real lock/expiry still removes it. Two theme regression tests cover retention, concealment and expiry. Finish source validation and run the full Android gate for wrong-code refusal and exact restoration. Worker remains disabled.
 
 Run 34778108902 passed intelligence, Forgot-PIN and backup-save instrumentation. Its host check found the synthetic recovery-code file missing before reset. The helper now writes through UiAutomation stdin and verifies exact readback; production paths are unchanged. Continue through reset, wrong-code refusal, exact restore and remaining visual acceptance. Worker remains off.
