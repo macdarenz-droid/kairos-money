@@ -18,16 +18,17 @@ def adb(*args, timeout=120):
 
 
 def instrumentation(name, count):
-    log = adb('shell', 'am', 'instrument', '-w', '-r', '-e', 'class',
+    log = adb('shell', 'am', 'instrument', '-w', '-e', 'class',
               'app.kairos.money.' + name,
               'app.kairos.money.test/androidx.test.runner.AndroidJUnitRunner', timeout=360)
     (EVIDENCE / (name + '.log')).write_text(log)
     print(log, flush=True)
-    successful = len(re.findall(r'INSTRUMENTATION_STATUS_CODE: 0\b', log))
-    if successful != count or 'INSTRUMENTATION_CODE: -1' not in log or 'FAILURES!!!' in log or 'shortMsg=' in log:
+    if not re.search(r'OK \(' + str(count) + r' tests?\)', log):
         raise RuntimeError(name + ' did not pass; see its instrumentation log')
 
 
+log_stream = None
+log_file = None
 try:
     for name in ['android/app/build/outputs/apk/debug/app-debug.apk',
                  'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk']:
@@ -35,6 +36,10 @@ try:
         if 'Success' not in result:
             raise RuntimeError('APK installation failed: ' + result)
     adb('shell', 'cmd', 'connectivity', 'airplane-mode', 'enable')
+    (EVIDENCE / 'android-webview-provider.txt').write_text(adb('shell', 'dumpsys', 'webviewupdate'))
+    adb('logcat', '-c')
+    log_file = (EVIDENCE / 'android-logcat-full.log').open('w')
+    log_stream = subprocess.Popen(['adb', 'logcat', '-b', 'all', '-v', 'threadtime'], stdout=log_file, stderr=subprocess.STDOUT)
     instrumentation('FoundationInstrumentedTest', 2)
     instrumentation('AcceptanceInstrumentedTest', 1)
     adb('pull', '/sdcard/Android/data/app.kairos.money/files/evidence', str(EVIDENCE / 'android-screens'))
@@ -58,10 +63,21 @@ except Exception as error:
 finally:
     # Preserve failure evidence even if an assertion interrupts the happy path.
     subprocess.run(['adb', 'pull', '/sdcard/Android/data/app.kairos.money/files/evidence',
-                    str(EVIDENCE / 'android-screens')], capture_output=True, timeout=60)
-    # Native aborts, WebView exits and OS kills are not all tagged AndroidRuntime.
-    # The device is a fresh CI emulator containing only synthetic financial data.
-    logs = subprocess.run(['adb', 'logcat', '-b', 'all', '-d', '-v', 'threadtime'], capture_output=True, text=True, timeout=30)
-    (EVIDENCE / 'android-logcat.log').write_text(logs.stdout + logs.stderr)
-    exits = subprocess.run(['adb', 'shell', 'dumpsys', 'activity', 'exit-info', 'app.kairos.money'], capture_output=True, text=True, timeout=30)
-    (EVIDENCE / 'android-exit-info.log').write_text(exits.stdout + exits.stderr)
+                    str(EVIDENCE / 'android-screens')], capture_output=True)
+    if log_stream is not None:
+        log_stream.terminate()
+        try:
+            log_stream.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            log_stream.kill()
+            log_stream.wait(timeout=10)
+    if log_file is not None:
+        log_file.close()
+    for label, command in [
+        ('android-logcat', ['logcat', '-b', 'crash', '-d']),
+        ('android-exit-info', ['shell', 'dumpsys', 'activity', 'exit-info', 'app.kairos.money']),
+    ]:
+        result = subprocess.run(['adb', *command], capture_output=True, text=True, timeout=30)
+        content = result.stdout + result.stderr
+        (EVIDENCE / (label + '.log')).write_text(content)
+        print(label + ':\n' + content, flush=True)
