@@ -119,5 +119,5 @@ public class KairosVaultPlugin extends Plugin {
         ActivityManager manager = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
         if (!manager.clearApplicationUserData()) throw new IllegalStateException("Android could not delete app data. Use Android Settings > Apps > Kairos > Storage > Clear data.");
     }); }
-    @Override protected void handleOnDestroy() { store.lock(); if (exportBytes != null) Arrays.fill(exportBytes, (byte) 0); worker.shutdown(); }
+    @Override protected void handleOnDestroy() { DatabaseLifecycle.close(getBridge()); store.lock(); if (exportBytes != null) Arrays.fill(exportBytes, (byte) 0); worker.shutdown(); }
 }
