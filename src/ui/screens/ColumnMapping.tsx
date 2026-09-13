@@ -1,0 +1,8 @@
+import type { ColumnRole, ExportMapping } from '../../ingest/sources';
+import { DataGrid } from '../design/primitives';
+const roles: ColumnRole[]=['date','description','amount','debit','credit','balance','reference','status'];
+export function ColumnMapping({table,mapping,onChange}:{table:string[][];mapping:ExportMapping;onChange:(m:ExportMapping)=>void}) {
+ const roleAt=(i:number)=>roles.find(r=>mapping.columns[r]===i)??'';
+ const assign=(i:number,role:string)=>{const columns={...mapping.columns};for(const key of roles) if(columns[key]===i)delete columns[key];if(role)columns[role as ColumnRole]=i;onChange({...mapping,columns});};
+ return <section className="stack"><h3>Map export columns</h3><p>Assign each column in place. Amounts use a signed column, or separate debit and credit columns.</p><label className="check-row"><input type="checkbox" checked={mapping.header} onChange={e=>onChange({...mapping,header:e.target.checked})}/>First row contains headings</label><DataGrid headings={(table[0]??[]).map((_,i)=><label key={i}>Column {i+1}<select aria-label={`Column ${i+1} meaning`} value={roleAt(i)} onChange={e=>assign(i,e.target.value)}><option value="">Not used</option>{roles.map(role=><option key={role} value={role}>{role[0]!.toUpperCase()+role.slice(1)}</option>)}</select></label>)} rows={table} numeric={['amount','debit','credit','balance'].flatMap(role=>mapping.columns[role as ColumnRole]===undefined?[]:[mapping.columns[role as ColumnRole]!])}/><label className="input-label">Export date format<select value={mapping.dateOrder} onChange={e=>onChange({...mapping,dateOrder:e.target.value as 'DMY'|'MDY'})}><option value="DMY">Day / month / year</option><option value="MDY">Month / day / year</option></select></label></section>;
+}

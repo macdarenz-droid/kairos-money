@@ -1,9 +1,11 @@
 import type { Driver } from '../core/db/driver';
 import { currency, money, toDatabase } from '../core/money';
 import { categorize, type CategoryRule } from '../ledger/rules';
-import { hash, isoDay, rowFingerprint } from './normalize';
+import { continuity } from './integrity';
+import type { ExportMapping } from './sources/types';
+import { hash, isoDay, rowFingerprint, dayNumber, similarity } from './normalize';
 import { balance, gaps, nearDuplicates, reconcile } from './reconcile';
-import { linkNet } from './parse/payslip';
+import { linkNet } from '../ledger/payslips';
 import type { Batch, Document, NormalizedRow } from './types';
 const integer = (s: string, c: string) => toDatabase(money(BigInt(s), currency(c)));
 function validate(doc: Document): void {
@@ -49,6 +51,7 @@ export function importService(driver: Driver) {
     });
   }
   async function save(doc: Document) {
+    await driver.execute('UPDATE import_batches SET integrity_tier=?,source_rank=? WHERE id=?', [doc.integrityTier ?? 'A', doc.sourceRank ?? 0, doc.id]);
     await driver.execute('DELETE FROM staging_rows WHERE import_batch_id=?', [doc.id]);
     await driver.execute('INSERT INTO staging_rows(id,import_batch_id,source_row_id,payload,confidence,issues) VALUES(?,?,?,?,?,?)', [hash(doc.id + ':__document__'), doc.id, '__document__', JSON.stringify(doc), 10000, '[]']);
     for (const row of doc.rows) await driver.execute('INSERT INTO staging_rows(id,import_batch_id,source_row_id,payload,confidence,issues) VALUES(?,?,?,?,?,?)', [hash(doc.id + ':' + row.sourceId), doc.id, row.sourceId, JSON.stringify(row), row.confidence, JSON.stringify(row.issues)]);
@@ -61,19 +64,23 @@ export function importService(driver: Driver) {
     const userRules = await rules(), merchantDefaults = await defaults();
     const items = doc.rows.map(row => {
       const suggestion = categorize(row, userRules, merchantDefaults, row.mcc);
-      const near = nearDuplicates(row, combined).filter(r => !r.sources.some(s => s.batchId === id && s.sourceId === row.sourceId));
-      const duplicate = existing.some(r => r.fingerprint === row.fingerprint || r.id === row.duplicateOf);
+      const settlementCandidates = doc.sourceRank ? combined.filter(r=>r.pending!==row.pending && r.accountId===row.accountId && r.currency===row.currency && Math.abs(dayNumber(r.date)-dayNumber(row.date))<=3 && similarity(r.merchant,row.merchant)>=9000) : [];
+      const near = [...new Map([...nearDuplicates(row, combined),...settlementCandidates].map(r=>[r.id,r])).values()].filter(r => !r.sources.some(s => s.batchId === id && s.sourceId === row.sourceId));
+      const projected = combined.find(r => r.sources.some(s => s.batchId === id && s.sourceId === row.sourceId));
+      const previous = existing.find(r => r.id === projected?.id || r.sources.some(s => projected?.sources.some(p => p.batchId === s.batchId && p.sourceId === s.sourceId)));
+      const superseded = !!previous?.pending && !projected?.pending;
+      const duplicate = !!previous || existing.some(r => r.fingerprint === row.fingerprint || r.id === row.duplicateOf);
       const collisions = doc.rows.filter(r => r.fingerprint === row.fingerprint).length > 1 || existing.some(r => r.fingerprint === row.fingerprint && ((r.reference && row.reference && r.reference !== row.reference) || r.merchant !== row.merchant));
-      return { row, suggestion, original: doc.rawRows?.find(r => r.sourceId === row.sourceId), near, duplicate, collision: collisions, blocked: !row.verified && (row.issues.length > 0 || row.confidence < 9000 || near.length > 0 || collisions || (!row.category && !!suggestion.category && suggestion.confidence < 9000)) };
+      return { row, suggestion, superseded, original: doc.rawRows?.find(r => r.sourceId === row.sourceId), near, duplicate, collision: collisions, blocked: !row.verified && (row.issues.length > 0 || row.confidence < 9000 || near.length > 0 || collisions || (!row.category && !!suggestion.category && suggestion.confidence < 9000)) };
     }).sort((a, b) => Number(b.blocked) - Number(a.blocked) || a.row.confidence - b.row.confidence || a.row.sourceId.localeCompare(b.row.sourceId));
-    return { doc, items, balance: balance(doc), coverageAdded: doc.payslip ? [] : gaps(all.filter(b => b.status === 'committed' && b.id !== id && b.context.accountId === doc.context.accountId && !b.payslip).map(b => b.context.period), doc.context.period), newCount: new Set(items.filter(i => !i.duplicate).map(i => i.row.fingerprint)).size, duplicateCount: items.filter(i => i.duplicate).length, uncertainCount: items.filter(i => i.blocked).length };
+    return { doc, items, continuity: continuity(doc.context.period, all.filter(b=>b.status==='committed' && !b.payslip && b.context.accountId===doc.context.accountId).map(b=>b.context.period)), supersededCount: items.filter(i=>i.superseded).length, balance: balance(doc), coverageAdded: doc.payslip ? [] : gaps(all.filter(b => b.status === 'committed' && b.id !== id && b.context.accountId === doc.context.accountId && !b.payslip).map(b => b.context.period), doc.context.period), newCount: new Set(items.filter(i => !i.duplicate).map(i => i.row.fingerprint)).size, duplicateCount: items.filter(i => i.duplicate && !i.superseded).length, uncertainCount: items.filter(i => i.blocked).length };
   }
   async function correct(id: string, sourceId: string, change: Pick<NormalizedRow, 'date' | 'description' | 'merchant' | 'minor' | 'category' | 'occurrence' | 'duplicateOf'>, makeRule: boolean) {
     return driver.transaction(async () => {
       const doc = (await batches()).find(b => b.id === id); if (!doc || !['staged', 'quarantined'].includes(doc.status)) throw new Error('Only staged rows can be corrected.');
       const row = doc.rows.find(r => r.sourceId === sourceId); if (!row) throw new Error('This row was not found. Reopen the import review.');
       Object.assign(row, change, { verified: true, issues: [], createRule: makeRule }); row.fingerprint = rowFingerprint(row); validate(doc);
-      if (row.duplicateOf) { const target = reconcile((await batches()).filter(b => b.status === 'committed')).find(r => r.id === row.duplicateOf || r.fingerprint === row.duplicateOf); if (!target || target.accountId !== row.accountId || target.currency !== row.currency || target.minor !== row.minor) throw new Error('That duplicate target does not match this account and amount. Keep the row separately.'); row.duplicateOf = target.id; }
+      if (row.duplicateOf) { const target = reconcile((await batches()).filter(b => b.status === 'committed')).find(r => r.id === row.duplicateOf || r.fingerprint === row.duplicateOf); if (!target || target.accountId !== row.accountId || target.currency !== row.currency || (target.minor !== row.minor && !(target.pending && !row.pending && Math.abs(dayNumber(target.date)-dayNumber(row.date))<=3 && similarity(target.merchant,row.merchant)>=9000))) throw new Error('That duplicate target does not match this account and amount. Keep the row separately.'); row.duplicateOf = target.id; }
       await save(doc);
     });
   }
@@ -96,6 +103,7 @@ export function importService(driver: Driver) {
       const merchantId = hash('merchant:' + row.merchant);
       await driver.execute('INSERT OR IGNORE INTO merchants(id,canonical_name,aliases,mcc) VALUES(?,?,?,?)', [merchantId, row.merchant, '[]', row.mcc]);
       await driver.execute('INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,merchant_id,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [row.id, row.accountId, row.date, integer(row.minor, row.currency), row.currency, row.description, merchantId, categoryId, BigInt(row.minor) < 0n ? 'debit' : 'credit', row.transferGroup, 0, row.id, row.owner, row.confidence, row.verified ? 1 : 0, notes.get(row.id) ?? '']);
+      await driver.execute('UPDATE transactions SET status=? WHERE id=?', [row.pending ? 'pending' : 'settled', row.id]);
       for (const source of row.sources) { const original = docs.find(d => d.id === source.batchId)!.rows.find(r => r.sourceId === source.sourceId)!; await driver.execute('INSERT INTO transaction_sources VALUES(?,?,?,?)', [row.id, source.batchId, source.sourceId, JSON.stringify(original)]); }
     }
     // Namespaced importer entities are removed only when no ledger or merchant uses them.
@@ -108,25 +116,26 @@ export function importService(driver: Driver) {
       else { const p = doc.payslip; await driver.execute('INSERT INTO payslips(id,employer,pay_date,period_start,period_end,gross_minor,net_minor,tax_minor,super_minor,deductions,allowances,ytd,currency,linked_transaction_id,import_batch_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [hash('payslip:' + doc.id), p.employer, p.payDate, p.period.start, p.period.end, integer(p.gross, p.currency), integer(p.net, p.currency), integer(p.tax, p.currency), integer(p.super, p.currency), JSON.stringify(p.deductions), JSON.stringify(p.allowances), JSON.stringify(p.ytd), p.currency, linkNet(p, ledger.filter(r => r.accountId === doc.context.accountId)), doc.id]); }
     }
   }
-  async function commit(id: string) {
-    return driver.transaction(async () => {
+  async function commitUnlocked(id: string) {
       const check = await review(id);
-      if (check.doc.status === 'committed') return { added: 0, alreadyImported: true };
+      if (check.doc.status === 'committed') return { added: 0, alreadyImported: true, known: check.duplicateCount, superseded: 0 };
       if (check.doc.status === 'rolled_back') throw new Error('Import this file again before committing it.');
       if (!check.balance.valid) throw new Error(`Balance differs by ${check.balance.difference.toString()} minor units. Correct the statement or rows before committing.`);
       if (check.uncertainCount) throw new Error(`Review ${check.uncertainCount} uncertain rows before committing.`);
       const proposed = [...(await batches()).filter(b => b.status === 'committed' && b.id !== id), check.doc];
       const projection = reconcile(proposed);
-      for (const document of proposed) if (!document.payslip) {
-        const contribution = projection.filter(r => r.sources.some(source => source.batchId === document.id)).reduce((sum, r) => sum + BigInt(r.minor), 0n);
+      for (const document of proposed) if (!document.payslip && (!document.integrityTier || document.integrityTier === 'A')) {
+        const contribution = projection.filter(r => r.sources.some(source => source.batchId === document.id)).reduce((sum, r) => { const source = r.sources.find(s=>s.batchId===document.id)!; return sum + BigInt(document.rows.find(v=>v.sourceId===source.sourceId)!.minor); }, 0n);
         if (BigInt(document.opening) + contribution !== BigInt(document.closing)) throw new Error(`The duplicate decision would break the balance of ${document.fileName}. Keep the transactions separately or review that statement first.`);
       }
+      const before = reconcile((await batches()).filter(b=>b.status==='committed'));
+      for(const row of projection) { const prior=before.find(r=>r.id===row.id); if(prior?.pending && !row.pending) await driver.execute('INSERT OR IGNORE INTO privacy_log(id,created_at,action,import_batch_id,metadata) VALUES(?,?,?,?,?)', [hash('supersession:'+id+':'+row.id),new Date().toISOString(),'transaction_superseded',id,JSON.stringify({transactionId:row.id,before:prior,after:row})]); }
       check.doc.rows.forEach(row => { row.verified = true; });
       await save(check.doc);
       await driver.execute("UPDATE import_batches SET status='committed' WHERE id=?", [id]); await rebuild();
-      return { added: check.newCount, alreadyImported: false };
-    });
+      return { added: check.newCount, alreadyImported: false, known: check.duplicateCount, superseded: check.supersededCount };
   }
+  async function commit(id: string) { return driver.transaction(()=>commitUnlocked(id)); }
   async function rollback(id: string) {
     return driver.transaction(async () => { const doc = (await batches()).find(b => b.id === id); if (!doc) throw new Error('That import was not found.'); await driver.execute("UPDATE import_batches SET status='rolled_back' WHERE id=?", [id]); await rebuild(); });
   }
@@ -135,16 +144,16 @@ export function importService(driver: Driver) {
     const labels = new Map((await driver.query('SELECT t.id,c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id')).map(r => [String(r.id), r.name === null ? null : String(r.name)]));
     return rows.map(r => ({ ...r, category: labels.get(r.id) ?? r.category }));
   }
-  async function stageFile(fileName: string, data: string, fileHash: string) {
+  async function stageFile(fileName: string, data: string, fileHash: string, sessionId = hash('session:'+fileHash)) {
     if (!/^[a-f0-9]{64}$/.test(fileHash) || data.length > 27962032) throw new Error('File is too large or its identity is invalid. Choose a file below 20 MB.');
     const id = hash('incoming:' + fileHash);
     await driver.transaction(async () => {
       await driver.execute('INSERT OR IGNORE INTO import_batches(id,source_file_hash,file_name,parser_version,status,created_at) VALUES(?,?,?,?,?,?)', [id, fileHash, fileName, 'awaiting-extraction-v1', 'staged', new Date().toISOString()]);
-      await driver.execute('INSERT OR IGNORE INTO staging_rows(id,import_batch_id,source_row_id,payload,confidence,issues) VALUES(?,?,?,?,?,?)', [id, id, '__file__', JSON.stringify({ fileName, data, hash: fileHash }), 0, '[]']);
+      await driver.execute('INSERT OR IGNORE INTO staging_rows(id,import_batch_id,source_row_id,payload,confidence,issues) VALUES(?,?,?,?,?,?)', [id, id, '__file__', JSON.stringify({ fileName, data, hash: fileHash, sessionId }), 0, '[]']);
     }); return id;
   }
   async function files() { return (await driver.query(`SELECT s.id,b.file_name FROM staging_rows s JOIN import_batches b ON b.id=s.import_batch_id WHERE s.source_row_id='__file__' ORDER BY b.created_at,s.id`)).map(r => ({ id: String(r.id), name: String(r.file_name) })); }
-  async function loadFile(id: string): Promise<{ fileName: string; data: string; hash: string }> { const row = (await driver.query(`SELECT payload FROM staging_rows WHERE id=? AND source_row_id='__file__'`, [id]))[0]; if (!row) throw new Error('That staged file was removed. Choose it again.'); return JSON.parse(String(row.payload)) as { fileName: string; data: string; hash: string }; }
+  async function loadFile(id: string): Promise<{ fileName: string; data: string; hash: string; sessionId?: string }> { const row = (await driver.query(`SELECT payload FROM staging_rows WHERE id=? AND source_row_id='__file__'`, [id]))[0]; if (!row) throw new Error('That staged file was removed. Choose it again.'); return JSON.parse(String(row.payload)) as { fileName: string; data: string; hash: string; sessionId?: string }; }
   async function removeFile(id: string) { await driver.transaction(async () => { await driver.execute(`DELETE FROM import_batches WHERE id=? AND parser_version='awaiting-extraction-v1'`, [id]); }); }
   async function correctPayslip(id: string, payslip: NonNullable<Document['payslip']>) {
     await driver.transaction(async () => { const doc = (await batches()).find(b => b.id === id); if (!doc || !doc.payslip || !['staged', 'quarantined'].includes(doc.status)) throw new Error('Only a staged payslip can be corrected.'); doc.payslip = payslip; validate(doc); await save(doc); });
@@ -152,5 +161,11 @@ export function importService(driver: Driver) {
   async function correctBalances(id: string, opening: string, closing: string) {
     await driver.transaction(async () => { const doc = (await batches()).find(b => b.id === id); if (!doc || !['staged', 'quarantined'].includes(doc.status)) throw new Error('Only staged balances can be corrected.'); doc.opening = opening; doc.closing = closing; validate(doc); await save(doc); });
   }
-  return { batches, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
+  async function savedMapping(issuer: string): Promise<ExportMapping | undefined> { const r=(await driver.query('SELECT value FROM app_settings WHERE key=?',['export-mapping:'+issuer]))[0]; return r ? JSON.parse(String(r.value)) as ExportMapping : undefined; }
+  async function saveMapping(issuer: string, mapping: ExportMapping) { await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',['export-mapping:'+issuer,JSON.stringify(mapping)]); }
+  async function audit(transactionId: string) { return (await driver.query("SELECT metadata FROM privacy_log WHERE action='transaction_superseded' ORDER BY created_at,id")).map(r=>JSON.parse(String(r.metadata)) as {transactionId:string;before:unknown;after:unknown}).filter(r=>r.transactionId===transactionId); }
+  async function commitSession(ids: string[]) { return driver.transaction(async()=> { const results=[]; for(const id of ids) results.push(await commitUnlocked(id)); return results; }); }
+  async function reminderDay(): Promise<number|null> { const r=(await driver.query("SELECT value FROM app_settings WHERE key='update-reminder'"))[0]; if(!r)return null;const value=JSON.parse(String(r.value)) as unknown;return typeof value==='number' && Number.isInteger(value)&&value>=0&&value<=6?value:null; }
+  async function setReminderDay(day:number|null) { if(day!==null&&(!Number.isInteger(day)||day<0||day>6))throw new Error('Choose a weekday.');await driver.execute("INSERT OR REPLACE INTO app_settings(key,value) VALUES('update-reminder',?)",[JSON.stringify(day)]); }
+  return { reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
 }

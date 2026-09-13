@@ -14,3 +14,6 @@
 .covered-range { background: var(--accent); border: 1px solid var(--accent); }
 .missing-range { background: repeating-linear-gradient(135deg, transparent, transparent 3px, var(--border-default) 3px, var(--border-default) 5px); border: 1px dashed var(--text-secondary); }
 details > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+.data-grid-scroll{max-width:100%;overflow:auto}.data-grid{border-collapse:collapse;width:100%;font-size:13px;line-height:20px;font-variant-numeric:tabular-nums}.data-grid th,.data-grid td{border-bottom:1px solid var(--border-subtle);padding:10px 12px;text-align:left;min-width:120px}.data-grid th{font-weight:500;background:var(--surface-2)}.data-grid td.amount{text-align:right}.surface-muted{background:var(--surface-1);color:var(--text-secondary)}.surface-muted h2{color:var(--text-secondary)}.export-range{user-select:all;overflow-wrap:anywhere}.drop-surface{border:1px dashed var(--border-control);padding:16px;background:var(--surface-1)}
+
+

@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
@@ -31,6 +32,8 @@
             </intent-filter>
 
         </activity>
+
+        <receiver android:name=".ReminderReceiver" android:exported="false" />
 
         <!-- WebView renders bundled fonts; native downloadable emoji is unnecessary. -->
         <provider

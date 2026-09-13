@@ -1,6 +1,6 @@
 # Kairos Money Tracker
 
-A private, on-device money tracker with exact money math, an encrypted Android ledger, account setup, app lock, export/delete and a quiet two-theme interface. Session 2 adds local file extraction, mandatory import review, reconciliation and reversible commits. Its native acceptance gate remains open; intelligence has not started.
+A private, on-device money tracker with exact money math, an encrypted Android ledger, account setup, app lock, export/delete and a quiet two-theme interface. Session 2 adds local file extraction, mandatory import review, reconciliation and reversible commits. Session 2 passed its native gate; Session 2.5 adds export-first updates and is under native verification. Intelligence has not started.
 
 **Session 1 gate: PASS** on Android 34 AOSP; [verified run](https://github.com/macdarenz-droid/kairos-money/actions/runs/34747556681).
 
@@ -81,8 +81,14 @@ Exports contain readable JSON and per-table CSV inside a ZIP and are written to 
 
 There is no account-based PIN recovery. Encrypted backup/restore is Session 4. iOS configuration is prepared, but a Keychain/LocalAuthentication vault implementation is still required; there is no insecure fallback.
 
-## Export-first revision planned for Session 2.5
+## Weekly export workflow
 
 Manual file imports are the only v1 data path. Direct bank API integration is outside v1 because its accredited-provider/server architecture does not fit this local-only app. Kairos will never request internet-banking credentials or use credential-scraping aggregators.
 
-After Session 2 passes, Session 2.5 makes weekly OFX/QIF and CSV/XLSX exports the preferred update path, while retaining all PDF/OCR support. The Update accounts flow will name a date range overlapping the previous covered week, so imports can reconcile transactions that settle later. These freshness and export-without-balances features are planned, not yet available in the current Session 2 build. See `docs/SESSION_2_5.md`.
+Use **Update accounts** from Today or Quick. For each account, copy the displayed date range into internet banking and download OFX/QIF or CSV/XLSX. The range deliberately repeats the last covered week. Choose or drop multiple files, confirm each file's account and dates, review any uncertain columns/rows, then confirm the update. Nothing auto-commits. PDFs and offline scanned statements remain available for historical periods.
+
+Leave stated balances blank for transaction exports. Tier A verifies a statement's stated balances; Tier B verifies running-balance transitions; Tier C checks coverage continuity and is explicitly balance-unverified. A missing internal period is a coverage gap; an old last-covered date is staleness. Today never presents stale imports as current available money.
+
+Pending transactions are retained as commitments. A matching settlement updates the original ID and records its prior values; ambiguous candidates need review. The import result explains additions, already-known transactions and superseded pending rows. An optional local weekday reminder is off by default and skipped while data is fresh. Android may delay delivery; open the app after reboot to restore scheduling.
+
+The new UI uses the existing design primitives. Session 2.5's device/visual acceptance is tracked in `docs/GATE_SESSION_2_5.md`. Do not start Session 3 before that gate passes.

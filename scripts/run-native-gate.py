@@ -81,6 +81,7 @@ try:
     (EVIDENCE / 'android-webview-provider.txt').write_text(adb('shell', 'dumpsys', 'webviewupdate'))
     instrumentation('FoundationInstrumentedTest', 2)
     instrumentation('ImportInstrumentedTest', 2)
+    instrumentation('RevisionInstrumentedTest', 2)
     instrumentation('AcceptanceInstrumentedTest', 1)
     adb('pull', '/sdcard/Android/data/app.kairos.money/files/evidence', str(SCREENS))
     subprocess.run(['node', '--import', 'tsx', str(ROOT / 'scripts/verify-native-ocr.ts'), str(SCREENS)], cwd=ROOT, check=True)
@@ -88,7 +89,7 @@ try:
     instrumentation('PostDeleteInstrumentedTest', 1)
     (EVIDENCE / 'native-run-status.json').write_text(json.dumps({
         'status': 'PASS', 'installed': True, 'instrumentation_executed': True,
-        'foundation_tests': 2, 'import_tests': 2, 'acceptance_tests': 1, 'post_delete_tests': 1,
+        'foundation_tests': 2, 'import_tests': 2, 'revision_tests': 2, 'acceptance_tests': 1, 'post_delete_tests': 1,
         'native_encryption_proven': True, 'native_delete_proven': True,
         'real_document_export_proven': True, 'background_unlock': '1 second retained; 61 seconds locked',
         'runner': 'Android 34 emulator; airplane mode enabled',

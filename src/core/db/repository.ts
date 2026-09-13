@@ -30,7 +30,7 @@ export function repository(driver: Driver) {
       return driver.transaction(async () => {
         const tables: Record<string, Record<string, SqlValue>[]> = {};
         for (const table of tableNames) tables[table] = await driver.query(`SELECT * FROM ${table} ORDER BY rowid`);
-        return { format: 'kairos-money', version: 1, schema_version: 2, exported_at: new Date().toISOString(), tables };
+        return { format: 'kairos-money', version: 1, schema_version: 2, database_schema_version: Number((await driver.query('SELECT MAX(version) AS version FROM _migrations'))[0]?.version ?? 0), exported_at: new Date().toISOString(), tables };
       });
     },
   };
