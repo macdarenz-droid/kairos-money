@@ -15,6 +15,7 @@ public class MainActivity extends BridgeActivity {
         setTheme(light ? R.style.AppTheme_Light : R.style.AppTheme_Dark);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
         registerPlugin(KairosVaultPlugin.class);
+        registerPlugin(KairosTextPlugin.class);
         super.onCreate(savedInstanceState);
         applyAppearance();
     }

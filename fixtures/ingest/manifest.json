@@ -1,0 +1,119 @@
+[
+  {
+    "name": "synthetic-checking-1",
+    "kind": "checking",
+    "layout": 1,
+    "expected_minor": [
+      "-1000",
+      "-2000",
+      "-3000"
+    ],
+    "rows": 3
+  },
+  {
+    "name": "synthetic-checking-2",
+    "kind": "checking",
+    "layout": 2,
+    "expected_minor": [
+      "-1000",
+      "-2000",
+      "-3000"
+    ],
+    "rows": 3
+  },
+  {
+    "name": "synthetic-checking-3",
+    "kind": "checking",
+    "layout": 3,
+    "expected_minor": [
+      "-1000",
+      "-2000",
+      "-3000"
+    ],
+    "rows": 3
+  },
+  {
+    "name": "synthetic-savings-1",
+    "kind": "savings",
+    "layout": 1,
+    "expected_minor": [
+      "-1000",
+      "-2000",
+      "-3000"
+    ],
+    "rows": 3
+  },
+  {
+    "name": "synthetic-savings-2",
+    "kind": "savings",
+    "layout": 2,
+    "expected_minor": [
+      "-1000",
+      "-2000",
+      "-3000"
+    ],
+    "rows": 3
+  },
+  {
+    "name": "synthetic-savings-3",
+    "kind": "savings",
+    "layout": 3,
+    "expected_minor": [
+      "-1000",
+      "-2000",
+      "-3000"
+    ],
+    "rows": 3
+  },
+  {
+    "name": "synthetic-credit-1",
+    "kind": "credit",
+    "layout": 1,
+    "expected_minor": [
+      "-1000",
+      "-2000",
+      "-3000"
+    ],
+    "rows": 3
+  },
+  {
+    "name": "synthetic-credit-2",
+    "kind": "credit",
+    "layout": 2,
+    "expected_minor": [
+      "-1000",
+      "-2000",
+      "-3000"
+    ],
+    "rows": 3
+  },
+  {
+    "name": "synthetic-credit-3",
+    "kind": "credit",
+    "layout": 3,
+    "expected_minor": [
+      "-1000",
+      "-2000",
+      "-3000"
+    ],
+    "rows": 3
+  },
+  {
+    "name": "synthetic-payslip-1",
+    "kind": "payslip",
+    "layout": 1,
+    "net_minor": "160000"
+  },
+  {
+    "name": "synthetic-payslip-2",
+    "kind": "payslip",
+    "layout": 2,
+    "net_minor": "160000"
+  },
+  {
+    "name": "synthetic-payslip-3",
+    "kind": "payslip",
+    "layout": 3,
+    "net_minor": "160000"
+  }
+]

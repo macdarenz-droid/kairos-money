@@ -2,6 +2,7 @@
 from pathlib import Path
 import json
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -9,6 +10,10 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE = ROOT / 'docs/evidence'
 EVIDENCE.mkdir(parents=True, exist_ok=True)
+SCREENS = EVIDENCE / 'android-screens-current'
+# Generated output from this disposable test run; never reuse historical screenshots.
+if SCREENS.exists():
+    shutil.rmtree(SCREENS)
 
 
 def adb(*args, timeout=120):
@@ -75,13 +80,14 @@ try:
     adb('shell', 'cmd', 'connectivity', 'airplane-mode', 'enable')
     (EVIDENCE / 'android-webview-provider.txt').write_text(adb('shell', 'dumpsys', 'webviewupdate'))
     instrumentation('FoundationInstrumentedTest', 2)
+    instrumentation('ImportInstrumentedTest', 2)
     instrumentation('AcceptanceInstrumentedTest', 1)
-    adb('pull', '/sdcard/Android/data/app.kairos.money/files/evidence', str(EVIDENCE / 'android-screens'))
+    adb('pull', '/sdcard/Android/data/app.kairos.money/files/evidence', str(SCREENS))
     subprocess.run([sys.executable, str(ROOT / 'scripts/verify-android-delete.py')], check=True)
     instrumentation('PostDeleteInstrumentedTest', 1)
     (EVIDENCE / 'native-run-status.json').write_text(json.dumps({
         'status': 'PASS', 'installed': True, 'instrumentation_executed': True,
-        'foundation_tests': 2, 'acceptance_tests': 1, 'post_delete_tests': 1,
+        'foundation_tests': 2, 'import_tests': 2, 'acceptance_tests': 1, 'post_delete_tests': 1,
         'native_encryption_proven': True, 'native_delete_proven': True,
         'real_document_export_proven': True, 'background_unlock': '1 second retained; 61 seconds locked',
         'runner': 'Android 34 emulator; airplane mode enabled',
@@ -96,8 +102,9 @@ except Exception as error:
     raise
 finally:
     # Preserve failure evidence even if an assertion interrupts the happy path.
-    subprocess.run(['adb', 'pull', '/sdcard/Android/data/app.kairos.money/files/evidence',
-                    str(EVIDENCE / 'android-screens')], capture_output=True)
+    if not SCREENS.exists():
+        subprocess.run(['adb', 'pull', '/sdcard/Android/data/app.kairos.money/files/evidence',
+                        str(SCREENS)], capture_output=True)
     if log_stream is not None:
         log_stream.terminate()
         try:

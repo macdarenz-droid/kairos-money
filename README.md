@@ -78,3 +78,9 @@ No account, analytics, financial-data network calls or internet permission. A na
 Exports contain readable JSON and per-table CSV inside a ZIP and are written to the Android document location explicitly chosen by the user. Keep those files private. Delete all data clears the app's database, files, preferences and keys, then Android closes it. User-created exports outside the app must be deleted separately.
 
 There is no account-based PIN recovery. Encrypted backup/restore is Session 4. iOS configuration is prepared, but a Keychain/LocalAuthentication vault implementation is still required; there is no insecure fallback.
+
+## Export-first revision planned for Session 2.5
+
+Manual file imports are the only v1 data path. Direct bank API integration is outside v1 because its accredited-provider/server architecture does not fit this local-only app. Kairos will never request internet-banking credentials or use credential-scraping aggregators.
+
+After Session 2 passes, Session 2.5 makes weekly OFX/QIF and CSV/XLSX exports the preferred update path, while retaining all PDF/OCR support. The Update accounts flow will name a date range overlapping the previous covered week, so imports can reconcile transactions that settle later. These freshness and export-without-balances features are planned, not yet available in the current Session 2 build. See `docs/SESSION_2_5.md`.

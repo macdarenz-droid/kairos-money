@@ -1,3 +1,4 @@
+import { importService } from '../../ingest/service';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { asc, eq } from 'drizzle-orm';
 import { accounts, schema, tableNames } from './schema';
@@ -15,6 +16,7 @@ export function repository(driver: Driver) {
     return { rows: method === 'get' ? (rows[0] ?? []) : rows };
   }, { schema });
   return {
+    imports: importService(driver),
     async accounts() { return db.select().from(accounts).orderBy(asc(accounts.name), asc(accounts.id)); },
     async addAccount(input: NewAccount) {
       const name = input.name.trim();

@@ -16,9 +16,13 @@ Payslips include employer, gross/net/tax/super, allowances, deductions, YTD and 
 
 Gate: all six import orders have identical canonical ledger bytes; 14-day overlap has no duplicates; repeat files add nothing; balance mismatch quarantines the whole batch; transfers count as neither income nor spend; rollback of batch 2 preserves 1 and 3; coverage gaps are visible and excluded from averages; every failure names what was unreadable and offers a concrete action.
 
+## Session 2.5 — Export-first revision
+
+Mandatory after Session 2 PASS, before Session 3. See `SESSION_2_5.md` for the complete accepted revision: source adapter boundary, CommBank/Westpac export inference, integrity tiers, pending supersession and weekly freshness loop. Preserve every Session 2 acceptance test unmodified. PDF/OCR remains supported.
+
 ## Session 3 — Intelligence
 
-Write RESEARCH.md first, using primary sources for the named effects in the brief. Separate research mechanisms from unvalidated app heuristics. Signals are versioned with stored inputs and return insufficient_data when coverage or necessary fields are absent. Never invent timestamps, instrument types, planning intent or enjoyment from a statement that lacks them.
+Respect the Session 2.5 integrity tiers and gaps; reduce confidence and disclose predominantly Tier C inputs. Exclude pending transactions from historical signals. Write RESEARCH.md first, using primary sources for the named effects in the brief. Separate research mechanisms from unvalidated app heuristics. Signals are versioned with stored inputs and return insufficient_data when coverage or necessary fields are absent. Never invent timestamps, instrument types, planning intent or enjoyment from a statement that lacks them.
 
 Implement the twelve specified signals (buffer, impulse, payday decay, volatility, concentration, subscription drag, fixed burden, savings consistency, friction, late-night share, small leaks and recovery lag), monthly and trailing-90 windows, four axes and six descriptive archetypes. No archetype under 60 covered days. Every insight needs signal, crossed threshold, transaction evidence, one if-then action and a derived dollar scenario. Label projections as assumptions, not causal promises. Rank impact × ease, show at most three, suppress after two dismissals.
 
@@ -28,7 +32,7 @@ Gate: insight contract/property checks; 20-day still-learning state; source dril
 
 ## Session 4 — Finish and release
 
-Money Fingerprint is the sole expressive visual: deterministic signal vector, monthly comparison, labelled axes. Add custom gap-aware cashflow, category treemap, payday-decay, subscription and net-worth charts. At most four onboarding steps, ending in real import. Opt-in individual notifications with frequency caps. Cash entries, receipts, merchant views, annualiser and monthly changes.
+Charts distinguish coverage gaps from the stale live edge; incomplete-month fingerprints are provisional. Money Fingerprint is the sole expressive visual: deterministic signal vector, monthly comparison, labelled axes. Add custom gap-aware cashflow, category treemap, payday-decay, subscription and net-worth charts. At most four onboarding steps, ending in real import. Opt-in individual notifications with frequency caps. Cash entries, receipts, merchant views, annualiser and monthly changes.
 
 AA in both themes, 200% text, screen-reader amount labels, reduced motion and 44px targets. Cold-start target under two seconds; virtualized 20k ledger; worker-based 40-page PDF with progress. Corruption/low-storage/interrupted-import recovery; encrypted user-chosen backup/restore; lock edge cases. Secret-backed release signing, versioning, changelog and Play Store data-safety text.
 

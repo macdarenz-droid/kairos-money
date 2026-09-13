@@ -1,0 +1,10 @@
+Period end | 14/01/2026
+Gross | 2000.00
+Net | 1600.00
+Tax | 400.00
+Super | 240.00
+YTD Gross | 12000.00
+YTD Tax | 2400.00
+Employer | Synthetic employer
+Pay date | 15/01/2026
+Period start | 01/01/2026

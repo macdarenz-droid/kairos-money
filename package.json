@@ -1,9 +1,11 @@
 {
   "name": "kairos-money",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "npm run tokens && tsc -b && vite build",
@@ -19,16 +21,19 @@
     "dev:fixtures": "tsx scripts/seed-fixtures.ts"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "6.0.2",
     "@capacitor/android": "6.2.2",
     "@capacitor/app": "6.0.2",
     "@capacitor/core": "6.2.2",
     "@capacitor/filesystem": "6.0.3",
-    "@capacitor-community/sqlite": "6.0.2",
+    "@capawesome/capacitor-file-picker": "6.2.0",
     "@fontsource-variable/inter": "5.2.8",
+    "@noble/hashes": "1.8.0",
     "@tanstack/react-query": "5.90.2",
     "drizzle-orm": "0.44.5",
     "fflate": "0.8.2",
     "lucide-react": "0.468.0",
+    "pdfjs-dist": "4.10.38",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "zustand": "5.0.8"

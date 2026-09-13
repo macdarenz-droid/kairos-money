@@ -1,36 +1,34 @@
-# Kairos Money Tracker — Session 1 handoff
+# Kairos Money Tracker — Session 2 in progress
 
 ## State
 
-**Session 1 PASS. Session 2 has not started.** The final gate is `docs/GATE_SESSION_1.md`.
+Session 1 PASS. Session 2 OPEN pending its final native import/OCR gate and screenshot review. Session 2.5 is accepted and recorded, but cannot begin before Session 2 PASS. Do not start Session 3.
 
-Private repository: `macdarenz-droid/kairos-money`. Tested source commit `3b9e8f941193b99069ad2edfa0f726bcfb9f13cb`; final evidence/documentation commit does not change application code.
+Repository: `macdarenz-droid/kairos-money`. Active local source: `/workspace/scratch/4b0b7f8b9437/kairos-money`, branch `codex/session2-import`. The GitHub connector and local Git have different commit IDs; always use the current remote head as the parent of connector commits.
 
-## Built and verified
+## Built this session
 
-Capacitor 6 / React 18 / strict TypeScript / Vite Android foundation; encrypted SQLCipher ledger with Drizzle and two reversible migrations across 16 tables; exact bigint money; separately designed dark/light tokens and primitives; Today, Ledger, Insights, You and Quick; account setup; native PIN/optional biometric lock; 60-second background policy; actual document-picker JSON/CSV export and OS deletion. No production synthetic fixtures, import or intelligence stand-ins.
+- Pure detection, CSV/OFX/QIF/positional parsers, date/sign/merchant normalization, exact balance quarantine, fingerprint/near-duplicate reconciliation, coverage union/gaps and deterministic source provenance.
+- Real SQLite staging, atomic commit and batch rollback. Entire selected files are encrypted in reserved staging rows until extraction. Normalized documents remain staged after commit to preserve contributions. Correction-created rules become live only on commit and are removed on batch rollback.
+- pdf.js legacy build with bundled worker, positional page stitching, safe XLSX XML extraction preserving decimal strings, and a Capacitor-native bundled ML Kit OCR bridge. No INTERNET permission, no model download, no server parsing.
+- Actual Android file picker; per-file account/date/balance confirmation; manual column mapping; uncertain row and payslip corrections; explicit review; ledger search/source detail; rollback; coverage map and data health.
+- Payslip labels, net-pay linkage, pay-cycle detection, exact take-home/tax ratios and net-pay distribution/variability. Payslips never create a second salary transaction or bank coverage.
+- Synthetic fixtures: three layouts per bank account class and payslip, real PDFs, page breaks and four scanned images/image-only PDFs. No fixtures enter production assets; Android instrumentation owns its test assets separately.
 
-19 source tests and 10,000 random money sequences pass. Four native tests pass; deletion verifies 65 files to zero and fresh setup. All 13 native screenshots reviewed successfully. Full evidence: `docs/evidence/session-1-final.json` and [successful CI run](https://github.com/macdarenz-droid/kairos-money/actions/runs/34747556681).
+## Evidence and continuation
 
-The installable v0.1.0 debug APK is artifact 10314384347 in that run. SHA-256: `4dbb90ec4a16c2ff679395dba960b33f61fdb6bf8e611818a39886d5df97b060` (18,473,169 bytes). This is development signing, not release signing. Native validation uses Android 34 AOSP in airplane mode; enrolled physical biometrics and all-device compatibility are not claimed.
+`docs/GATE_SESSION_2.md` is authoritative. Source tests cover all six import orders (15 randomized amounts), overlap, idempotence, balance quarantine, transfers, middle rollback, interrupted commit, pending-to-posted review, payslip linking, formats/golden files and both-theme import UI. Android app and instrumentation compile and lint; actual device gate and screenshots remain to be verified.
 
-## Exact next steps — Session 2
+1. Finish `npm run check` and ensure generated SCHEMA/CONTRAST/tokens match.
+2. Publish source and run `.github/workflows/android.yml`, including `ImportInstrumentedTest` between foundation and export/delete checks.
+3. Inspect all four native OCR scans and file-picker → staging → review → commit → rollback evidence, then review new dark/light screenshots. Fix any failure without changing expected behavior to hide it.
+4. Deliver the tested signed debug APK and mark Session 2 PASS only with exact evidence. Preserve its acceptance tests unmodified from that point onward.
+5. Implement `docs/SESSION_2_5.md` next. The latest revision adds explicit design constraints: in-place dense mapping, one Update accounts sheet, muted staleness and plain result sentences using existing primitives. Then run its regression/mixed-source/supersession/inference/tier/freshness gate before Session 3.
 
-1. Read the full import brief, SCHEMA.md and ADRs. Preserve staging-only writes before explicit confirmation and many-to-many transaction provenance.
-2. Build pure pipeline contracts and synthetic golden fixtures before parser UI: detect, extract, parse, normalize, stage, reconcile, review, commit. Include three layouts per account/payslip class, a scan and a page break.
-3. Prove six-order canonical ledger equality, overlapping duplicate handling, identical-file idempotence, balance quarantine, transfer exclusion and rollback preserving other batches.
-4. Connect mandatory review/correction/rule creation, coverage gaps and data health only after the core passes; add payslip extraction, pay-cycle detection and net-pay linking.
-5. Run the complete Session 2 acceptance gate and update handoff/schema/ADRs with an installable APK. Do not begin Session 3 before it passes.
+## Known scope and deferred work
 
-## Deferred by the brief
+Session 2 requires stated opening/closing balances; no-balance exports, headerless/issuer inference, remembered mappings, source hierarchy and adapters, audited changed-amount supersession, weekly freshness and reminders are the mandatory Session 2.5 revision. PDF/OCR remains supported throughout. Direct bank APIs are out of v1; credential scraping is permanently excluded. Optional email ingestion stays off unless every required revision gate passes first.
 
-All imports, OCR, dedupe/coverage reconciliation, rules, payslip matching, behavioural signals, archetypes, forecasts, goals UI, fingerprint/charts, notification/cash/receipt features, release signing and encrypted backup/restore. No fake stand-ins are active. iOS needs the native vault implementation before it can run; browser preview intentionally cannot store financial data.
+Transfer automation requires explicit transfer evidence plus a unique reciprocal candidate; ambiguous matches remain visible rather than excluding unrelated purchases. Repeated identical purchases require consistent confirmed occurrence identity across overlaps. Canonical order independence refers to sorted logical ledger/source state, not SQLCipher bytes or import timestamps.
 
-## Risks the next sessions must settle
-
-- Preserve many-to-many source provenance when deduplicating or rolling back overlaps. A single import_batch_id cannot support safe rollback.
-- Identical same-day same-amount same-description purchases can collide under the proposed fingerprint; resolve occurrence identity with golden tests before claiming lossless import.
-- Define byte-identical **canonical ledger snapshots** for the six import orders. Physical encrypted SQLite file bytes and real import-event timestamps are not order-independent.
-- Do not infer impulse intent, time-of-day, instrument, location, awareness or enjoyment when statements lack the inputs. Return insufficient_data. Research mechanisms do not validate the app's invented archetype thresholds or causal dollar promises.
-- Account coverage is not the sum of overlapping days across accounts. The profile gate requires genuine covered history, including in the Session 4 E2E fixture.
-- Debug certificates are development credentials; switching signing identity can require reinstall. Preserve a stable development certificate before relying on upgrades with real data. Release signing remains separate.
+Intelligence, research catalogue, forecasts, fingerprint/charts, release signing, broader device/biometric compatibility and Session 4 performance/accessibility remain deferred. Session 3 must respect integrity tiers and gaps and exclude pending history; Session 4 distinguishes gaps from staleness and labels partial-month fingerprints provisional.

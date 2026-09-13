@@ -13,3 +13,7 @@
 ### Session 1 verification completed — 2026-09-13
 
 Native launch, encryption, PIN/resume lock, document-picker export, OS deletion and fresh setup pass. All 13 theme screenshots reviewed. Source suite remains 19 tests plus 10,000 randomized money sequences. Final tested build: 3b9e8f94.
+
+## 0.2.0 — Import engine (verification in progress)
+
+Adds encrypted multi-file staging, local CSV/OFX/QIF/XLSX/PDF and bundled OCR extraction, mandatory review, exact balance quarantine, deterministic overlap reconciliation, batch rollback, coverage/data health, merchant rules and payslip linkage. Adds actual file and native import tests. Records the mandatory export-first Session 2.5 revision before intelligence; its features are not yet implemented.

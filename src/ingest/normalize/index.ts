@@ -1,0 +1,70 @@
+import { sha256 } from '@noble/hashes/sha256';
+import { bytesToHex } from '@noble/hashes/utils';
+import { currencyDigits, money, parseDecimal, type Currency } from '../../core/money';
+import { ImportFailure, type ImportContext, type NormalizedRow, type Period, type RawRow } from '../types';
+export function hash(value: string | Uint8Array): string { return bytesToHex(sha256(typeof value === 'string' ? new TextEncoder().encode(value) : value)); }
+export function isoDay(input: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input) || !Number.isFinite(Date.parse(input)) || new Date(input).toISOString().slice(0, 10) !== input) throw new Error(`Invalid calendar date: ${input}.`);
+  return input;
+}
+export function dayNumber(day: string): number { return Date.parse(isoDay(day)) / 86400000; }
+export function shiftDay(day: string, days: number): string { return new Date((dayNumber(day) + days) * 86400000).toISOString().slice(0, 10); }
+export function normalizeDate(value: string, period: Period, order: 'DMY' | 'MDY'): string {
+  isoDay(period.start); isoDay(period.end);
+  if (period.start > period.end) throw new Error('Statement end precedes its start.');
+  const cleaned = value.trim(); let candidates: string[] = [];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) candidates = [isoDay(cleaned)];
+  else {
+    const m = /^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?$/.exec(cleaned);
+    if (!m) throw new ImportFailure('Statement period is known.', 'The transaction date could not be read.', value, 'Use day/month/year or confirm the column mapping.');
+    const month = Number(m[order === 'DMY' ? 2 : 1]), day = Number(m[order === 'DMY' ? 1 : 2]);
+    const years = m[3] ? [Number(m[3].length === 2 ? `20${m[3]}` : m[3])] : Array.from({ length: Number(period.end.slice(0, 4)) - Number(period.start.slice(0, 4)) + 1 }, (_, i) => Number(period.start.slice(0, 4)) + i);
+    candidates = years.flatMap(year => { const s = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`; try { return [isoDay(s)]; } catch { return []; } });
+  }
+  candidates = candidates.filter(s => s >= period.start && s <= period.end);
+  if (candidates.length !== 1) throw new ImportFailure('The date format was read.', 'The date is ambiguous or outside the statement period.', value, 'Confirm the statement dates and date format.');
+  return candidates[0]!;
+}
+export function normalizeAmount(value: string, code: Currency, decimal: '.' | ','): bigint {
+  let s = value.trim().toUpperCase();
+  const negative = /^\(.*\)$/.test(s) || /DR$/.test(s) || /-$/.test(s) || /^-/.test(s);
+  if (/CR$/.test(s) && negative) throw new Error(`Conflicting amount signs: ${value}. Confirm the amount.`);
+  s = s.replace(/(?:DR|CR)$/, '').replace(/[()]/g, '').replace(/^-|-$|^\+/, '').trim().replace(/^(?:AUD|USD|PHP|EUR|GBP|NZD|CAD|SGD|JPY|KWD|A\$|\$|£|€|₱)\s*/, '');
+  const grouping = decimal === '.' ? ',' : '.';
+  const parts = s.split(decimal);
+  if (parts.length > 2 || (parts[1]?.length ?? 0) > currencyDigits[code]) throw new Error(`The decimal format in “${value}” is unclear. Confirm the decimal separator.`);
+  const whole = parts[0] ?? '';
+  const groupPattern = grouping === ',' ? /^\d{1,3}(,\d{3})+$/ : /^\d{1,3}(\.\d{3})+$/;
+  if (!/^\d+$/.test(whole) && !groupPattern.test(whole)) throw new Error(`The amount “${value}” has invalid digit grouping. Correct this amount.`);
+  if (parts[1] !== undefined && !/^\d+$/.test(parts[1])) throw new Error(`The amount “${value}” has an unreadable fraction. Correct this amount.`);
+  const parsed = parseDecimal(`${negative ? '-' : ''}${whole.split(grouping).join('')}${parts[1] === undefined ? '' : '.' + parts[1]}`, code);
+  return parsed.minor;
+}
+export function merchantName(value: string): string {
+  return value.normalize('NFKC').toUpperCase().replace(/\b(?:EFTPOS|POS|VISA|MASTERCARD|DEBIT CARD|CREDIT CARD)\b/g, ' ').replace(/\b(?:TERMINAL|STORE|REF|REFERENCE|AUTH|TID)\s*[#:]?\s*[A-Z0-9-]+\b/g, ' ').replace(/\b\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?\b/g, ' ').replace(/\b\d{5,}\b/g, ' ').replace(/\s+(?:MELBOURNE|SYDNEY|BRISBANE|PERTH|ADELAIDE)(?:\s+(?:VIC|NSW|QLD|WA|SA))?$/g, '').replace(/[^\p{L}\p{N} ]/gu, ' ').replace(/\s+/g, ' ').trim();
+}
+export function similarity(a: string, b: string): number {
+  if (a === b) return 10000;
+  const grams = (s: string) => new Set(Array.from({ length: Math.max(0, s.length - 2) }, (_, i) => s.slice(i, i + 3)));
+  const x = grams(a), y = grams(b); if (!x.size || !y.size) return 0;
+  return Math.floor(20000 * [...x].filter(g => y.has(g)).length / (x.size + y.size));
+}
+export function canonicalMerchant(raw: string, aliases: readonly { canonical: string; aliases: string[] }[]): string {
+  const name = merchantName(raw);
+  const ranked = aliases.map(a => ({ name: a.canonical, score: Math.max(...[a.canonical, ...a.aliases].map(v => similarity(name, merchantName(v)))) })).filter(a => a.score >= 8600).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  return ranked[0] && (!ranked[1] || ranked[0].score > ranked[1].score) ? ranked[0].name : name;
+}
+export function rowFingerprint(row: Pick<NormalizedRow, 'accountId' | 'date' | 'minor' | 'merchant' | 'occurrence'>): string { return hash(JSON.stringify([row.accountId, row.date, row.minor, row.merchant.slice(0, 120), row.occurrence])); }
+export function normalizeRow(raw: RawRow, context: ImportContext): NormalizedRow {
+  let minor = normalizeAmount(raw.amount, context.currency, context.decimal);
+  if (raw.direction) minor = (minor < 0n ? -minor : minor) * (raw.direction === 'debit' ? -1n : 1n);
+  else if (/(?:DR|CR)\s*$/i.test(raw.amount)) { /* Explicit debit/credit suffix already supplies ledger direction. */ }
+  else if (context.accountKind === 'credit' && context.creditPositivePurchases) minor = -minor;
+  money(minor, context.currency);
+  const merchant = merchantName(raw.description);
+  const row: NormalizedRow = { sourceId: raw.sourceId, accountId: context.accountId, date: normalizeDate(raw.date, context.period, context.dateOrder), description: raw.description.trim(), merchant, minor: minor.toString(), currency: context.currency, reference: raw.reference ?? '', pending: raw.pending ?? false, confidence: raw.confidence, fingerprint: '', issues: [], category: null, verified: false, duplicateOf: null, occurrence: '', createRule: false };
+  if (!row.description || !merchant) row.issues.push('Confirm the merchant description.');
+  if (row.pending) row.issues.push('This transaction is pending. Confirm it against a settled statement.');
+  if (raw.confidence < 9000) row.issues.push('Check this extracted row against the source.');
+  row.fingerprint = rowFingerprint(row); return row;
+}

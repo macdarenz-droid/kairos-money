@@ -9,7 +9,7 @@ import { memoryDriver } from './db-helper';
 import { migrate } from '../src/core/db/migrate';
 import { repository, type Repository } from '../src/core/db/repository';
 const native = vi.hoisted(() => ({ configured: false, unlocked: false, listener: undefined as ((state: { isActive: boolean }) => void) | undefined, repo: undefined as Repository | undefined, erased: false }));
-vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => true } }));
+vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => true }, registerPlugin: () => ({}) }));
 vi.mock('@capacitor/app', () => ({ App: { addListener: async (_name: string, callback: (state: { isActive: boolean }) => void) => { native.listener = callback; return { remove() {} }; } } }));
 vi.mock('../src/core/db/native', () => ({ openDatabase: async () => native.repo, closeDatabase: async () => {}, deleteDatabase: async () => { native.erased = true; }, serial: async <T,>(fn: () => Promise<T>) => fn() }));
 vi.mock('../src/core/crypto/native', () => ({ Vault: {
