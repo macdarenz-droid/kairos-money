@@ -1,17 +1,13 @@
 {
   "contract": "KAIROS-MONEY-V16-ADAPTED",
   "phase": "S1 and Session 3 consolidated gate",
-  "lease": {
-    "owner": "kairos-money-continuation-20260914T0411",
-    "acquired_at": "2026-09-13T18:11:00Z",
-    "expires_at": "2026-09-13T20:11:00Z"
-  },
-  "candidate_sha": "b456368993b4fe6e7e2cb6462e2b57f882828b00",
-  "candidate_tree": "d7387f2d7b8b4167046736b43acd411c348074df",
-  "local_checkpoint": "pending backup-reset-restore acceptance",
-  "run_id": 34770935104,
+  "lease": null,
+  "candidate_sha": "38582738d975355263c538900ec1c2423a1d7c80",
+  "candidate_tree": "33b80cc448139fba4db1a3c38b363ab0b9f34c00",
+  "local_checkpoint": "ee3c544",
+  "run_id": null,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
-  "last_result": "Candidate b456368993b4fe6e7e2cb6462e2b57f882828b00 / run 34770935104 passed the full existing source and native workflow.",
-  "local_validation": "Added real Forgot-PIN and backup-reset-restore device acceptance. Source lint, 154 tests in 25 files, production build and Python syntax PASS. Exact Android compilation remains pending CI because the local Gradle/SDK distribution is unavailable.",
-  "next_action": "Publish the consolidated device-acceptance candidate. Resolve its workflow once; on pass, retrieve the one required artifact and review all screenshots before marking the milestone PASS and opening Session 4."
+  "last_result": "Published consolidated real-device acceptance for Forgot PIN, encrypted backup save, locked reset, wrong-code zero-write refusal and exact full-ledger restore.",
+  "local_validation": "Source lint, 154 tests in 25 files, production build and Python harness syntax PASS. Exact Android compilation was unavailable locally because the Gradle/SDK distribution disappeared; CI must establish compilation and device execution.",
+  "next_action": "Resolve candidate 38582738d975355263c538900ec1c2423a1d7c80 once. If unfinished, end. On pass, retrieve the single required artifact, verify backup-reset-restore evidence and review every required dark/light screenshot; only then close the milestone and open Session 4."
 }
