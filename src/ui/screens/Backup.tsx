@@ -1,3 +1,4 @@
+import {RecoveryCode} from '../design/RecoveryCode';
 import { useState } from 'react';
 import { FilePicker } from '@capawesome/capacitor-file-picker';
 import { Filesystem } from '@capacitor/filesystem';
@@ -46,7 +47,7 @@ export function Backup({ onClose, notify }: { onClose: () => void; notify: (mess
   }
   return <Sheet title="Encrypted backup" onClose={() => { if (!busy) onClose(); }}><div className="stack">
     {mode === 'choose' && <><p>Save a private backup, or restore one into an empty ledger. The recovery code decrypts backups; it cannot unlock this app.</p><Button disabled={busy} onClick={() => void prepare()}>Save backup or view recovery code</Button><Button disabled={busy} onClick={() => { setCode(''); setMode('restore'); }}>Restore a backup</Button></>}
-    {mode === 'save' && <><p>Write down all ten groups and keep them separately from your backup. Without this code, a backup cannot be recovered after a reset or on another device.</p><Input label="Recovery code" readOnly value={code} onFocus={event => event.target.select()}/><label className="check-row"><input type="checkbox" checked={written} onChange={event => setWritten(event.target.checked)}/>I have written this down.</label><p className="meta">You can review this code here whenever Kairos is unlocked.</p><Button variant="primary" disabled={busy || !written} onClick={() => void save()}>{busy ? 'Preparing backup…' : 'Choose backup location'}</Button></>}
+    {mode === 'save' && <><p>Write down all ten groups and keep them separately from your backup. Without this code, a backup cannot be recovered after a reset or on another device.</p><RecoveryCode value={code}/><label className="check-row"><input type="checkbox" checked={written} onChange={event => setWritten(event.target.checked)}/>I have written this down.</label><p className="meta">You can review this code here whenever Kairos is unlocked.</p><Button variant="primary" disabled={busy || !written} onClick={() => void save()}>{busy ? 'Preparing backup…' : 'Choose backup location'}</Button></>}
     {mode === 'restore' && <><p>Start with an empty Kairos ledger and enter the code saved with your backup. Existing accounts or imports will not be replaced. Your current app PIN stays unchanged.</p><Input label="Backup recovery code" autoComplete="off" spellCheck={false} value={code} onChange={event => setCode(event.target.value)}/><Button variant="primary" disabled={busy || !code.trim()} onClick={() => void restore()}>{busy ? 'Restoring…' : 'Choose backup file'}</Button></>}
     {error && <p role="alert">{error}</p>}
   </div></Sheet>;

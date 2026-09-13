@@ -1,5 +1,12 @@
 import { covered, dates, day, type Key, type Signal, type Snapshot, type Window } from '../model';
 
+/** Dimensionless signed millionths for chart geometry; never a monetary conversion. */
+export function displayRatio(value:string,ceiling:string):string {
+ const limit=BigInt(ceiling);if(limit<=0n)throw new Error('Chart scale must be positive.');
+ const scaled=BigInt(value)*1000000n/limit;
+ return (scaled < -1000000n ? -1000000n : scaled>1000000n ? 1000000n : scaled).toString();
+}
+
 const fingerprintAxes: { key: Key; label: string; ceiling: bigint }[] = [
   { key: 'spend_volatility', label: 'Spending variability', ceiling: 20000n },
   { key: 'impulse_ratio', label: 'Unplanned spending', ceiling: 10000n },

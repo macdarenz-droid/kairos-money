@@ -18,7 +18,9 @@ export function intelligenceRepository(driver:Driver){
   const pays=(await driver.query('SELECT * FROM payslips ORDER BY pay_date,id')).filter(r=>r.currency===c).map(r=>({id:String(r.id),employer:String(r.employer),date:String(r.pay_date),start:String(r.period_start),end:String(r.period_end),net:String(r.net_minor),gross:String(r.gross_minor),currency:c,transactionId:r.linked_transaction_id===null?null:String(r.linked_transaction_id)}));
   const s:Snapshot={asOf,currency:c,accountIds:ids,transactions,coverage,pays};const reflection=await setting<Snapshot['selfReport']|null>('intelligence:reflection',null);if(reflection)s.selfReport=reflection;
   const provenance=await driver.query('SELECT s.transaction_id,s.source_row_id,s.original_payload,b.file_name FROM transaction_sources s JOIN import_batches b ON b.id=s.import_batch_id');
-  for(const t of transactions)t.sources=provenance.filter(r=>r.transaction_id===t.id).map(r=>({file:String(r.file_name),row:String(r.source_row_id),raw:String(r.original_payload)}));
+  const sources=new Map<string,NonNullable<Transaction['sources']>>();
+  for(const r of provenance){const id=String(r.transaction_id),group=sources.get(id)??[];group.push({file:String(r.file_name),row:String(r.source_row_id),raw:String(r.original_payload)});sources.set(id,group);}
+  for(const t of transactions)t.sources=sources.get(t.id)??[];
   const recurringNames=new Set(recurrences(s).map(r=>r.merchant));for(const t of transactions)if(recurringNames.has(t.description.trim().toLowerCase()))t.recurring=true;
   const liquidAccounts=accounts.filter(a=>['checking','savings','cash','credit'].includes(String(a.type)));let balance=0n,liability=0n;const evidence:string[]=[];let valid=liquidAccounts.length>0;
   for(const a of liquidAccounts){const anchors=await driver.query("SELECT * FROM import_batches WHERE account_id=? AND status='committed' AND integrity_tier='A' AND period_end<=? AND stated_closing_minor IS NOT NULL ORDER BY period_end DESC,id",[String(a.id),asOf]);const anchor=anchors[0];if(!anchor){valid=false;continue;}const date=String(anchor.period_end);const intervals=coverage.filter(v=>v.accountId===a.id);for(let d=day(date);d<=day(asOf);d++)if(!intervals.some(v=>day(v.start)<=d&&day(v.end)>=d))valid=false;
@@ -44,5 +46,5 @@ export function intelligenceRepository(driver:Driver){
  async function setBuffer(code:string,minor:string){if(BigInt(minor)<0n)throw new Error('Buffer cannot be negative.');money(BigInt(minor),currency(code));await set('intelligence:buffer:'+code,minor);}
  async function annotate(id:string,data:Partial<Pick<Transaction,'instrument'|'hour'|'planned'|'outsideRoutine'|'overdraftFee'>>){if(data.hour!==undefined&&(!Number.isInteger(data.hour)||data.hour<0||data.hour>23))throw new Error('Use a local hour from 0 to 23.');if(!(await driver.query('SELECT id FROM transactions WHERE id=?',[id])).length)throw new Error('Transaction no longer exists.');const m=await setting<Record<string,typeof data>>('intelligence:metadata',{});m[id]=data;await set('intelligence:metadata',m);}
  async function setReflection(value:NonNullable<Snapshot['selfReport']>|null){if(value&&Object.values(value).some(v=>!Number.isInteger(v)||v<0||v>100))throw new Error('Choose a whole score from 0 to 100.');await set('intelligence:reflection',value);}
- return {analyse,dismiss,saveGoal,setBuffer,annotate,setReflection};
+ return {snapshot,analyse,dismiss,saveGoal,setBuffer,annotate,setReflection};
 }

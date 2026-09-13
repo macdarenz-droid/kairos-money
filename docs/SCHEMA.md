@@ -250,6 +250,10 @@ Version 1 uses existing tables without changing storage version. Signals use cur
 
 Manual entries use explicit manual-entry-v1 source envelopes in import_batches and a reserved __manual__ staging payload. They have no statement period, no source file and no coverage ranges. The payload stores positive integer-string amount, expense/income/transfer kind, account IDs, date, description, category, notes and confirmed source links. transactions and transaction_sources contain the live projection; transfers project two equal/opposite legs atomically. A confirmed import match suppresses only the corresponding manual projection, retaining the original record for rollback. Export, encrypted backup and deletion include these envelopes using the existing schema. See ADR/0017-manual-source-records.md.
 
+## Transaction attachments
+
+Encrypted app_settings keys ledger-detail:<transaction-id> and ledger-detail:manual:<manual-id> retain a note and receipt records (id, name, base64 data and locally extracted text). Receipts never create ledger transactions or coverage. Existing export/backup/delete include these values; manual deletion removes its attachment key. Import rollback retains attachment metadata for source reimport. See ADR/0018-session4-visuals-and-responsive-ledger.md.
+
 ## Migration metadata
 
 `_migrations(version INTEGER PRIMARY KEY)` is maintained transactionally by the migration runner. It is not financial data and is removed with the database during deletion.

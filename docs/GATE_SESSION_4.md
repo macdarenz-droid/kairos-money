@@ -2,6 +2,14 @@
 
 Prerequisite: Session 3 consolidated gate PASS, run 34783225808. This is one integrated private-v1 milestone, not a sequence of component releases.
 
+Current integrated work (not a release): run 34788034278 failed in manual entry after accounts were treated as absent during loading. The application now retains the Add transaction intent until account loading resolves; a source regression reproduces delayed accounts. Native input helpers also wait for the actual input before typing. Existing native assertions are retained. The next full candidate must include the consolidated remaining session work rather than rerunning this repair alone.
+
+Validation of this integration checkpoint: 192 tests in the full source run PASS, plus the subsequently added worker-failure rollback test PASS (193 total). Strict TypeScript, source lint and production build PASS before the final test-only addition. The latest test is included in final lint/type checking. Android compilation and the expanded native/visual assertions have not run for this checkpoint. No new full CI run is requested for this incomplete milestone.
+
+Implemented together since that candidate: monthly fingerprint/comparison with unknown/provisional axes; cashflow and category visuals; merchant history, recurring annual costs, upcoming bills and coverage-qualified monthly changes; receipt-file attachment/OCR and transaction notes; complete recovery-code group display; lazy PDF loading; variable-height ledger windowing; indexed reconciliation/provenance; dedicated large-reconciliation worker with rollback on failure. These features still need actual native/theme acceptance.
+
+Remaining scope is not waived: finish cashflow gap/stale visual distinction, labelled category treemap and payday/subscription/net-worth charts; direct receipt capture, bulk categories/splits/refunds/FX/net-worth/widget ownership; complete onboarding; opt-in local notifications (not bank-notification listening); device performance/40-page import and interruption proof; screen-by-screen accessibility; corruption/low-storage checks; signed private release and full E2E. Local checks cannot mark these PASS.
+
 | Workstream | State | Required acceptance |
 |---|---|---|
 | Fingerprint and custom charts | IN PROGRESS | Monthly comparison; labelled source axes; unknown/provisional states; gaps distinct from stale edges; dark/light review. Pure geometry inputs and cashflow data have three passing tests; UI remains open. |

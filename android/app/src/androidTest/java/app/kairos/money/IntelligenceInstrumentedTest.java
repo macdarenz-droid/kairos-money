@@ -50,6 +50,7 @@ public class IntelligenceInstrumentedTest {
         awaitJs("Boolean(" + button + ")"); js(button + ".click()");
     }
     private void input(String label, String value) throws Exception {
+        awaitJs("Array.from(document.querySelectorAll('label')).some(x=>x.textContent.startsWith(" + JSONObject.quote(label) + ") && x.querySelector('input'))");
         String script = "(()=>{const l=Array.from(document.querySelectorAll('label')).find(x=>x.textContent.startsWith(" + JSONObject.quote(label) + "));const i=l.querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(i," + JSONObject.quote(value) + ");i.dispatchEvent(new Event('input',{bubbles:true}));})()";
         js(script);
     }
@@ -155,6 +156,23 @@ public class IntelligenceInstrumentedTest {
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-match");js("document.querySelector('dialog .icon-button').click()");
                 click("Delete");NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-delete");click("Delete transaction");
                 awaitJs("!document.querySelector('dialog') && !document.body.innerText.includes('Synthetic manual purchase "+theme+"')");
+            }
+        }
+    }
+    @Test public void c_monthlyVisualEvidence() throws Exception {
+        try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(a->activity=a);unlock();
+            for(String theme:new String[]{"Light","Dark"}) {
+                click("You");click(theme);awaitJs("Boolean(document.querySelector('.money-visuals select'))");
+                js("(()=>{const e=document.querySelector('.money-visuals select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+                awaitJs("Boolean(document.querySelector('.fingerprint'))");
+                for(String heading:new String[]{"Money Fingerprint","Daily cashflow","What changed","Recurring costs","Upcoming bills","Merchant history"}) {
+                    js("Array.from(document.querySelectorAll('h2')).find(e=>e.textContent==="+JSONObject.quote(heading)+").scrollIntoView()");
+                    NativeEvidence.capture(activity,theme.toLowerCase()+"-monthly-"+heading.toLowerCase().replace(' ','-'));
+                }
+                js("(()=>{const e=document.querySelector('.money-visuals input[type=range]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'1');e.dispatchEvent(new Event('input',{bubbles:true}));})()");
+                awaitJs("document.querySelector('.money-visuals input[type=range]').value==='1'");
+                js("document.querySelector('.money-visuals').scrollIntoView()");NativeEvidence.capture(activity,theme.toLowerCase()+"-monthly-comparison");
             }
         }
     }

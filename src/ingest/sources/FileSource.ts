@@ -24,6 +24,7 @@ export class FileSource implements TransactionSource {
   return this.extracted;
  }
  async inspect(progress?: (message: string) => void) { return statementDetails((await this.read(progress)).text); }
+ async receiptText(progress?: (message:string)=>void) {const data=await this.read(progress);if(data.kind!=='pdf'&&data.kind!=='image')throw new Error('Choose a receipt photo or PDF.');return data.text;}
  async fetch(options: SourceOptions, progress?: (message: string) => void, institution = this.institution): Promise<Document> {
   const e = await this.read(progress);
   if(e.kind==='ofx' && /<STMTTRNP[>\s]/i.test(e.text))throw new Error('This OFX includes pending records in a separate table. Export CSV including status so every row can be reviewed.');

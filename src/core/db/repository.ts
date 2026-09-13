@@ -1,4 +1,5 @@
 import { manualRepository } from '../../ledger/manual';
+import { attachmentRepository } from '../../ledger/attachments';
 import { restoreSnapshot } from './restore';
 import { intelligenceRepository } from '../../ledger/intelligence';
 import { importService } from '../../ingest/service';
@@ -21,6 +22,7 @@ export function repository(driver: Driver) {
   return {
     imports: importService(driver),
     manual: manualRepository(driver),
+    attachments: attachmentRepository(driver),
     restoreBackup: (snapshot: unknown) => restoreSnapshot(driver, snapshot),
     intelligence: intelligenceRepository(driver),
     async accounts() { return db.select().from(accounts).orderBy(asc(accounts.name), asc(accounts.id)); },

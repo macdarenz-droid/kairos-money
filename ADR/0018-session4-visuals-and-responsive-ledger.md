@@ -1,0 +1,11 @@
+# Session 4 evidence and responsiveness
+
+The visual layer reads a repository snapshot without writing ledger entries. Monthly fingerprint axes retain unknown values; incomplete months remain provisional. Historical months cannot borrow today's verified liquid balance. Charts normalize exact integer amounts into bounded dimensionless geometry only at the rendering boundary. Tables and evidence sheets retain exact money and source links.
+
+Daily cashflow breaks at missing coverage and labels the stale edge separately in its accessible daily listing. Monthly changes require two complete covered months. Merchant and category totals exclude pending entries and transfers. Recurring annual costs are explicitly conditional arithmetic, not confirmed contracts or future charges.
+
+PDF.js loads only for PDF extraction, retaining its separate parser worker. Browser reconciliation above 200 source rows runs in a dedicated module worker; small workloads and non-browser execution use the same pure implementation. Worker failures reject the operation, so the enclosing database transaction rolls back rather than accepting a partial result. Reconciliation candidate indexes preserve the original matching predicates and reciprocal uniqueness assertions.
+
+Large imported ledgers render measured, variable-height windows. ResizeObserver adapts to text-size changes; explicit row navigation and list positions preserve keyboard/screen-reader access. Source evidence is grouped once by transaction identity rather than scanning every source for every transaction. Local 20,000-record benchmarks are not substituted for Android cold-start or frame-time acceptance.
+
+Receipt and note metadata live in encrypted app_settings entries keyed `ledger-detail:<transaction-id>` or `ledger-detail:manual:<manual-id>`. This preserves the existing export/backup schema. A receipt is an attachment, never a new transaction. Removing a manual entry removes its attachments; rolling back an import retains attached data so reimport can restore its source identity. Files are limited to five receipts of 10 MB each per transaction. Camera capture, orphan-attachment management and real device picker evidence remain explicit acceptance work.
