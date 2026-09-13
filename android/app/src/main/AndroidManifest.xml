@@ -34,6 +34,7 @@
         </activity>
 
         <receiver android:name=".ReminderReceiver" android:exported="false" />
+        <receiver android:name=".MoneyNoticeReceiver" android:exported="false" />
 
         <!-- WebView renders bundled fonts; native downloadable emoji is unnecessary. -->
         <provider

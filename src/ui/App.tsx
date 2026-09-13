@@ -1,5 +1,6 @@
 import { ManualHistory, ManualSheet } from './screens/Manual';
 import { MoneyVisuals } from './screens/MoneyVisuals';
+import { NotificationSync } from './screens/Notifications';
 import { Intelligence } from './screens/Intelligence';
 import { useCallback, useEffect, useState } from 'react';
 import { create } from 'zustand';
@@ -35,6 +36,7 @@ export default function App() {
   const accountAction = <Button variant="primary" onClick={() => setSheet('account')}><Plus size={16}/>Set up an account</Button>;
   const quickActions = [{label:'Add transaction',icon:Plus,act:()=>setSheet('manual')},{label:'Update accounts',icon:FileText,act:()=>setSheet('update')},{ label: 'Import statements', icon: FileText, act: () => { if (!count) { setSheet('account'); return; } setTab('Ledger'); setSheet(null); setImportRequest(n => n + 1); } }, { label: 'Find a transaction', icon: Search, act: () => { setTab('Ledger'); setSheet(null); } }, { label: 'Add an account', icon: Plus, act: () => setSheet('account') }, ...(['Today', 'Ledger', 'Insights', 'You'] as const).map(t => ({ label: `Open ${t === 'You' ? 'settings' : t.toLowerCase()}`, icon: t === 'Today' ? CalendarDays : t === 'Ledger' ? FileText : t === 'Insights' ? Layers3 : ShieldCheck, act: () => { setTab(t); setSheet(null); } }))].filter(action => action.label.toLowerCase().includes(search.toLowerCase()));
   return <div className="app" aria-hidden={session.state === 'background' || undefined} style={session.state === 'background' ? { display: 'none' } : undefined}><header className="brand-bar"><Brand/><div className="privacy-status"><LockKeyhole size={12}/><span>{session.state === 'preview' ? 'Design preview' : 'On this device'}</span></div></header>
+    <NotificationSync/>
     {session.state === 'preview' && <p className="notice">Account storage and security require the Android app.</p>}
     <main><header className="screen-header"><div><h1>{tab === 'You' ? 'Your money, your way' : tab}</h1><p>{tab === 'Today' ? 'A clearer view starts with your data.' : tab === 'Ledger' ? 'Every account. One place to understand it.' : tab === 'Insights' ? 'Patterns need evidence.' : 'A private ledger you control.'}</p></div>{tab === 'Ledger' && <Button variant="quiet" className="icon-button" aria-label="Add account" onClick={() => setSheet('account')}><Plus size={20}/></Button>}</header>
     {accounts.error && <p className="error" role="alert">Accounts could not be read. Lock and reopen Kairos before continuing.</p>}

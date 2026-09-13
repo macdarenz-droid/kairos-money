@@ -2,7 +2,7 @@ import { Capacitor, registerPlugin } from '@capacitor/core';
 import { shiftDay } from './normalize';
 import { accountFreshness } from './freshness';
 import type { Batch } from './types';
-export const Reminder = registerPlugin<{ schedule(o:{at:number}):Promise<void>; cancel():Promise<void>; request():Promise<{granted:boolean}> }>('KairosReminder');
+export const Reminder = registerPlugin<{ schedule(o:{at:number}):Promise<void>; cancel():Promise<void>; request():Promise<{granted:boolean}>; notices(o:{queue:{kind:string;key:string;at:number}[]}):Promise<void> }>('KairosReminder');
 export function nextReminder(weekday:number,accountIds:string[],batches:readonly Batch[],today:string):number|null {
  if(!Number.isInteger(weekday)||weekday<0||weekday>6||!accountIds.length)return null;
  let day=shiftDay(today,1);

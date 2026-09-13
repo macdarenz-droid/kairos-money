@@ -21,4 +21,5 @@ public class KairosReminderPlugin extends Plugin {
   ReminderReceiver.schedule(getContext(),at);call.resolve();
  }
  @PluginMethod public void cancel(PluginCall call) {ReminderReceiver.cancel(getContext());call.resolve();}
+ @PluginMethod public void notices(PluginCall call) {try{JSArray queue=call.getArray("queue");if(queue==null)throw new IllegalArgumentException("Choose a notification schedule.");MoneyNoticeReceiver.replace(getContext(),queue);call.resolve();}catch(Exception error){call.reject(error.getMessage());}}
 }

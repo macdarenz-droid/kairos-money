@@ -19,3 +19,6 @@ Session 4 starts as one integrated completion milestone. Added pure visual-data 
 Next: connect monthly fingerprint/comparison and charts to real repository data; complete product features, accessibility, worker imports, performance and hardening using docs/GATE_SESSION_4.md. Existing recovery-code fields need an all-groups-visible presentation. Preserve prior source/native regressions and schema/provenance integrity. Do not fetch the already-reviewed Session 3 artifacts again.
 
 Manual continuation; Money worker remains disabled, V16 suspended. Bank-notification capture/Addendum A remains after private v1. No trading repositories or automations are in scope.
+# Latest Session 4 continuation
+
+Continue the whole private-v1 milestone. Added independent off-by-default local money notices, encrypted preferences, generic native alarm payloads, category treemap and distinct gap/stale cashflow shading. These additions are source work, not accepted native delivery or visual evidence. The original Session 4 product, onboarding, accessibility, hardening, performance and final release requirements remain open in docs/GATE_SESSION_4.md. Do not launch a component-only gate or enable bank-notification listening.

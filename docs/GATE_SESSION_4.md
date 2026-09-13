@@ -1,5 +1,9 @@
 # Session 4 gate — OPEN
 
+Continuation in the same integration: opt-in imported-data notification preferences and native generic-message queue are connected; category treemap geometry and cashflow gap/stale shading are written. No additional full Android gate or component release was launched. Native notification delivery/cancellation/permission handling and actual dark/light chart review remain OPEN. The existing remaining scope below is still binding.
+
+Latest source evidence: 197/198 tests passed in the full run; the unchanged 60-second import-order property timed out under parallel load. All 26 tests in that file passed in isolation (property 32.728 seconds), without changing assertions, seed, run count or timeout. Two additional notification preference theme tests passed, bringing the verified total to 200 distinct tests across combined runs. Fixed a notification boundary rejection and duplicate plugin registration found during integration. Production build and lint passed before the final registration-only correction; final focused checks are recorded in WORKER_STATE. No Android evidence is implied by these source results.
+
 Prerequisite: Session 3 consolidated gate PASS, run 34783225808. This is one integrated private-v1 milestone, not a sequence of component releases.
 
 Current integrated work (not a release): run 34788034278 failed in manual entry after accounts were treated as absent during loading. The application now retains the Add transaction intent until account loading resolves; a source regression reproduces delayed accounts. Native input helpers also wait for the actual input before typing. Existing native assertions are retained. The next full candidate must include the consolidated remaining session work rather than rerunning this repair alone.
