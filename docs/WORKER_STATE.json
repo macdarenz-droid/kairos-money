@@ -5,13 +5,13 @@
   "automation_enabled": false,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
   "mode": "Manual continuation; user stopped worker",
-  "candidate_sha": "50824556acbe40afea58ab1c7c70780bd3b3e6d7",
-  "candidate_tree": "c9256c5c1fe43e2cf18798184b78501bd95950db",
-  "run_id": 34783225808,
-  "run_result": "success",
-  "before_checkpoint": "2d15e3a49469530e38a2651721e013acdfcc1c66",
-  "local_checkpoint": "a37315b",
-  "last_result": "Session 3 consolidated gate PASS on run 34783225808. Final 16 recovery/backup screenshots reviewed; exact restore, wrong-code refusal, real PIN replacement and zero-file reset pass. Session 4 visual-data groundwork added; UI integration remains open.",
-  "local_validation": "Three visual-data tests and TypeScript pass. Session 4 source lint and production build PASS; earlier full candidate source/Android jobs PASS. New modules are not yet wired into shipped screens.",
-  "next_action": "Complete integrated Session 4 roadmap in docs/GATE_SESSION_4.md; first wire monthly Money Fingerprint and gap/staleness-aware charts to real data. No Addendum A or workers. Preserve accepted candidate as tested APK until a full Session 4 delivery gate passes."
+  "candidate_sha": "1ba2c4003b6a8dbc0f8566631adcd77974a3fcb4",
+  "candidate_tree": "24fa8ed61b9413d0000aa9870add630561922452",
+  "run_id": 34785441843,
+  "run_result": "in_progress",
+  "before_checkpoint": "b9339d03ed963b7710c13e4ea281b4a0cd2bce0a",
+  "local_checkpoint": "a560664",
+  "last_result": "CommBank supplied PDF read privately: 263 rows, exact every-row balance chain and closing balance, production staging/review/commit/idempotence/rollback PASS. Dedicated parser and metadata detection added with synthetic fixtures. Import activity primitive shows actual stages and respects reduced motion. Westpac unchanged and passing.",
+  "local_validation": "167/167 full source tests PASS plus 2 new CommBank dark/light history tests PASS separately. Source lint, production build, diff check PASS. Private test/input/payload excluded from git. Android verification pending; loading animation still needs device visual review.",
+  "next_action": "Check current CI; continue Session 4 with manual expense/income/transfer entry from Today/Quick and reconciliation against later imports, then remaining fingerprint/charts/product/accessibility/hardening scope. Session 3 remains accepted; no Addendum A or workers."
 }
