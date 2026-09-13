@@ -5,13 +5,13 @@
   "automation_enabled": false,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
   "mode": "Manual continuation; user stopped worker",
-  "candidate_sha": "1ba2c4003b6a8dbc0f8566631adcd77974a3fcb4",
-  "candidate_tree": "24fa8ed61b9413d0000aa9870add630561922452",
-  "run_id": 34785441843,
+  "candidate_sha": "71f5123cd83033466c48371153bf49bc2a570bc6",
+  "candidate_tree": "832ae88fb1035f2bc0d65f9e59764ef1bb0248bd",
+  "run_id": 34788034278,
   "run_result": "in_progress",
-  "before_checkpoint": "b9339d03ed963b7710c13e4ea281b4a0cd2bce0a",
-  "local_checkpoint": "a560664",
-  "last_result": "CommBank supplied PDF read privately: 263 rows, exact every-row balance chain and closing balance, production staging/review/commit/idempotence/rollback PASS. Dedicated parser and metadata detection added with synthetic fixtures. Import activity primitive shows actual stages and respects reduced motion. Westpac unchanged and passing.",
-  "local_validation": "167/167 full source tests PASS plus 2 new CommBank dark/light history tests PASS separately. Source lint, production build, diff check PASS. Private test/input/payload excluded from git. Android verification pending; loading animation still needs device visual review.",
-  "next_action": "Check current CI; continue Session 4 with manual expense/income/transfer entry from Today/Quick and reconciliation against later imports, then remaining fingerprint/charts/product/accessibility/hardening scope. Session 3 remains accepted; no Addendum A or workers."
+  "before_checkpoint": "e341627b2e94f5924d2a1439e040577f44ecd846",
+  "local_checkpoint": "ce8cbe1a1ea3855f060e6fe42f7c450ddbed5641",
+  "last_result": "CommBank repair run 34785441843 source and Android PASS. Published manual expense/income/transfer, Today/Quick/Ledger entry, edit/delete and confirmed statement matches. Independent manual provenance survives rollback and encrypted backup; corroborated matches count once. Added Android UI test and ten both-theme captures; awaiting CI and visual acceptance.",
+  "local_validation": "180 tests in 32 files PASS; latest focused manual 11/11 PASS. Source lint, strict TypeScript, production build, schema generation and diff check PASS. Corrected TypeScript SQL-value narrowing found during initial build. Android compile/lint/device verification delegated to authorized CI. Existing frozen tests untouched. Bundle-size warning remains open performance work.",
+  "next_action": "Resolve manual candidate CI and actual both-theme evidence without treating source tests as device proof. Continue integrated Session 4 fingerprint/charts/product/accessibility/performance/hardening/release scope; loading indicator visual review remains open. Session 3 remains accepted; no Addendum A or workers."
 }
