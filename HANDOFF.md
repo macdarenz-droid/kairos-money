@@ -1,3 +1,11 @@
+# Session 3 started — specification incomplete
+
+The user authorized Session 3 and rejected the previous K logo on 13 September 2026. The monochrome aperture replacement is integrated in this checkpoint; native logo review remains open. Web production build passed. RESEARCH.md is an initial evidence catalogue, not the completed research gate.
+
+Read docs/GATE_SESSION_3.md and docs/DESIGN_SESSION_3.md. The original Session 3 prompt and section 7 definitions are needed: the stored roadmap omits exact four axes, six archetypes and signal specifications. Do not invent them. Sessions 1–2.5 remain passed on the prior tested APK.
+
+## Prior handoff
+
 # Kairos Money Tracker — Sessions 1–2.5 PASS
 
 ## State

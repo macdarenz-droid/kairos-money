@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Fingerprint, LockKeyhole } from 'lucide-react';
 import { Button, Input, Skeleton } from '../design/primitives';
 import { useSession } from '../session';
-export function Brand() { return <div className="brand"><span className="brand-mark" aria-hidden="true"><img src="/branding/kairos-money-logo.jpg" width="26" height="26" alt=""/></span><span>Kairos</span></div>; }
+export function Brand() { return <div className="brand"><span className="brand-mark" aria-hidden="true"><img src="/branding/kairos-aperture.png" width="26" height="26" alt=""/></span><span>Kairos</span></div>; }
 export function LockScreen() {
   const session = useSession(); const setup = session.state === 'setup';
   const [pin, setPin] = useState(''); const [confirm, setConfirm] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
