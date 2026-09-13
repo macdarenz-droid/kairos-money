@@ -5,13 +5,13 @@
   "automation_enabled": false,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
   "mode": "Manual continuation; user stopped worker",
-  "candidate_sha": "d1b5e6e980ce773bbc1c6b1943b8507db4bdb023",
-  "candidate_tree": "9643dbed725765cebbbdfda49e324a0bb5ee2568",
-  "run_id": 34778108902,
+  "candidate_sha": "3cfdbe08d809c7e6ed875578f5ad6222343a797a",
+  "candidate_tree": "feb9715972a91fd25405ffca4d32efa10a488c3d",
+  "run_id": 34778870575,
   "run_result": "in_progress",
   "before_checkpoint": "67445399b933f15aeb9128e4aabe780e75a700b1",
-  "local_checkpoint": "f5a1136",
-  "last_result": "Run 34777460743 failed intelligence fixture direct key unwrap before recovery. Same fixture now uses authenticated app connection on owning worker; no assertion removed or production authentication changed. New full CI gate running.",
+  "local_checkpoint": "6022321",
+  "last_result": "Intelligence, Forgot-PIN full-data equality and encrypted backup save passed in 34778108902. Missing synthetic recovery file blocked host pre-reset verification. Repaired test write using UiAutomation stdin and exact readback; production unchanged.",
   "local_validation": "Test-only changes; diff check PASS. Android compilation, lint and full source/native regression delegated to authorized CI.",
-  "next_action": "Follow the repaired full CI gate. On failure repair actual defect; on success complete native backup/recovery and both-theme evidence review before opening Session 4."
+  "next_action": "Follow full CI gate; finish reset, wrong-code refusal, exact restore and both-theme visual acceptance. Worker stays disabled."
 }
