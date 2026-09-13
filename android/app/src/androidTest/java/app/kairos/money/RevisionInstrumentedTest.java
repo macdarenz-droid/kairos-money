@@ -121,7 +121,7 @@ public class RevisionInstrumentedTest {
                     click("You");click(theme);click("Ledger");choose(name);
                     awaitJs("document.body.innerText.includes('Files waiting for review')");click("Read file");
                     input("Statement start",start.toString());input("Statement end",end.toString());click("Extract for review");
-                    awaitJs("document.body.innerText.includes('Tier C') && document.body.innerText.includes('balance unverified')");
+                    awaitJs("Boolean(document.querySelector('dialog')?.innerText.includes('Tier C')) && Boolean(Array.from(document.querySelectorAll('dialog button')).find(b=>b.textContent==='Confirm import' && !b.disabled))");
                     NativeEvidence.capture(activity,prefix+"-revision-tier-c");click("Confirm import");
                     awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Added 1 new transaction')");
                     NativeEvidence.capture(activity,prefix+"-revision-result");click("Today");
@@ -144,6 +144,17 @@ public class RevisionInstrumentedTest {
                     awaitJs("document.body.innerText.includes('Tier C') && document.body.innerText.includes('Confirm import')");click("Discard import");
                     awaitJs("!document.querySelector('dialog')");
                 } finally { target.getContentResolver().delete(mappingUri,null,null); }
+                String dropScript="(()=>{const transfer=new DataTransfer();for(let i=1;i<=2;i++)transfer.items.add(new File(['Date,Description,Amount\\n"+end+",Synthetic grouped "+prefix+" '+i+',-'+i+'.00\\n'],['group-"+prefix+"-'+i+'.csv'].join(''),{type:'text/csv'}));document.querySelector('.import-workspace').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:transfer}));})()";
+                js(dropScript);awaitJs("document.body.innerText.includes('2 files staged in one update')");
+                for(int i=0;i<2;i++) {
+                    click("Read file");input("Statement start",start.toString());input("Statement end",end.toString());click("Extract for review");
+                    awaitJs("document.body.innerText.includes('Tier C') && Boolean(Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Confirm import'))");
+                    js("document.querySelector('dialog .icon-button').click()");awaitJs("!document.querySelector('dialog')");
+                }
+                click("Review update");awaitJs("Boolean(Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Confirm update' && !b.disabled))");
+                NativeEvidence.capture(activity,prefix+"-revision-multi-review");click("Confirm update");
+                awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Added 2 new transactions')");
+
             }
         }
     }
@@ -154,7 +165,9 @@ public class RevisionInstrumentedTest {
             android.app.NotificationManager manager=target.getSystemService(android.app.NotificationManager.class);
             assertTrue(manager.getActiveNotifications().length>0);
             ReminderReceiver.cancel(target);
-            assertEquals(0,manager.getActiveNotifications().length);
+            long deadline=SystemClock.elapsedRealtime()+5000;
+            while(manager.getActiveNotifications().length>0 && SystemClock.elapsedRealtime()<deadline)SystemClock.sleep(50);
+            assertEquals("Cancelled notification remained active",0,manager.getActiveNotifications().length);
         } finally { ReminderReceiver.cancel(target); }
     }
 }
