@@ -1,3 +1,4 @@
+import { intelligenceRepository } from '../../ledger/intelligence';
 import { importService } from '../../ingest/service';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { asc, eq } from 'drizzle-orm';
@@ -17,6 +18,7 @@ export function repository(driver: Driver) {
   }, { schema });
   return {
     imports: importService(driver),
+    intelligence: intelligenceRepository(driver),
     async accounts() { return db.select().from(accounts).orderBy(asc(accounts.name), asc(accounts.id)); },
     async addAccount(input: NewAccount) {
       const name = input.name.trim();
