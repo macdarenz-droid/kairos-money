@@ -1,5 +1,7 @@
 # Kairos Money — Session 3 under verification
 
+Current repair after run 34778870575: reset is now proven (zero app files, external backup preserved). Restore lost its sheet when Android's picker backgrounded Kairos. App now retains that hidden transient view until authenticated resume; real lock/expiry still removes it. Two theme regression tests cover retention, concealment and expiry. Finish source validation and run the full Android gate for wrong-code refusal and exact restoration. Worker remains disabled.
+
 Run 34778108902 passed intelligence, Forgot-PIN and backup-save instrumentation. Its host check found the synthetic recovery-code file missing before reset. The helper now writes through UiAutomation stdin and verifies exact readback; production paths are unchanged. Continue through reset, wrong-code refusal, exact restore and remaining visual acceptance. Worker remains off.
 
 Latest failure: run 34777460743 stopped at intelligence fixture key unwrap (`UserNotAuthenticatedException`) before testing the recovery timing repair. Fixture insertion now uses the authenticated app connection on Capacitor's worker; synthetic data and all assertions are retained. Validate this combined test repair in CI, then finish native recovery/backup and theme evidence. Worker stays disabled.
