@@ -1,0 +1,10 @@
+{
+  "commit": "7dc9ae972f4c7b922ea00612c73af0ffd6cdbcda",
+  "run_id": 34742912479,
+  "source_gate": "PASS",
+  "apk_build_and_signature": "PASS",
+  "native_gate": "FAIL before test execution",
+  "cause": "AVD required 7372.80 MB; 6558.54 MB available. Emulator exited before boot.",
+  "repair": "Use a 2048M data partition; run native stages through one Python process with bounded timeouts.",
+  "url": "https://github.com/macdarenz-droid/kairos-money/actions/runs/34742912479"
+}

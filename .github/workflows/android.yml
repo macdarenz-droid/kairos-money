@@ -69,13 +69,12 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
+          disk-size: 2048M
+          emulator-boot-timeout: 300
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -no-metrics
           disable-animations: true
           script: |
-            cd android
-            ./gradlew :app:connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.class=app.kairos.money.FoundationInstrumentedTest
-            adb pull /sdcard/Android/data/app.kairos.money/files/evidence ../docs/evidence/android-screens
-            cd ..
-            python scripts/verify-android-delete.py
+            python scripts/run-native-gate.py
       - name: Upload signed debug APK
         uses: actions/upload-artifact@v4
         with:

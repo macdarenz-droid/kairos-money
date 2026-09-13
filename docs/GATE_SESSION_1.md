@@ -20,7 +20,7 @@ Status date: 2026-09-13 UTC. PASS requires all Session 1 acceptance criteria to 
 | Requirement | Status | Evidence |
 |---|---|---|
 | React 18 / strict TypeScript / Vite / Capacitor 6 and Android | PASS | Pinned package-lock, strict TS build, generated Android project and successful Capacitor sync. |
-| New GitHub repository and signed debug artifact on push | FAIL | Workflow is written. The user-created private repository is accessible with write permission. Source publication is being completed; the signed artifact and successful workflow still require evidence. |
+| New GitHub repository and signed debug artifact on push | FAIL | Workflow is written. The user-created private repository is accessible with write permission. Initial source upload 7dc9ae9 and CI source/build/signature checks passed. First run failed before emulator boot because the default data partition exceeded free disk space. Successful native workflow/artifact publication remains required; see ci-first-run.json. |
 | Debug app and instrumentation build | PASS | Gradle app assembleDebug, assembleDebugAndroidTest and lintDebug succeed. APK signature verifies; 13 packaged web assets match the current build; no internet permission. Lint reports 0 errors and 12 warnings (resource/toolchain guidance). Reports and final build log are in docs/evidence. Device execution remains a separate gate. |
 | SQLCipher/Drizzle schema and file migrations | PASS | Production encrypted adapter, all core tables plus staging/provenance/privacy/settings; schema parity tests. Device execution is a separate acceptance check above. |
 | Seeded synthetic development fixtures | PASS | `npm run dev:fixtures` creates a clearly fake DB outside production entry points. Duplicate seeding refuses overwrite. |

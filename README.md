@@ -42,10 +42,9 @@ Use a fresh emulator or test install: the tests intentionally create synthetic f
 
 ```sh
 cd android
-./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.kairos.money.FoundationInstrumentedTest
-adb pull /sdcard/Android/data/app.kairos.money/files/evidence ../docs/evidence/android-screens
+./gradlew :app:assembleDebug :app:assembleDebugAndroidTest
 cd ..
-python scripts/verify-android-delete.py
+python scripts/run-native-gate.py
 ```
 
 The separate deletion test intentionally terminates the app using Android's data-clear API; a host verifier checks that app-owned financial files and database have gone. Synthetic screenshots temporarily remove screenshot protection inside the instrumentation harness only; production always sets FLAG_SECURE.
