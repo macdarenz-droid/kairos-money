@@ -25,9 +25,9 @@ final class DatabaseDigest {
         byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
         digest.update(ByteBuffer.allocate(4).putInt(bytes.length).array()); digest.update(bytes);
     }
-    private interface Read<T> { T run(SupportSQLiteDatabase db) throws Exception; }
-    /** Read the real SQLCipher connection on its owning worker, without opening a competing connection. */
-    private static <T> T snapshot(MainActivity activity, Read<T> read) throws Exception {
+    interface Operation<T> { T run(SupportSQLiteDatabase db) throws Exception; }
+    /** Test-only transaction on the authenticated connection and its owning worker. */
+    static <T> T transaction(MainActivity activity, Operation<T> operation) throws Exception {
         CountDownLatch done = new CountDownLatch(1);
         AtomicReference<T> result = new AtomicReference<>();
         AtomicReference<Exception> failure = new AtomicReference<>();
@@ -44,7 +44,7 @@ final class DatabaseDigest {
                 SupportSQLiteDatabase db = connection.getDb();
                 if (db.inTransaction()) throw new IllegalStateException("Ledger writes have not finished before the acceptance snapshot.");
                 db.beginTransaction();
-                try { result.set(read.run(db)); db.setTransactionSuccessful(); }
+                try { result.set(operation.run(db)); db.setTransactionSuccessful(); }
                 finally { db.endTransaction(); }
             } catch (Exception error) { failure.set(error); }
             finally { done.countDown(); }
@@ -54,7 +54,7 @@ final class DatabaseDigest {
         return result.get();
     }
     static String hash(MainActivity activity) throws Exception {
-        return snapshot(activity, DatabaseDigest::hashConnection);
+        return transaction(activity, DatabaseDigest::hashConnection);
     }
     private static String hashConnection(SupportSQLiteDatabase db) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -88,7 +88,7 @@ final class DatabaseDigest {
         StringBuilder result = new StringBuilder(); for (byte value : digest.digest()) result.append(String.format("%02x", value & 0xff)); return result.toString();
     }
     static long userRows(MainActivity activity) throws Exception {
-        return snapshot(activity, db -> {
+        return transaction(activity, db -> {
         long total = 0;
         // Empty setup creates derived signals/profiles. They remain covered by the
         // complete before/after hash; this count concerns imported/user ledger rows.

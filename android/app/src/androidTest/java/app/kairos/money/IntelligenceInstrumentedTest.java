@@ -111,9 +111,9 @@ public class IntelligenceInstrumentedTest {
         try(OutputStream out=target.getContentResolver().openOutputStream(uri)){assertNotNull(out);out.write(csv.getBytes(StandardCharsets.UTF_8));}return uri;
     }
     private void seed(int count, boolean low) throws Exception {
-        VaultStore store=new VaultStore(target);store.unlock("246810");
-        net.sqlcipher.database.SQLiteDatabase.loadLibs(target);
-        try(net.sqlcipher.database.SQLiteDatabase db=net.sqlcipher.database.SQLiteDatabase.openDatabase(target.getDatabasePath("kairos-moneySQLite.db").getPath(),store.secret(),null,net.sqlcipher.database.SQLiteDatabase.OPEN_READWRITE)) {
+        new BackupTestUi(activity).ready();
+        click("You");
+        DatabaseDigest.transaction(activity, db -> {
             String end=java.time.LocalDate.now().toString(),start=java.time.LocalDate.now().minusDays(count-1).toString();
             db.execSQL("INSERT OR IGNORE INTO accounts(id,name,institution,type,currency,opening_balance_minor) VALUES('s3','Synthetic intelligence','Test','checking','USD',0)");
             db.execSQL("INSERT OR IGNORE INTO categories(id,name,kind) VALUES('s3-essential','Synthetic essentials','essential')");
@@ -136,7 +136,8 @@ public class IntelligenceInstrumentedTest {
                 }
             }
             db.execSQL("INSERT OR REPLACE INTO app_settings VALUES('intelligence:metadata',?)",new Object[]{metadata.toString()});
-        }
+            return null;
+        });
     }
     private void selectCurrency() throws Exception {click("Insights");awaitJs("Boolean(document.querySelector('.intelligence select'))");js("(()=>{const e=document.querySelector('.intelligence select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");}
     @Test public void a_intelligenceEvidenceAndThemes() throws Exception {
