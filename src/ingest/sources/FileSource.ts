@@ -12,7 +12,7 @@ export type { Columns } from '../parse/csv';
 export function documentFromExtracted(extracted: Extracted, sourceHash: string, fileName: string, context: ImportContext, opening: string, closing: string, payslip: boolean, mapping?: Columns, aliases: readonly { canonical: string; aliases: string[] }[] = []): Document {
  const parsed = payslip ? { rows: [], parser: 'labelled-payslip-v1' } : parse(extracted, context, mapping);
  const doc: Document = { id: hash(JSON.stringify([context.accountId, sourceHash])), hash: sourceHash, fileName, parser: parsed.parser, rawRows: parsed.rows, sourceText: extracted.text.slice(0,12000), context, opening: normalizeAmount(opening, context.currency, context.decimal).toString(), closing: normalizeAmount(closing, context.currency, context.decimal).toString(), rows: parsed.rows.map(r => normalizeRow(r, context, aliases)), payslip: payslip ? parsePayslip(extracted.text, context) : null };
- return parsed.parser === 'westpac-choice-v1' ? distinguishStatementRows(doc) : doc;
+ return ['westpac-choice-v1', 'commbank-statement-v1'].includes(parsed.parser) ? distinguishStatementRows(doc) : doc;
 }
 export class FileSource implements TransactionSource {
  private extracted?: Promise<Extracted>;
