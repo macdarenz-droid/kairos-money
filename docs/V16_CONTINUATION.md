@@ -1,5 +1,7 @@
 # Kairos Money continuation contract
 
+Latest user instruction: suspend V16 orchestration rules during manual repair and session continuity. GitHub Actions is explicitly authorized for Android compilation, lint and device testing instead of unavailable local tooling. Keep the worker disabled. The original product requirements, privacy guarantees and session acceptance criteria remain binding.
+
 Current user override (2026-09-13): the Money worker is disabled at the user's request. Continue manually; do not recreate or re-enable scheduled continuation without a new explicit request. The lease is released. The milestones and acceptance gates below still apply.
 
 User authorization: continue while the user sleeps, applying V16 orchestration safeguards to Kairos Money only. The scheduler supports hourly invocations. Use exactly one recurring Money worker; do not create sub-hourly successor chains or modify trading/job workers.

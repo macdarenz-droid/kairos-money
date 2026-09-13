@@ -1,5 +1,5 @@
 {
-  "contract": "KAIROS-MONEY-V16-ADAPTED",
+  "contract": "Manual continuation; V16 suspended by user",
   "phase": "S1 and Session 3 consolidated gate",
   "lease": null,
   "automation_enabled": false,
@@ -11,7 +11,7 @@
   "run_result": "failure",
   "before_checkpoint": "67445399b933f15aeb9128e4aabe780e75a700b1",
   "local_checkpoint": "Manual repair commit containing this state; follows ee3c544",
-  "last_result": "Stopped Money automation. Read failing Android job and saved assertion: ForgotPinInstrumentedTest failed opening a competing SQLCipher connection. Repaired snapshots to use the owning Capacitor worker, corrected migration-table exclusion, added full wrong-code invariance, and proved replacement PIN before restoring standard synthetic PIN. No new candidate launched.",
-  "local_validation": "154 tests in 25 files, source lint, production build and Python syntax PASS. Android compilation/lint BLOCKED: Gradle distribution and Android SDK missing; official download timed out; no saved tool bundle found.",
-  "next_action": "Restore local Gradle 8.2.1 and Android SDK, finish app/instrumentation compilation and lint, then publish one coherent candidate and check workflow once. Complete backup/reset/restore device evidence and required both-theme screenshots before Session 4. Do not restart worker without explicit user instruction."
+  "last_result": "User authorized GitHub Actions for Android compilation, lint and device testing. Publishing preserved native database-lock test repair; worker remains disabled.",
+  "local_validation": "154 source tests, source lint, production build and Python syntax PASS. Android compilation/lint/device verification delegated to authorized GitHub Actions.",
+  "next_action": "Follow the repaired full CI gate. On failure repair actual defect; on success complete native backup/recovery and both-theme evidence review before opening Session 4."
 }

@@ -62,6 +62,8 @@ Run 34770935104: **PASS**. The exact repair compiled and all source/build/lint/s
 
 ### Manual repair of run 34774420396
 
+The user subsequently authorized GitHub Actions as the Android validation environment and suspended V16 orchestration for manual continuation. The preserved repair can now run through the existing full CI gate; missing local tooling is no longer a publication blocker. Device and visual acceptance remain required.
+
 The user stopped the recurring worker; it is confirmed disabled. Candidate `38582738d975355263c538900ec1c2423a1d7c80` failed in `ForgotPinInstrumentedTest` at its first database digest, before recovery interaction. The saved failure log identifies `SQLiteException: database is locked` while a second read-only SQLCipher connection opens. Existing native suites and all four OCR parser checks passed before this point; this does not establish backup/recovery acceptance.
 
 The repair reads the existing SQLCipher connection on Capacitor's owning worker in a snapshot transaction, preserving canonical table/column/typed-value hashes without extracting a second data key or opening another connection. The wrong-code check now excludes the actual `_migrations` table from user-row counts and additionally requires the complete fresh-database digest to remain unchanged. After restore, the test proves the new installation's PIN still works, then restores the standard synthetic PIN before the unchanged deletion regression. Failed instrumentation output is printed into the job log as well as saved separately.
