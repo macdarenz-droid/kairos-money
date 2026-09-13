@@ -1,6 +1,7 @@
 package app.kairos.money;
 
 import android.app.Activity;
+import android.app.KeyguardManager;
 import android.app.UiModeManager;
 import android.os.Build;
 import android.app.ActivityManager;
@@ -27,7 +28,7 @@ import java.util.concurrent.Executors;
 public class KairosVaultPlugin extends Plugin {
     private VaultStore store;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
-    private long pausedAt = -1;
+    private volatile long pausedAt = -1;
     private byte[] exportBytes;
     @Override public void load() { store = new VaultStore(getContext()); }
     private interface Operation { void run() throws Exception; }
@@ -70,6 +71,43 @@ public class KairosVaultPlugin extends Plugin {
             });
         });
     }
+    @PluginMethod public void recoverPin(PluginCall call) { perform(call, () -> {
+        if (!store.configured()) throw new IllegalStateException("Set up Kairos first.");
+        store.lock();
+        KeyguardManager keyguard = (KeyguardManager) getContext().getSystemService(Context.KEYGUARD_SERVICE);
+        if (!keyguard.isDeviceSecure()) throw new IllegalStateException("Device recovery is unavailable because Android has no screen lock configured.");
+        getActivity().runOnUiThread(() -> {
+            if (Build.VERSION.SDK_INT < 30) {
+                Intent intent = keyguard.createConfirmDeviceCredentialIntent("Recover Kairos PIN", "Confirm your Android screen lock to choose a new Kairos PIN.");
+                if (intent == null) { call.reject("Device authentication is unavailable. Try again from the lock screen."); return; }
+                startActivityForResult(call, intent, "recoveryResult");
+                return;
+            }
+            BiometricPrompt prompt = new BiometricPrompt(getActivity(), ContextCompat.getMainExecutor(getContext()), new BiometricPrompt.AuthenticationCallback() {
+                @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                    perform(call, () -> { store.authorizePinReplacement(); pausedAt = -1; call.resolve(); });
+                }
+                @Override public void onAuthenticationError(int code, CharSequence message) { call.reject("Device authentication did not complete. Your ledger remains locked."); }
+            });
+            prompt.authenticate(new BiometricPrompt.PromptInfo.Builder().setTitle("Recover Kairos PIN")
+                .setSubtitle("Authenticate, then choose a new Kairos PIN.")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL).build());
+        });
+    }); }
+    @ActivityCallback private void recoveryResult(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        perform(call, () -> {
+            if (result.getResultCode() != Activity.RESULT_OK) throw new IllegalStateException("Device authentication did not complete. Your ledger remains locked.");
+            store.authorizePinReplacement(); pausedAt = -1; call.resolve();
+        });
+    }
+    @PluginMethod public void replacePin(PluginCall call) { perform(call, () -> { store.replacePin(call.getString("pin"), call.getString("confirm")); call.resolve(); }); }
+    @PluginMethod public void resetLockedApp(PluginCall call) { perform(call, () -> {
+        if (!"DELETE KAIROS".equals(call.getString("confirmation"))) throw new IllegalArgumentException("Type DELETE KAIROS to confirm permanent deletion.");
+        store.lock();
+        ActivityManager manager = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
+        if (!manager.clearApplicationUserData()) throw new IllegalStateException("Android could not reset Kairos. Use Android Settings > Apps > Kairos > Storage > Clear data.");
+    }); }
     @Override protected void handleOnPause() { pausedAt = SystemClock.elapsedRealtime(); }
     @Override protected void handleOnResume() {
         if (pausedAt >= 0 && SystemClock.elapsedRealtime() - pausedAt >= 60000) store.lock();

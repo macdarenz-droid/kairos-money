@@ -3,6 +3,7 @@ package app.kairos.money;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Base64;
+import android.os.SystemClock;
 import androidx.security.crypto.EncryptedSharedPreferences;
 import androidx.security.crypto.MasterKey;
 import java.io.File;
@@ -19,6 +20,7 @@ final class VaultStore {
     private final Context context;
     private SharedPreferences prefs;
     private boolean unlocked;
+    private long recoveryUntil;
     VaultStore(Context context) { this.context = context; }
     private synchronized SharedPreferences prefs() throws Exception {
         if (prefs == null) {
@@ -54,6 +56,7 @@ final class VaultStore {
     }
     synchronized void unlock(String pin) throws Exception {
         if (!configured()) throw new IllegalStateException("Set a PIN before opening the ledger.");
+        if (prefs().getBoolean("pinReplacementRequired", false)) throw new IllegalStateException("Authenticate with your device and choose a new Kairos PIN first.");
         long now = System.currentTimeMillis();
         if (now < prefs().getLong("nextAttempt", 0) || now < prefs().getLong("lastAttempt", 0))
             throw new IllegalStateException("Please wait before trying your PIN again.");
@@ -75,15 +78,38 @@ final class VaultStore {
     }
     synchronized void requireUnlocked() { if (!unlocked) throw new IllegalStateException("Unlock Kairos to continue."); }
     synchronized boolean isUnlocked() { return unlocked; }
-    synchronized void lock() { unlocked = false; }
+    synchronized void lock() { unlocked = false; recoveryUntil = 0; }
     synchronized boolean biometricEnabled() throws Exception { return configured() && prefs().getBoolean("biometric", false); }
     synchronized void setBiometric(boolean enabled) throws Exception {
         requireUnlocked();
         if (!prefs().edit().putBoolean("biometric", enabled).commit()) throw new IllegalStateException("Could not save biometric preference.");
     }
     synchronized void biometricUnlock() throws Exception {
+        if (prefs().getBoolean("pinReplacementRequired", false)) throw new IllegalStateException("Choose a new Kairos PIN before unlocking.");
         if (!biometricEnabled()) throw new IllegalStateException("Biometric unlock is not enabled.");
         unlocked = true;
+    }
+    synchronized void authorizePinReplacement() throws Exception {
+        if (!configured()) throw new IllegalStateException("Set up Kairos first.");
+        unlocked = false;
+        if (!prefs().edit().putBoolean("pinReplacementRequired", true).commit())
+            throw new IllegalStateException("Could not save recovery state. Try device authentication again.");
+        recoveryUntil = SystemClock.elapsedRealtime() + 300000;
+    }
+    synchronized void replacePin(String pin, String confirmation) throws Exception {
+        if (recoveryUntil == 0 || SystemClock.elapsedRealtime() >= recoveryUntil)
+            throw new IllegalStateException("Authenticate with your device again before replacing your PIN.");
+        if (pin == null || !pin.matches("[0-9]{6,12}")) throw new IllegalArgumentException("Choose a PIN with 6 to 12 digits.");
+        if (!pin.equals(confirmation)) throw new IllegalArgumentException("The PINs do not match.");
+        byte[] salt = new byte[32]; new SecureRandom().nextBytes(salt);
+        byte[] hash = derive(pin, salt);
+        try {
+            if (!prefs().edit().putString("salt", encode(salt)).putString("pinHash", encode(hash))
+                .putBoolean("pinReplacementRequired", false).putInt("attempts", 0)
+                .putLong("nextAttempt", 0).putLong("lastAttempt", 0).commit())
+                throw new IllegalStateException("The new PIN could not be saved. Free device storage and try again.");
+        } finally { Arrays.fill(hash, (byte) 0); }
+        recoveryUntil = 0; unlocked = true;
     }
     synchronized String secret() throws Exception { requireUnlocked(); return prefs().getString("dbSecret", ""); }
 }

@@ -7,11 +7,12 @@ import { closeDatabase, openDatabase, serial } from '../core/db/native';
 import { requiresUnlock } from '../core/crypto/lifecycle';
 import type { Repository } from '../core/db/repository';
 type State = 'checking' | 'setup' | 'locked' | 'ready' | 'preview' | 'error' | 'background';
-type Session = { state: State; error: string; biometric: boolean; biometricEnabled: boolean; run: <T>(fn: (repo: Repository) => Promise<T>) => Promise<T>; unlock: (pin: string, confirm?: string) => Promise<void>; biometricUnlock: () => Promise<void>; lock: () => Promise<void>; retry: () => Promise<void>; refreshBiometric: () => Promise<void> };
+type Session = { state: State; error: string; biometric: boolean; biometricEnabled: boolean; run: <T>(fn: (repo: Repository) => Promise<T>) => Promise<T>; unlock: (pin: string, confirm?: string) => Promise<void>; biometricUnlock: () => Promise<void>; recoverPin: () => Promise<void>; replacePin: (pin: string, confirm: string) => Promise<void>; lock: () => Promise<void>; retry: () => Promise<void>; refreshBiometric: () => Promise<void> };
 const Context = createContext<Session | null>(null);
 export function SessionProvider({ children }: PropsWithChildren) {
   const [state, setState] = useState<State>('checking'); const [error, setError] = useState('');
   const [biometric, setBiometric] = useState(false); const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const recoveringPin = useRef(false);
   const repo = useRef<Repository>(); const backgroundAt = useRef<number | null>(null); const epoch = useRef(0);
   const query = useQueryClient();
   const refreshBiometric = useCallback(async () => { const status = await Vault.status(); setBiometric(status.biometric); setBiometricEnabled(status.biometricEnabled); }, []);
@@ -48,6 +49,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
       else {
         void (async () => {
           try {
+            if (recoveringPin.current) { setState('locked'); return; }
             const status = await Vault.status();
             if (!status.configured) { setState('setup'); return; }
             if (backgroundAt.current === null && repo.current && status.unlocked) return;
@@ -68,6 +70,8 @@ export function SessionProvider({ children }: PropsWithChildren) {
   }
   return <Context.Provider value={{ state, error, biometric, biometricEnabled, run, lock, retry, refreshBiometric,
     async unlock(pin, confirm) { if (confirm !== undefined) await Vault.setup({ pin, confirm }); else await Vault.unlock({ pin }); await open(); },
+    async recoverPin() { await lock(); recoveringPin.current = true; try { await Vault.recoverPin(); } catch (e) { recoveringPin.current = false; throw e; } },
+    async replacePin(pin, confirm) { await Vault.replacePin({ pin, confirm }); recoveringPin.current = false; await open(); },
     async biometricUnlock() { await Vault.authenticate(); await open(); },
   }}>{children}</Context.Provider>;
 }

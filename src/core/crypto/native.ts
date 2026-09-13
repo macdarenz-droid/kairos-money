@@ -4,6 +4,9 @@ export interface VaultPlugin {
   setup(options: { pin: string; confirm: string }): Promise<void>;
   unlock(options: { pin: string }): Promise<void>;
   authenticate(): Promise<void>;
+  recoverPin(): Promise<void>;
+  replacePin(options: { pin: string; confirm: string }): Promise<void>;
+  resetLockedApp(options: { confirmation: string }): Promise<void>;
   setBiometric(options: { enabled: boolean }): Promise<void>;
   databaseSecret(): Promise<{ secret: string }>;
   lock(): Promise<void>;
