@@ -18,12 +18,13 @@ def adb(*args, timeout=120):
 
 
 def instrumentation(name, count):
-    log = adb('shell', 'am', 'instrument', '-w', '-e', 'class',
+    log = adb('shell', 'am', 'instrument', '-w', '-r', '-e', 'class',
               'app.kairos.money.' + name,
               'app.kairos.money.test/androidx.test.runner.AndroidJUnitRunner', timeout=360)
     (EVIDENCE / (name + '.log')).write_text(log)
     print(log, flush=True)
-    if not re.search(r'OK \(' + str(count) + r' tests?\)', log):
+    successful = len(re.findall(r'INSTRUMENTATION_STATUS_CODE: 0\b', log))
+    if successful != count or 'INSTRUMENTATION_CODE: -1' not in log or 'FAILURES!!!' in log or 'shortMsg=' in log:
         raise RuntimeError(name + ' did not pass; see its instrumentation log')
 
 
@@ -57,6 +58,10 @@ except Exception as error:
 finally:
     # Preserve failure evidence even if an assertion interrupts the happy path.
     subprocess.run(['adb', 'pull', '/sdcard/Android/data/app.kairos.money/files/evidence',
-                    str(EVIDENCE / 'android-screens')], capture_output=True)
-    logs = subprocess.run(['adb', 'logcat', '-d', '-s', 'AndroidRuntime:E', 'chromium:E'], capture_output=True, text=True)
+                    str(EVIDENCE / 'android-screens')], capture_output=True, timeout=60)
+    # Native aborts, WebView exits and OS kills are not all tagged AndroidRuntime.
+    # The device is a fresh CI emulator containing only synthetic financial data.
+    logs = subprocess.run(['adb', 'logcat', '-b', 'all', '-d', '-v', 'threadtime'], capture_output=True, text=True, timeout=30)
     (EVIDENCE / 'android-logcat.log').write_text(logs.stdout + logs.stderr)
+    exits = subprocess.run(['adb', 'shell', 'dumpsys', 'activity', 'exit-info', 'app.kairos.money'], capture_output=True, text=True, timeout=30)
+    (EVIDENCE / 'android-exit-info.log').write_text(exits.stdout + exits.stderr)

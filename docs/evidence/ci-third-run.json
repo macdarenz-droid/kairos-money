@@ -1,0 +1,11 @@
+{
+  "commit": "db64c9998ac9291677810f47c757924f31479fbe",
+  "run_id": 34744181772,
+  "source_gate": "PASS",
+  "apk_build_and_signature": "PASS",
+  "disk_preflight_free_bytes": 28127150080,
+  "emulator_boot_ms": 65935,
+  "native_gate": "FAIL; Foundation process crashed after first test",
+  "diagnosis": "Filtered AndroidRuntime/Chromium error logs did not capture the Kairos process exit. Next run collects all logcat buffers and Android exit-info, plus raw test method status.",
+  "url": "https://github.com/macdarenz-droid/kairos-money/actions/runs/34744181772"
+}
