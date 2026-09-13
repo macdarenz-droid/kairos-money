@@ -24,6 +24,8 @@ export const import_batches = sqliteTable('import_batches', {
   stated_opening_minor: integer('stated_opening_minor'),
   stated_closing_minor: integer('stated_closing_minor'),
   created_at: text('created_at').notNull(),
+  integrity_tier: text('integrity_tier'),
+  source_rank: integer('source_rank').notNull(),
 });
 
 export const coverage_ranges = sqliteTable('coverage_ranges', {
@@ -79,6 +81,7 @@ export const transactions = sqliteTable('transactions', {
   fx_numerator: text('fx_numerator'),
   fx_denominator: text('fx_denominator'),
   fx_quote_currency: text('fx_quote_currency'),
+  status: text('status').notNull(),
 });
 
 export const transaction_sources = sqliteTable('transaction_sources', {

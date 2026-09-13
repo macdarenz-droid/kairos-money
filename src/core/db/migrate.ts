@@ -2,8 +2,10 @@ import up1 from './migrations/0001_foundation.up.sql?raw';
 import down1 from './migrations/0001_foundation.down.sql?raw';
 import up2 from './migrations/0002_query_indexes.up.sql?raw';
 import down2 from './migrations/0002_query_indexes.down.sql?raw';
+import up3 from './migrations/0003_export_sources.up.sql?raw';
+import down3 from './migrations/0003_export_sources.down.sql?raw';
 import type { Driver } from './driver';
-export const migrations = [{ version: 1, up: up1, down: down1 }, { version: 2, up: up2, down: down2 }] as const;
+export const migrations = [{ version: 1, up: up1, down: down1 }, { version: 2, up: up2, down: down2 }, { version: 3, up: up3, down: down3 }] as const;
 export function statements(sql: string): string[] { return sql.split(';').map(s => s.trim()).filter(Boolean); }
 export async function migrate(driver: Driver, target: number = migrations.length, allowDestructive = false): Promise<void> {
   if (!Number.isInteger(target) || target < 0 || target > migrations.length) throw new Error('Unsupported schema version.');

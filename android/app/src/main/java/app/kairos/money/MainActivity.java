@@ -16,6 +16,7 @@ public class MainActivity extends BridgeActivity {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
         registerPlugin(KairosVaultPlugin.class);
         registerPlugin(KairosTextPlugin.class);
+        registerPlugin(KairosReminderPlugin.class);
         super.onCreate(savedInstanceState);
         applyAppearance();
     }

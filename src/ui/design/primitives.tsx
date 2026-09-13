@@ -36,3 +36,6 @@ export function EmptyState({ icon, title, children, action }: PropsWithChildren<
   return <section className="empty-state"><div className="empty-icon" aria-hidden="true">{icon}</div><h2>{title}</h2><p>{children}</p><div className="empty-action">{action}</div></section>;
 }
 export function Skeleton({ label = 'Loading' }: { label?: string }) { return <div className="skeleton" role="status" aria-label={label}><span/><span/><span/></div>; }
+export function DataGrid({ headings, rows, numeric = [] }: { headings: ReactNode[]; rows: string[][]; numeric?: number[] }) {
+ return <div className="data-grid-scroll" tabIndex={0} aria-label="Raw export rows"><table className="data-grid"><thead><tr>{headings.map((h,i)=><th key={i}>{h}</th>)}</tr></thead><tbody>{rows.slice(0,20).map((r,i)=><tr key={i}>{r.map((v,j)=><td className={numeric.includes(j)?'amount':''} key={j}>{v}</td>)}</tr>)}</tbody></table>{rows.length>20 && <p className="meta">Showing the first 20 raw rows.</p>}</div>;
+}

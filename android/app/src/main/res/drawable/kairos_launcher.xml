@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Preserve the approved artwork; inset protects its K under round launcher masks. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetLeft="12dp" android:insetTop="12dp"
+    android:insetRight="12dp" android:insetBottom="12dp">
+    <bitmap android:src="@drawable/kairos_logo" android:gravity="fill" android:filter="true" />
+</inset>
