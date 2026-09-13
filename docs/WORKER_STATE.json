@@ -8,9 +8,10 @@
   },
   "candidate_sha": "b456368993b4fe6e7e2cb6462e2b57f882828b00",
   "candidate_tree": "d7387f2d7b8b4167046736b43acd411c348074df",
-  "local_checkpoint": "25b9d39",
+  "local_checkpoint": "pending backup-reset-restore acceptance",
   "run_id": 34770935104,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
-  "last_result": "Candidate b456368993b4fe6e7e2cb6462e2b57f882828b00 passed the source and Android workflows, including key protection and Session 3 native suites. This does not close unimplemented backup-reset-restore or visual review.",
-  "next_action": "Implement the actual Android encrypted backup save, reset, wrong-code refusal and full restore comparison; preserve existing security/export/delete assertions."
+  "last_result": "Candidate b456368993b4fe6e7e2cb6462e2b57f882828b00 / run 34770935104 passed the full existing source and native workflow.",
+  "local_validation": "Added real Forgot-PIN and backup-reset-restore device acceptance. Source lint, 154 tests in 25 files, production build and Python syntax PASS. Exact Android compilation remains pending CI because the local Gradle/SDK distribution is unavailable.",
+  "next_action": "Publish the consolidated device-acceptance candidate. Resolve its workflow once; on pass, retrieve the one required artifact and review all screenshots before marking the milestone PASS and opening Session 4."
 }

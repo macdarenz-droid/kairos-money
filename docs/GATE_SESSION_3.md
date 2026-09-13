@@ -55,3 +55,17 @@ Android local verification: app APK, instrumentation APK and lint **PASS**. Actu
 Run 34767336001: source gate PASS; Android build/signature and the native PIN, foundation, key-protection, import and Session 2.5 revision suites passed. The Session 3 suite failed before its UI assertions because its test-only database fixture called the authenticated key directly after the 60-second Android authorization window expired. Production prompt handling was not implicated. Repair: launch and unlock the production activity immediately before each of the three fixture phases, so the actual Android credential flow grants the key before test-only SQLCipher seeding. All original Session 3 behavioral and screenshot assertions remain.
 
 Repair validation: 154 source tests in 25 files, source lint and production build PASS. The fresh worker could restore the exact locked npm graph from cache, but its prior Gradle distribution/Android SDK cache was no longer present and external Gradle downloads were unavailable. Therefore exact-patch Android compilation is pending in CI; this is stated as OPEN rather than promoted as a local Android pass.
+
+Run 34770935104: **PASS**. The exact repair compiled and all source/build/lint/signature and native suites passed, including authentication-bound key expiry, the statement-import repair and Session 3 intelligence. Its screenshots remain unreviewed until the consolidated candidate includes the final backup/reset/restore evidence.
+
+## Backup, reset and PIN-recovery acceptance candidate
+
+The next consolidated native sequence retains every existing gate, then adds:
+
+- real Forgot PIN UI -> Android device-credential prompt -> mandatory replacement; the old PIN is refused and a typed digest of every SQLite table remains identical before/after; the standard synthetic gate PIN is restored;
+- encrypted backup creation through Android's document picker, with ciphertext checked for absence of the SQLite header and the known synthetic account name;
+- locked recovery-sheet reset using the exact `DELETE KAIROS` phrase and Android `clearApplicationUserData`, externally verified as zero app-owned files while the user-chosen backup survives;
+- first-run setup after reset, a deliberately wrong recovery code with zero user-ledger rows, then correct restoration through Android's picker;
+- exact pre-backup/post-restore SHA-256 comparison over every non-internal table, column, typed value and row, including import provenance and coverage; runtime recovery material and synthetic files are cleaned.
+
+Source lint, all **154 tests in 25 files**, production build and Python harness syntax PASS. Exact Android compilation/execution remains OPEN because this worker no longer has a local Gradle/SDK distribution; the candidate workflow must supply that evidence. Session 4 remains closed, and required screenshots/APK are fetched only after this sequence passes.
