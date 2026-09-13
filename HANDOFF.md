@@ -1,6 +1,6 @@
 # Kairos Money — Session 3 under verification
 
-Standing scope: private sideloaded build; targeted edits only; preserve passing work and existing tests. Run local checks and the full regression suite before pushing. After push, check CI at most once and stop if unfinished; no polling. On failure, fetch only the failing job log once. Patch S1 key management/recovery and encrypted backup is next; notification Addendum A follows shipped v1.
+Standing scope: private sideloaded build; targeted edits only; preserve passing work and existing tests. Run local checks and the full regression suite before pushing. Finish complete milestones rather than per-component deliveries. After a milestone-candidate push, check CI at most once and stop if unfinished; no polling. Review required APK/theme artifacts once at milestone closure; no routine green-run logs/jobs. On failure, fetch only the failing job log once. Patch S1 key management/recovery and encrypted backup is next; notification Addendum A follows shipped v1.
 
 Sessions 1–2.5 PASS. Session 3 authorized; the full original brief is now supplied. No specification blocker remains. No Session 4 work.
 
@@ -39,3 +39,10 @@ Added a Settings encrypted-backup sheet, native backup-only recovery code and wr
 Patch S1 remains OPEN: authentication-bound device-key wrapping/migration, mandatory code acknowledgement during initial setup, the post-import backup prompt, and real device reset/restore and system-authentication acceptance. Backup/restore currently supports the current schema and a 64 MB limit. Session 3 final visual acceptance remains open. Do not report either gate complete.
 
 Local verification for the encrypted-backup slice: 136 source tests PASS, source lint and production build PASS, Android app/test APK compilation and lint PASS. Both-theme backup UI interaction tests pass; no native screenshot review or physical reset/restore proof is claimed. Existing Sessions 1–2.5 acceptance tests were not edited.
+
+
+## Delivery consolidation — user-requested planning change
+
+The user explicitly asked to stop fragmenting the four-session brief into user-facing slices. `docs/ROADMAP.md` now consolidates the remaining work into (1) finish all S1 requirements and close Session 3, then (2) complete Session 4 and ship private v1. Addendum A stays post-v1. Internal implementation steps do not each trigger a push or handoff. Required full regressions and device acceptance remain intact. No application code changed in this planning update.
+
+The current backup candidate remains `a5a87a9`, workflow 34762937327; this planning turn did not query its status or inspect artifacts. Next implementation turn: check that candidate once, handle any failure, then complete the remaining current-milestone requirements together before another implementation delivery. Required milestone-closing APK/theme evidence is the specific exception to the earlier green-artifact ban, as otherwise the original acceptance requirements cannot be met. Keep the no-polling rule.

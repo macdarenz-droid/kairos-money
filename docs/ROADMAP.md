@@ -2,9 +2,54 @@
 
 The user-supplied four-session brief governs this project. Do not advance until the previous session gate is PASS. Every session ends with runnable/installable artifacts, HANDOFF.md, ADRs, regenerated schema and a criterion-by-criterion gate report. No shipped synthetic data, guesses, placeholder implementations or unresolved failing tests.
 
+## Delivery model — revised at the user’s request
+
+The four sessions are delivery milestones, not a requirement to stop after each implementation component. Session 2.5 is the accepted intervening revision. Patch S1 is an urgent dependency brought into the current milestone, not a new series of user-facing sessions. Addendum A stays after shipped v1. This delivery model supersedes the recent per-component push/handoff pattern.
+
+| Milestone | Current state | Completion boundary |
+|---|---|---|
+| Session 1 — foundation | PASS | Preserve its accepted implementation and acceptance assertions. |
+| Session 2 — ingestion | PASS | Preserve PDF/OCR, staging, reconciliation, rollback and payslips. |
+| Session 2.5 — export-first revision | PASS | Preserve adapters, bank inference, tiers, pending supersession and freshness. |
+| Current milestone — S1 completion and Session 3 closure | OPEN | Complete all remaining security requirements, prove actual device recovery/backup/restore, reconcile the Session 3 criteria and review its required theme evidence; deliver one accepted APK and complete reports. |
+| Session 4 — finished private v1 | NOT STARTED, except backup brought forward by S1 | Complete visual, product, accessibility, performance and hardening work; deliver the signed private release and final gate. |
+| Addendum A — notification capture | DEFERRED until v1 shipped | Separate post-v1 milestone with replay/deduplication acceptance. |
+
+### Current milestone: finish S1 and close Session 3
+
+Already implemented: offline PIN-replacement flow, typed reset, persistent backoff, backup-only recovery code, encrypted backup save and atomic empty-ledger restore. Local backup candidate has 136 passing source tests and passing app/test builds and lint. Candidate `a5a87a9` is in workflow 34762937327; its outcome has not been checked as part of this planning change. A green workflow alone is not proof of the full new reset/restore journey.
+
+Complete together before the next implementation delivery:
+
+1. Authentication-bound device-key protection and safe migration of existing installations. Preserve the independently random database secret and ensure PIN replacement cannot require database re-encryption. Audit the SQLite plugin’s retained secret path as part of this requirement.
+2. Mandatory setup-time recovery-code acknowledgement, unlocked code review and the dismissable backup prompt after an import session commits more than 50 transactions. The current first-backup acknowledgement does not satisfy setup-time acknowledgement.
+3. Actual Android device-credential recovery followed by mandatory new PIN; force-quit backoff; explicit reset with zero remaining app data/key material; encrypted backup → reset → fresh setup → restore, preserving transactions, import batches, provenance, payslips and coverage. Wrong/missing code must fail. Test through the real system pickers, not just mocks or native store methods.
+4. Verify every Session 3 criterion against the implemented engine: research mapping, twelve signals, evidence and confidence, 60-day learning threshold, Drifter path, bounded insights/dismissals, forecasts/goals/scenarios/pay rise and calm distress. Fill genuine gaps only; do not rebuild passing functionality.
+5. Review all required new screens in both themes, verify the tested APK and publish the S1 and Session 3 acceptance results together. Both gates remain OPEN until their evidence supports PASS.
+
+### Session 4: one integrated finish-and-release milestone
+
+Internal workstreams may be implemented separately but are not separate user-facing deliveries:
+
+- Visual completion: deterministic Money Fingerprint with month comparison and provisional states; custom charts that distinguish gaps from staleness; final theme/design review using existing primitives and the accepted replacement logo.
+- Product completion: onboarding (four steps maximum), opt-in bills/unusual-transaction/subscription/monthly notifications, cash entry, receipts, merchant views, annualiser and monthly changes. Audit all brief-wide features for ownership: bulk categorisation, splits, notes/attachments, recurring cancellation workflow, bills calendar, net-worth manual assets/liabilities, refunds/chargebacks, exact stored FX, widget/quick-add and command actions. Retain implemented features; resolve omissions within this milestone instead of silently dropping them.
+- Accessibility and performance: per-screen AA/200% text/screen-reader/reduced-motion/touch-target checks; measured cold start and 20k ledger performance; worker-based long-PDF import with real progress.
+- Reliability and private release: corruption, low storage, interrupted import and lock edge cases; reuse and regression-test S1 backup rather than rebuild it; preserve signing-key continuity, version and changelog; complete README and the full end-to-end acceptance journey. No Play Store deliverables.
+
+Original Session 4 acceptance criteria remain binding, including the recorded fresh-install/import/intelligence/forecast/theme journey, kill-mid-import proof, performance measurements, accessibility report and design-drift corrections. Test history must cover enough dates to justify an archetype.
+
+### Checkpoint and evidence policy
+
+- Complete a coherent milestone candidate locally before pushing for its delivery gate. Local implementation commits and focused tests are internal progress, not requests for another user continuation.
+- Run the required full regressions, strict build and Android compilation/lint on the integrated candidate. Preserve earlier acceptance assertions. Do not regenerate already accepted fixtures or evidence unnecessarily.
+- Push one complete candidate, then check CI at most once. If unfinished, stop immediately with its URL and remaining check. Never poll or wait on external work. A failed candidate is repaired within the same milestone; it does not create another roadmap phase.
+- Gate-required APK, screenshot and device evidence is reviewed once at milestone closure. This is the narrowly necessary exception to the earlier blanket prohibition on fetching artifacts after a green run: otherwise the original APK/visual acceptance requirements cannot be completed. Routine green-run jobs/logs remain unnecessary; on red, fetch only the failing job log once. Do not fetch artifacts on every implementation commit.
+- End-of-milestone delivery includes the tested installable APK, criterion-by-criterion PASS/FAIL/N/A report, current HANDOFF, relevant ADRs and schema update only if changed. Do not label a source-only or mocked-path pass as device acceptance.
+- Session 4 cannot begin until the current milestone is accepted. Addendum A cannot begin until v1 is shipped. Optional email ingestion and the optional questionnaire remain disabled unless their optional scope is deliberately taken up after required gates.
+
 ## Session 1 — Foundation
 
-Capacitor 6, React 18, strict TypeScript and Vite; Android CI; SQLCipher and Drizzle; bigint money; the prescribed dark/light design language and primitives; four tabs plus Quick; native app lock; working export/delete. Session 1 is complete and PASS; Session 2 is next.
+Capacitor 6, React 18, strict TypeScript and Vite; Android CI; SQLCipher and Drizzle; bigint money; the prescribed dark/light design language and primitives; four tabs plus Quick; native app lock; working export/delete. Session 1 is complete and PASS.
 
 ## Session 2 — Import
 
@@ -34,7 +79,7 @@ Gate: insight contract/property checks; 20-day still-learning state; source dril
 
 Charts distinguish coverage gaps from the stale live edge; incomplete-month fingerprints are provisional. Money Fingerprint is the sole expressive visual: deterministic signal vector, monthly comparison, labelled axes. Add custom gap-aware cashflow, category treemap, payday-decay, subscription and net-worth charts. At most four onboarding steps, ending in real import. Opt-in individual notifications with frequency caps. Cash entries, receipts, merchant views, annualiser and monthly changes.
 
-AA in both themes, 200% text, screen-reader amount labels, reduced motion and 44px targets. Cold-start target under two seconds; virtualized 20k ledger; worker-based 40-page PDF with progress. Corruption/low-storage/interrupted-import recovery; encrypted user-chosen backup/restore; lock edge cases. Secret-backed release signing, versioning, changelog and Play Store data-safety text.
+AA in both themes, 200% text, screen-reader amount labels, reduced motion and 44px targets. Cold-start target under two seconds; virtualized 20k ledger; worker-based 40-page PDF with progress. Corruption/low-storage/interrupted-import recovery; encrypted user-chosen backup/restore; lock edge cases. Secret-backed private release signing, versioning and changelog. Play Store data-safety work is removed by the later private-sideload scope.
 
 Gate: full overlapping-statements/payslips E2E; kill-mid-import recovery without partial ledger; measured 20k performance; accessibility report by screen; visual self-review and repairs. Do not generate an archetype from only two payslips/short coverage; the E2E dataset still needs at least 60 covered days.
 
