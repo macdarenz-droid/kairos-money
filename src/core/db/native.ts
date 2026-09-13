@@ -25,7 +25,7 @@ function rows(value: unknown): SqlRow[] {
 }
 export async function openDatabase() {
   if (connection) throw new Error('Database is already open.');
-  if (!(await sqlite.isSecretStored()).result) await sqlite.setEncryptionSecret((await Vault.databaseSecret()).secret);
+  await Vault.prepareDatabase();
   const db = await sqlite.createConnection(name, true, 'secret', 1, false);
   try {
     await db.open();

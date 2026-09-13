@@ -1,6 +1,7 @@
 package app.kairos.money;
 
 import android.content.Context;
+import com.getcapacitor.community.database.sqlite.SQLite.UtilsSecret;
 import android.content.SharedPreferences;
 import android.util.Base64;
 import android.os.SystemClock;
@@ -78,7 +79,7 @@ final class VaultStore {
     }
     synchronized void requireUnlocked() { if (!unlocked) throw new IllegalStateException("Unlock Kairos to continue."); }
     synchronized boolean isUnlocked() { return unlocked; }
-    synchronized void lock() { unlocked = false; recoveryUntil = 0; }
+    synchronized void lock() { UtilsSecret.clearSessionSecret(); unlocked = false; recoveryUntil = 0; }
     synchronized boolean biometricEnabled() throws Exception { return configured() && prefs().getBoolean("biometric", false); }
     synchronized void setBiometric(boolean enabled) throws Exception {
         requireUnlocked();
@@ -134,5 +135,18 @@ final class VaultStore {
         if (!backupRecoveryCode().equals(code)) throw new IllegalArgumentException("Review your current recovery code before continuing.");
         if (!prefs().edit().putBoolean("backupCodeAcknowledged", true).commit()) throw new IllegalStateException("Could not save recovery-code confirmation.");
     }
-    synchronized String secret() throws Exception { requireUnlocked(); return prefs().getString("dbSecret", ""); }
+    synchronized String protectedSecret() throws Exception {
+        requireUnlocked();
+        String wrapped = prefs().getString("authenticatedDbSecret", null);
+        if (wrapped == null) {
+            String legacy = prefs().getString("dbSecret", null);
+            if (legacy == null || legacy.isEmpty()) throw new IllegalStateException("The database key is unavailable. Restore a backup after resetting Kairos.");
+            wrapped = AuthenticatedKey.wrap(context, legacy);
+            if (!legacy.equals(AuthenticatedKey.unwrap(context, wrapped))) throw new IllegalStateException("Device key verification failed.");
+            if (!prefs().edit().putString("authenticatedDbSecret", wrapped).remove("dbSecret").commit())
+                throw new IllegalStateException("Could not migrate the device key. Free storage and try again.");
+        }
+        return AuthenticatedKey.unwrap(context, wrapped);
+    }
+    synchronized String secret() throws Exception { requireUnlocked(); return prefs().contains("authenticatedDbSecret") ? protectedSecret() : prefs().getString("dbSecret", ""); }
 }

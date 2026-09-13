@@ -1,0 +1,9 @@
+{
+  "contract": "KAIROS-MONEY-V16-ADAPTED",
+  "phase": "S1 and Session 3 consolidated gate",
+  "lease": null,
+  "candidate_sha": null,
+  "run_id": null,
+  "next_action": "Read current branch workflow for the authentication migration candidate; finish required device backup-reset-restore and theme review before Session 4.",
+  "automation_id": null
+}

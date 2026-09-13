@@ -15,6 +15,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class PostDeleteInstrumentedTest {
     @Test public void freshSetupAfterDeletion() throws Exception {
         android.content.Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        java.security.KeyStore keys = java.security.KeyStore.getInstance("AndroidKeyStore"); keys.load(null);
+        assertFalse("Authentication key survived reset", keys.containsAlias(AuthenticatedKey.ALIAS));
+        assertFalse("Vault key survived reset", keys.containsAlias(VaultStore.KEY_ALIAS));
         assertFalse(new VaultStore(context).configured());
         assertFalse(context.getDatabasePath("kairos-moneySQLite.db").exists());
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {

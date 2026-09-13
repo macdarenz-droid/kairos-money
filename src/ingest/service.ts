@@ -1,3 +1,4 @@
+import { hasStatementBalanceChain } from './normalize/statement-evidence';
 import type { Driver } from '../core/db/driver';
 import { currency, money, toDatabase } from '../core/money';
 import { categorize, type CategoryRule } from '../ledger/rules';
@@ -62,18 +63,29 @@ export function importService(driver: Driver) {
     const existing = reconcile(all.filter(b => b.status === 'committed' && b.id !== id));
     const combined = reconcile([...all.filter(b => b.status === 'committed' && b.id !== id), doc]);
     const userRules = await rules(), merchantDefaults = await defaults();
+    const distinctStatementEntries = hasStatementBalanceChain(doc);
+    const balancedSources = new Set(all.filter(b => (b.id === id || b.status === 'committed') && hasStatementBalanceChain(b)).map(b => b.id));
     const items = doc.rows.map(row => {
       const suggestion = categorize(row, userRules, merchantDefaults, row.mcc);
       const settlementCandidates = doc.sourceRank ? combined.filter(r=>r.pending!==row.pending && r.accountId===row.accountId && r.currency===row.currency && Math.abs(dayNumber(r.date)-dayNumber(row.date))<=3 && similarity(r.merchant,row.merchant)>=9000) : [];
-      const near = [...new Map([...nearDuplicates(row, combined),...settlementCandidates].map(r=>[r.id,r])).values()].filter(r => !r.sources.some(s => s.batchId === id && s.sourceId === row.sourceId));
+      const near = [...new Map([...nearDuplicates(row, combined),...settlementCandidates].map(r=>[r.id,r])).values()].filter(r => !r.sources.some(s => s.batchId === id && s.sourceId === row.sourceId)).filter(r => !(distinctStatementEntries && !row.pending && !r.pending && r.sources.some(s => s.batchId === id || (balancedSources.has(s.batchId) && row.runningBalance !== r.runningBalance))));
       const projected = combined.find(r => r.sources.some(s => s.batchId === id && s.sourceId === row.sourceId));
       const previous = existing.find(r => r.id === projected?.id || r.sources.some(s => projected?.sources.some(p => p.batchId === s.batchId && p.sourceId === s.sourceId)));
       const superseded = !!previous?.pending && !projected?.pending;
       const duplicate = !!previous || existing.some(r => r.fingerprint === row.fingerprint || r.id === row.duplicateOf);
       const collisions = doc.rows.filter(r => r.fingerprint === row.fingerprint).length > 1 || existing.some(r => r.fingerprint === row.fingerprint && ((r.reference && row.reference && r.reference !== row.reference) || r.merchant !== row.merchant));
-      return { row, suggestion, superseded, original: doc.rawRows?.find(r => r.sourceId === row.sourceId), near, duplicate, collision: collisions, blocked: !row.verified && (row.issues.length > 0 || row.confidence < 9000 || near.length > 0 || collisions || (!row.category && !!suggestion.category && suggestion.confidence < 9000)) };
+      const categoryOnly = !row.verified && !row.category && !!suggestion.category && suggestion.confidence < 9000 && !row.issues.length && row.confidence >= 9000 && !near.length && !collisions;
+      return { row, suggestion, categoryOnly, superseded, original: doc.rawRows?.find(r => r.sourceId === row.sourceId), near, duplicate, collision: collisions, blocked: !row.verified && (row.issues.length > 0 || row.confidence < 9000 || near.length > 0 || collisions || (!row.category && !!suggestion.category && suggestion.confidence < 9000)) };
     }).sort((a, b) => Number(b.blocked) - Number(a.blocked) || a.row.confidence - b.row.confidence || a.row.sourceId.localeCompare(b.row.sourceId));
     return { doc, items, continuity: continuity(doc.context.period, all.filter(b=>b.status==='committed' && !b.payslip && b.context.accountId===doc.context.accountId).map(b=>b.context.period)), supersededCount: items.filter(i=>i.superseded).length, balance: balance(doc), coverageAdded: doc.payslip ? [] : gaps(all.filter(b => b.status === 'committed' && b.id !== id && b.context.accountId === doc.context.accountId && !b.payslip).map(b => b.context.period), doc.context.period), newCount: new Set(items.filter(i => !i.duplicate).map(i => i.row.fingerprint)).size, duplicateCount: items.filter(i => i.duplicate && !i.superseded).length, uncertainCount: items.filter(i => i.blocked).length };
+  }
+  async function leaveCategoriesUnassigned(id: string) {
+    return driver.transaction(async () => {
+      const check = await review(id);
+      if (!['staged', 'quarantined'].includes(check.doc.status)) throw new Error('Only staged categories can be reviewed.');
+      for (const item of check.items) if (item.categoryOnly) item.row.verified = true;
+      await save(check.doc);
+    });
   }
   async function correct(id: string, sourceId: string, change: Pick<NormalizedRow, 'date' | 'description' | 'merchant' | 'minor' | 'category' | 'occurrence' | 'duplicateOf'>, makeRule: boolean) {
     return driver.transaction(async () => {
@@ -167,5 +179,5 @@ export function importService(driver: Driver) {
   async function commitSession(ids: string[]) { return driver.transaction(async()=> { const results=[]; for(const id of ids) results.push(await commitUnlocked(id)); return results; }); }
   async function reminderDay(): Promise<number|null> { const r=(await driver.query("SELECT value FROM app_settings WHERE key='update-reminder'"))[0]; if(!r)return null;const value=JSON.parse(String(r.value)) as unknown;return typeof value==='number' && Number.isInteger(value)&&value>=0&&value<=6?value:null; }
   async function setReminderDay(day:number|null) { if(day!==null&&(!Number.isInteger(day)||day<0||day>6))throw new Error('Choose a weekday.');await driver.execute("INSERT OR REPLACE INTO app_settings(key,value) VALUES('update-reminder',?)",[JSON.stringify(day)]); }
-  return { reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
+  return { leaveCategoriesUnassigned, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
 }

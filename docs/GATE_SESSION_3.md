@@ -18,3 +18,36 @@ The full brief is now supplied. Sessions 1–2.5 remain PASS. Implementation and
 The optional Money Scripts questionnaire stays disabled. Statements do not establish intent/instrument/time/enjoyment; unobserved fields stay unknown. Forecasts require a current verifiable balance; unknown loan commitments block safe-to-spend. One currency is analysed at a time without invented FX rates. Schema columns are unchanged; derived period IDs are currency-namespaced. ADR 0008 and INSIGHT_CATALOGUE.md define exact operational choices.
 
 Run 34756987002: source/build/lint/signature PASS; foundation native 2/2 and OCR PASS. Import interaction stopped before the picker opened: its action was transiently disabled while accounts loaded. Saved screenshot shows Ledger, with no picker or crash. Fix: defer the import workspace during account loading; frozen acceptance test is unchanged. New held-query UI regression verifies the action appears only when usable. Intelligence native gate was not reached.
+
+## Reported statement import defect — local verification
+
+| Check | State | Evidence |
+|---|---|---|
+| Supported Westpac period and balances filled without typing | PASS source | Explicit labels only; invalid or missing metadata rejected; both-theme interaction tests. |
+| Wrapped transactions across pages | PASS source | Dedicated positional fixture; repeated headers and opening/closing rows handled; missing amounts fail explicitly. |
+| Repeated purchases, overlap and rollback | PASS source | Complete running-balance evidence; both import orders, same-file idempotence and rollback; ambiguous exports remain reviewable. |
+| Leave category-only guesses unassigned | PASS source | Both-theme UI path; uncertain extraction cannot be approved by this action. |
+| Actual reported file read through history | PASS private local validation | Extraction, staging, explicit category deferral, transactional commit, repeat import and rollback checked; private input excluded from repository. |
+| Full source regression | PASS | 146 tests in 23 files; previous acceptance tests unchanged. |
+| Device verification of this candidate | OPEN | Local source checks do not establish Android picker/render acceptance. |
+
+This is a repair within the consolidated milestone. Session 3 and S1 remain open until their remaining requirements pass.
+
+## Consolidated security and continuation candidate
+
+This candidate combines the reported statement repair, mandatory recovery-code acknowledgement, a dismissible backup action after more than 50 added/superseded transactions, and authentication-bound wrapping of the existing random database key. It removes both legacy persistent data-key copies and supplies SQLite through a checksum-pinned memory-only native adapter. No data key crosses the JavaScript bridge.
+
+| Remaining acceptance | State | Required evidence |
+|---|---|---|
+| Existing database key migration, Android authentication expiry, legacy-copy removal | OPEN native | KeyProtectionInstrumentedTest checks the actual key properties, missing legacy entries, refusal after the 60-second window, and refusal despite a valid app PIN. |
+| Frozen Session 2 acceptance files | Preserved | Android credential handling is in the test runner; ImportInstrumentedTest remains byte-identical. |
+| Real encrypted backup, reset, restore | OPEN | Save through Android's picker, reset, restore using the recovery code, compare the complete ledger/provenance/coverage; reject a wrong code without mutation. Source round-trip tests alone do not close this. |
+| Forgot-PIN system authentication and replacement | OPEN device interaction | Confirm the Android prompt, require a new app PIN, retain the ledger. |
+| Recovery setup, backup flow and Session 3 screens in both themes | OPEN visual | Review unobscured screenshots of this candidate's required screens. |
+| Session 4 entry | CLOSED pending full milestone | Only all required acceptance evidence, recorded here and in HANDOFF.md, opens Session 4. A green partial workflow is insufficient. |
+
+The continuation contract is docs/V16_CONTINUATION.md. It permits one worker, durable before/after checkpoints, one workflow lookup per invocation, and a changed approach after two equivalent failures. The worker completes this milestone, then proceeds through Session 4 without asking for routine confirmations.
+
+Local source verification for the combined candidate: **154 tests in 25 files PASS**, including all frozen Session 2 hashes, all 24 mixed-source import orders and 10,000 exact-money sequences. Source lint and production build PASS. The full suite used two workers after resource contention caused a timeout in the initial parallel attempt; no timeout or acceptance threshold was loosened.
+
+Android local verification: app APK, instrumentation APK and lint **PASS**. Actual native execution is pending; local compilation is not a device PASS.

@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.app.KeyguardManager;
 import android.app.UiModeManager;
 import android.os.Build;
+import android.security.keystore.UserNotAuthenticatedException;
+import com.getcapacitor.community.database.sqlite.SQLite.UtilsSecret;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
@@ -45,11 +47,45 @@ public class KairosVaultPlugin extends Plugin {
     @PluginMethod public void status(PluginCall call) { perform(call, () -> {
         JSObject result = new JSObject(); result.put("configured", store.configured());
         result.put("biometric", biometricAvailable()); result.put("biometricEnabled", store.biometricEnabled());
-        result.put("unlocked", store.isUnlocked()); call.resolve(result);
+        result.put("unlocked", store.isUnlocked());
+        result.put("backupCodeRequired", store.isUnlocked() && !store.backupCodeAcknowledged()); call.resolve(result);
     }); }
     @PluginMethod public void setup(PluginCall call) { perform(call, () -> { store.setup(call.getString("pin"), call.getString("confirm")); call.resolve(); }); }
     @PluginMethod public void unlock(PluginCall call) { perform(call, () -> { store.unlock(call.getString("pin")); call.resolve(); }); }
-    @PluginMethod public void databaseSecret(PluginCall call) { perform(call, () -> { JSObject result = new JSObject(); result.put("secret", store.secret()); call.resolve(result); }); }
+    private void supplyDatabaseKey(PluginCall call) throws Exception {
+        String secret = store.protectedSecret();
+        UtilsSecret.clearLegacySecret();
+        UtilsSecret.setSessionSecret(secret);
+        call.resolve();
+    }
+    @PluginMethod public void prepareDatabase(PluginCall call) { perform(call, () -> {
+        try { supplyDatabaseKey(call); }
+        catch (UserNotAuthenticatedException needed) {
+            getActivity().runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT < 30) {
+                    KeyguardManager keyguard = (KeyguardManager) getContext().getSystemService(Context.KEYGUARD_SERVICE);
+                    Intent intent = keyguard.createConfirmDeviceCredentialIntent("Open Kairos", "Confirm your Android screen lock to access the encrypted ledger.");
+                    if (intent == null) { store.lock(); call.reject("Set an Android screen lock before opening Kairos."); return; }
+                    startActivityForResult(call, intent, "databaseAuthenticationResult"); return;
+                }
+                BiometricPrompt prompt = new BiometricPrompt(getActivity(), ContextCompat.getMainExecutor(getContext()), new BiometricPrompt.AuthenticationCallback() {
+                    @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) { perform(call, () -> { pausedAt = -1; supplyDatabaseKey(call); }); }
+                    @Override public void onAuthenticationError(int code, CharSequence message) { store.lock(); call.reject("Device authentication did not complete. Your ledger remains locked."); }
+                });
+                prompt.authenticate(new BiometricPrompt.PromptInfo.Builder().setTitle("Open Kairos")
+                    .setSubtitle("Confirm access to your encrypted ledger.")
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL).build());
+            });
+        }
+    }); }
+    @ActivityCallback private void databaseAuthenticationResult(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        perform(call, () -> {
+            if (result.getResultCode() != Activity.RESULT_OK) { store.lock(); throw new IllegalStateException("Device authentication did not complete. Your ledger remains locked."); }
+            pausedAt = -1; supplyDatabaseKey(call);
+        });
+    }
+
     @PluginMethod public void lock(PluginCall call) { store.lock(); call.resolve(); }
     @PluginMethod public void setBiometric(PluginCall call) { perform(call, () -> {
         boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled"));

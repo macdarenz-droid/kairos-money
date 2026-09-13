@@ -26,7 +26,7 @@ def adb(*args, timeout=120):
 def instrumentation(name, count):
     log = adb('shell', 'am', 'instrument', '-w', '-e', 'class',
               'app.kairos.money.' + name,
-              'app.kairos.money.test/androidx.test.runner.AndroidJUnitRunner', timeout=360)
+              'app.kairos.money.test/app.kairos.money.KairosTestRunner', timeout=360)
     (EVIDENCE / (name + '.log')).write_text(log)
     print(log, flush=True)
     if not re.search(r'OK \(' + str(count) + r' tests?\)', log):
@@ -72,6 +72,7 @@ try:
         'launcher_restarted_before_app_install': 'com.android.launcher3',
         'launcher_visible_without_error_dialog': True,
     }, indent=2) + '\n')
+    adb('shell', 'locksettings', 'set-pin', '739182')
     for name in ['android/app/build/outputs/apk/debug/app-debug.apk',
                  'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk']:
         result = adb('install', '-r', str(ROOT / name))
@@ -81,6 +82,7 @@ try:
     (EVIDENCE / 'android-webview-provider.txt').write_text(adb('shell', 'dumpsys', 'webviewupdate'))
     instrumentation('PinRecoveryInstrumentedTest', 3)
     instrumentation('FoundationInstrumentedTest', 2)
+    instrumentation('KeyProtectionInstrumentedTest', 1)
     instrumentation('ImportInstrumentedTest', 2)
     instrumentation('RevisionInstrumentedTest', 2)
     instrumentation('IntelligenceInstrumentedTest', 1)
@@ -91,7 +93,7 @@ try:
     instrumentation('PostDeleteInstrumentedTest', 1)
     (EVIDENCE / 'native-run-status.json').write_text(json.dumps({
         'status': 'PASS', 'installed': True, 'instrumentation_executed': True,
-        'pin_recovery_tests': 3, 'foundation_tests': 2, 'import_tests': 2, 'revision_tests': 2, 'intelligence_tests': 1, 'acceptance_tests': 1, 'post_delete_tests': 1,
+        'authentication_bound_key_tests': 1, 'pin_recovery_tests': 3, 'foundation_tests': 2, 'import_tests': 2, 'revision_tests': 2, 'intelligence_tests': 1, 'acceptance_tests': 1, 'post_delete_tests': 1,
         'native_encryption_proven': True, 'native_delete_proven': True,
         'real_document_export_proven': True, 'background_unlock': '1 second retained; 61 seconds locked',
         'runner': 'Android 34 emulator; airplane mode enabled',
