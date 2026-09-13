@@ -41,6 +41,18 @@ final class BackupTestUi {
         String encoded = js("Array.from(document.querySelectorAll('label')).find(x=>x.textContent.startsWith(" + JSONObject.quote(label) + ")).querySelector('input').value");
         return new JSONArray("[" + encoded + "]").getString(0);
     }
+    // Render the same production screen with each existing token set; do not alter
+    // stored preferences or database contents during full-digest assertions.
+    void captureBoth(String name) throws Exception {
+        String previous = js("document.documentElement.dataset.theme");
+        try {
+            for (String theme : new String[]{"dark", "light"}) {
+                js("document.documentElement.dataset.theme=" + JSONObject.quote(theme));
+                await("document.documentElement.dataset.theme===" + JSONObject.quote(theme));
+                NativeEvidence.capture(activity, theme + "-" + name);
+            }
+        } finally { js("document.documentElement.dataset.theme=" + previous); }
+    }
     void ready() throws Exception {
         await("Boolean(document.querySelector('nav'))");
         // Navigation mounts before Today's asynchronous analysis transaction finishes.
@@ -50,7 +62,7 @@ final class BackupTestUi {
     void unlock(String pin) throws Exception { await("document.body.innerText.includes('Welcome back')"); input("PIN", pin); click("Unlock"); ready(); }
     void setup(String pin) throws Exception {
         await("document.body.innerText.includes('Your money.')"); input("Choose a PIN", pin); input("Confirm PIN", pin); click("Create private ledger");
-        await("document.body.innerText.includes('Keep your recovery code')"); js("document.querySelector('input[type=checkbox]').click()");
+        await("document.body.innerText.includes('Keep your recovery code')"); captureBoth("recovery-setup"); js("document.querySelector('input[type=checkbox]').click()");
         await("Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='Continue to ledger' && !b.disabled)"); click("Continue to ledger"); ready();
     }
     private boolean activate(AccessibilityNodeInfo node, String name) {

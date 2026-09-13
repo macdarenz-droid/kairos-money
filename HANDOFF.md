@@ -1,3 +1,5 @@
+Current update: run 34782241638 is fully green, including exact native backup/reset/restore, wrong-code refusal and original regressions. All 18 Session 3 theme images reviewed. Final recovery/backup both-theme captures are being added to the existing test flow; Session 4 remains closed until their review. Manual continuation; worker remains disabled.
+
 # Kairos Money — Session 3 under verification
 
 Latest run 34781012976 confirms picker review retention and wrong-code zero-write refusal. Correct restore exposed a fresh-installation bug: generated signals/profiles were counted as user ledger data. The restore guard now permits atomic replacement of derived tables while retaining protection for accounts, transactions, imports, goals and other user tables. New real-SQLite regressions cover analysed empty installations, goal-only refusal and rollback of calculated data. Complete source checks and publish to authorized CI; worker stays off.

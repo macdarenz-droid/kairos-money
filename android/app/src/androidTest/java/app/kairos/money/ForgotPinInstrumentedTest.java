@@ -14,8 +14,8 @@ public class ForgotPinInstrumentedTest {
             BackupTestUi ui = new BackupTestUi(current[0]); ui.unlock("246810");
             String before = DatabaseDigest.hash(current[0]);
             ui.click("You"); ui.click("Lock now"); ui.await("document.body.innerText.includes('Welcome back')");
-            ui.click("Forgot PIN?"); ui.click("Use device authentication"); ui.await("document.body.innerText.includes('Choose a new PIN')");
-            NativeEvidence.capture(current[0], "dark-forgot-pin-replacement");
+            ui.click("Forgot PIN?"); ui.captureBoth("forgot-pin-options"); ui.click("Reset app"); ui.captureBoth("recovery-reset-confirmation"); ui.js("document.querySelector('dialog .icon-button').click()"); ui.click("Forgot PIN?"); ui.click("Use device authentication"); ui.await("document.body.innerText.includes('Choose a new PIN')");
+            ui.captureBoth("forgot-pin-replacement");
             ui.input("New PIN", "135790"); ui.input("Confirm PIN", "135790"); ui.click("Save new PIN"); ui.await("Boolean(document.querySelector('nav'))");
             assertEquals(before, DatabaseDigest.hash(current[0]));
             ui.click("You"); ui.click("Lock now"); ui.input("PIN", "246810"); ui.click("Unlock"); ui.await("document.body.innerText.includes('That PIN did not match')");

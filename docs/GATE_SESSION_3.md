@@ -1,5 +1,13 @@
 # Session 3 gate — OPEN
 
+## Current acceptance — run 34782241638
+
+Source and Android jobs PASS for candidate 9f7601f0098b3e74706138e646a0818c27e68c80. Native backup/reset/restore evidence confirms real document-picker save, Android-authenticated Forgot-PIN replacement with unchanged full database, reset from 114 app-owned files to zero, preserved external backup, wrong-code refusal without mutation, and exact all-table restoration. Original native regressions also pass.
+
+All 18 intelligence screenshots were reviewed in both themes: learning, profile, evidence, purchase context, reflections, forecast, scenario, goals and triage show the expected unobscured screens. Recovery/backup visual coverage was incomplete (only dark replacement captured). The next test-only candidate adds both-theme captures of setup acknowledgement, recovery options/replacement/reset confirmation and backup options/save/restore/wrong-code states. It changes only the root theme attribute temporarily for rendering, restoring it afterward without changing preferences or ledger data. Existing functional assertions are retained. Session 4 stays closed until these final images are reviewed.
+
+Evidence downloaded once to gate-34782241638; artifact 10325622301. Historical entries below describe prior candidates, not current failures.
+
 The full brief is now supplied. Sessions 1–2.5 remain PASS. Implementation and source verification are underway; native and both-theme visual acceptance remain open. No Session 4 work.
 
 | Criterion | State | Evidence |
