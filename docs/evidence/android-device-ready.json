@@ -1,0 +1,6 @@
+{
+  "status": "PASS",
+  "boot_broadcasts_idle": true,
+  "launcher_restarted_before_app_install": "com.android.launcher3",
+  "launcher_visible_without_error_dialog": true
+}

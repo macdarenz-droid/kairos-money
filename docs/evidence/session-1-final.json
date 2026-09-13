@@ -1,0 +1,90 @@
+{
+  "status": "PASS",
+  "date": "2026-09-13",
+  "tested_commit": "3b9e8f941193b99069ad2edfa0f726bcfb9f13cb",
+  "workflow_url": "https://github.com/macdarenz-droid/kairos-money/actions/runs/34747556681",
+  "source_tests": 19,
+  "random_money_sequences": 10000,
+  "native_tests": 4,
+  "native_durations_seconds": {
+    "foundation": 34.467,
+    "acceptance": 102.607,
+    "post_delete": 6.658
+  },
+  "deleted_files": {
+    "before": 65,
+    "after": 0
+  },
+  "apk_sha256": "4dbb90ec4a16c2ff679395dba960b33f61fdb6bf8e611818a39886d5df97b060",
+  "apk_size_bytes": 18473169,
+  "apk_artifact_id": 10314384347,
+  "evidence_artifact_id": 10315005721,
+  "scope": "Android 34 AOSP x86_64 emulator, airplane mode; mandatory PIN path. Physical enrolled biometrics and broader device compatibility not claimed.",
+  "screenshots": [
+    {
+      "file": "android-screens/dark-cold-launch-locked.png",
+      "sha256": "753a4621a7486fee3f6cb250132780883d1d8bdfbb57c58ced82d26e2d2bbdeb",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/dark-insights.png",
+      "sha256": "468929c72a6c136e0228c3be8db2cc4301c8a8b63ccee23ae636c62df7292165",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/dark-ledger.png",
+      "sha256": "65a05289542c2b9cd3f7c6595e5bcd6100493392f8bc1c3023357f966067df69",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/dark-quick.png",
+      "sha256": "40d44960566dd975b09181df5110957262df1102c1cfde6fd5e84eabeddb60d5",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/dark-today.png",
+      "sha256": "a46836ad26a941557fbefd74a49c37d7ed21bb1ad87fb3ea3535f522c0227fbc",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/dark-you.png",
+      "sha256": "2f2ba7b725b5f739b0deb126fddbbdda664fec059b887a52211be29d5a1f44e7",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/light-insights.png",
+      "sha256": "d78770d3efdefdb9e1025d86907a2a346cf911fd88e4cbfc82672d4cbe610f1a",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/light-ledger.png",
+      "sha256": "1fd27befe440552f673301eb9ee66fff88ab8c4af576dd4ea57a97e4573dc1c6",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/light-recreated-locked.png",
+      "sha256": "bb9fde4f26510fdd52dc45afa95eb3cd8fcc3ed6eb58cfc93b3d0e027f226e4c",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/light-resume-locked.png",
+      "sha256": "561b17961a9f44df4a1eaba29bbc9b3291252fb34ac994cce590b0991f205c4a",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/light-today.png",
+      "sha256": "98558858b6d0b87f35a8703803bfa6487b5df81b811efa8197c5a6e35effbcb0",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/light-you.png",
+      "sha256": "c876412222170a9ff235ec5928e069f5acc8df781ad156770ac6ebf15399b85d",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    },
+    {
+      "file": "android-screens/today-initial.png",
+      "sha256": "d810c61e17f0e5830ff15bffab890d35d21b572da307793634ab0bde9224d793",
+      "review": "PASS: expected screen and theme, unobscured, no clipped content or prior-frame mismatch"
+    }
+  ]
+}

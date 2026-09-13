@@ -2,6 +2,8 @@
 
 A private, on-device money tracker. This repository contains the Session 1 foundation: exact money math, an encrypted Android ledger, account setup, app lock, export/delete and a quiet two-theme interface. Import and intelligence remain outside this build until their own gates pass.
 
+**Session 1 gate: PASS** on Android 34 AOSP; [verified run](https://github.com/macdarenz-droid/kairos-money/actions/runs/34747556681).
+
 Read `HANDOFF.md` and `docs/GATE_SESSION_1.md` before continuing. A source-test pass is not an Android install/security pass.
 
 ## Run the UI

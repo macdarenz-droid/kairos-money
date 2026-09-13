@@ -16,3 +16,9 @@ This records a source/build review, not a completed Android visual or security a
 | Android lint flagged missing Android 12+ data-extraction rules | Excluded every app-used storage domain from cloud backup and device transfer, with legacy backup disabled | Manifest, XML rules and Android lint; device migration behavior not claimed as tested |
 
 Native screenshots, launch/resume appearance, biometric behavior and document-picker export still require a real device or accelerated emulator. No pixel-level review is claimed. The restrained visual design is implemented; its native rendering remains a gate.
+
+## Final native review — 2026-09-13
+
+The earlier pending native review is resolved by run 34747556681. All 13 screenshots in evidence/android-screens were inspected: correct dark/light Today, Ledger, Insights, You; Quick sheet; fresh Today; cold-launch, recreated and resumed lock screens. No clipped content, stale preceding screens or system dialogs remain. The interface retains quiet layered surfaces, hairline grouping, tabular aligned amounts and one accent; no generic dashboard metric-card grid was introduced. Synthetic account data exists only in instrumentation.
+
+Fixed during verification: emulator disk exhaustion; transitive downloadable-emoji provider dependency crash; first-boot launcher ANR; UIAutomator readiness output handling; screenshots captured before the WebView frame committed. Screenshot protection is disabled only within test capture and restored afterward. Production protection remains enabled. Export and actual OS deletion are now observed, not simulated. Physical biometric enrollment remains outside emulator scope.

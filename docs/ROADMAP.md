@@ -4,7 +4,7 @@ The user-supplied four-session brief governs this project. Do not advance until 
 
 ## Session 1 — Foundation
 
-Capacitor 6, React 18, strict TypeScript and Vite; Android CI; SQLCipher and Drizzle; bigint money; the prescribed dark/light design language and primitives; four tabs plus Quick; native app lock; working export/delete. This is the current session.
+Capacitor 6, React 18, strict TypeScript and Vite; Android CI; SQLCipher and Drizzle; bigint money; the prescribed dark/light design language and primitives; four tabs plus Quick; native app lock; working export/delete. Session 1 is complete and PASS; Session 2 is next.
 
 ## Session 2 — Import
 
