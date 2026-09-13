@@ -139,6 +139,25 @@ public class IntelligenceInstrumentedTest {
             return null;
         });
     }
+    @Test public void b_manualEntryAndThemes() throws Exception {
+        try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(a->activity=a);unlock();
+            for(String theme:new String[]{"Light","Dark"}) {
+                click("You");click(theme);click("Today");click("Add transaction");
+                input("Amount","12.50");input("Description","Synthetic manual purchase "+theme);
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-entry");click("Save transaction");
+                awaitJs("!document.querySelector('dialog')");click("Ledger");
+                awaitJs("document.body.innerText.includes('Synthetic manual purchase "+theme+"')");
+                js("Array.from(document.querySelectorAll('h2')).find(e=>e.textContent==='Manual transactions').scrollIntoView()");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-history");click("Edit");input("Amount","15.00");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-edit");click("Save transaction");awaitJs("!document.querySelector('dialog')");
+                click("Match with statement");awaitJs("document.body.innerText.includes('No imported entry with the same account')");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-match");js("document.querySelector('dialog .icon-button').click()");
+                click("Delete");NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-delete");click("Delete transaction");
+                awaitJs("!document.querySelector('dialog') && !document.body.innerText.includes('Synthetic manual purchase "+theme+"')");
+            }
+        }
+    }
     private void selectCurrency() throws Exception {click("Insights");awaitJs("Boolean(document.querySelector('.intelligence select'))");js("(()=>{const e=document.querySelector('.intelligence select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");}
     @Test public void a_intelligenceEvidenceAndThemes() throws Exception {
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {

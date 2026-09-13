@@ -1,3 +1,4 @@
+import {manualRepository} from './manual';
 import type {Driver} from '../core/db/driver';
 import {currency,money,toDatabase} from '../core/money';
 import {computeSignals} from '../intelligence/signals';
@@ -24,6 +25,7 @@ export function intelligenceRepository(driver:Driver){
    let accountBalance=BigInt(String(anchor.stated_closing_minor));const after=transactions.filter(t=>t.accountId===a.id&&t.date>date&&t.date<=asOf&&t.status==='settled');for(const t of after)accountBalance+=BigInt(t.minor);if(a.type==='credit'){if(accountBalance<0n)liability-=accountBalance;}else balance+=accountBalance;evidence.push(...transactions.filter(t=>t.accountId===a.id&&t.date<=asOf).map(t=>t.id));
    if(intervals.some(v=>v.tier==='C'&&v.end>date))valid=false;
   }
+  if(Object.keys(await manualRepository(driver).unresolved()).length)valid=false;
   s.commitmentsKnown=!accounts.some(a=>a.type==='loan');if(valid)s.committedLiability={minor:liability.toString(),evidence};
   if(valid)s.liquid={minor:balance.toString(),asOf,verified:true,evidence};
   return s;

@@ -1,3 +1,4 @@
+import { syncManual } from '../ledger/manual';
 import { hasStatementBalanceChain } from './normalize/statement-evidence';
 import type { Driver } from '../core/db/driver';
 import { currency, money, toDatabase } from '../core/money';
@@ -127,6 +128,7 @@ export function importService(driver: Driver) {
       if (!doc.payslip) await driver.execute('INSERT INTO coverage_ranges VALUES(?,?,?,?,?)', [hash('coverage:' + doc.id), doc.context.accountId, doc.context.period.start, doc.context.period.end, doc.id]);
       else { const p = doc.payslip; await driver.execute('INSERT INTO payslips(id,employer,pay_date,period_start,period_end,gross_minor,net_minor,tax_minor,super_minor,deductions,allowances,ytd,currency,linked_transaction_id,import_batch_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [hash('payslip:' + doc.id), p.employer, p.payDate, p.period.start, p.period.end, integer(p.gross, p.currency), integer(p.net, p.currency), integer(p.tax, p.currency), integer(p.super, p.currency), JSON.stringify(p.deductions), JSON.stringify(p.allowances), JSON.stringify(p.ytd), p.currency, linkNet(p, ledger.filter(r => r.accountId === doc.context.accountId)), doc.id]); }
     }
+    await syncManual(driver);
   }
   async function commitUnlocked(id: string) {
       const check = await review(id);

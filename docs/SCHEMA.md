@@ -246,6 +246,10 @@ Storage schema 3 adds transaction status and batch integrity/source rank. Docume
 
 Version 1 uses existing tables without changing storage version. Signals use currency-prefixed period IDs; inputs retain complete versioned signal payloads, coverage and provenance. Profiles store monthly axes, covered days and evidence-completeness confidence. Insights retain the five-part contract and conditional calculation in evidence JSON. app_settings keys intelligence:dismissals, intelligence:metadata, intelligence:reflection and intelligence:buffer:<currency> retain dismissal counts, explicitly supplied purchase context, optional non-validated reflections and the chosen reserve. Goals are user earmarks, never additional ledger balances. All are encrypted and included in export/delete.
 
+## Manual source records
+
+Manual entries use explicit manual-entry-v1 source envelopes in import_batches and a reserved __manual__ staging payload. They have no statement period, no source file and no coverage ranges. The payload stores positive integer-string amount, expense/income/transfer kind, account IDs, date, description, category, notes and confirmed source links. transactions and transaction_sources contain the live projection; transfers project two equal/opposite legs atomically. A confirmed import match suppresses only the corresponding manual projection, retaining the original record for rollback. Export, encrypted backup and deletion include these envelopes using the existing schema. See ADR/0017-manual-source-records.md.
+
 ## Migration metadata
 
 `_migrations(version INTEGER PRIMARY KEY)` is maintained transactionally by the migration runner. It is not financial data and is removed with the database during deletion.

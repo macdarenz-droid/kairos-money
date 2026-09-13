@@ -22,4 +22,14 @@ Do not mark the session complete from isolated source tests. Frozen earlier acce
 - Loading uses real extraction messages, no fabricated percentage; ledger icon uses existing tokens, response-only pulsing and static reduced-motion state. No raw private input added to the repository.
 - Native visual review remains OPEN for this new indicator. This source repair does not close the Session 4 release gate.
 
-Local regression: full existing suite 167/167 PASS, plus the two newly added CommBank theme/history tests PASS separately (169 total passing tests). Source lint PASS. Production build result is recorded in the continuation checkpoint. Android CI verification remains required.
+Local regression: full existing suite 167/167 PASS, plus the two newly added CommBank theme/history tests PASS separately (169 total passing tests). Source lint and production build PASS. Workflow 34785441843 source and Android jobs PASS. The new loading indicator still requires actual native visual review.
+
+## Manual everyday tracking
+
+- Implemented: Add transaction on Today, Quick and Ledger; expense/income/atomic same-currency transfers; edit/delete; recorded-today totals; explicit matching against settled statement entries within three days and exact amount.
+- PASS source: nine storage tests and two theme interaction tests. Includes encrypted backup round trip, source rollback/reimport, surviving corroboration, refusal to attach two manual purchases to one imported transaction, and invalid-amount preservation.
+- Integrity: manual records create no coverage. Source envelopes and confirmed matches are exported/backed up; imports are never modified by deleting a manual entry. Unresolved matches are disclosed and block verified safe-to-spend.
+- OPEN native/visual: new Android save/edit/match/delete interaction test with dark/light captures. Existing Android acceptance assertions remain in the run. UI screenshots are not accepted from DOM tests alone.
+- Remaining product/accessibility/performance/release work above is unchanged. This is not a component release.
+
+Local regression for the manual-entry candidate: 180 tests across 32 files PASS, including all unchanged prior-session tests. Source lint, strict TypeScript and production build PASS. The bundle-size warning remains part of the open performance workstream. Android compilation/lint and native captures are delegated to the authorized CI gate; they are not claimed from local source results.
