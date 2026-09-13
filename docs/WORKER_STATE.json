@@ -1,17 +1,13 @@
 {
   "contract": "KAIROS-MONEY-V16-ADAPTED",
   "phase": "S1 and Session 3 consolidated gate",
-  "lease": {
-    "owner": "kairos-money-continuation-20260914T0304",
-    "acquired_at": "2026-09-13T17:04:00Z",
-    "expires_at": "2026-09-13T18:04:00Z"
-  },
-  "candidate_sha": "e57cf27eca6b675abae2d8a4dd74307372467f1c",
-  "candidate_tree": "fd2400a22d76b761cbe113ef32b7fcd2967aa155",
-  "local_checkpoint": "pending intelligence authentication-timing repair",
-  "run_id": 34767336001,
+  "lease": null,
+  "candidate_sha": "b456368993b4fe6e7e2cb6462e2b57f882828b00",
+  "candidate_tree": "d7387f2d7b8b4167046736b43acd411c348074df",
+  "local_checkpoint": "25b9d39",
+  "run_id": null,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
-  "last_result": "The source gate, Android build/signature, PIN, foundation, key-protection, import and revision suites passed. Intelligence fixture seeding failed after the 60-second Android authentication window expired.",
-  "local_validation": "Repair: 154 tests in 25 files, source lint and production build PASS. Exact-patch Android compilation unavailable because this fresh worker had no Gradle/SDK distribution; next CI must establish it.",
-  "next_action": "Publish the focused test repair, resolve its workflow once by exact SHA, then continue the still-open backup-reset-restore, Forgot-PIN device flow and both-theme review."
+  "last_result": "Repaired the red candidate's only failing native suite by authenticating through the production app immediately before every Session 3 fixture phase. All original assertions remain.",
+  "local_validation": "154 tests in 25 files, source lint and production build PASS. Exact-patch Android compilation unavailable in this worker after its Gradle/SDK cache disappeared; CI must establish Android build and device execution.",
+  "next_action": "Resolve candidate b456368993b4fe6e7e2cb6462e2b57f882828b00 once. If unfinished, end. On pass, inspect only required milestone evidence and continue backup-reset-restore, Forgot-PIN device flow and both-theme visual acceptance before opening Session 4."
 }
