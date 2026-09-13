@@ -140,13 +140,11 @@ public class IntelligenceInstrumentedTest {
     }
     private void selectCurrency() throws Exception {click("Insights");awaitJs("Boolean(document.querySelector('.intelligence select'))");js("(()=>{const e=document.querySelector('.intelligence select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");}
     @Test public void a_intelligenceEvidenceAndThemes() throws Exception {
-        seed(20,false);
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
-            scenario.onActivity(a->activity=a);unlock();selectCurrency();awaitJs("document.body.innerText.includes('Still learning') && document.body.innerText.includes('20 covered days')");for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('20 covered days')");js("window.scrollTo(0,0)");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-learning");}
+            scenario.onActivity(a->activity=a);unlock();seed(20,false);selectCurrency();awaitJs("document.body.innerText.includes('Still learning') && document.body.innerText.includes('20 covered days')");for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('20 covered days')");js("window.scrollTo(0,0)");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-learning");}
         }
-        seed(182,false);
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
-            scenario.onActivity(a->activity=a);unlock();
+            scenario.onActivity(a->activity=a);unlock();seed(182,false);
             for(String theme:new String[]{"Light","Dark"}) {
                 click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('The Drifter') && document.body.innerText.includes('Small purchases add up')");js("window.scrollTo(0,0)");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-profile");
                 js("document.querySelector('.intelligence .surface button').click()");awaitJs("Boolean(document.querySelector('dialog')) && document.body.innerText.includes('Synthetic discretionary')");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-evidence");click("Confirm purchase context");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-context");js("document.querySelector('dialog .icon-button').click()");
@@ -156,9 +154,8 @@ public class IntelligenceInstrumentedTest {
                 click("Goals and buffer");input("Goal name","Synthetic rego "+theme);input("Target amount","500");input("Target date",java.time.LocalDate.now().plusDays(90).toString());NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-goal");click("Save goal");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Synthetic rego "+theme+"')");
             }
         }
-        seed(182,true);
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
-            scenario.onActivity(a->activity=a);unlock();selectCurrency();awaitJs("document.body.innerText.includes('Focus on essentials')");assertEquals("false",js("document.body.innerText.includes('Cashflow outlook')"));
+            scenario.onActivity(a->activity=a);unlock();seed(182,true);selectCurrency();awaitJs("document.body.innerText.includes('Focus on essentials')");assertEquals("false",js("document.body.innerText.includes('Cashflow outlook')"));
             for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('Focus on essentials')");js("window.scrollTo(0,0)");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-triage");}
         }
     }
