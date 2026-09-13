@@ -1,5 +1,7 @@
 # Kairos Money continuation contract
 
+Current user override (2026-09-13): the Money worker is disabled at the user's request. Continue manually; do not recreate or re-enable scheduled continuation without a new explicit request. The lease is released. The milestones and acceptance gates below still apply.
+
 User authorization: continue while the user sleeps, applying V16 orchestration safeguards to Kairos Money only. The scheduler supports hourly invocations. Use exactly one recurring Money worker; do not create sub-hourly successor chains or modify trading/job workers.
 
 Scope: macdarenz-droid/kairos-money, branch codex/session3-design-research. Read HANDOFF.md, docs/ROADMAP.md and the latest relevant gate report. The current consolidated milestone is S1 plus Session 3, including the statement-import repair. After its complete acceptance gate passes, proceed through Session 4 to private sideloaded v1. Stop at shipped v1; notification Addendum A remains later.

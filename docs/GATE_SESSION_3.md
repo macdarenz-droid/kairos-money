@@ -60,6 +60,14 @@ Run 34770935104: **PASS**. The exact repair compiled and all source/build/lint/s
 
 ## Backup, reset and PIN-recovery acceptance candidate
 
+### Manual repair of run 34774420396
+
+The user stopped the recurring worker; it is confirmed disabled. Candidate `38582738d975355263c538900ec1c2423a1d7c80` failed in `ForgotPinInstrumentedTest` at its first database digest, before recovery interaction. The saved failure log identifies `SQLiteException: database is locked` while a second read-only SQLCipher connection opens. Existing native suites and all four OCR parser checks passed before this point; this does not establish backup/recovery acceptance.
+
+The repair reads the existing SQLCipher connection on Capacitor's owning worker in a snapshot transaction, preserving canonical table/column/typed-value hashes without extracting a second data key or opening another connection. The wrong-code check now excludes the actual `_migrations` table from user-row counts and additionally requires the complete fresh-database digest to remain unchanged. After restore, the test proves the new installation's PIN still works, then restores the standard synthetic PIN before the unchanged deletion regression. Failed instrumentation output is printed into the job log as well as saved separately.
+
+Repair validation: 154 source tests in 25 files, source lint, production build, Python syntax and diff whitespace checks PASS. This repair is an Android-unvalidated source checkpoint, not a new application candidate or release. Android compilation and lint require the missing Gradle distribution and Android SDK. No saved distribution was found, and the official Gradle download timed out. Do not promote this checkpoint until that required local validation is available. Real Android recovery/backup/restore and both-theme visual acceptance remain OPEN; Session 4 remains CLOSED.
+
 The next consolidated native sequence retains every existing gate, then adds:
 
 - real Forgot PIN UI -> Android device-credential prompt -> mandatory replacement; the old PIN is refused and a typed digest of every SQLite table remains identical before/after; the standard synthetic gate PIN is restored;

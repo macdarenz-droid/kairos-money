@@ -25,6 +25,7 @@ def instrument(name, count=1):
                  'app.kairos.money.' + name, RUNNER)
     (EVIDENCE / (name + '.log')).write_text(result.stdout)
     if result.returncode or not re.search(r'OK \(' + str(count) + r' tests?\)', result.stdout):
+        print(result.stdout, flush=True)
         raise AssertionError(name + ' did not pass; see its instrumentation log')
 
 

@@ -2,12 +2,16 @@
   "contract": "KAIROS-MONEY-V16-ADAPTED",
   "phase": "S1 and Session 3 consolidated gate",
   "lease": null,
+  "automation_enabled": false,
+  "automation_id": "6aa6c8e99f20819181576d885cb21b46",
+  "mode": "Manual continuation; user stopped worker",
   "candidate_sha": "38582738d975355263c538900ec1c2423a1d7c80",
   "candidate_tree": "33b80cc448139fba4db1a3c38b363ab0b9f34c00",
-  "local_checkpoint": "ee3c544",
-  "run_id": null,
-  "automation_id": "6aa6c8e99f20819181576d885cb21b46",
-  "last_result": "Published consolidated real-device acceptance for Forgot PIN, encrypted backup save, locked reset, wrong-code zero-write refusal and exact full-ledger restore.",
-  "local_validation": "Source lint, 154 tests in 25 files, production build and Python harness syntax PASS. Exact Android compilation was unavailable locally because the Gradle/SDK distribution disappeared; CI must establish compilation and device execution.",
-  "next_action": "Resolve candidate 38582738d975355263c538900ec1c2423a1d7c80 once. If unfinished, end. On pass, retrieve the single required artifact, verify backup-reset-restore evidence and review every required dark/light screenshot; only then close the milestone and open Session 4."
+  "run_id": 34774420396,
+  "run_result": "failure",
+  "before_checkpoint": "67445399b933f15aeb9128e4aabe780e75a700b1",
+  "local_checkpoint": "Manual repair commit containing this state; follows ee3c544",
+  "last_result": "Stopped Money automation. Read failing Android job and saved assertion: ForgotPinInstrumentedTest failed opening a competing SQLCipher connection. Repaired snapshots to use the owning Capacitor worker, corrected migration-table exclusion, added full wrong-code invariance, and proved replacement PIN before restoring standard synthetic PIN. No new candidate launched.",
+  "local_validation": "154 tests in 25 files, source lint, production build and Python syntax PASS. Android compilation/lint BLOCKED: Gradle distribution and Android SDK missing; official download timed out; no saved tool bundle found.",
+  "next_action": "Restore local Gradle 8.2.1 and Android SDK, finish app/instrumentation compilation and lint, then publish one coherent candidate and check workflow once. Complete backup/reset/restore device evidence and required both-theme screenshots before Session 4. Do not restart worker without explicit user instruction."
 }

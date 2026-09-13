@@ -1,7 +1,15 @@
 package app.kairos.money;
 
-import android.content.Context;
 import android.database.Cursor;
+import androidx.sqlite.db.SupportSQLiteDatabase;
+import com.getcapacitor.community.database.sqlite.CapacitorSQLite;
+import com.getcapacitor.community.database.sqlite.CapacitorSQLitePlugin;
+import com.getcapacitor.community.database.sqlite.SQLite.Database;
+import java.lang.reflect.Field;
+import java.util.Dictionary;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import android.util.Base64;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -9,7 +17,6 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import net.sqlcipher.database.SQLiteDatabase;
 
 /** Canonical, typed digest of every non-internal SQLite table on the test device. */
 final class DatabaseDigest {
@@ -18,18 +25,48 @@ final class DatabaseDigest {
         byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
         digest.update(ByteBuffer.allocate(4).putInt(bytes.length).array()); digest.update(bytes);
     }
-    static String hash(Context context, String secret) throws Exception {
-        SQLiteDatabase.loadLibs(context);
+    private interface Read<T> { T run(SupportSQLiteDatabase db) throws Exception; }
+    /** Read the real SQLCipher connection on its owning worker, without opening a competing connection. */
+    private static <T> T snapshot(MainActivity activity, Read<T> read) throws Exception {
+        CountDownLatch done = new CountDownLatch(1);
+        AtomicReference<T> result = new AtomicReference<>();
+        AtomicReference<Exception> failure = new AtomicReference<>();
+        activity.getBridge().execute(() -> {
+            try {
+                Object plugin = activity.getBridge().getPlugin("CapacitorSQLite").getInstance();
+                Field implementation = CapacitorSQLitePlugin.class.getDeclaredField("implementation");
+                implementation.setAccessible(true);
+                Field connections = CapacitorSQLite.class.getDeclaredField("dbDict");
+                connections.setAccessible(true);
+                Dictionary<?, ?> dictionary = (Dictionary<?, ?>) connections.get(implementation.get(plugin));
+                Database connection = (Database) dictionary.get("RW_kairos-money");
+                if (connection == null) throw new IllegalStateException("Kairos database connection is not open.");
+                SupportSQLiteDatabase db = connection.getDb();
+                if (db.inTransaction()) throw new IllegalStateException("Ledger writes have not finished before the acceptance snapshot.");
+                db.beginTransaction();
+                try { result.set(read.run(db)); db.setTransactionSuccessful(); }
+                finally { db.endTransaction(); }
+            } catch (Exception error) { failure.set(error); }
+            finally { done.countDown(); }
+        });
+        if (!done.await(30, TimeUnit.SECONDS)) throw new IllegalStateException("Database snapshot timed out.");
+        if (failure.get() != null) throw failure.get();
+        return result.get();
+    }
+    static String hash(MainActivity activity) throws Exception {
+        return snapshot(activity, DatabaseDigest::hashConnection);
+    }
+    private static String hashConnection(SupportSQLiteDatabase db) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(context.getDatabasePath("kairos-moneySQLite.db").getPath(), secret, null, SQLiteDatabase.OPEN_READONLY)) {
+        {
             List<String> tables = new ArrayList<>();
-            try (Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name", null)) {
+            try (Cursor cursor = db.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")) {
                 while (cursor.moveToNext()) tables.add(cursor.getString(0));
             }
             for (String table : tables) {
                 field(digest, "table:" + table); List<String> rows = new ArrayList<>();
                 String quoted = "\"" + table.replace("\"", "\"\"") + "\"";
-                try (Cursor cursor = db.rawQuery("SELECT * FROM " + quoted, null)) {
+                try (Cursor cursor = db.query("SELECT * FROM " + quoted)) {
                     for (String column : cursor.getColumnNames()) field(digest, "column:" + column);
                     while (cursor.moveToNext()) {
                         StringBuilder row = new StringBuilder();
@@ -50,14 +87,15 @@ final class DatabaseDigest {
         }
         StringBuilder result = new StringBuilder(); for (byte value : digest.digest()) result.append(String.format("%02x", value & 0xff)); return result.toString();
     }
-    static long userRows(Context context, String secret) {
-        SQLiteDatabase.loadLibs(context); long total = 0;
-        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(context.getDatabasePath("kairos-moneySQLite.db").getPath(), secret, null, SQLiteDatabase.OPEN_READONLY);
-             Cursor tables = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('schema_migrations','categories','app_settings')", null)) {
-            while (tables.moveToNext()) try (Cursor count = db.rawQuery("SELECT COUNT(*) FROM \"" + tables.getString(0).replace("\"", "\"\"") + "\"", null)) {
+    static long userRows(MainActivity activity) throws Exception {
+        return snapshot(activity, db -> {
+        long total = 0;
+        try (Cursor tables = db.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('_migrations','categories','app_settings')")) {
+            while (tables.moveToNext()) try (Cursor count = db.query("SELECT COUNT(*) FROM \"" + tables.getString(0).replace("\"", "\"\"") + "\"")) {
                 if (!count.moveToFirst()) throw new IllegalStateException("Could not count " + tables.getString(0) + "."); total += count.getLong(0);
             }
         }
         return total;
+        });
     }
 }
