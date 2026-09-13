@@ -5,13 +5,13 @@
   "automation_enabled": false,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
   "mode": "Manual continuation; user stopped worker",
-  "candidate_sha": "b44f93d88b22c7985933a22a617a2f7a9c4d4cc2",
-  "candidate_tree": "4a37fef751668d4fd3f644cb479dc84e3c7b69b3",
-  "run_id": 34781012976,
-  "run_result": "in_progress",
-  "before_checkpoint": "67445399b933f15aeb9128e4aabe780e75a700b1",
-  "local_checkpoint": "9de6bc7",
-  "last_result": "Run 34778870575 passed reset with zero app-owned files and external backup preservation, then lost backup review on picker return. Reproduced in both themes; fixed transient background view retention while hidden and preserved actual lock/expiry disposal. Full Android gate running.",
-  "local_validation": "156 tests in 26 files, source lint, production build and diff check PASS. Frozen Session 2 tests unchanged. Android compilation/lint/device acceptance via authorized CI.",
-  "next_action": "Follow full CI gate; finish reset, wrong-code refusal, exact restore and both-theme visual acceptance. Worker stays disabled."
+  "candidate_sha": "9f7601f0098b3e74706138e646a0818c27e68c80",
+  "candidate_tree": "6556e4b945bec9a80172f4d46c9741091e524298",
+  "run_id": 34782241638,
+  "run_result": "queued",
+  "before_checkpoint": "d6c7c0bcb7d51dd5751ce6a5faea7ae093eced43",
+  "local_checkpoint": "9a3d3d4",
+  "last_result": "Run 34781012976 passed wrong-code refusal with unchanged full database. Valid restore exposed an empty-installation guard bug: Today generates signals/profiles before any account exists. Fixed eligibility for generated tables; accounts, transactions, imports and goals remain protected. New full Android gate queued.",
+  "local_validation": "158 tests have passing results across full run (157 pass, one unchanged property test timeout plus worker RPC timeout) and isolated unchanged property rerun (33.9s, original 60s limit). Eight backup tests pass including fresh analysis, goal-only protection and interrupted restore. Source lint, production build and diff check PASS. CI must establish clean full suite and Android compilation/lint/device acceptance.",
+  "next_action": "Follow run 34782241638; verify full exact restore and remaining original native regressions, then capture/review every required Session 3 and recovery/backup screen in both themes before closing milestone. Session 4 remains closed. Worker stays disabled."
 }
