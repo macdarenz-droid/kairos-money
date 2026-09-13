@@ -2,8 +2,11 @@
   "contract": "KAIROS-MONEY-V16-ADAPTED",
   "phase": "S1 and Session 3 consolidated gate",
   "lease": null,
-  "candidate_sha": null,
+  "candidate_sha": "e57cf27eca6b675abae2d8a4dd74307372467f1c",
+  "candidate_tree": "fd2400a22d76b761cbe113ef32b7fcd2967aa155",
+  "local_checkpoint": "13b52fe",
   "run_id": null,
-  "next_action": "Read current branch workflow for the authentication migration candidate; finish required device backup-reset-restore and theme review before Session 4.",
-  "automation_id": null
+  "automation_id": "6aa6c8e99f20819181576d885cb21b46",
+  "local_validation": "154 tests in 25 files, lint, production build, Android app and instrumentation packages, Android lint PASS",
+  "next_action": "Resolve the candidate workflow once by its exact SHA. If unfinished, end. Finish real backup-reset-restore, Forgot-PIN system interaction and both-theme review before closing the consolidated gate and starting Session 4."
 }
