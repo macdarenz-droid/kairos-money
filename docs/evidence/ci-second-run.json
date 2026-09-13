@@ -1,0 +1,10 @@
+{
+  "commit": "95904f46e3e5900bbcc88ff1153ad6a25c1ba63c",
+  "run_id": 34743677323,
+  "source_gate": "PASS",
+  "apk_build_and_signature": "PASS",
+  "native_gate": "NOT RUN; emulator exited before boot",
+  "cause": "Emulator 37.1.11 still requires 7372.80 MB with disk.dataPartition.size=2048M; only 6556.49 MB was free. The emulator exited immediately, then its action waited 300 seconds.",
+  "repair": "Remove unused preinstalled .NET, NDK and Haskell toolchains from the disposable CI runner after compilation. Require 16 GiB free before image installation. Reset native status to NOT RUN so old evidence cannot be mistaken for this run.",
+  "url": "https://github.com/macdarenz-droid/kairos-money/actions/runs/34743677323"
+}

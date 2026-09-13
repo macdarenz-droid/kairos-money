@@ -62,6 +62,23 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Reserve space for the Android test device
+        run: |
+          df -h .
+          # This disposable runner has already compiled the APKs. These SDKs are unused.
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/ndk /opt/ghc /usr/local/.ghcup
+          python - <<'PYSPACE'
+          import json, shutil
+          from pathlib import Path
+          free = shutil.disk_usage('.').free
+          minimum = 16 * 1024**3
+          report = {'free_bytes': free, 'minimum_bytes': minimum, 'status': 'PASS' if free >= minimum else 'FAIL'}
+          Path('docs/evidence/ci-disk-space.json').write_text(json.dumps(report, indent=2) + '\n')
+          Path('docs/evidence/native-run-status.json').write_text(json.dumps({'status': 'NOT RUN', 'reason': 'Native gate has not completed on this CI run. Read the workflow log for emulator startup failures.'}, indent=2) + '\n')
+          print(json.dumps(report))
+          if free < minimum:
+              raise SystemExit('Insufficient free space for the Android system image and userdata partition.')
+          PYSPACE
       - name: Native encryption, app flow and theme gate
         uses: reactivecircus/android-emulator-runner@v2
         with:
