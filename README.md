@@ -1,6 +1,6 @@
 # Kairos Money Tracker
 
-A private, on-device money tracker with exact money math, an encrypted Android ledger, account setup, app lock, export/delete and a quiet two-theme interface. Session 2 adds local file extraction, mandatory import review, reconciliation and reversible commits. Session 2 passed its native gate; Session 2.5 adds export-first updates and is under native verification. Intelligence has not started.
+A private, on-device money tracker with exact money math, an encrypted Android ledger, account setup, app lock, export/delete and a quiet two-theme interface. Session 2 adds local file extraction, mandatory import review, reconciliation and reversible commits. Session 2 passed its native gate; Session 2.5 adds export-first updates and has passed its native and both-theme visual gates. Intelligence has not started.
 
 **Session 1 gate: PASS** on Android 34 AOSP; [verified run](https://github.com/macdarenz-droid/kairos-money/actions/runs/34747556681).
 
@@ -92,3 +92,5 @@ Leave stated balances blank for transaction exports. Tier A verifies a statement
 Pending transactions are retained as commitments. A matching settlement updates the original ID and records its prior values; ambiguous candidates need review. The import result explains additions, already-known transactions and superseded pending rows. An optional local weekday reminder is off by default and skipped while data is fresh. Android may delay delivery; open the app after reboot to restore scheduling.
 
 The new UI uses the existing design primitives. Session 2.5's device/visual acceptance is tracked in `docs/GATE_SESSION_2_5.md`. Do not start Session 3 before that gate passes.
+
+**Session 2.5 gate: PASS.** 100 source tests, eight native tests and 39 reviewed screenshots. [Regression report](docs/GATE_SESSION_2_5.md) · [Verified workflow](https://github.com/macdarenz-droid/kairos-money/actions/runs/34754456134). Session 3 has not started.

@@ -2,9 +2,9 @@
 
 ## State
 
-Sessions 1–2 PASS. Session 2 passed on commit 282460630e9ae5419f7224b8cf8e63d174334e40, workflow 34752125659: 78 source tests, six native tests and 27 reviewed screenshots. Session 2.5 passed on commit 4c5ef38bfaf563aa527a0753233a9adafb1e3582, workflow 34754456134: 100 source tests, eight native tests and all 12 new screenshots reviewed in both themes. Do not start Session 3.
+Sessions 1–2 PASS. Session 2 passed on commit 282460630e9ae5419f7224b8cf8e63d174334e40, workflow 34752125659: 78 source tests, six native tests and 27 reviewed screenshots. Session 2.5 passed on commit 4c5ef38bfaf563aa527a0753233a9adafb1e3582, workflow 34754456134: 100 source tests, eight native tests and all 39 screenshots reviewed, including 12 new screens in both themes. Do not start Session 3.
 
-Repository: `macdarenz-droid/kairos-money`. Active local source: `/workspace/scratch/19f118d9b907/session25-gate`, remote branch `codex/session25-ingestion`. The GitHub connector and local Git have different commit IDs; always use the current remote head as the parent of connector commits.
+Repository: `macdarenz-droid/kairos-money`. Active local source: `/workspace/scratch/19f118d9b907/session25-gate`, remote branch `main`. The GitHub connector and local Git have different commit IDs; always use the current remote head as the parent of connector commits.
 
 ## Built this session
 
@@ -31,3 +31,5 @@ Session 2.5 adds no-balance exports, headerless/issuer inference, remembered map
 Transfer automation requires explicit transfer evidence plus a unique reciprocal candidate; ambiguous matches remain visible rather than excluding unrelated purchases. Repeated identical purchases require consistent confirmed occurrence identity across overlaps. Canonical order independence refers to sorted logical ledger/source state, not SQLCipher bytes or import timestamps.
 
 Intelligence, research catalogue, forecasts, fingerprint/charts, release signing, broader device/biometric compatibility and Session 4 performance/accessibility remain deferred. Session 3 must respect integrity tiers and gaps and exclude pending history; Session 4 distinguishes gaps from staleness and labels partial-month fingerprints provisional.
+
+The full native status, deletion result, artifact IDs and all 39 screenshot SHA-256 hashes are recorded in `docs/evidence/session-2.5-final.json`.

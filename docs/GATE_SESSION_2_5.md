@@ -37,3 +37,5 @@ APK artifact archive SHA-256: `61860792b3ae5cc7730436f34d6d8acbd62aef1e32ad5a39f
 Evidence artifact archive SHA-256: `a879338cedaeffeecaf5fb1787a222617ac91d03510d5f11ee19b40f8e74ab3b`.
 
 This is an Android 34 emulator-verified debug build. Release signing and wider physical-device testing remain later work. Session 3 has not started.
+
+The final review also rechecked all 27 foundation/import images with the approved logo: 39 screenshots in total. Their SHA-256 hashes, artifact IDs and native status are recorded in `docs/evidence/session-2.5-final.json`. The downloaded APK is version 0.2.5 / code 3, its v2 signature verifies, and it has no INTERNET permission. Local reminders use inexact alarms; opening Kairos restores scheduling after reboot, as recorded in ADR 0006.
