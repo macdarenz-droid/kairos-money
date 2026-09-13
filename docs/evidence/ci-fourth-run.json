@@ -1,0 +1,13 @@
+{
+  "commit": "ac43e1f1eab78798cd9786bcb4d36f0cdcad3731",
+  "run_id": 34744611430,
+  "source_gate": "PASS",
+  "apk_build_and_signature": "PASS",
+  "emulator_boot": "PASS",
+  "native_gate": "FAIL during foundation app-flow test",
+  "target_exit_reason": "12 (DEPENDENCY DIED)",
+  "target_exit_description": "depends on provider com.google.android.gms/.fonts.provider.FontsProvider in dying proc com.google.android.gms.persistent",
+  "underlying_event": "Google Play Services persistent process killed after SIM_STATE_CHANGED broadcast ANR",
+  "repair": "Remove transitive EmojiCompatInitializer metadata. Kairos renders bundled Inter in WebView and does not use native emoji enhancement. Preserve all other AndroidX Startup initializers. Add native guard assertion.",
+  "url": "https://github.com/macdarenz-droid/kairos-money/actions/runs/34744611430"
+}

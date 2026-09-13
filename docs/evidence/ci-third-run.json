@@ -3,9 +3,16 @@
   "run_id": 34744181772,
   "source_gate": "PASS",
   "apk_build_and_signature": "PASS",
-  "disk_preflight_free_bytes": 28127150080,
+  "disk_preflight": {
+    "status": "PASS",
+    "free_bytes": 28127150080,
+    "minimum_bytes": 17179869184
+  },
   "emulator_boot_ms": 65935,
-  "native_gate": "FAIL; Foundation process crashed after first test",
-  "diagnosis": "Filtered AndroidRuntime/Chromium error logs did not capture the Kairos process exit. Next run collects all logcat buffers and Android exit-info, plus raw test method status.",
+  "apks_installed": true,
+  "native_gate": "FAIL; first foundation test completed, target process crashed during app-flow test",
+  "instrumentation_output": "app.kairos.money.FoundationInstrumentedTest:.INSTRUMENTATION_RESULT: shortMsg=Process crashed.",
+  "cause": "Undetermined: previous AndroidRuntime/chromium-only log filter did not preserve the target crash. The filtered log contains an unrelated emulator Gmail error, which is not treated as the Kairos cause.",
+  "next": "Run 34744611430 on ac43e1f1 captures full native logs, crash buffers, WebView provider and app exit reasons.",
   "url": "https://github.com/macdarenz-droid/kairos-money/actions/runs/34744181772"
 }

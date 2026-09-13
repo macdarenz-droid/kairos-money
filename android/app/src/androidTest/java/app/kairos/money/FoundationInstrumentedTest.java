@@ -77,6 +77,7 @@ public class FoundationInstrumentedTest {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a -> activity = a);
             awaitJs("document.body.innerText.includes('Choose a PIN')");
+            assertFalse("Offline app must not start the downloadable emoji font provider", androidx.emoji2.text.EmojiCompat.isConfigured());
             assertTrue((activity.getWindow().getAttributes().flags & WindowManager.LayoutParams.FLAG_SECURE) != 0);
             input("Choose a PIN", "246810"); input("Confirm PIN", "246810"); click("Create private ledger");
             awaitJs("Boolean(document.querySelector('nav'))");
