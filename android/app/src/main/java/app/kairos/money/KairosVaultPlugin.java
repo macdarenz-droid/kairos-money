@@ -92,6 +92,8 @@ public class KairosVaultPlugin extends Plugin {
         String content = call.getString("base64");
         if (content == null) throw new IllegalArgumentException("No export data was supplied.");
         exportBytes = Base64.decode(content, Base64.NO_WRAP);
+        // Capacitor persists activity-call arguments; the ZIP must stay out of the Binder bundle.
+        call.getData().remove("base64");
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT); intent.setType("application/zip");
         intent.addCategory(Intent.CATEGORY_OPENABLE); intent.putExtra(Intent.EXTRA_TITLE, "Kairos-money-export.zip");
         getActivity().runOnUiThread(() -> startActivityForResult(call, intent, "exportResult"));
