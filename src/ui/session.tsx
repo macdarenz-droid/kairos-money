@@ -26,7 +26,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     await serial(async () => {
       await closeDatabase(); const opened = await openDatabase();
       if (generation !== epoch.current) { await closeDatabase(); return; }
-      repo.current = opened; setError(''); setState('ready');
+      repo.current = opened; backgroundAt.current = null; setError(''); setState('ready');
     });
   }, []);
   const lock = useCallback(async () => {
@@ -36,23 +36,28 @@ export function SessionProvider({ children }: PropsWithChildren) {
   useEffect(() => { void retry(); }, [retry]);
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-    const listener = NativeApp.addListener('appStateChange', ({ isActive }) => {
-      if (!isActive) {
+    const background = () => {
+        if (backgroundAt.current !== null) return;
         backgroundAt.current = Date.now(); epoch.current++; repo.current = undefined; query.clear();
         document.documentElement.classList.add('session-obscured'); setState('background');
         void serial(closeDatabase).catch(() => { setState('error'); setError('Storage could not close safely. Restart Kairos.'); });
-      } else {
+    };
+    const pauseListener = NativeApp.addListener('pause', background);
+    const listener = NativeApp.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive) background();
+      else {
         void (async () => {
           try {
             const status = await Vault.status();
             if (!status.configured) { setState('setup'); return; }
+            if (backgroundAt.current === null && repo.current && status.unlocked) return;
             if (requiresUnlock(backgroundAt.current, Date.now(), status.unlocked)) await lock(); else await open();
           } catch { setState('error'); setError('Kairos could not resume safely. Restart it before opening your ledger.'); }
           finally { document.documentElement.classList.remove('session-obscured'); }
         })();
       }
     });
-    return () => { void listener.then(handle => handle.remove()); };
+    return () => { void listener.then(handle => handle.remove()); void pauseListener.then(handle => handle.remove()); };
   }, [lock, open, query]);
   async function run<T>(fn: (repo: Repository) => Promise<T>): Promise<T> {
     return serial(async () => {
