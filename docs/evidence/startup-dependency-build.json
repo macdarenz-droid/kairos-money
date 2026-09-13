@@ -1,0 +1,15 @@
+{
+  "previous_run": 34745264432,
+  "previous_failure": "Android lint MissingClass on explicitly referenced InitializationProvider; APK/test compilation succeeded.",
+  "repair": "Declare existing androidx.startup:startup-runtime:1.1.1 as a direct implementation dependency. No lint suppression.",
+  "local_tasks": [
+    ":app:assembleDebug",
+    ":app:assembleDebugAndroidTest",
+    ":app:lintDebug"
+  ],
+  "local_result": "PASS",
+  "duration_seconds": 112,
+  "lint_errors": 0,
+  "lint_warnings": 13,
+  "device_gate": "Pending next CI emulator run"
+}

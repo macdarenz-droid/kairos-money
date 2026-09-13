@@ -4,7 +4,7 @@ Status: accepted. Date: 2026-09-13.
 
 ## Decision
 
-Remove only EmojiCompatInitializer metadata from AndroidX Startup through the manifest merger. Keep the initialization provider and its other components. Kairos renders its interface in WebView with packaged Inter fonts; native emoji enhancement is unused. No manual EmojiCompat initializer is added.
+Remove only EmojiCompatInitializer metadata from AndroidX Startup through the manifest merger. Keep the initialization provider and its other components. Kairos renders its interface in WebView with packaged Inter fonts; native emoji enhancement is unused. No manual EmojiCompat initializer is added. Declare startup-runtime 1.1.1 directly because the application manifest now references its provider; this is the same version already present at runtime and lets lint resolve that class.
 
 ## Evidence
 
