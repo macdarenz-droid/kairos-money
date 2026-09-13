@@ -21,7 +21,7 @@ it.each(['dark', 'light'])('reviews a staged CSV, commits and rolls it back in %
   fireEvent.click(screen.getByRole('button', { name: 'Extract for review' }));
   await screen.findByText('✓ Balance check passed', {}, { timeout: 10000 }); expect(await state.repo!.imports.ledger()).toHaveLength(0);
   fireEvent.click(screen.getByRole('button', { name: 'Confirm import' }));
-  await screen.findByText('1 transactions'); expect(await state.repo!.imports.ledger()).toHaveLength(1);
+  await screen.findByText('1 transaction'); expect(await state.repo!.imports.ledger()).toHaveLength(1);
   fireEvent.click(screen.getByRole('button', { name: 'Roll back' })); fireEvent.click(screen.getByRole('button', { name: 'Confirm rollback' }));
   await waitFor(async () => expect(await state.repo!.imports.ledger()).toHaveLength(0));
   expect(document.documentElement.dataset.theme).toBe(theme);

@@ -13,6 +13,9 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -50,6 +53,17 @@ public class ImportInstrumentedTest {
     private byte[] asset(String name) throws Exception {
         try (InputStream input = InstrumentationRegistry.getInstrumentation().getContext().getAssets().open(name); ByteArrayOutputStream output = new ByteArrayOutputStream()) { byte[] block = new byte[8192]; int n; while ((n = input.read(block)) != -1) output.write(block, 0, n); return output.toByteArray(); }
     }
+    private void evidence(String name, String content) throws Exception {
+        File directory = new File(activity.getExternalFilesDir(null), "evidence");
+        assertTrue(directory.exists() || directory.mkdirs());
+        try (FileOutputStream output = new FileOutputStream(new File(directory, name))) { output.write(content.getBytes(StandardCharsets.UTF_8)); }
+    }
+    private String hierarchy(AccessibilityNodeInfo node) {
+        if (node == null) return "No active window\n";
+        StringBuilder result = new StringBuilder().append(node.getPackageName()).append(" | ").append(node.getClassName()).append(" | ").append(node.getText()).append(" | ").append(node.getContentDescription()).append('\n');
+        for (int i = 0; i < node.getChildCount(); i++) result.append(hierarchy(node.getChild(i)));
+        return result.toString();
+    }
     @Test public void a_bundledOcrReadsAllFourSyntheticScansOffline() throws Exception {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a -> activity = a); unlock();
@@ -59,9 +73,10 @@ public class ImportInstrumentedTest {
                 awaitJs("Boolean(window.__ocrResult || window.__ocrError)");
                 assertEquals("OCR bridge failed", "null", js("window.__ocrError"));
                 String result = new JSONArray("[" + js("JSON.stringify(window.__ocrResult)") + "]").getString(0);
+                evidence("ocr-" + kind + ".json", result);
                 JSONArray items = new JSONObject(result).getJSONArray("items"); StringBuilder text = new StringBuilder();
                 for (int i = 0; i < items.length(); i++) text.append(items.getJSONObject(i).getString("text")).append(' ');
-                assertTrue("OCR missed synthetic marker for " + kind, text.toString().toUpperCase().contains("SYNTHETIC"));
+                assertTrue("OCR missed synthetic marker for " + kind + ": " + text, text.toString().toUpperCase().contains("SYNTHETIC"));
                 assertTrue("OCR missed money for " + kind, text.toString().contains(kind.equals("payslip") ? "1600.00" : "10.00"));
                 js("delete window.__ocrResult;delete window.__ocrError;");
             }
@@ -69,8 +84,8 @@ public class ImportInstrumentedTest {
     }
     private boolean clickDocument(AccessibilityNodeInfo node, String name) {
         if (node == null) return false;
-        CharSequence text = node.getText();
-        if (text != null && text.toString().equals(name)) {
+        CharSequence text = node.getText(); CharSequence description = node.getContentDescription();
+        if ((text != null && text.toString().equals(name)) || (description != null && description.toString().equals(name))) {
             AccessibilityNodeInfo candidate = node;
             for (int i = 0; candidate != null && i < 4; i++, candidate = candidate.getParent()) if (candidate.isClickable() && candidate.isEnabled()) return candidate.performAction(AccessibilityNodeInfo.ACTION_CLICK);
         }
@@ -83,19 +98,39 @@ public class ImportInstrumentedTest {
         try {
             try (OutputStream out = target.getContentResolver().openOutputStream(uri)) { assertNotNull(out); out.write(asset("synthetic-checking-1.csv")); }
             try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
-                scenario.onActivity(a -> activity = a); unlock(); click("You"); click("Light"); click("Ledger"); click("Import statements");
-                long deadline = System.currentTimeMillis() + 30000; boolean chosen = false;
-                while (System.currentTimeMillis() < deadline && !chosen) { chosen = clickDocument(InstrumentationRegistry.getInstrumentation().getUiAutomation().getRootInActiveWindow(), "Kairos-synthetic-import.csv"); if (!chosen) Thread.sleep(200); }
-                assertTrue("Real Android file picker did not show the synthetic CSV", chosen);
-                awaitJs("document.body.innerText.includes('Files waiting for review')"); click("Read file");
-                input("Statement start", "2026-01-01"); input("Statement end", "2026-01-31"); input("Stated opening balance", "0"); input("Stated closing balance", "-60.00"); click("Extract for review");
-                awaitJs("document.body.innerText.includes('3 new') && document.body.innerText.includes('Balance check passed')");
-                NativeEvidence.capture(activity, "light-import-review"); click("Confirm import");
-                awaitJs("document.body.innerText.includes('3 transactions') && !document.querySelector('dialog')");
-                assertTrue(js("document.body.innerText").contains("SYNTHETIC MERCHANT A")); NativeEvidence.capture(activity, "light-import-ledger");
-                click("You"); click("Dark"); click("Ledger"); awaitJs("document.documentElement.dataset.theme==='dark'"); NativeEvidence.capture(activity, "dark-import-ledger");
-                click("Roll back"); NativeEvidence.capture(activity, "dark-import-rollback"); click("Confirm rollback");
-                awaitJs("document.body.innerText.includes('No transactions yet') && !document.querySelector('dialog')");
+                scenario.onActivity(a -> activity = a); unlock();
+                for (String theme : new String[]{"Light", "Dark"}) {
+                    String prefix = theme.toLowerCase();
+                    click("You"); click(theme); awaitJs("document.documentElement.dataset.theme===" + JSONObject.quote(prefix)); click("Ledger"); click("Import statements");
+                    long started = System.currentTimeMillis(); long deadline = started + 30000; boolean chosen = false; boolean drawerOpened = false; boolean downloadsOpened = false;
+                    while (System.currentTimeMillis() < deadline && !chosen) {
+                        AccessibilityNodeInfo root = InstrumentationRegistry.getInstrumentation().getUiAutomation().getRootInActiveWindow();
+                        chosen = clickDocument(root, "Kairos-synthetic-import.csv");
+                        if (!chosen && System.currentTimeMillis() - started > 3000) {
+                            if (!drawerOpened) drawerOpened = clickDocument(root, "Show roots");
+                            else if (!downloadsOpened) downloadsOpened = clickDocument(root, "Downloads");
+                        }
+                        if (!chosen) Thread.sleep(200);
+                    }
+                    if (!chosen) { evidence(prefix + "-picker-hierarchy.txt", hierarchy(InstrumentationRegistry.getInstrumentation().getUiAutomation().getRootInActiveWindow())); NativeEvidence.captureSystem(activity, prefix + "-picker-failure"); }
+                    assertTrue("Real Android file picker did not show the synthetic CSV", chosen);
+                    awaitJs("document.body.innerText.includes('Files waiting for review')"); click("Read file");
+                    NativeEvidence.capture(activity, prefix + "-import-details");
+                    input("Statement start", "2026-01-01"); input("Statement end", "2026-01-31"); input("Stated opening balance", "0"); input("Stated closing balance", "-59.00"); click("Extract for review");
+                    awaitJs("document.body.innerText.includes('3 new') && document.body.innerText.includes('Balance mismatch')");
+                    NativeEvidence.capture(activity, prefix + "-import-quarantine");
+                    js("document.querySelector('dialog details').open=true"); input("Closing balance (decimal dot)", "-60.00"); click("Save stated balances");
+                    awaitJs("document.body.innerText.includes('Balance check passed')"); js("document.querySelector('dialog details').open=false;document.querySelector('dialog .transaction-row').click()");
+                    awaitJs("document.body.innerText.includes('Check transaction')");
+                    js("(()=>{const s=Array.from(document.querySelectorAll('label')).find(l=>l.textContent.startsWith('Category')).querySelector('select');s.value='Groceries';s.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('dialog:last-of-type input[type=checkbox]').click();})()");
+                    NativeEvidence.capture(activity, prefix + "-import-correction"); click("Confirm this row");
+                    awaitJs("!document.body.innerText.includes('Check transaction')"); NativeEvidence.capture(activity, prefix + "-import-review"); click("Confirm import");
+                    awaitJs("document.body.innerText.includes('3 transactions') && !document.querySelector('dialog')");
+                    assertTrue(js("document.body.innerText").contains("SYNTHETIC MERCHANT A")); NativeEvidence.capture(activity, prefix + "-import-ledger");
+                    js("document.querySelector('.coverage').scrollIntoView()"); NativeEvidence.capture(activity, prefix + "-import-coverage"); js("window.scrollTo(0,0)");
+                    click("Roll back"); NativeEvidence.capture(activity, prefix + "-import-rollback"); click("Confirm rollback");
+                    awaitJs("document.body.innerText.includes('No transactions yet') && !document.querySelector('dialog')");
+                }
             }
         } finally { target.getContentResolver().delete(uri, null, null); }
     }

@@ -31,9 +31,12 @@ export function parseTable(table: readonly string[][], mapping?: Columns, confid
   return table.slice(1).filter(row => row.some(Boolean) && row.join('|') !== header.join('|')).map((row, i) => {
     if (row.length !== header.length) throw new ImportFailure('A table header was found.', `Row ${i + 2} has ${row.length} cells; expected ${header.length}.`, row.join(' | '), 'Confirm the delimiter or export the statement again.');
     const debit = columns.debit === null ? '' : row[columns.debit] ?? '', credit = columns.credit === null ? '' : row[columns.credit] ?? '';
+    if (columns.amount === null && !debit.trim() && !credit.trim()) throw new ImportFailure('Debit and credit columns were identified.', `Row ${i + 2} has no amount.`, row.join(' | '), 'Correct the missing amount or map the signed amount column.');
     const nonzero = (v: string) => v.trim() !== '' && !/^[0., ]+$/.test(v);
     if (columns.amount === null && nonzero(debit) && nonzero(credit)) throw new ImportFailure('Debit and credit columns were identified.', `Row ${i + 2} contains both a debit and a credit.`, row.join(' | '), 'Correct the row or map a signed amount column.');
+    const mccIndex = header.findIndex(h => /^(?:mcc|merchant category code)$/i.test(h.trim()));
+    const mcc = mccIndex >= 0 && /^\d{4}$/.test(row[mccIndex] ?? '') ? row[mccIndex] : undefined;
     const amount = columns.amount === null ? (nonzero(debit) ? debit : credit || debit || '0') : row[columns.amount] ?? '';
-    return { sourceId: String(i + 2), date: row[columns.date] ?? '', description: row[columns.description] ?? '', amount, ...(columns.amount === null ? { direction: nonzero(debit) ? 'debit' as const : 'credit' as const } : {}), ...(columns.reference === null ? {} : { reference: row[columns.reference] ?? '' }), confidence };
+    return { ...(mcc ? { mcc } : {}), sourceId: String(i + 2), date: row[columns.date] ?? '', description: row[columns.description] ?? '', amount, ...(columns.amount === null ? { direction: nonzero(debit) ? 'debit' as const : 'credit' as const } : {}), ...(columns.reference === null ? {} : { reference: row[columns.reference] ?? '' }), confidence };
   });
 }

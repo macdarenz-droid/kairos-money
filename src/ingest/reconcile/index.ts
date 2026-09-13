@@ -25,7 +25,9 @@ export function coveredDays(ranges: readonly Period[]): number { return coverage
 export function dailyAverage(minor: bigint, ranges: readonly Period[]): bigint | null { const days = coveredDays(ranges); return days ? minor / BigInt(days) : null; }
 export function balance(document: Document): { valid: boolean; difference: bigint } {
   if (document.payslip) { const p = document.payslip; const difference = BigInt(p.gross) - BigInt(p.tax) - p.deductions.reduce((s, a) => s + BigInt(a.minor), 0n) - BigInt(p.net); return { valid: difference === 0n, difference }; }
-  const difference = BigInt(document.opening) + document.rows.reduce((sum, row) => sum + BigInt(row.minor), 0n) - BigInt(document.closing);
+  const unique = new Map<string, bigint>();
+  for (const row of document.rows) unique.set(row.duplicateOf ?? row.fingerprint, BigInt(row.minor));
+  const difference = BigInt(document.opening) + [...unique.values()].reduce((sum, value) => sum + value, 0n) - BigInt(document.closing);
   return { valid: difference === 0n, difference };
 }
 export function reconcile(documents: readonly Document[]): LedgerRow[] {

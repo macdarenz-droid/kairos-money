@@ -25,4 +25,8 @@ Session 1 is PASS. Session 2 implementation is under verification; do not begin 
 
 ## Remaining exact work
 
+First published native run `34749487000` on `4c1224ae3044f9d4441380ce2c0a4567e7882795`: 73 source tests passed; APK build, signature, Android lint and both foundation instrumentation tests passed. Both new import tests failed: the scan marker was not recognized and the picker test assumed its file appeared in Recent. Export/resume/deletion checks were not reached. This run is not a passing Session 2 gate.
+
+The repair candidate embeds the fixture font (the previous renderer visibly substituted incorrect glyph spacing), navigates the real picker to Downloads, retains OCR text and picker diagnostics, and exercises review/quarantine/correction/coverage/rollback in both themes. It also rejects balance checks that counted collapsed duplicates twice and validates every affected statement before committing duplicate corrections. The source suite now has 74 tests.
+
 Run the published CI gate; fix any failing source or native check; inspect all new native screenshots in both themes. Record exact tested commit, test counts, APK signature/hash and artifact links. Freeze Session 2 acceptance tests only once PASS, then begin Session 2.5.

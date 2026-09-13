@@ -55,14 +55,14 @@ export function canonicalMerchant(raw: string, aliases: readonly { canonical: st
   return ranked[0] && (!ranked[1] || ranked[0].score > ranked[1].score) ? ranked[0].name : name;
 }
 export function rowFingerprint(row: Pick<NormalizedRow, 'accountId' | 'date' | 'minor' | 'merchant' | 'occurrence'>): string { return hash(JSON.stringify([row.accountId, row.date, row.minor, row.merchant.slice(0, 120), row.occurrence])); }
-export function normalizeRow(raw: RawRow, context: ImportContext): NormalizedRow {
+export function normalizeRow(raw: RawRow, context: ImportContext, aliases: readonly { canonical: string; aliases: string[] }[] = []): NormalizedRow {
   let minor = normalizeAmount(raw.amount, context.currency, context.decimal);
   if (raw.direction) minor = (minor < 0n ? -minor : minor) * (raw.direction === 'debit' ? -1n : 1n);
   else if (/(?:DR|CR)\s*$/i.test(raw.amount)) { /* Explicit debit/credit suffix already supplies ledger direction. */ }
   else if (context.accountKind === 'credit' && context.creditPositivePurchases) minor = -minor;
   money(minor, context.currency);
-  const merchant = merchantName(raw.description);
-  const row: NormalizedRow = { sourceId: raw.sourceId, accountId: context.accountId, date: normalizeDate(raw.date, context.period, context.dateOrder), description: raw.description.trim(), merchant, minor: minor.toString(), currency: context.currency, reference: raw.reference ?? '', pending: raw.pending ?? false, confidence: raw.confidence, fingerprint: '', issues: [], category: null, verified: false, duplicateOf: null, occurrence: '', createRule: false };
+  const merchant = canonicalMerchant(raw.description, aliases);
+  const row: NormalizedRow = { sourceId: raw.sourceId, accountId: context.accountId, date: normalizeDate(raw.date, context.period, context.dateOrder), description: raw.description.trim(), merchant, minor: minor.toString(), currency: context.currency, reference: raw.reference ?? '', pending: raw.pending ?? false, confidence: raw.confidence, fingerprint: '', issues: [], category: null, verified: false, duplicateOf: null, occurrence: '', createRule: false, mcc: raw.mcc ?? null };
   if (!row.description || !merchant) row.issues.push('Confirm the merchant description.');
   if (row.pending) row.issues.push('This transaction is pending. Confirm it against a settled statement.');
   if (raw.confidence < 9000) row.issues.push('Check this extracted row against the source.');

@@ -3,6 +3,9 @@ from pathlib import Path
 import csv, json, subprocess
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+pdfmetrics.registerFont(TTFont('FixtureSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'fixtures/ingest'
 OUT.mkdir(exist_ok=True)
@@ -24,7 +27,7 @@ for kind in ['checking','savings','credit']:
         c=canvas.Canvas(str(OUT/(name+'.pdf')),pagesize=(595,842),invariant=1)
         chunks=[rows] if layout!=2 else [rows[:2],rows[2:]]
         for page,chunk in enumerate(chunks,1):
-            c.setFont('Helvetica',11); c.drawString(40,800,'SYNTHETIC TEST STATEMENT - NOT A REAL ACCOUNT')
+            c.setFont('FixtureSans',11); c.drawString(40,800,'SYNTHETIC TEST STATEMENT - NOT A REAL ACCOUNT')
             c.drawString(40,777,kind+' account / January 2026')
             for x,text in zip(xs,header):c.drawString(x,720,text)
             for i,row in enumerate(chunk):
@@ -39,7 +42,7 @@ for layout,sep in enumerate([': ', ' | ', ':    '],1):
     text='\n'.join(k+sep+v for k,v in pairs)
     (OUT/(name+'.txt')).write_text(text+'\n')
     c=canvas.Canvas(str(OUT/(name+'.pdf')),pagesize=(595,842),invariant=1)
-    c.setFont('Helvetica',12);c.drawString(40,800,'SYNTHETIC PAYSLIP - NOT REAL EMPLOYMENT')
+    c.setFont('FixtureSans',12);c.drawString(40,800,'SYNTHETIC PAYSLIP - NOT REAL EMPLOYMENT')
     for i,(key,value) in enumerate(pairs):
         c.drawString(40,755-i*28,key+sep); c.drawString(260,755-i*28,value)
     c.save();manifest.append({'name':name,'kind':'payslip','layout':layout,'net_minor':'160000'})
