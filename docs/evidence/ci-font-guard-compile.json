@@ -1,0 +1,7 @@
+{
+  "failed_run": 34745041934,
+  "cause": "New native test referenced androidx.emoji2.text, which is a transitive runtime implementation absent from the test compiler classpath.",
+  "repair": "Use PackageManager GET_META_DATA to assert the installed manifest excludes EmojiCompatInitializer and retains ProcessLifecycleInitializer.",
+  "local_validation": ":app:compileDebugAndroidTestJavaWithJavac PASS, 28 seconds, 77 actionable tasks",
+  "native_gate": "Pending next device run"
+}

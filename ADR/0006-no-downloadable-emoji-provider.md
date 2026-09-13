@@ -16,6 +16,6 @@ Waiting for Google Play Services startup or retrying after its crash would retai
 
 ## Validation
 
-The native app-flow test asserts EmojiCompat is not configured after launch. The existing real lock, database, appearance, export and deletion checks remain required. No permission, authentication, encryption or network restriction is relaxed. System-provided emoji remains available; the WebView interface and its bundled font assets are unchanged.
+The native app-flow test inspects the installed AndroidX Startup provider metadata, asserting the emoji initializer is absent and the lifecycle initializer remains. This avoids a compile-time reference to a transitive implementation dependency. The existing real lock, database, appearance, export and deletion checks remain required. No permission, authentication, encryption or network restriction is relaxed. System-provided emoji remains available; the WebView interface and its bundled font assets are unchanged.
 
 Source: [Android EmojiCompat documentation](https://developer.android.com/reference/androidx/emoji2/text/EmojiCompat), including default deferred font loading and the supported manifest removal.
