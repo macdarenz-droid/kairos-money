@@ -9,3 +9,7 @@ Alternatives: dismiss or suppress ANR dialogs, ignore the screenshots, or retain
 Consequences: screenshot capture fails on a foreign foreground window and saves an obscured diagnostic image. The original production security flags remain in force; only synthetic instrumentation capture temporarily clears FLAG_SECURE. The selected SDK image is present in the official system-image catalogue. Biometrics depend on available/enrolled device hardware; PIN remains the mandatory tested unlock path.
 
 Validation: full local APK, instrumentation and lint build passes. CI and clean screenshot review remain required before the Session 1 gate closes.
+
+## Frame presentation follow-up
+
+Run 34746295447 passes the complete functional gate, including real export and zero-file deletion. Visual inspection still rejects two stale frames: light Insights shows Ledger, and initial Today shows the preceding opening state. Android's [VisualStateCallback](https://developer.android.com/reference/android/webkit/WebView.VisualStateCallback) signals readiness for a subsequent draw; it does not prove that frame has been presented. Clear the synthetic capture window flag before the wait, request a draw and require the [frame commit callback](https://developer.android.com/reference/android/view/ViewTreeObserver#registerFrameCommitCallback(java.lang.Runnable)) before capturing. The production APK is unchanged by this instrumentation repair.

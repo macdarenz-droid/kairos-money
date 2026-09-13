@@ -1,0 +1,8 @@
+{
+  "method": "Real Settings confirmation -> Android clearApplicationUserData",
+  "files_before": 61,
+  "files_after": 0,
+  "database_exists_after": false,
+  "rows_after": 0,
+  "scope": "All private app files, cache, WebView storage and app-owned external files; user-chosen exports and installed APK excluded"
+}

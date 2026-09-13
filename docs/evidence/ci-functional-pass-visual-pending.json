@@ -1,0 +1,16 @@
+{
+  "run_id": 34746295447,
+  "commit": "489d916bcb4c692b4f455989f9ece98d0106b5ad",
+  "source_gate": "PASS",
+  "native_functional_gate": "PASS",
+  "foundation_tests": 2,
+  "acceptance_tests": 1,
+  "post_delete_tests": 1,
+  "files_before_delete": 61,
+  "files_after_delete": 0,
+  "export": "Real Android picker saved JSON plus all 16 CSV tables; exact synthetic account amount verified",
+  "visual_review": "OPEN: light-insights.png contains Ledger and today-initial.png contains the prior opening state. Other reviewed dark/light screens are unobscured. These two images are rejected.",
+  "repair": "Clear the synthetic screenshot window flag before waiting for visual state, then require a committed hardware-rendered frame before capture.",
+  "apk_sha256": "53cebdd17811e01c95e749e8b1f8ac3c23624bf54d090215936f08168c859c6c",
+  "url": "https://github.com/macdarenz-droid/kairos-money/actions/runs/34746295447"
+}

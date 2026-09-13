@@ -1,9 +1,14 @@
 {
-  "status": "BLOCKED",
-  "installed": false,
-  "instrumentation_executed": false,
-  "reason": "No /dev/kvm; software Android 34 emulator did not finish booting within 480 seconds.",
-  "native_encryption_proven": false,
-  "native_delete_proven": false,
-  "next_runner": "Android 34 device or accelerated GitHub Actions emulator"
+  "status": "PASS",
+  "installed": true,
+  "instrumentation_executed": true,
+  "foundation_tests": 2,
+  "acceptance_tests": 1,
+  "post_delete_tests": 1,
+  "native_encryption_proven": true,
+  "native_delete_proven": true,
+  "real_document_export_proven": true,
+  "background_unlock": "1 second retained; 61 seconds locked",
+  "runner": "Android 34 emulator; airplane mode enabled",
+  "screenshots_require_review": true
 }

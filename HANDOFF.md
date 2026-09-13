@@ -29,7 +29,9 @@ Destination: **macdarenz-droid/kairos-money** only. No trading-journal repositor
 
 ## Latest native verification
 
-Run 34745565390 on cdffe4a2 passed both foundation tests, proving the actual Android app DB is encrypted. PIN retry, theme state persistence and 1/61-second resume assertions completed, then the Save action could not be reached. Screenshot review found a System UI ANR overlay, so the images are rejected. The next run uses AOSP Android 34 and requires a foreground app window plus completed WebView visual state for each screenshot. APK, instrumentation and lint pass locally with this change. Export, deletion and clean visual review remain open; see ADR 0007 and ci-system-ui-overlay.json.
+Run 34746295447 on 489d916b is green for both source and Android jobs. Both foundation tests, the export/resume acceptance test, OS deletion verification and post-deletion setup test pass. The real document picker saves JSON plus 16 CSV tables. OS deletion leaves zero of 61 app-owned files and no database. Native security/export/delete are proved.
+
+Session 1 remains OPEN only for completion of native visual evidence: `light-insights.png` captures Ledger and `today-initial.png` captures the earlier opening state. These frames are rejected. The capture helper now waits for a committed frame after clearing the synthetic screenshot flag. Monitor the next CI run, review every image, then update the gate and deliver the APK. Do not rerun completed repository setup or alter app functionality to fix a capture timing issue. See `ci-functional-pass-visual-pending.json` and ADR 0007.
 
 ## Exact next steps
 
