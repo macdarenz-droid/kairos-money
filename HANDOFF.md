@@ -1,5 +1,7 @@
 # Kairos Money — Session 3 under verification
 
+Run 34778108902 passed intelligence, Forgot-PIN and backup-save instrumentation. Its host check found the synthetic recovery-code file missing before reset. The helper now writes through UiAutomation stdin and verifies exact readback; production paths are unchanged. Continue through reset, wrong-code refusal, exact restore and remaining visual acceptance. Worker remains off.
+
 Latest failure: run 34777460743 stopped at intelligence fixture key unwrap (`UserNotAuthenticatedException`) before testing the recovery timing repair. Fixture insertion now uses the authenticated app connection on Capacitor's worker; synthetic data and all assertions are retained. Validate this combined test repair in CI, then finish native recovery/backup and theme evidence. Worker stays disabled.
 
 Run 34776505859 compiled the native repair and passed existing suites; its new recovery hash assertion exposed that the baseline snapshot races Today's asynchronous derived-data transaction. The next test candidate waits for completed Money evidence, retains full-table comparisons and preserves recovery screenshots before reset. Android validation remains in authorized CI. Worker stays off; Session 4 remains closed.

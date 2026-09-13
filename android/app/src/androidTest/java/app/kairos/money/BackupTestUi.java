@@ -89,8 +89,19 @@ final class BackupTestUi {
         }
     }
     void writeExternal(String name, String value) throws Exception {
-        String encoded = android.util.Base64.encodeToString(value.getBytes(StandardCharsets.UTF_8), android.util.Base64.NO_WRAP);
-        shell("sh -c 'printf %s " + encoded + " | base64 -d > /sdcard/Download/" + name + "'");
+        if (android.os.Build.VERSION.SDK_INT < 31) throw new IllegalStateException("Backup gate requires Android 31 or later.");
+        assertTrue("Invalid synthetic fixture filename", name.matches("kairos-test-[a-z-]+\\.txt"));
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        ParcelFileDescriptor[] streams = InstrumentationRegistry.getInstrumentation().getUiAutomation()
+            .executeShellCommandRw("tee /sdcard/Download/" + name);
+        try (FileInputStream input = new ParcelFileDescriptor.AutoCloseInputStream(streams[0])) {
+            try (java.io.OutputStream output = new ParcelFileDescriptor.AutoCloseOutputStream(streams[1])) {
+                output.write(bytes);
+            }
+            byte[] block = new byte[1024];
+            while (input.read(block) != -1) { /* Drain tee before verifying the file. */ }
+        }
+        assertTrue("Synthetic acceptance file was not written exactly", java.util.Arrays.equals(bytes, shell("cat /sdcard/Download/" + name)));
     }
     String readExternal(String name) throws Exception { return new String(shell("cat /sdcard/Download/" + name), StandardCharsets.UTF_8).trim(); }
 }
