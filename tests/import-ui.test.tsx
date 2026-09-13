@@ -26,3 +26,18 @@ it.each(['dark', 'light'])('reviews a staged CSV, commits and rolls it back in %
   await waitFor(async () => expect(await state.repo!.imports.ledger()).toHaveLength(0));
   expect(document.documentElement.dataset.theme).toBe(theme);
 });
+
+it('uses the displayed account when accounts reload after opening file review', async () => {
+  const csv = 'Date,Description,Amount\n01/01/2026,Synthetic shop,-10.00';
+  await state.repo!.imports.stageFile('synthetic.csv', btoa(csv), hash(csv));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const view = render(<QueryClientProvider client={client}><ImportWorkspace accounts={[]} request={0} consumed={() => undefined}/></QueryClientProvider>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Read file' }));
+  view.rerender(<QueryClientProvider client={client}><ImportWorkspace accounts={await state.repo!.accounts()} request={0} consumed={() => undefined}/></QueryClientProvider>);
+  expect((screen.getByLabelText('Account') as HTMLSelectElement).value).toBe('a');
+  for (const [label, value] of [['Statement start', '2026-01-01'], ['Statement end', '2026-01-31'], ['Stated opening balance', '0'], ['Stated closing balance', '-10.00']]) fireEvent.change(screen.getByLabelText(label!), { target: { value } });
+  fireEvent.click(screen.getByRole('button', { name: 'Extract for review' }));
+  await screen.findByText('✓ Balance check passed', {}, { timeout: 10000 });
+  expect((await state.repo!.imports.batches())[0]!.context.accountId).toBe('a');
+  expect(await state.repo!.imports.ledger()).toHaveLength(0);
+});
