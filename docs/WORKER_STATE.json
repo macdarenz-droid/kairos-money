@@ -8,10 +8,13 @@
   "candidate_sha": "71f5123cd83033466c48371153bf49bc2a570bc6",
   "candidate_tree": "832ae88fb1035f2bc0d65f9e59764ef1bb0248bd",
   "run_id": 34788034278,
-  "run_result": "in_progress",
+  "run_result": "failure",
+  "integration_checkpoint_sha": "13f0ee7d2145c834d3cca10b9e859c9be77bd19b",
+  "integration_local_checkpoint": "131914215471a9324f1f58299d829aa9c30913a9",
+  "integration_delivery_status": "Incomplete Session 4 source checkpoint; skip-ci, not a new application candidate or release",
   "before_checkpoint": "e341627b2e94f5924d2a1439e040577f44ecd846",
   "local_checkpoint": "ce8cbe1a1ea3855f060e6fe42f7c450ddbed5641",
-  "last_result": "CommBank repair run 34785441843 source and Android PASS. Published manual expense/income/transfer, Today/Quick/Ledger entry, edit/delete and confirmed statement matches. Independent manual provenance survives rollback and encrypted backup; corroborated matches count once. Added Android UI test and ten both-theme captures; awaiting CI and visual acceptance.",
-  "local_validation": "180 tests in 32 files PASS; latest focused manual 11/11 PASS. Source lint, strict TypeScript, production build, schema generation and diff check PASS. Corrected TypeScript SQL-value narrowing found during initial build. Android compile/lint/device verification delegated to authorized CI. Existing frozen tests untouched. Bundle-size warning remains open performance work.",
-  "next_action": "Resolve manual candidate CI and actual both-theme evidence without treating source tests as device proof. Continue integrated Session 4 fingerprint/charts/product/accessibility/performance/hardening/release scope; loading indicator visual review remains open. Session 3 remains accepted; no Addendum A or workers."
+  "last_result": "Run 34788034278 failed in b_manualEntryAndThemes: Add transaction opened account setup before account loading completed. Fixed application intent handling and added delayed-account regression; native input waits for mounted fields. Continued original Session 4 work together: monthly visual/history views, recurring annualiser/bills/merchant history/digest, receipt-file OCR/notes, readable recovery-code groups, lazy PDF loading, measured ledger windowing, reconciliation/provenance indexes and large-import worker. No new full gate launched for this incomplete milestone.",
+  "local_validation": "192 tests in full source run PASS plus new worker-failure rollback test PASS, 193 total. Source lint, strict TypeScript, production build, schema and diff check PASS. Existing tests unmodified. Fixed local PDF worker URL override discovered by frozen mixed-source test. Benchmark fixture corrected to use truly distinct alphabetic merchants. Local 20k reconciliation 2846ms, SQLite snapshot with provenance 763ms; DOM window render/scroll 261ms with fewer than 20 rows. These are not Android timings or visual proof.",
+  "next_action": "Continue remaining original Session 4 scope from consolidated checkpoint, not a manual-entry-only rerun. Finish chart detail/gap-stale visual distinction, onboarding, notification opt-ins, direct camera capture and product ownership gaps (bulk categories/splits/refunds/FX/net worth/widget), device accessibility/performance/40-page/interruption/hardening and final private release E2E. Native/theme acceptance for all new UI remains open. Preserve source checkpoint separately from failed candidate. Continue independent work during CI; obsolete stop-on-active-CI rule removed. No workers or Addendum A."
 }
