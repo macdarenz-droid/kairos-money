@@ -161,13 +161,24 @@ public class RevisionInstrumentedTest {
     @Test public void b_localReminderDeliversAndCancelsWithoutNetwork() throws Exception {
         InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission(target.getPackageName(),android.Manifest.permission.POST_NOTIFICATIONS);
         try {
-            new ReminderReceiver().onReceive(target,new android.content.Intent(target,ReminderReceiver.class));
             android.app.NotificationManager manager=target.getSystemService(android.app.NotificationManager.class);
-            assertTrue(manager.getActiveNotifications().length>0);
+            assertTrue("Notification permission was not enabled",manager.areNotificationsEnabled());
+            new ReminderReceiver().onReceive(target,new android.content.Intent(target,ReminderReceiver.class));
+            // NotificationManager enqueues asynchronously. Observe the actual
+            // notification before the finally block can cancel its queued post.
+            long deadline=SystemClock.uptimeMillis()+10000;
+            android.service.notification.StatusBarNotification delivered=null;
+            while(SystemClock.uptimeMillis()<deadline && delivered==null) {
+                for(android.service.notification.StatusBarNotification notification:manager.getActiveNotifications())
+                    if(notification.getId()==250 && "account-updates".equals(notification.getNotification().getChannelId()))delivered=notification;
+                if(delivered==null)SystemClock.sleep(100);
+            }
+            assertNotNull("Kairos account-update notification did not become active within 10 seconds",delivered);
+            assertEquals("Update accounts",delivered.getNotification().extras.getString(android.app.Notification.EXTRA_TITLE));
             ReminderReceiver.cancel(target);
-            long deadline=SystemClock.elapsedRealtime()+5000;
-            while(manager.getActiveNotifications().length>0 && SystemClock.elapsedRealtime()<deadline)SystemClock.sleep(50);
-            assertEquals("Cancelled notification remained active",0,manager.getActiveNotifications().length);
+            deadline=SystemClock.uptimeMillis()+10000;
+            while(SystemClock.uptimeMillis()<deadline && manager.getActiveNotifications().length>0)SystemClock.sleep(100);
+            assertEquals(0,manager.getActiveNotifications().length);
         } finally { ReminderReceiver.cancel(target); }
     }
 }
