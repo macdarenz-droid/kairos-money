@@ -47,4 +47,16 @@ public class PinRecoveryInstrumentedTest {
         interrupted.authorizePinReplacement(); interrupted.replacePin("135790", "135790");
         assertTrue(interrupted.isUnlocked());
     }
+    @Test public void backupCodeIsPersistentSeparateAndUnavailableWhileLocked() throws Exception {
+        VaultStore store = new VaultStore(context); store.setup("246810", "246810");
+        String code = store.backupRecoveryCode();
+        assertTrue(code.matches("[2-9A-HJ-NP-Z]{4}(-[2-9A-HJ-NP-Z]{4}){9}"));
+        assertNotEquals(store.secret(), code); assertFalse(store.backupCodeAcknowledged());
+        assertThrows(IllegalArgumentException.class, () -> store.acknowledgeBackupCode("wrong"));
+        store.acknowledgeBackupCode(code); store.lock();
+        assertThrows(IllegalStateException.class, store::backupRecoveryCode);
+        assertThrows(IllegalArgumentException.class, () -> store.unlock(code));
+        VaultStore restarted = new VaultStore(context); restarted.unlock("246810");
+        assertEquals(code, restarted.backupRecoveryCode()); assertTrue(restarted.backupCodeAcknowledged());
+    }
 }

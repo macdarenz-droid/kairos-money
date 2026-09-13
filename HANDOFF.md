@@ -28,3 +28,14 @@ Export repair `23825ff` passed workflow [34760248303](https://github.com/macdare
 Added offline Forgot PIN with device authentication followed by mandatory PIN replacement, and typed permanent reset. A native recovery grant expires after five minutes and is lost on restart; the replacement requirement persists. The database key is unchanged by PIN replacement. Added native store tests for replacement/backoff/interruption and both-theme UI interaction tests. Existing Sessions 1–2.5 acceptance tests remain unchanged. Local validation: all 127 source tests passed; source lint and production build passed; app APK, instrumentation APK and Android lint passed on the final source. New native recovery assertions await CI; real system-prompt recovery and visual acceptance are not yet claimed.
 
 Patch S1 remains OPEN: authentication-bound key wrapping and migration, backup-only recovery code, encrypted backup/restore, post-import backup prompt, and real device recovery/reset acceptance remain outstanding. Current recovery uses the system authentication callback; it must not be reported as authentication-bound cryptographic key protection. Continue those targeted requirements before general Session 4 work.
+
+
+## Patch S1: encrypted backup slice
+
+PIN recovery commit `b378bbf` passed workflow [34761634388](https://github.com/macdarenz-droid/kairos-money/actions/runs/34761634388). No green-run jobs, logs or artifacts were fetched.
+
+Added a Settings encrypted-backup sheet, native backup-only recovery code and written-code acknowledgement, AES-GCM encrypted save through the existing system save picker, and atomic restore through the file picker into an empty ledger. All tables are included, including provenance, payslips, coverage and staged files. Wrong codes and damaged backups are rejected before writes; invalid rows and interrupted inserts roll back. The existing readable JSON/CSV export is retained.
+
+Patch S1 remains OPEN: authentication-bound device-key wrapping/migration, mandatory code acknowledgement during initial setup, the post-import backup prompt, and real device reset/restore and system-authentication acceptance. Backup/restore currently supports the current schema and a 64 MB limit. Session 3 final visual acceptance remains open. Do not report either gate complete.
+
+Local verification for the encrypted-backup slice: 136 source tests PASS, source lint and production build PASS, Android app/test APK compilation and lint PASS. Both-theme backup UI interaction tests pass; no native screenshot review or physical reset/restore proof is claimed. Existing Sessions 1–2.5 acceptance tests were not edited.

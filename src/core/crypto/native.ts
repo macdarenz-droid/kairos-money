@@ -8,6 +8,8 @@ export interface VaultPlugin {
   replacePin(options: { pin: string; confirm: string }): Promise<void>;
   resetLockedApp(options: { confirmation: string }): Promise<void>;
   setBiometric(options: { enabled: boolean }): Promise<void>;
+  backupRecovery(): Promise<{ code: string; acknowledged: boolean }>;
+  acknowledgeBackupCode(options: { code: string }): Promise<void>;
   databaseSecret(): Promise<{ secret: string }>;
   lock(): Promise<void>;
   erase(): Promise<void>;

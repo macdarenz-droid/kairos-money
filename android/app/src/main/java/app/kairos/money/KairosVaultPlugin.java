@@ -124,6 +124,10 @@ public class KairosVaultPlugin extends Plugin {
         }
         call.resolve();
     }
+    @PluginMethod public void backupRecovery(PluginCall call) { perform(call, () -> {
+        JSObject result = new JSObject(); result.put("code", store.backupRecoveryCode()); result.put("acknowledged", store.backupCodeAcknowledged()); call.resolve(result);
+    }); }
+    @PluginMethod public void acknowledgeBackupCode(PluginCall call) { perform(call, () -> { store.acknowledgeBackupCode(call.getString("code")); call.resolve(); }); }
     @PluginMethod public void exportFile(PluginCall call) { perform(call, () -> {
         store.requireUnlocked();
         if (exportBytes != null) throw new IllegalStateException("Finish the current export first.");
@@ -132,8 +136,9 @@ public class KairosVaultPlugin extends Plugin {
         exportBytes = Base64.decode(content, Base64.NO_WRAP);
         // Capacitor persists activity-call arguments; the ZIP must stay out of the Binder bundle.
         call.getData().remove("base64");
-        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT); intent.setType("application/zip");
-        intent.addCategory(Intent.CATEGORY_OPENABLE); intent.putExtra(Intent.EXTRA_TITLE, "Kairos-money-export.zip");
+        boolean backup = "Kairos-money-backup.kairos".equals(call.getString("fileName"));
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT); intent.setType(backup ? "application/octet-stream" : "application/zip");
+        intent.addCategory(Intent.CATEGORY_OPENABLE); intent.putExtra(Intent.EXTRA_TITLE, backup ? "Kairos-money-backup.kairos" : "Kairos-money-export.zip");
         getActivity().runOnUiThread(() -> startActivityForResult(call, intent, "exportResult"));
     }); }
     @ActivityCallback private void exportResult(PluginCall call, ActivityResult result) {

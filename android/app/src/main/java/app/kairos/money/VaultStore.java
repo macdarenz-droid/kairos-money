@@ -111,5 +111,28 @@ final class VaultStore {
         } finally { Arrays.fill(hash, (byte) 0); }
         recoveryUntil = 0; unlocked = true;
     }
+    synchronized String backupRecoveryCode() throws Exception {
+        requireUnlocked();
+        String existing = prefs().getString("backupRecoveryCode", null);
+        if (existing != null) return existing;
+        String alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+        byte[] entropy = new byte[40]; new SecureRandom().nextBytes(entropy);
+        StringBuilder code = new StringBuilder();
+        for (int i = 0; i < entropy.length; i++) {
+            if (i > 0 && i % 4 == 0) code.append('-');
+            code.append(alphabet.charAt(entropy[i] & 31));
+        }
+        Arrays.fill(entropy, (byte) 0);
+        String generated = code.toString();
+        if (!prefs().edit().putString("backupRecoveryCode", generated).commit())
+            throw new IllegalStateException("Could not save your recovery code. Free device storage and try again.");
+        return generated;
+    }
+    synchronized boolean backupCodeAcknowledged() throws Exception { requireUnlocked(); return prefs().getBoolean("backupCodeAcknowledged", false); }
+    synchronized void acknowledgeBackupCode(String code) throws Exception {
+        requireUnlocked();
+        if (!backupRecoveryCode().equals(code)) throw new IllegalArgumentException("Review your current recovery code before continuing.");
+        if (!prefs().edit().putBoolean("backupCodeAcknowledged", true).commit()) throw new IllegalStateException("Could not save recovery-code confirmation.");
+    }
     synchronized String secret() throws Exception { requireUnlocked(); return prefs().getString("dbSecret", ""); }
 }
