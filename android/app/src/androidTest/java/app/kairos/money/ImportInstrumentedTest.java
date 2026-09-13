@@ -5,7 +5,10 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.graphics.Rect;
+import android.os.SystemClock;
 import android.util.Base64;
+import android.view.MotionEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -86,8 +89,15 @@ public class ImportInstrumentedTest {
         if (node == null) return false;
         CharSequence text = node.getText(); CharSequence description = node.getContentDescription();
         if ((text != null && text.toString().equals(name)) || (description != null && description.toString().equals(name))) {
-            AccessibilityNodeInfo candidate = node;
-            for (int i = 0; candidate != null && i < 4; i++, candidate = candidate.getParent()) if (candidate.isClickable() && candidate.isEnabled()) return candidate.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+            if (!node.isVisibleToUser() || !node.isEnabled()) return false;
+            Rect bounds = new Rect(); node.getBoundsInScreen(bounds); if (bounds.isEmpty()) return false;
+            long time = SystemClock.uptimeMillis();
+            MotionEvent down = MotionEvent.obtain(time, time, MotionEvent.ACTION_DOWN, bounds.centerX(), bounds.centerY(), 0);
+            MotionEvent up = MotionEvent.obtain(time, time + 50, MotionEvent.ACTION_UP, bounds.centerX(), bounds.centerY(), 0);
+            try {
+                boolean pressed = InstrumentationRegistry.getInstrumentation().getUiAutomation().injectInputEvent(down, true);
+                return InstrumentationRegistry.getInstrumentation().getUiAutomation().injectInputEvent(up, true) && pressed;
+            } finally { down.recycle(); up.recycle(); }
         }
         for (int i = 0; i < node.getChildCount(); i++) if (clickDocument(node.getChild(i), name)) return true;
         return false;

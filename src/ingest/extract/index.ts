@@ -8,7 +8,7 @@ import { csvRows } from '../parse/csv';
 import { extractXlsx } from './xlsx';
 GlobalWorkerOptions.workerSrc = pdfWorker;
 export type Extracted = { kind: ReturnType<typeof detect>['kind']; text: string; items: TextItem[]; table: string[][] | null; ocr: boolean; issuer: string | null };
-export const OfflineText = registerPlugin<{ recognize(options: { base64: string }): Promise<{ items: { text: string; x: number; y: number; width: number }[] }> }>('KairosText');
+export const OfflineText = registerPlugin<{ recognize(options: { base64: string }): Promise<{ items: { text: string; x: number; y: number; width: number; height: number }[] }> }>('KairosText');
 function base64(bytes: Uint8Array): string { let s = ''; for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode(...bytes.subarray(i, i + 8192)); return btoa(s); }
 async function extractLocal(bytes: Uint8Array, fileName: string, progress: (message: string) => void = () => undefined): Promise<Extracted> {
   if (bytes.length > 20971520) throw new ImportFailure('The file was selected.', 'This file exceeds the 20 MB import limit.', fileName, 'Split the statement into smaller files or export CSV.');

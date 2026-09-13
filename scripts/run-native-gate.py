@@ -83,6 +83,7 @@ try:
     instrumentation('ImportInstrumentedTest', 2)
     instrumentation('AcceptanceInstrumentedTest', 1)
     adb('pull', '/sdcard/Android/data/app.kairos.money/files/evidence', str(SCREENS))
+    subprocess.run(['node', '--import', 'tsx', str(ROOT / 'scripts/verify-native-ocr.ts'), str(SCREENS)], cwd=ROOT, check=True)
     subprocess.run([sys.executable, str(ROOT / 'scripts/verify-android-delete.py')], check=True)
     instrumentation('PostDeleteInstrumentedTest', 1)
     (EVIDENCE / 'native-run-status.json').write_text(json.dumps({

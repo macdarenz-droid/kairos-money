@@ -1,10 +1,10 @@
 # Kairos Money Tracker
 
-A private, on-device money tracker. This repository contains the Session 1 foundation: exact money math, an encrypted Android ledger, account setup, app lock, export/delete and a quiet two-theme interface. Import and intelligence remain outside this build until their own gates pass.
+A private, on-device money tracker with exact money math, an encrypted Android ledger, account setup, app lock, export/delete and a quiet two-theme interface. Session 2 adds local file extraction, mandatory import review, reconciliation and reversible commits. Its native acceptance gate remains open; intelligence has not started.
 
 **Session 1 gate: PASS** on Android 34 AOSP; [verified run](https://github.com/macdarenz-droid/kairos-money/actions/runs/34747556681).
 
-Read `HANDOFF.md` and `docs/GATE_SESSION_1.md` before continuing. A source-test pass is not an Android install/security pass.
+Read `HANDOFF.md` and `docs/GATE_SESSION_2.md` before continuing. A source-test pass is not an Android install/security pass.
 
 ## Run the UI
 
@@ -66,10 +66,12 @@ It proves encrypted-file behavior on the host, not native Android execution. Nat
 - `core/crypto`: native vault boundary and resume-time policy. Android implements this in `KairosVaultPlugin` / `VaultStore`.
 - `ui/design`: OKLCH tokens, contrast aliases, primitives and persisted theme.
 - `ui/screens`: native lock, account setup, settings and development-only kitchen sink.
+- `ingest`: offline extraction, parser registry, normalization, encrypted staging, reconciliation and review.
+- `ledger`: deterministic categorisation rules and merchant/MCC suggestions.
 - `tests`: property, database, privacy and interaction verification. Synthetic data never enters the production import graph.
 - `ADR`: rationale for non-obvious choices. `docs/SCHEMA.md` is regenerated from SQL.
 
-Ingest will write staging only until confirmation. Intelligence will consume a read-only ledger interface. Neither module is implemented in Session 1. Future SQL writes must use the serialized transaction boundary; SQLCipher encryption must never fall back to plain SQLite.
+Ingest writes staging only until confirmation. Intelligence will consume a read-only ledger interface. SQL writes use the serialized transaction boundary; SQLCipher encryption must never fall back to plain SQLite.
 
 ## Privacy and recovery
 

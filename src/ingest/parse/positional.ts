@@ -1,14 +1,17 @@
 import { ImportFailure, type RawRow } from '../types';
 import { inferColumns, parseTable } from './csv';
-export type TextItem = { text: string; x: number; y: number; width: number; page: number };
+export type TextItem = { text: string; x: number; y: number; width: number; height?: number; page: number };
 export function textLines(items: readonly TextItem[]): { page: number; y: number; items: TextItem[] }[] {
   const lines: { page: number; y: number; items: TextItem[] }[] = [];
   for (const item of [...items].sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x)) {
     const last = lines.at(-1);
-    if (last && last.page === item.page && Math.abs(last.y - item.y) <= 3) last.items.push(item);
+    // OCR boxes vary slightly between columns. Scale tolerance to glyph height,
+    // without allowing a full adjacent text line to collapse into this one.
+    const tolerance = last ? Math.max(3, Math.floor(Math.min(item.height ?? 10, ...last.items.map(i => i.height ?? 10)) * 3 / 10)) : 3;
+    if (last && last.page === item.page && Math.abs(last.y - item.y) <= tolerance) last.items.push(item);
     else lines.push({ page: item.page, y: item.y, items: [item] });
   }
-  return lines;
+  return lines.map(line => ({ ...line, items: line.items.sort((a, b) => a.x - b.x) }));
 }
 export function positionalTable(items: readonly TextItem[], ocr = false): RawRow[] {
   const lines = textLines(items); let header: TextItem[] | null = null; const table: string[][] = []; let started = false; let currentPage = 0;

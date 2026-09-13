@@ -35,7 +35,8 @@ public class KairosTextPlugin extends Plugin {
                 JSArray items = new JSArray();
                 for (Text.TextBlock block : result.getTextBlocks()) for (Text.Line line : block.getLines()) for (Text.Element element : line.getElements()) {
                     Rect box = element.getBoundingBox(); if (box == null) continue;
-                    JSObject item = new JSObject(); item.put("text", element.getText()); item.put("x", box.left); item.put("y", line.getBoundingBox() == null ? box.top : line.getBoundingBox().top); item.put("width", box.width()); items.put(item);
+                    Rect lineBox = line.getBoundingBox() == null ? box : line.getBoundingBox();
+                    JSObject item = new JSObject(); item.put("text", element.getText()); item.put("x", box.left); item.put("y", lineBox.top); item.put("width", box.width()); item.put("height", lineBox.height()); items.put(item);
                 }
                 JSObject output = new JSObject(); output.put("items", items); call.resolve(output);
             }).addOnFailureListener(error -> call.reject("On-device text recognition failed. Choose a sharper scan or CSV.")).addOnCompleteListener(task -> { bitmap.recycle(); recognizer.close(); });
