@@ -64,7 +64,7 @@ public class ImportInstrumentedTest {
     }
     private String hierarchy(AccessibilityNodeInfo node) {
         if (node == null) return "No active window\n";
-        StringBuilder result = new StringBuilder().append(node.getPackageName()).append(" | ").append(node.getClassName()).append(" | ").append(node.getText()).append(" | ").append(node.getContentDescription()).append('\n');
+        StringBuilder result = new StringBuilder().append(node.getPackageName()).append(" | ").append(node.getClassName()).append(" | ").append(node.getText()).append(" | ").append(node.getContentDescription()).append(" | clickable=").append(node.isClickable()).append(" | id=").append(node.getViewIdResourceName()).append('\n');
         for (int i = 0; i < node.getChildCount(); i++) result.append(hierarchy(node.getChild(i)));
         return result.toString();
     }
@@ -91,6 +91,11 @@ public class ImportInstrumentedTest {
         CharSequence text = node.getText(); CharSequence description = node.getContentDescription();
         if ((text != null && text.toString().equals(name)) || (description != null && description.toString().equals(name))) {
             if (!node.isVisibleToUser() || !node.isEnabled()) return false;
+            AccessibilityNodeInfo action = node;
+            while (action != null) {
+                if (action.isClickable() && action.isEnabled() && action.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true;
+                action = action.getParent();
+            }
             Rect bounds = new Rect(); node.getBoundsInScreen(bounds); if (bounds.isEmpty()) return false;
             long time = SystemClock.uptimeMillis();
             MotionEvent down = MotionEvent.obtain(time, time, MotionEvent.ACTION_DOWN, bounds.centerX(), bounds.centerY(), 0);
@@ -114,6 +119,8 @@ public class ImportInstrumentedTest {
                 for (String theme : new String[]{"Light", "Dark"}) {
                     String prefix = theme.toLowerCase();
                     click("You"); click(theme); awaitJs("document.documentElement.dataset.theme===" + JSONObject.quote(prefix)); click("Ledger"); click("Import statements");
+                    try { InstrumentationRegistry.getInstrumentation().getUiAutomation().waitForIdle(1000, 10000); }
+                    catch (java.util.concurrent.TimeoutException ignored) { /* The bounded selection loop retains diagnostics. */ }
                     long started = System.currentTimeMillis(); long deadline = started + 30000; boolean chosen = false; boolean drawerOpened = false; boolean downloadsOpened = false;
                     while (System.currentTimeMillis() < deadline && !chosen) {
                         AccessibilityNodeInfo root = InstrumentationRegistry.getInstrumentation().getUiAutomation().getRootInActiveWindow();
@@ -133,7 +140,10 @@ public class ImportInstrumentedTest {
                         AccessibilityNodeInfo root = InstrumentationRegistry.getInstrumentation().getUiAutomation().getRootInActiveWindow();
                         if (root != null && "app.kairos.money".contentEquals(root.getPackageName())) { returned = true; break; }
                         if (root != null && "com.android.documentsui".contentEquals(root.getPackageName())) {
-                            if (!clickDocument(root, "Open")) clickDocument(root, "OPEN");
+                            if (!clickDocument(root, "Open") && !clickDocument(root, "OPEN")) {
+                                // A transition can discard the first activation. Retry the visible row.
+                                clickDocument(root, "Kairos-synthetic-import.csv");
+                            }
                         }
                         Thread.sleep(200);
                     }
