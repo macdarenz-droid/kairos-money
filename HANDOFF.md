@@ -4,7 +4,7 @@
 
 Sessions 1–2 PASS. Session 2 passed on commit 282460630e9ae5419f7224b8cf8e63d174334e40, workflow 34752125659: 78 source tests, six native tests and 27 reviewed screenshots. Session 2.5 is implemented and under verification; its native/visual gate is still OPEN. Do not start Session 3.
 
-Repository: `macdarenz-droid/kairos-money`. Active local source: `/workspace/scratch/19f118d9b907/kairos-money`, branch `codex/session2-import`. The GitHub connector and local Git have different commit IDs; always use the current remote head as the parent of connector commits.
+Repository: `macdarenz-droid/kairos-money`. Active local source: `/workspace/scratch/19f118d9b907/session25-gate`, remote branch `codex/session25-ingestion`. The GitHub connector and local Git have different commit IDs; always use the current remote head as the parent of connector commits.
 
 ## Built this session
 
@@ -26,7 +26,7 @@ Repository: `macdarenz-droid/kairos-money`. Active local source: `/workspace/scr
 
 ## Known scope and deferred work
 
-Session 2 requires stated opening/closing balances; no-balance exports, headerless/issuer inference, remembered mappings, source hierarchy and adapters, audited changed-amount supersession, weekly freshness and reminders are the mandatory Session 2.5 revision. PDF/OCR remains supported throughout. Direct bank APIs are out of v1; credential scraping is permanently excluded. Optional email ingestion stays off unless every required revision gate passes first.
+Session 2.5 adds no-balance exports, headerless/issuer inference, remembered mappings, source hierarchy and adapters, audited changed-amount supersession, weekly freshness and reminders. Native evidence is the remaining gate. PDF/OCR remains supported throughout. Direct bank APIs are out of v1; credential scraping is permanently excluded. Optional email ingestion stays off unless every required revision gate passes first.
 
 Transfer automation requires explicit transfer evidence plus a unique reciprocal candidate; ambiguous matches remain visible rather than excluding unrelated purchases. Repeated identical purchases require consistent confirmed occurrence identity across overlaps. Canonical order independence refers to sorted logical ledger/source state, not SQLCipher bytes or import timestamps.
 
