@@ -126,6 +126,19 @@ public class ImportInstrumentedTest {
                     }
                     if (!chosen) { evidence(prefix + "-picker-hierarchy.txt", hierarchy(InstrumentationRegistry.getInstrumentation().getUiAutomation().getRootInActiveWindow())); NativeEvidence.captureSystem(activity, prefix + "-picker-failure"); }
                     assertTrue("Real Android file picker did not show the synthetic CSV", chosen);
+                    // Multi-file selection stays in DocumentsUI until its Open action is confirmed.
+                    long returnDeadline = System.currentTimeMillis() + 15000;
+                    boolean returned = false;
+                    while (System.currentTimeMillis() < returnDeadline) {
+                        AccessibilityNodeInfo root = InstrumentationRegistry.getInstrumentation().getUiAutomation().getRootInActiveWindow();
+                        if (root != null && "app.kairos.money".contentEquals(root.getPackageName())) { returned = true; break; }
+                        if (root != null && "com.android.documentsui".contentEquals(root.getPackageName())) {
+                            if (!clickDocument(root, "Open")) clickDocument(root, "OPEN");
+                        }
+                        Thread.sleep(200);
+                    }
+                    if (!returned) { evidence(prefix + "-picker-return-hierarchy.txt", hierarchy(InstrumentationRegistry.getInstrumentation().getUiAutomation().getRootInActiveWindow())); NativeEvidence.captureSystem(activity, prefix + "-picker-return-failure"); }
+                    assertTrue("Android file picker did not return after confirming selection", returned);
                     awaitJs("document.body.innerText.includes('Files waiting for review')"); click("Read file");
                     NativeEvidence.capture(activity, prefix + "-import-details");
                     input("Statement start", "2026-01-01"); input("Statement end", "2026-01-31"); input("Stated opening balance", "0"); input("Stated closing balance", "-59.00"); click("Extract for review");
