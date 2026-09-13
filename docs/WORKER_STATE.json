@@ -1,13 +1,16 @@
 {
   "contract": "KAIROS-MONEY-V16-ADAPTED",
   "phase": "S1 and Session 3 consolidated gate",
-  "lease": null,
+  "lease": {
+    "owner": "kairos-money-continuation-20260914T0411",
+    "acquired_at": "2026-09-13T18:11:00Z",
+    "expires_at": "2026-09-13T20:11:00Z"
+  },
   "candidate_sha": "b456368993b4fe6e7e2cb6462e2b57f882828b00",
   "candidate_tree": "d7387f2d7b8b4167046736b43acd411c348074df",
   "local_checkpoint": "25b9d39",
-  "run_id": null,
+  "run_id": 34770935104,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
-  "last_result": "Repaired the red candidate's only failing native suite by authenticating through the production app immediately before every Session 3 fixture phase. All original assertions remain.",
-  "local_validation": "154 tests in 25 files, source lint and production build PASS. Exact-patch Android compilation unavailable in this worker after its Gradle/SDK cache disappeared; CI must establish Android build and device execution.",
-  "next_action": "Resolve candidate b456368993b4fe6e7e2cb6462e2b57f882828b00 once. If unfinished, end. On pass, inspect only required milestone evidence and continue backup-reset-restore, Forgot-PIN device flow and both-theme visual acceptance before opening Session 4."
+  "last_result": "Candidate b456368993b4fe6e7e2cb6462e2b57f882828b00 passed the source and Android workflows, including key protection and Session 3 native suites. This does not close unimplemented backup-reset-restore or visual review.",
+  "next_action": "Implement the actual Android encrypted backup save, reset, wrong-code refusal and full restore comparison; preserve existing security/export/delete assertions."
 }
