@@ -242,6 +242,10 @@ Reserved source row `__file__` contains a user-selected file as base64 in encryp
 
 Storage schema 3 adds transaction status and batch integrity/source rank. Document payloads retain sessionId, sourceKind, sourceRank, integrityTier and optional running balances. App settings contain confirmed export mappings and the optional reminder weekday. privacy_log retains before/after supersession evidence; transaction_sources keeps original inputs. Export schema_version remains 2 with database_schema_version identifying migrated storage.
 
+## Intelligence snapshots
+
+Version 1 uses existing tables without changing storage version. Signals use currency-prefixed period IDs; inputs retain complete versioned signal payloads, coverage and provenance. Profiles store monthly axes, covered days and evidence-completeness confidence. Insights retain the five-part contract and conditional calculation in evidence JSON. app_settings keys intelligence:dismissals, intelligence:metadata, intelligence:reflection and intelligence:buffer:<currency> retain dismissal counts, explicitly supplied purchase context, optional non-validated reflections and the chosen reserve. Goals are user earmarks, never additional ledger balances. All are encrypted and included in export/delete.
+
 ## Migration metadata
 
 `_migrations(version INTEGER PRIMARY KEY)` is maintained transactionally by the migration runner. It is not financial data and is removed with the database during deletion.
