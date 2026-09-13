@@ -1,4 +1,23 @@
-# Session 3 gate — OPEN
+# Session 3 gate — PASS
+
+
+## Final consolidated acceptance
+
+Candidate `50824556acbe40afea58ab1c7c70780bd3b3e6d7`, workflow [34783225808](https://github.com/macdarenz-droid/kairos-money/actions/runs/34783225808): source and Android jobs PASS. This final record supersedes historical OPEN entries below.
+
+| Acceptance | Result | Evidence |
+|---|---|---|
+| Research mapping, versioned signals, contract, learning threshold, Drifter, distress | PASS | Source gate plus IntelligenceInstrumentedTest; 18 dark/light intelligence images reviewed from the preceding identical-production green candidate. |
+| Evidence, forecasts, goals and scenarios | PASS | Native intelligence assertions and reviewed evidence/context/forecast/goal/scenario screens. |
+| Statement repair and Sessions 1–2.5 regressions | PASS | Full source gate; unchanged original native import, revision, foundation, export and deletion checks. |
+| Key migration, expiry and legacy-copy removal | PASS | KeyProtectionInstrumentedTest and PinRecoveryInstrumentedTest in final full Android gate. |
+| Real Forgot-PIN authentication and mandatory replacement | PASS | ForgotPinInstrumentedTest: old PIN refused, full database retained. |
+| Encrypted backup save, reset and exact restore | PASS | android-backup-reset-restore.json: 125 owned files reduced to zero; external backup survives; every typed table/column/row digest restored; synthetic external files cleaned. |
+| Wrong recovery code | PASS | Refused with no user ledger rows and unchanged full fresh-database digest. |
+| Recovery and backup visual acceptance | PASS | 16 unobscured images: options, replacement, reset confirmation, setup, backup options/save/restore/error, each in dark and light. Token-switch captures test content themes; native system bars retain the original device theme during these test-only switches. |
+| Installable signed APK | PASS | Debug artifact 10325992038; APK signature v2 verified in CI. Downloaded APK SHA-256: cbe8c3051864fc30b4094566f331e47d26de1dbf0e20f178ecbaabbad5b89b6d. |
+
+Final evidence artifact: 10326096692. No real financial data or real recovery codes were used in device evidence. Schema unchanged. Session 4 entry is now OPEN. Recovery-code fields are horizontally scrollable; making every group visible together is carried into Session 4 usability/accessibility work.
 
 ## Current acceptance — run 34782241638
 

@@ -1,6 +1,6 @@
 {
   "contract": "Manual continuation; V16 suspended by user",
-  "phase": "S1 and Session 3 consolidated gate",
+  "phase": "Session 4 integrated private-v1 completion",
   "lease": null,
   "automation_enabled": false,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
@@ -8,10 +8,10 @@
   "candidate_sha": "50824556acbe40afea58ab1c7c70780bd3b3e6d7",
   "candidate_tree": "c9256c5c1fe43e2cf18798184b78501bd95950db",
   "run_id": 34783225808,
-  "run_result": "in_progress",
+  "run_result": "success",
   "before_checkpoint": "2d15e3a49469530e38a2651721e013acdfcc1c66",
   "local_checkpoint": "a37315b",
-  "last_result": "Run 34782241638 fully PASS. Native exact backup/reset/restore, wrong-code refusal and original regressions confirmed. All 18 intelligence screenshots reviewed. Added final both-theme recovery/backup captures; no production changes or weakened assertions.",
-  "local_validation": "Previous full source and Android gate green. Current instrumentation-only change reviewed against actual controls; diff check PASS. Android compilation and full regressions delegated to authorized CI.",
-  "next_action": "Review final recovery/backup screenshots after this run passes, retrieve tested APK and close consolidated milestone only with complete evidence; then open Session 4. Worker disabled."
+  "last_result": "Session 3 consolidated gate PASS on run 34783225808. Final 16 recovery/backup screenshots reviewed; exact restore, wrong-code refusal, real PIN replacement and zero-file reset pass. Session 4 visual-data groundwork added; UI integration remains open.",
+  "local_validation": "Three visual-data tests and TypeScript pass. Session 4 source lint and production build PASS; earlier full candidate source/Android jobs PASS. New modules are not yet wired into shipped screens.",
+  "next_action": "Complete integrated Session 4 roadmap in docs/GATE_SESSION_4.md; first wire monthly Money Fingerprint and gap/staleness-aware charts to real data. No Addendum A or workers. Preserve accepted candidate as tested APK until a full Session 4 delivery gate passes."
 }

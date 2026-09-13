@@ -11,8 +11,8 @@ The four sessions are delivery milestones, not a requirement to stop after each 
 | Session 1 — foundation | PASS | Preserve its accepted implementation and acceptance assertions. |
 | Session 2 — ingestion | PASS | Preserve PDF/OCR, staging, reconciliation, rollback and payslips. |
 | Session 2.5 — export-first revision | PASS | Preserve adapters, bank inference, tiers, pending supersession and freshness. |
-| Current milestone — S1 completion and Session 3 closure | OPEN | Complete all remaining security requirements, prove actual device recovery/backup/restore, reconcile the Session 3 criteria and review its required theme evidence; deliver one accepted APK and complete reports. |
-| Session 4 — finished private v1 | NOT STARTED, except backup brought forward by S1 | Complete visual, product, accessibility, performance and hardening work; deliver the signed private release and final gate. |
+| Current milestone — S1 completion and Session 3 closure | PASS — run 34783225808 | Complete all remaining security requirements, prove actual device recovery/backup/restore, reconcile the Session 3 criteria and review its required theme evidence; deliver one accepted APK and complete reports. |
+| Session 4 — finished private v1 | IN PROGRESS | Complete visual, product, accessibility, performance and hardening work; deliver the signed private release and final gate. |
 | Addendum A — notification capture | DEFERRED until v1 shipped | Separate post-v1 milestone with replay/deduplication acceptance. |
 
 ### Current milestone: finish S1 and close Session 3
