@@ -17,3 +17,5 @@ Run 34746295447 passes the complete functional gate, including real export and z
 ## First-boot launcher readiness
 
 Run 34746823229 correctly rejected the first screenshot because Quickstep's ANR dialog was foreground. The launcher timed out before BOOT_COMPLETED receivers finished, before Kairos launched. Before installing Kairos on the fresh AOSP emulator, the runner now waits for broadcast queues to become idle, restarts only `com.android.launcher3` once, opens HOME and checks its accessibility hierarchy for a visible launcher with no error dialog. This is test-device preparation, not an app retry or an ANR-dialog suppression policy. Any failure during the app tests still fails the gate.
+
+Run 34747215355 exposed another first-boot readiness detail: uiautomator returned success without creating its hierarchy file. The harness now waits up to 60 seconds for confirmed hierarchy output, records every command result, and captures logcat from the start of device preparation. It still rejects an error dialog and never retries an app test.

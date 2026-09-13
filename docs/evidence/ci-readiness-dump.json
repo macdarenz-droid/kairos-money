@@ -1,0 +1,11 @@
+{
+  "run_id": 34747215355,
+  "commit": "992957f3c01a1bfe530a9b72a7b4fa3c616d12fc",
+  "source_gate": "PASS",
+  "build_and_signature": "PASS",
+  "native_gate": "FAIL",
+  "app_installed": false,
+  "reason": "Device preparation: uiautomator returned zero without creating the requested XML; subsequent cat reported no such file.",
+  "repair": "Wait for confirmed hierarchy output for at most 60 seconds, retain stdout/stderr of every readiness attempt, and start full logcat capture before device preparation.",
+  "previous_functional_pass": 34746295447
+}

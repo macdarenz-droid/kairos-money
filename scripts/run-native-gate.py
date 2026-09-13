@@ -4,6 +4,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE = ROOT / 'docs/evidence'
@@ -30,6 +31,9 @@ def instrumentation(name, count):
 log_stream = None
 log_file = None
 try:
+    adb('logcat', '-c')
+    log_file = (EVIDENCE / 'android-logcat-full.log').open('w')
+    log_stream = subprocess.Popen(['adb', 'logcat', '-b', 'all', '-v', 'threadtime'], stdout=log_file, stderr=subprocess.STDOUT)
     # First-boot HOME input can stall Launcher before BOOT_COMPLETED receivers finish.
     # Prepare only the disposable test device, before installing or launching Kairos.
     adb('shell', 'cmd', 'connectivity', 'airplane-mode', 'enable')
@@ -39,8 +43,21 @@ try:
     adb('shell', 'am', 'force-stop', 'com.android.launcher3')
     adb('shell', 'am', 'start', '-W', '-a', 'android.intent.action.MAIN', '-c', 'android.intent.category.HOME')
     adb('shell', 'am', 'wait-for-broadcast-idle', timeout=120)
-    adb('shell', 'uiautomator', 'dump', '/sdcard/kairos-device-ready.xml', timeout=60)
-    hierarchy = adb('shell', 'cat', '/sdcard/kairos-device-ready.xml')
+    readiness_deadline = time.monotonic() + 60
+    readiness_attempts = []
+    hierarchy = ''
+    while time.monotonic() < readiness_deadline:
+        dump = subprocess.run(['adb', 'shell', 'uiautomator', 'dump', '--compressed',
+                               '/sdcard/kairos-device-ready.xml'], capture_output=True, text=True, timeout=30)
+        readiness_attempts.append({'returncode': dump.returncode, 'stdout': dump.stdout, 'stderr': dump.stderr})
+        (EVIDENCE / 'android-device-ready-attempts.json').write_text(json.dumps(readiness_attempts, indent=2) + '\n')
+        # uiautomator can exit zero without writing a file while its accessibility tree is busy.
+        if dump.returncode == 0 and 'dumped to:' in dump.stdout:
+            hierarchy = adb('shell', 'cat', '/sdcard/kairos-device-ready.xml')
+            break
+        time.sleep(1)
+    if not hierarchy:
+        raise RuntimeError('Android did not produce a ready UI hierarchy within 60 seconds; see android-device-ready-attempts.json')
     adb('shell', 'rm', '/sdcard/kairos-device-ready.xml')
     (EVIDENCE / 'android-device-ready.xml').write_text(hierarchy)
     if 'com.android.launcher3' not in hierarchy or 'android:id/aerr_' in hierarchy:
@@ -57,9 +74,6 @@ try:
             raise RuntimeError('APK installation failed: ' + result)
     adb('shell', 'cmd', 'connectivity', 'airplane-mode', 'enable')
     (EVIDENCE / 'android-webview-provider.txt').write_text(adb('shell', 'dumpsys', 'webviewupdate'))
-    adb('logcat', '-c')
-    log_file = (EVIDENCE / 'android-logcat-full.log').open('w')
-    log_stream = subprocess.Popen(['adb', 'logcat', '-b', 'all', '-v', 'threadtime'], stdout=log_file, stderr=subprocess.STDOUT)
     instrumentation('FoundationInstrumentedTest', 2)
     instrumentation('AcceptanceInstrumentedTest', 1)
     adb('pull', '/sdcard/Android/data/app.kairos.money/files/evidence', str(EVIDENCE / 'android-screens'))
