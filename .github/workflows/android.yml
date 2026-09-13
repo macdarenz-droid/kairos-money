@@ -83,13 +83,17 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
-          target: google_apis
+          target: default
           arch: x86_64
           profile: pixel_6
+          ram-size: 3072M
+          heap-size: 512M
           disk-size: 2048M
           emulator-boot-timeout: 300
           emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -no-metrics
           disable-animations: true
+          disable-spellchecker: true
+          enable-hw-keyboard: true
           script: |
             python scripts/run-native-gate.py
       - name: Upload signed debug APK

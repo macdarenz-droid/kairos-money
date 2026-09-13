@@ -1,0 +1,22 @@
+{
+  "run_id": 34745565390,
+  "commit": "cdffe4a2254e07b3d1b5f3ac8176521ba4811418",
+  "foundation_tests": {
+    "passed": 2,
+    "duration_seconds": 80.233
+  },
+  "native_cipher_fixture_and_actual_app_file": "PASS",
+  "acceptance_progress": [
+    "wrong PIN rejected",
+    "dark cold-launch state",
+    "light recreation state",
+    "1-second background session retained",
+    "61-second background session locked"
+  ],
+  "failure": "Document picker Save action inaccessible",
+  "visual_review": "FAIL: System UI ANR overlay covers screenshots; several frames lag their requested tab. These are not accepted theme evidence.",
+  "system_anr": "com.android.systemui/.dump.SystemUIAuxiliaryDumpService",
+  "repair": "Android 34 AOSP image, 3 GiB RAM; assert foreground package and await WebView visual state before screenshot. Capture file-picker failure image.",
+  "local_build": "APK, instrumentation, lint PASS in 163 seconds",
+  "url": "https://github.com/macdarenz-droid/kairos-money/actions/runs/34745565390"
+}

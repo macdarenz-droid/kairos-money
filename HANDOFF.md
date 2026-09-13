@@ -27,6 +27,10 @@ Destination: **macdarenz-droid/kairos-money** only. No trading-journal repositor
 - Capacitor Android sync succeeds. App debug and instrumentation APKs compile; Android lint has 0 errors and 12 warnings. All 13 packaged web assets match the current production build; the APK has no internet permission. The downloadable APK is debug-signed; see docs/evidence/apk-signature.txt and apk-manifest.json.
 - Local software-emulator startup timed out after 480 seconds. There is no KVM acceleration here. No native instrumentation, installation, screenshots, document-picker export or deletion check ran; see docs/evidence/native-run-status.json.
 
+## Latest native verification
+
+Run 34745565390 on cdffe4a2 passed both foundation tests, proving the actual Android app DB is encrypted. PIN retry, theme state persistence and 1/61-second resume assertions completed, then the Save action could not be reached. Screenshot review found a System UI ANR overlay, so the images are rejected. The next run uses AOSP Android 34 and requires a foreground app window plus completed WebView visual state for each screenshot. APK, instrumentation and lint pass locally with this change. Export, deletion and clean visual review remain open; see ADR 0007 and ci-system-ui-overlay.json.
+
 ## Exact next steps
 
 1. Read `docs/GATE_SESSION_1.md`, `docs/evidence/` and the latest native logs. Do not restart the project or regenerate the Android platform over custom native code.

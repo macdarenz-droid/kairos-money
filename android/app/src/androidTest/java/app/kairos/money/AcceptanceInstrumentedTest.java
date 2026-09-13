@@ -47,15 +47,7 @@ public class AcceptanceInstrumentedTest {
         click("Unlock");
     }
     private void unlock() throws Exception { awaitJs("document.body.innerText.includes('Welcome back')"); pin("246810"); awaitJs("Boolean(document.querySelector('nav'))"); }
-    private void screenshot(String name) throws Exception {
-        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE));
-        try {
-            Thread.sleep(350); Bitmap shot = InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
-            File directory = new File(activity.getExternalFilesDir(null), "evidence"); assertTrue(directory.exists() || directory.mkdirs());
-            try (FileOutputStream output = new FileOutputStream(new File(directory, name + ".png"))) { assertTrue(shot.compress(Bitmap.CompressFormat.PNG, 100, output)); }
-            shot.recycle();
-        } finally { InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE)); }
-    }
+    private void screenshot(String name) throws Exception { NativeEvidence.capture(activity, name); }
     private boolean clickSave(AccessibilityNodeInfo node) {
         if (node == null) return false;
         CharSequence label = node.getText(); CharSequence pkg = node.getPackageName();
@@ -111,6 +103,7 @@ public class AcceptanceInstrumentedTest {
             UiAutomation automation = InstrumentationRegistry.getInstrumentation().getUiAutomation();
             long deadline = System.currentTimeMillis() + 30000; boolean saved = false;
             while (System.currentTimeMillis() < deadline && !saved) { saved = clickSave(automation.getRootInActiveWindow()); if (!saved) Thread.sleep(200); }
+            if (!saved) NativeEvidence.captureSystem(activity, "document-picker-save-unavailable");
             assertTrue("The real document picker did not offer its Save action", saved);
             awaitJs("document.body.innerText.includes('Your JSON and CSV export was saved.')"); verifyExport();
             click("You"); click("Dark"); awaitJs("document.documentElement.dataset.theme==='dark'");

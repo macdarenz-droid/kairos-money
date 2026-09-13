@@ -44,16 +44,7 @@ public class FoundationInstrumentedTest {
     private void input(String label, String value) throws Exception {
         evaluate("(()=>{const label=Array.from(document.querySelectorAll('label')).find(l=>l.textContent.startsWith(" + JSONObject.quote(label) + ")); const i=label.querySelector('input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(i," + JSONObject.quote(value) + ");i.dispatchEvent(new Event('input',{bubbles:true}));})()");
     }
-    private void screenshot(String name) throws Exception {
-        // Screenshots contain synthetic test data only. Production always sets FLAG_SECURE.
-        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE));
-        Thread.sleep(350);
-        Bitmap shot = InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
-        File directory = new File(context.getExternalFilesDir(null), "evidence"); assertTrue(directory.exists() || directory.mkdirs());
-        try (FileOutputStream stream = new FileOutputStream(new File(directory, name + ".png"))) { assertTrue(shot.compress(Bitmap.CompressFormat.PNG, 100, stream)); }
-        shot.recycle();
-        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE));
-    }
+    private void screenshot(String name) throws Exception { NativeEvidence.capture(activity, name); }
     @Test public void a_vaultAndCipher() throws Exception {
         assertTrue("Instrumentation must run on a fresh test install", !new VaultStore(context).configured());
         VaultStore store = new VaultStore(context);
@@ -94,7 +85,12 @@ public class FoundationInstrumentedTest {
             assertTrue(evaluate("document.body.innerText").contains("$123.45"));
             for (String theme : new String[]{"Light", "Dark"}) {
                 click("You"); click(theme); awaitJs("document.documentElement.dataset.theme===" + JSONObject.quote(theme.toLowerCase()));
-                for (String tab : new String[]{"Today","Ledger","Insights","You"}) { click(tab); screenshot(theme.toLowerCase() + "-" + tab.toLowerCase()); }
+                for (String tab : new String[]{"Today","Ledger","Insights","You"}) {
+                    click(tab);
+                    awaitJs("document.querySelector('nav [aria-current=page]').textContent.trim()===" + JSONObject.quote(tab));
+                    evaluate("window.scrollTo(0,0)");
+                    screenshot(theme.toLowerCase() + "-" + tab.toLowerCase());
+                }
             }
             click("Quick"); screenshot("dark-quick"); input("Find an action", "settings"); click("Open settings");
             click("Lock now"); awaitJs("document.body.innerText.includes('Welcome back')"); assertEquals("false", evaluate("Boolean(document.querySelector('nav'))"));
