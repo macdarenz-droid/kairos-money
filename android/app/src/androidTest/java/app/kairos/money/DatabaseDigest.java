@@ -90,7 +90,9 @@ final class DatabaseDigest {
     static long userRows(MainActivity activity) throws Exception {
         return snapshot(activity, db -> {
         long total = 0;
-        try (Cursor tables = db.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('_migrations','categories','app_settings')")) {
+        // Empty setup creates derived signals/profiles. They remain covered by the
+        // complete before/after hash; this count concerns imported/user ledger rows.
+        try (Cursor tables = db.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT IN ('_migrations','categories','app_settings','signals','profiles')")) {
             while (tables.moveToNext()) try (Cursor count = db.query("SELECT COUNT(*) FROM \"" + tables.getString(0).replace("\"", "\"\"") + "\"")) {
                 if (!count.moveToFirst()) throw new IllegalStateException("Could not count " + tables.getString(0) + "."); total += count.getLong(0);
             }

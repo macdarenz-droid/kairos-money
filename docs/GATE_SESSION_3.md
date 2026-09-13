@@ -62,6 +62,8 @@ Run 34770935104: **PASS**. The exact repair compiled and all source/build/lint/s
 
 ### Manual repair of run 34774420396
 
+Follow-up run 34776505859: source/build/lint and original native suites passed. The competing database connection is fixed. Forgot-PIN now reaches replacement, then fails full-database equality. Source inspection identifies an unfinished Today analysis when the first snapshot is taken: navigation is rendered before its transaction writes signals/profile timestamps. The test now waits for the completed Money evidence section before the initial snapshot. No table is excluded from the full equality comparison. Empty-ledger row counts exclude setup-created derived signals/profiles, with all those tables still protected by the wrong-code full-database hash. New screenshots are pulled after each backup/recovery stage so reset cannot erase their only copy. Python syntax and diff checks pass; CI will compile and run this test-only repair.
+
 The user subsequently authorized GitHub Actions as the Android validation environment and suspended V16 orchestration for manual continuation. The preserved repair can now run through the existing full CI gate; missing local tooling is no longer a publication blocker. Device and visual acceptance remain required.
 
 The user stopped the recurring worker; it is confirmed disabled. Candidate `38582738d975355263c538900ec1c2423a1d7c80` failed in `ForgotPinInstrumentedTest` at its first database digest, before recovery interaction. The saved failure log identifies `SQLiteException: database is locked` while a second read-only SQLCipher connection opens. Existing native suites and all four OCR parser checks passed before this point; this does not establish backup/recovery acceptance.

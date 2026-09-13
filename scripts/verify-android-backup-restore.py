@@ -24,6 +24,17 @@ def instrument(name, count=1):
     result = adb('shell', 'am', 'instrument', '-w', '-e', 'class',
                  'app.kairos.money.' + name, RUNNER)
     (EVIDENCE / (name + '.log')).write_text(result.stdout)
+    # Reset removes the device evidence directory. Retain new captures after each
+    # stage, including failed stages, without nesting or replacing earlier images.
+    screens = EVIDENCE / 'android-screens-current'
+    screens.mkdir(parents=True, exist_ok=True)
+    remote = '/sdcard/Android/data/app.kairos.money/files/evidence'
+    listing = adb('shell', 'ls', remote)
+    if listing.returncode == 0:
+        for filename in listing.stdout.splitlines():
+            if re.fullmatch(r'[A-Za-z0-9_-]+\.png', filename) and not (screens / filename).exists():
+                pulled = adb('pull', remote + '/' + filename, str(screens / filename))
+                assert pulled.returncode == 0, 'Could not retain screenshot: ' + filename
     if result.returncode or not re.search(r'OK \(' + str(count) + r' tests?\)', result.stdout):
         print(result.stdout, flush=True)
         raise AssertionError(name + ' did not pass; see its instrumentation log')

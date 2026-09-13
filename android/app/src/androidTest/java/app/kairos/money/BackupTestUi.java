@@ -41,11 +41,17 @@ final class BackupTestUi {
         String encoded = js("Array.from(document.querySelectorAll('label')).find(x=>x.textContent.startsWith(" + JSONObject.quote(label) + ")).querySelector('input').value");
         return new JSONArray("[" + encoded + "]").getString(0);
     }
-    void unlock(String pin) throws Exception { await("document.body.innerText.includes('Welcome back')"); input("PIN", pin); click("Unlock"); await("Boolean(document.querySelector('nav'))"); }
+    void ready() throws Exception {
+        await("Boolean(document.querySelector('nav'))");
+        // Navigation mounts before Today's asynchronous analysis transaction finishes.
+        // Compare a completed database snapshot, including every derived table.
+        await("document.querySelector('.screen-header h1')?.textContent !== 'Today' || Boolean(document.querySelector('section[aria-label=\"Money evidence\"]'))");
+    }
+    void unlock(String pin) throws Exception { await("document.body.innerText.includes('Welcome back')"); input("PIN", pin); click("Unlock"); ready(); }
     void setup(String pin) throws Exception {
         await("document.body.innerText.includes('Your money.')"); input("Choose a PIN", pin); input("Confirm PIN", pin); click("Create private ledger");
         await("document.body.innerText.includes('Keep your recovery code')"); js("document.querySelector('input[type=checkbox]').click()");
-        await("Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='Continue to ledger' && !b.disabled)"); click("Continue to ledger"); await("Boolean(document.querySelector('nav'))");
+        await("Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='Continue to ledger' && !b.disabled)"); click("Continue to ledger"); ready();
     }
     private boolean activate(AccessibilityNodeInfo node, String name) {
         if (node == null) return false; CharSequence text = node.getText(), description = node.getContentDescription();
