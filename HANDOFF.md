@@ -1,3 +1,17 @@
+# Session 4 — keyset paging did not move the native Ledger, 14 September 2026
+
+Run [34871468723](https://github.com/macdarenz-droid/kairos-money/actions/runs/34871468723) on `881e6f3` failed the same class: **20,000-row ledger took 52,390 ms; budget is 10,000 ms**. The previous run measured 52,426 ms. Keyset paging moved the native number by 36 ms.
+
+That falsifies the hypothesis behind `881e6f3`. The quadratic OFFSET rescan is real and the local measurements were correct — offset paging quadruples per doubling where keyset doubles, and the local workspace improved from 679 ms to 381 ms — but it is not where the device spends its time. The change is kept because it is correct and strictly faster, not because it fixed this.
+
+The stronger signal is across three runs. Three materially different data paths produced nearly the same native figure: document reconciliation on every read measured 58,954 ms, materialized transaction and provenance reads measured 52,426 ms, and keyset-paged materialized reads measured 52,390 ms. A bottleneck that survives replacing the entire read strategy is not in the read strategy. Everything below the UI has now been ruled out by measurement rather than by argument.
+
+`IntelligenceInstrumentedTest` passed 4/4 again and the nine classes before it passed, so the scope repair holds. Startup was not the problem either.
+
+The measured window is `click("Ledger")` through the virtualized list reporting `aria-setsize=20000`, which covers opening the tab, the data read crossing the Capacitor bridge, entering the search term and full virtualization in one number. It cannot distinguish them, which is why the next run splits it: `tab_open_ms`, `first_row_ms`, `search_entered_ms` and the unchanged `ledger_load_ms` are now recorded in `docs/evidence/ledger-20000.json`. The 10-second assertion is untouched.
+
+No further repair is proposed until that evidence says which phase holds the time. Guessing a second time would cost another gate cycle and risk another correct-but-irrelevant fix. Session 4 remains OPEN.
+
 # Session 4 — keyset ledger paging, 14 September 2026
 
 Run [34868920857](https://github.com/macdarenz-droid/kairos-money/actions/runs/34868920857) confirmed the materialized-ledger scope repair: `IntelligenceInstrumentedTest` passed all four tests, and the nine classes before it passed with startup at 746 ms median and 849 ms fresh install. The gate then failed one class later, in `LedgerPerformanceInstrumentedTest`: **20,000-row ledger took 52,426 ms; budget is 10,000 ms**.

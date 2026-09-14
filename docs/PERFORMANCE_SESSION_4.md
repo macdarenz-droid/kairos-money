@@ -1,5 +1,19 @@
 # Session 4 performance evidence — incomplete
 
+## The native Ledger cost is not in the data layer
+
+Three different read strategies, one native figure:
+
+| Read strategy | Run | 20,000-row Ledger |
+|---|---|---|
+| Full document reconciliation per read | 34853883508 | 58,954 ms |
+| Materialized transaction/provenance reads | 34868920857 | 52,426 ms |
+| Keyset-paged materialized reads | 34871468723 | 52,390 ms |
+
+Budget is 10,000 ms. Replacing the entire read strategy twice moved the number by about 11% and then by 36 ms, so the cost is not in the read. Local figures improved genuinely over the same changes (workspace 679 ms to 381 ms, snapshot 468 ms to 305 ms), which is why local measurement alone could not find this.
+
+The measured window spans tab open, data read across the Capacitor bridge, search entry and virtualization as a single number. It is now split into `tab_open_ms`, `first_row_ms` and `search_entered_ms` alongside the unchanged `ledger_load_ms` in `docs/evidence/ledger-20000.json`, so the next run identifies the phase instead of inviting another hypothesis. The 10-second assertion and every other check in that class are unchanged.
+
 ## Keyset ledger paging
 
 Run 34868920857 measured the 20,000-row Ledger at **52,426 ms** against a 10,000 ms budget, barely below the 58,954 ms of the last green run. The cause was OFFSET paging in `queryPages`, which is O(rows squared / page) and re-decrypts every rescanned row on the encrypted device database.
