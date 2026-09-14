@@ -1,3 +1,4 @@
+import {foreignCurrencyRepository} from '../../ledger/foreign-currency';
 import {splitRepository} from '../../ledger/splits';
 import {cancellationRepository} from '../../ledger/cancellations';
 import { manualRepository } from '../../ledger/manual';
@@ -32,6 +33,7 @@ export function repository(driver: Driver) {
     netWorth: netWorthRepository(driver),
     categories: categoryRepository(driver),
     splits: splitRepository(driver),
+    foreignCurrency: foreignCurrencyRepository(driver),
     attachments: attachmentRepository(driver),
     restoreBackup: (snapshot: unknown) => restoreSnapshot(driver, snapshot),
     intelligence: intelligenceRepository(driver),

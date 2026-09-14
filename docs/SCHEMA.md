@@ -266,6 +266,10 @@ Encrypted app_settings category-edit:<canonical-transaction-id> stores the selec
 
 Encrypted app_settings cancellation:<JSON currency/merchant pair> stores normalized merchant, currency, requested/provider-confirmed status, contact/confirmation date and note. Entries are included in full export, backup, restore and deletion. They do not alter transactions, coverage, observed bills or forecast amounts. Records remain visible without an active detected pattern; later covered settled debits link back to statement evidence. See ADR/0024-cancellation-records.md.
 
+## Recorded original currency
+
+Encrypted app_settings foreign-amount:<transaction-id> holds posted amount/currency, original positive amount/currency and a required source note. Reads are active only while the settled transaction matches the saved posted values. Exact rational implied rates are derived in major currency units, with a rounded six-decimal display; no live quote, fee inference or ledger conversion. Settings survive source rollback/reimport and encrypted backup. Transaction FX columns remain reserved and unchanged, preventing reconciliation from silently dropping user notes. See ADR/0028-recorded-original-currency.md.
+
 ## Expense category splits
 
 Encrypted app_settings split:<canonical-transaction-id> retains the source id, currency, signed original minor amount and 2-10 positive category allocations (category, essential/discretionary kind, integer-string minor units). Allocations must conserve the complete expense amount. Snapshot readers apply only allocations that still match a settled non-transfer payment. Statement transactions, source rows and coverage are not modified. Rollback retains metadata for exact reimport; backup/restore/delete include it. Manual expenses use their stable projected transaction id. Explicit statement matching copies valid allocations atomically and rejects conflicting splits; the manual copy remains available on source rollback, and deleting the manual record removes only that copy. See ADR/0026-expense-category-splits.md and ADR/0027-manual-split-ownership.md.

@@ -1,7 +1,6 @@
-import {TransactionSplits} from './TransactionSplits';
 import {hash} from '../../ingest/normalize';
 import {TransactionAttachments} from './TransactionAttachments';
-import {useState} from 'react';
+import {lazy,Suspense,useState} from 'react';
 import {useQuery,useQueryClient} from '@tanstack/react-query';
 import type {Account} from '../../core/db/repository';
 import type {ManualEntry} from '../../ledger/manual';
@@ -9,6 +8,7 @@ import {currency,money,parseDecimal} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {useSession} from '../session';
 import {Amount,Button,Input,Row,Sheet} from '../design/primitives';
+const TransactionSplits=lazy(()=>import('./TransactionSplits').then(m=>({default:m.TransactionSplits})));
 const categories=['Groceries','Housing','Utilities','Transport','Health','Eating out','Shopping','Entertainment','Debt','Savings'];
 export function ManualSheet({accounts,entry,onClose}:{accounts:Account[];entry?:ManualEntry;onClose:()=>void}){
  const session=useSession(),query=useQueryClient();
@@ -36,4 +36,4 @@ export function ManualHistory({accounts,today=false}:{accounts:Account[];today?:
 }
 function ReceiptDetails({id}:{id:string}){const [open,setOpen]=useState(false);return <details onToggle={e=>setOpen(e.currentTarget.open)}><summary>Notes and receipts</summary>{open&&<TransactionAttachments target={'manual:'+id}/>}</details>;}
 
-function ManualSplit({id,minor,code}:{id:string;minor:string;code:string}){const [open,setOpen]=useState(false);return <details onToggle={e=>setOpen(e.currentTarget.open)}><summary>Split expense categories</summary>{open&&<TransactionSplits id={hash('manual-transaction:'+id+':entry')} minor={(-BigInt(minor)).toString()} code={currency(code)}/>}</details>;}
+function ManualSplit({id,minor,code}:{id:string;minor:string;code:string}){const [open,setOpen]=useState(false);return <details onToggle={e=>setOpen(e.currentTarget.open)}><summary>Split expense categories</summary>{open&&<Suspense fallback={<p>Opening category split…</p>}><TransactionSplits id={hash('manual-transaction:'+id+':entry')} minor={(-BigInt(minor)).toString()} code={currency(code)}/></Suspense>}</details>;}

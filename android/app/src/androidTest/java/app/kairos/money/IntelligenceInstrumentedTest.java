@@ -258,7 +258,12 @@ public class IntelligenceInstrumentedTest {
                 assertTrue("Synthetic imported expense must support two positive portions",first.signum()>0);
                 click("Split this expense");input("Amount 1",first.toPlainString());input("Amount 2",total.subtract(first).toPlainString());
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-split-entry");click("Save category split");awaitJs("document.body.innerText.includes('Edit category split')");
-                NativeEvidence.capture(activity,theme.toLowerCase()+"-split-saved");click("Remove split");click("Confirm remove split");awaitJs("document.body.innerText.includes('Split this expense')");js("document.querySelector('dialog .icon-button').click()");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-split-saved");click("Remove split");click("Confirm remove split");awaitJs("document.body.innerText.includes('Split this expense')");
+                click("Record original amount");input("Original positive amount","10.00");input("Source of original amount","Synthetic receipt for native verification");
+                click("Save original amount");awaitJs("document.body.innerText.includes('Implied rate:')");
+                captureHeading("Original currency",theme.toLowerCase()+"-original-currency");
+                click("Remove original amount");click("Confirm remove original amount");awaitJs("document.body.innerText.includes('Record original amount') && !document.body.innerText.includes('Implied rate:')");
+                js("document.querySelector('dialog .icon-button').click()");
 
             }
         }
