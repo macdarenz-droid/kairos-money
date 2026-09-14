@@ -1,6 +1,10 @@
 # Session 4 performance evidence — incomplete
 
-## Reviewed Android measurements
+## Latest failure and repair
+
+Run **34843754745** passes startup at **1,653 ms** median and **2,263 ms** fresh install. The 20,000-row journey fails before reporting scroll timings; cleanup overwrote the original error. The log shows repeated blocking GC near the **192 MB** Java heap ceiling. Parsed fixture JSON is now scoped to loading/seeding only; the production row sets use 256-row bridge responses and indexed ordering, and native phase/heap/error checkpoints survive failure. No Android scroll PASS or exclusive root-cause proof is claimed yet. Individual large text fields are not byte-chunked by this row-pagination change.
+
+## Previous reviewed Android measurements
 
 Green run **34839763247**, candidate **a6a9c41**: non-debuggable benchmark cold samples **1,833 / 1,574 / 1,575 ms**, median **1,575 ms**, fresh install **1,833 ms**. Both unchanged startup limits pass. A 40-page PDF extracted in **2,842 ms** with visible progress and responsive WebView. Its staged file survived activity recreation before extraction. This does not prove process death during extraction or commit.
 

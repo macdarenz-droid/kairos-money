@@ -1,6 +1,12 @@
 # Session 4 gate — OPEN
 
-## Current reviewed evidence
+## Latest gate and repair
+
+Run **34843754745** on **3262bfd** failed in the 20,000-row test. Source/build/lint/signatures and startup pass (median **1,653 ms**, fresh **2,263 ms**); notification delivery policy and all preceding native classes through Intelligence pass. The cleanup timeout masked the primary exception, while the log shows severe Java heap pressure. See [the evidence record](evidence/session4-gate-34843754745.json).
+
+The combined repair releases parsed test-fixture objects before measurement, pages large transaction/provenance/label responses at 256 rows, preserves date/id ordering, and records primary plus cleanup failures. Dataset, checks and limits remain unchanged. Native repair, loaded-screen accessibility and downstream continuation remain OPEN. Notification receiver/delivery/cap/privacy/cancellation now has native PASS; actual alarm timing is still unmeasured.
+
+## Previous reviewed green evidence
 
 Run **34839763247** on **a6a9c41** is GREEN. Full native execution including widget lifecycle, backup/reset/restore, deletion and PostDelete passed. Startup median **1,575 ms**, fresh install **1,833 ms**. The complete source run is **271/271 tests**. All 151 current screenshots were reviewed in contact sheets; archive/APK/screenshot hashes and exact limitations are recorded in [the evidence record](evidence/session4-gate-34839763247.json).
 

@@ -1,3 +1,19 @@
+# Session 4 — large-ledger memory repair, 14 September 2026
+
+Checked completed run [34843754745](https://github.com/macdarenz-droid/kairos-money/actions/runs/34843754745) once on `3262bfd47611098221b48a8b88c7b73e989b5d61`. Source, all APK compilation/lint/signature checks, startup (1,653 ms median; 2,263 ms fresh install) and every native class through Intelligence passed. The new notification test proves permission refusal, actual Android receiver/NotificationManager delivery of all four generic private notices, daily caps, deduplication, future/stale refusal and cancellation. Its due-time fixture still does not measure Doze/alarm punctuality.
+
+The 20,000-row test failed with a cleanup database timeout, which replaced the primary exception. The full log shows repeated blocking garbage collection and 24 MB allocation attempts near the 192 MB Java heap ceiling after recreation. The test retained both full parsed fixture representations during measurement. Their loading/seeding now finishes in a separate method returning only the batch ID, allowing those objects to be collected before the real app reads the ledger. The dataset and all assertions remain intact.
+
+The production transaction, source-provenance and ledger-label reads now cross the native bridge in pages of at most 256 rows. Every record/value is preserved; transaction date/id order is retained by reading the primary-key index and stable-sorting dates once. This avoids repeatedly sorting the full table for each page. These are row-count bounds, not a byte cap for an individual large text field. The native test now records phase/heap checkpoints and retains the original exception with any cleanup error suppressed beneath it. Native performance is still OPEN until this repair runs.
+
+Verified evidence archive SHA-256 and recorded exact results/limitations in `docs/evidence/session4-gate-34843754745.json`. The previous completely green candidate remains `a6a9c41`; this failure does not invalidate its narrower passing widget/backup/delete proof. New loaded-screen accessibility and downstream acceptance were not reached by the current failed run.
+
+Continue **one integrated Session 4 milestone**. Preserve all remaining launcher, active-import process-death, native-refund, visual/accessibility, alarm timing and privately signed release/E2E requirements. Next session is all 36 offline Money Analysis capabilities plus the six quiet-coaching concepts together, followed by the complete usability pass. Automation remains disabled; no replacement-gate polling.
+
+Local validation: 274/274 source tests across 63 files; lint, TypeScript, production build (498.18 kB main bundle), schema/generated-file and release-configuration checks, 11 runner tests, money lint and diff checks PASS. Native test Java syntax PASS; actual repair compilation/execution pending combined CI. See ADR/0033-bounded-native-ledger-reads.md.
+
+## Earlier checkpoint history
+
 # Session 4 acceptance review — 14 September 2026
 
 Full gate [34839763247](https://github.com/macdarenz-droid/kairos-money/actions/runs/34839763247) is **GREEN** on `a6a9c41b16d85d8ea8ae0368c5aa1a25dbf6fbd3`. The previous widget repair passed the real touch, locked activity recreation, unlock, acknowledgement/no-replay and normal ActivityScenario teardown assertions. Source verification, Android compilation/lint, signatures, all native classes and the complete backup/reset/restore/delete continuation pass.

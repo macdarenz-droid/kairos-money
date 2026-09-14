@@ -64,25 +64,43 @@ public class LedgerPerformanceInstrumentedTest {
             return null;
         });
     }
-    @Test public void twentyThousandSourceRowsScrollAtNormalAndLargeText() throws Exception {
+    private String loadAndSeedFixture() throws Exception {
         JSONObject fixture;
         try(InputStream input=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("generated/performance-ledger.json")) {
             java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream();byte[] block=new byte[8192];int count;
             while((count=input.read(block))!=-1)bytes.write(block,0,count);
             fixture=new JSONObject(bytes.toString("UTF-8"));
         }
-        JSONObject doc=fixture.getJSONObject("document");JSONArray ledger=fixture.getJSONArray("ledger"),samples=new JSONArray();
+        JSONObject doc=fixture.getJSONObject("document");JSONArray ledger=fixture.getJSONArray("ledger");
         assertEquals(20000,ledger.length());
+        fixture(doc,ledger);
+        return doc.getString("id");
+    }
+    private void checkpoint(String phase,JSONArray samples,Throwable error) throws Exception {
+        File directory=new File(activity.getExternalFilesDir(null),"evidence");assertTrue(directory.exists()||directory.mkdirs());
+        JSONObject report=new JSONObject().put("phase",phase).put("samples",samples)
+            .put("java_heap_used_bytes",Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())
+            .put("java_heap_max_bytes",Runtime.getRuntime().maxMemory());
+        if(error!=null){java.io.StringWriter trace=new java.io.StringWriter();error.printStackTrace(new java.io.PrintWriter(trace));report.put("failure",trace.toString());}
+        Files.write(new File(directory,"ledger-20000-progress.json").toPath(),report.toString(2).getBytes(StandardCharsets.UTF_8));
+    }
+    @Test public void twentyThousandSourceRowsScrollAtNormalAndLargeText() throws Throwable {
+        JSONArray samples=new JSONArray();
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a->activity=a);unlock();click("You");new BackupTestUi(activity).ready();
-            long before=DatabaseDigest.userRows(activity);boolean seeded=false;
+            long before=DatabaseDigest.userRows(activity);String batchId=null;Throwable primary=null;String phase="seed";
             try {
-                fixture(doc,ledger);seeded=true;
+                checkpoint(phase,samples,null);
+                // The parsed document AND reconciled rows must leave the Java stack before
+                // measuring the app. Keeping them here pins tens of MB in the app's test process.
+                batchId=loadAndSeedFixture();phase="recreate";checkpoint(phase,samples,null);
                 scenario.recreate();scenario.onActivity(a->activity=a);unlock();
+                phase="ledger load";checkpoint(phase,samples,null);
                 long started=SystemClock.elapsedRealtime();click("Ledger");input("Search transactions","Synthetic performance merchant");
                 awaitJs("document.querySelector('.windowed-list [role=listitem]')?.getAttribute('aria-setsize')==='20000'");
                 long loadMs=SystemClock.elapsedRealtime()-started;
                 for(int zoom:new int[]{100,200}) {
+                    phase="scroll text "+zoom;checkpoint(phase,samples,null);
                     InstrumentationRegistry.getInstrumentation().runOnMainSync(()->activity.getBridge().getWebView().getSettings().setTextZoom(zoom));
                     js("(()=>{const list=document.querySelector('.windowed-list');list.scrollTop=0;list.scrollIntoView({behavior:'instant',block:'start'});})()");
                     awaitJs("Boolean(document.querySelector('.windowed-list [aria-posinset=\"1\"]'))");
@@ -103,18 +121,30 @@ public class LedgerPerformanceInstrumentedTest {
                 }
                 File directory=new File(activity.getExternalFilesDir(null),"evidence");assertTrue(directory.exists()||directory.mkdirs());
                 Files.write(new File(directory,"ledger-20000.json").toPath(),new JSONObject().put("rows",20000).put("source_links",20000).put("ledger_load_ms",loadMs).put("samples",samples).put("measurement","WebView requestAnimationFrame intervals during programmatic scroll on Android; raw timings require performance review, not a physical-device FPS claim.").toString(2).getBytes(StandardCharsets.UTF_8));
+            } catch(Throwable error) {
+                primary=error;
+                android.util.Log.e("KairosPerformance","Failure during "+phase,error);
+                try{checkpoint(phase,samples,error);}catch(Throwable reporting){error.addSuppressed(reporting);}
+                throw error;
             } finally {
-                InstrumentationRegistry.getInstrumentation().runOnMainSync(()->activity.getBridge().getWebView().getSettings().setTextZoom(100));
-                if(seeded) {
-                    DatabaseDigest.transaction(activity,db->{
-                        String batch=doc.getString("id");
-                        db.execSQL("DELETE FROM transaction_sources WHERE import_batch_id=?",new Object[]{batch});
-                        db.execSQL("DELETE FROM transactions WHERE account_id='native-performance'");
-                        db.execSQL("DELETE FROM staging_rows WHERE import_batch_id=?",new Object[]{batch});
-                        db.execSQL("DELETE FROM import_batches WHERE id=?",new Object[]{batch});
-                        db.execSQL("DELETE FROM accounts WHERE id='native-performance'");return null;
-                    });
-                    assertEquals("Performance fixture left user records behind",before,DatabaseDigest.userRows(activity));
+                try {
+                    InstrumentationRegistry.getInstrumentation().runOnMainSync(()->activity.getBridge().getWebView().getSettings().setTextZoom(100));
+                    if(batchId!=null) {
+                        final String batch=batchId;
+                        DatabaseDigest.transaction(activity,db->{
+                            db.execSQL("DELETE FROM transaction_sources WHERE import_batch_id=?",new Object[]{batch});
+                            db.execSQL("DELETE FROM transactions WHERE account_id='native-performance'");
+                            db.execSQL("DELETE FROM staging_rows WHERE import_batch_id=?",new Object[]{batch});
+                            db.execSQL("DELETE FROM import_batches WHERE id=?",new Object[]{batch});
+                            db.execSQL("DELETE FROM accounts WHERE id='native-performance'");return null;
+                        });
+                        assertEquals("Performance fixture left user records behind",before,DatabaseDigest.userRows(activity));
+                    }
+                } catch(Throwable cleanup) {
+                    if(primary==null)throw cleanup;
+                    primary.addSuppressed(cleanup);
+                    android.util.Log.e("KairosPerformance","Cleanup also failed; original failure retained",cleanup);
+                    try{checkpoint(phase,samples,primary);}catch(Throwable reporting){primary.addSuppressed(reporting);}
                 }
             }
         }

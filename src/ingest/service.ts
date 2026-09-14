@@ -3,6 +3,7 @@ import { syncManual } from '../ledger/manual';
 import {applyCategoryEdits} from '../ledger/categories';
 import { hasStatementBalanceChain } from './normalize/statement-evidence';
 import type { Driver } from '../core/db/driver';
+import {queryPages} from '../core/db/query-pages';
 import { currency, money, toDatabase } from '../core/money';
 import { categorize, type CategoryRule } from '../ledger/rules';
 import { continuity } from './integrity';
@@ -158,7 +159,7 @@ export function importService(driver: Driver) {
   }
   async function ledger() {
     const rows = await reconcileAsync((await batches()).filter(b => b.status === 'committed'));
-    const labels = new Map((await driver.query('SELECT t.id,c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id')).map(r => [String(r.id), r.name === null ? null : String(r.name)]));
+    const labels = new Map((await queryPages(driver,'SELECT t.id,c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id ORDER BY t.id')).map(r => [String(r.id), r.name === null ? null : String(r.name)]));
     return rows.map(r => ({ ...r, category: labels.has(r.id) ? labels.get(r.id)! : r.category }));
   }
   async function stageFile(fileName: string, data: string, fileHash: string, sessionId = hash('session:'+fileHash)) {
