@@ -159,6 +159,18 @@ export function importService(driver: Driver) {
   async function ledger() {
     return (await import('./materialized')).materializedLedger(driver);
   }
+  /** One window of the Transactions list, with search and ordering applied in SQL. */
+  async function ledgerPage(search = '', offset = 0, limit = 200) {
+    return (await import('./materialized')).materializedPage(driver, search, offset, limit);
+  }
+  /** Bounded candidates for the bulk-categorisation sheet, matched in SQL on its own filter. */
+  async function ledgerBulk(search = '') {
+    return (await import('./materialized')).materializedBulk(driver, search);
+  }
+  /** Per-account data-health counts, aggregated rather than transferred. */
+  async function ledgerHealth() {
+    return (await import('./materialized')).materializedHealth(driver);
+  }
   async function summaries(): Promise<BatchSummary[]> {
     const rows = await driver.query(`SELECT b.id,b.file_name,b.account_id,b.period_start,b.period_end,b.status,b.integrity_tier,
       CASE WHEN b.status IN ('staged','quarantined') THEN json_extract(d.payload,'$.sessionId') ELSE NULL END AS session_id,
@@ -180,9 +192,10 @@ export function importService(driver: Driver) {
       };
     });
   }
-  async function workspace() {
+  async function workspace(search = '', offset = 0, limit = 200) {
     const pending = await files(), documents = await summaries();
-    return { files: pending, batches: documents, ledger: await ledger() };
+    const page = await ledgerPage(search, offset, limit);
+    return { files: pending, batches: documents, ledger: page.rows, ledgerTotal: page.total, health: await ledgerHealth() };
   }
   async function stageFile(fileName: string, data: string, fileHash: string, sessionId = hash('session:'+fileHash)) {
     if (!/^[a-f0-9]{64}$/.test(fileHash) || data.length > 27962032) throw new Error('File is too large or its identity is invalid. Choose a file below 20 MB.');
@@ -207,5 +220,5 @@ export function importService(driver: Driver) {
   async function commitSession(ids: string[]) { return driver.transaction(async()=> { const results=[]; for(const id of ids) results.push(await commitUnlocked(id)); return results; }); }
   async function reminderDay(): Promise<number|null> { const r=(await driver.query("SELECT value FROM app_settings WHERE key='update-reminder'"))[0]; if(!r)return null;const value=JSON.parse(String(r.value)) as unknown;return typeof value==='number' && Number.isInteger(value)&&value>=0&&value<=6?value:null; }
   async function setReminderDay(day:number|null) { if(day!==null&&(!Number.isInteger(day)||day<0||day>6))throw new Error('Choose a weekday.');await driver.execute("INSERT OR REPLACE INTO app_settings(key,value) VALUES('update-reminder',?)",[JSON.stringify(day)]); }
-  return { workspace, leaveCategoriesUnassigned, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
+  return { workspace, ledgerPage, ledgerBulk, ledgerHealth, leaveCategoriesUnassigned, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
 }

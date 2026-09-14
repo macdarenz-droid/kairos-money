@@ -11,7 +11,8 @@ it('loads compact import history and current categories without transferring sou
  const pending={...doc,hash:hash('pending workspace'),id:hash(JSON.stringify(['a',hash('pending workspace')])),fileName:'Pending.csv'};
  await repo.imports.stage(pending);
  await repo.imports.stageFile('Waiting.csv','c3ludGhldGlj',hash('waiting workspace'));
- const expected={files:await repo.imports.files(),batches:await repo.imports.summaries(),ledger:await repo.imports.ledger()};
+ const page=await repo.imports.ledgerPage();
+ const expected={files:await repo.imports.files(),batches:await repo.imports.summaries(),ledger:page.rows,ledgerTotal:page.total,health:await repo.imports.ledgerHealth()};
  let documentReads=0;
  const guarded:Driver={...driver,async query(sql,values){if(/SELECT\s+d\.payload\b/i.test(sql)){documentReads++;throw new Error('Large source document read');}return driver.query(sql,values);}};
  const workspace=await repository(guarded).imports.workspace();
@@ -19,6 +20,12 @@ it('loads compact import history and current categories without transferring sou
  expect(documentReads).toBe(0);
  expect(workspace.batches.some(b=>b.status==='staged')).toBe(true);
  expect(workspace.ledger).toHaveLength(4);
+ expect(workspace.ledgerTotal).toBe(4);
+ // The window is a window: the list reads one page and a count, never every row.
+ expect((await repo.imports.ledgerPage('',0,2)).rows).toHaveLength(2);
+ expect((await repo.imports.ledgerPage('',0,2)).total).toBe(4);
+ expect((await repo.imports.ledgerPage('refund thirty')).rows.map(r=>r.description)).toEqual(['Synthetic refund thirty']);
+ expect(workspace.ledger.map(r=>r.id)).toEqual([...workspace.ledger].sort((a,b)=>b.date.localeCompare(a.date)||a.id.localeCompare(b.id)).map(r=>r.id));
  expect(workspace.ledger.find(r=>r.id===id)?.category).toBe('Health');
  documentReads=0;
  await repo.categories.set([id],'Transport');
@@ -42,5 +49,22 @@ it('ignores committed records that the importer never materialized from a source
  // A payload that is not the importer's own provenance must not be parsed as evidence either.
  await driver.execute("INSERT INTO transaction_sources VALUES('outside-row','outside','outside-row',?)",[JSON.stringify({note:'Outside source'})]);
  expect(await repo.imports.ledger()).toEqual(expected);
- expect((await repo.imports.workspace()).ledger).toEqual(expected);
+ expect(new Set((await repo.imports.workspace()).ledger.map(r=>r.id))).toEqual(new Set(expected.map(r=>r.id)));
+ expect((await repo.imports.workspace()).ledgerTotal).toBe(expected.length);
+ expect((await repo.imports.ledgerHealth()).some(h=>h.accountId==='outside')).toBe(false);
+});
+
+it('offers bulk categorisation candidates without transferring the whole ledger',async()=>{
+ const {repo,driver}=await refundFixture();
+ const all=await repo.imports.ledger();
+ const purchase=all.find(r=>r.description==='Synthetic purchase')!;
+ await driver.execute('UPDATE transactions SET transfer_group_id=? WHERE id=?',['group',purchase.id]);
+ const candidates=await repo.imports.ledgerBulk();
+ // Matched transfers are excluded, as the sheet has always excluded them.
+ expect(candidates.rows.map(r=>r.id)).not.toContain(purchase.id);
+ expect(candidates.total).toBe(all.length-1);
+ // The sheet filters on merchant, date and category, and that filter runs in SQL.
+ const merchant=candidates.rows[0]!.merchant;
+ expect((await repo.imports.ledgerBulk(merchant)).rows.every(r=>r.merchant===merchant)).toBe(true);
+ expect((await repo.imports.ledgerBulk('no such merchant')).total).toBe(0);
 });

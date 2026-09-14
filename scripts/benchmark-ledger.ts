@@ -20,6 +20,10 @@ await driver.transaction(async()=>{for(const t of ledger){insert.run(t.id,t.date
 const readStart=performance.now(),snapshot=await repo.intelligence.snapshot('2026-12-31','AUD'),readMs=performance.now()-readStart;
 if(snapshot.transactions.length!==20000||snapshot.transactions.some(t=>t.sources?.length!==1))throw new Error('Snapshot evidence mismatch');
 const workspaceStart=performance.now(),workspace=await repo.imports.workspace(),workspaceMs=performance.now()-workspaceStart;
-if(workspace.ledger.length!==20000||workspace.batches.length!==1||workspace.ledger.some(t=>t.sources.length!==1))throw new Error('Materialized workspace mismatch');
-raw.close();return {fixture:'synthetic only',rows:20000,reconciliation_ms:Math.round(reconcileMs),sqlite_snapshot_with_provenance_ms:Math.round(readMs),materialized_ledger_workspace_ms:Math.round(workspaceMs),runtime:process.version,scope:'Local Node SQLite; Android cold start and frame times still require device measurement'};
+if(workspace.ledgerTotal!==20000||workspace.ledger.length!==200||workspace.batches.length!==1||workspace.ledger.some(t=>t.sources.length!==1))throw new Error('Materialized workspace mismatch');
+if(workspace.health.reduce((sum,h)=>sum+h.total,0)!==20000)throw new Error('Health counts mismatch');
+// The last window must cost about the same as the first, or deep scrolling regresses natively.
+const deepStart=performance.now(),deep=await repo.imports.ledgerPage('',19800,200),deepMs=performance.now()-deepStart;
+if(deep.rows.length!==200||deep.total!==20000)throw new Error('Deep window mismatch');
+raw.close();return {fixture:'synthetic only',rows:20000,reconciliation_ms:Math.round(reconcileMs),sqlite_snapshot_with_provenance_ms:Math.round(readMs),materialized_ledger_workspace_ms:Math.round(workspaceMs),deep_window_ms:Math.round(deepMs),runtime:process.version,scope:'Local Node SQLite; Android cold start and frame times still require device measurement'};
 }

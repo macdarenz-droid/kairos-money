@@ -89,9 +89,13 @@ export function totals(rows: readonly LedgerRow[], code: string): { income: bigi
   return rows.filter(row => row.currency === code && !row.transferGroup && !row.pending).reduce((sum, row) => { const minor = BigInt(row.minor); return minor >= 0n ? { ...sum, income: sum.income + minor } : { ...sum, spending: sum.spending - minor }; }, { income: 0n, spending: 0n });
 }
 export function dataHealth(rows: readonly LedgerRow[], ranges: readonly Period[], window: Period, tiers: readonly ('A' | 'B' | 'C')[] = []) {
+  return dataHealthCounts({ total: rows.length, uncategorized: rows.filter(r => !r.category).length, unmatchedTransfers: rows.filter(r => /\b(?:TRANSFER|TFR|XFER)\b/i.test(r.description) && !r.transferGroup).length }, ranges, window, tiers);
+}
+
+/** The same health from counts, so a 20,000-row ledger is aggregated rather than transferred. */
+export function dataHealthCounts(counts: { total: number; uncategorized: number; unmatchedTransfers: number }, ranges: readonly Period[], window: Period, tiers: readonly ('A' | 'B' | 'C')[] = []) {
   const available = coveredDays(coverage(ranges).map(r => ({ start: r.start < window.start ? window.start : r.start, end: r.end > window.end ? window.end : r.end })).filter(r => r.start <= r.end));
-  const days = coveredDays([window]); const uncategorized = rows.filter(r => !r.category).length;
-  const unmatched = rows.filter(r => /\b(?:TRANSFER|TFR|XFER)\b/i.test(r.description) && !r.transferGroup).length;
+  const days = coveredDays([window]); const uncategorized = counts.uncategorized, rows = { length: counts.total }, unmatched = counts.unmatchedTransfers;
   const coveragePercent = Math.floor(100 * available / days);
   const integrityConfidence = tiers.length ? Math.floor(tiers.reduce((sum,t)=>sum+(t==='A'?100:t==='B'?90:50),0)/tiers.length) : 100;
   return { integrityConfidence, coveragePercent, uncategorized, unmatchedTransfers: unmatched, score: rows.length ? Math.floor(integrityConfidence / 100 * (coveragePercent + 100 * (rows.length - uncategorized) / rows.length + 100 * (rows.length - unmatched) / rows.length) / 3) : null };

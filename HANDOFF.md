@@ -1,3 +1,23 @@
+# Session 4 — the Ledger reads one window, 14 September 2026
+
+The phase split landed the answer. Run [34875373780](https://github.com/macdarenz-droid/kairos-money/actions/runs/34875373780) on `4b244e0` reported:
+
+`20,000-row ledger took 52491 ms; budget is 10000 ms [tab_open=22 ms, first_row=52310 ms, search_entered=52473 ms]`
+
+Opening the tab cost **22 ms**. Entering the search term and fully virtualizing cost about **180 ms** between them. The data read cost **52,310 ms — 99.7% of the load**. That matches the local elimination exactly: `WindowedList` mounts 20,000 rows in 6 ms and re-renders in 2 ms, and `ImportWorkspace`'s filter is one memoized pass, so neither could ever have been the cost.
+
+The Transactions list virtualizes to about sixteen visible rows, yet the read moved roughly 40,000 rows — 20,000 transactions and 20,000 provenance records — across the Capacitor SQLite bridge on every open. The repair is to read a window instead of the ledger.
+
+`materializedPage` reads one window with search and ordering applied in SQL, plus a count. `materializedBulk` reads the bulk-categorisation candidates the same way, matched on merchant, date and category and excluding matched transfers exactly as that sheet always has, bounded by the 1,000-row cap it already enforced. `materializedHealth` aggregates the per-account counts `dataHealth` needs; the transfer wording SQL cannot judge is narrowed by LIKE to a small candidate set and decided by the original expression, so the result is identical to reading every row. `materializedLedger` is unchanged and still reads everything, which keeps every existing assertion about the full ledger honest.
+
+`WindowedList` gained one optional callback reporting its visible range, so the list requests the window it is showing. Rows outside the loaded window render as a reading placeholder until their window arrives.
+
+Local 20,000-row workspace falls from **679 ms** through 381 ms to **101 ms**, and the last window, at offset 19,800, costs **75 ms** — deep scrolling stays as cheap as the first page, which the benchmark now asserts. Roughly 40,000 rows crossing the bridge become about 400 plus counts.
+
+Regression is 281/281 tests across 65 files with lint, strict TypeScript, build, schema, release configuration, money lint, native-gate unit tests and generated-file checks passing. The workspace contract test was extended rather than relaxed, and the transfer-exclusion guarantee moved to the layer that now enforces it. The 10,000 ms budget, the 256-row native response budget and every other assertion are untouched.
+
+Native verification of this repair is still required. Session 4 remains OPEN.
+
 # Session 4 — keyset paging did not move the native Ledger, 14 September 2026
 
 Run [34871468723](https://github.com/macdarenz-droid/kairos-money/actions/runs/34871468723) on `881e6f3` failed the same class: **20,000-row ledger took 52,390 ms; budget is 10,000 ms**. The previous run measured 52,426 ms. Keyset paging moved the native number by 36 ms.

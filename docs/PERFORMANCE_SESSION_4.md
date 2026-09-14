@@ -1,5 +1,26 @@
 # Session 4 performance evidence — incomplete
 
+## Measured: the cost is the read, not the render
+
+Run 34875373780 split the load into phases:
+
+| phase | ms |
+|---|---|
+| tab_open | 22 |
+| first_row | 52,310 |
+| search_entered | 52,473 |
+| total | 52,491 |
+
+The data read is 99.7% of it. Reading a window instead of the whole ledger:
+
+| measurement | before | after |
+|---|---|---|
+| local 20,000-row workspace | 679 ms | **101 ms** |
+| local window at offset 19,800 | n/a | **75 ms** |
+| rows crossing the bridge per open | ~40,000 | ~400 plus counts |
+
+Deep windows cost the same as the first, so scrolling does not regress; the benchmark asserts it. Native measurement of the repair is still required.
+
 ## What holds the full ledger array, if the bridge is confirmed
 
 Scoped while the phase-split run executed, so the repair can start immediately rather than begin with this survey. Four consumers in `ImportWorkspace` hold all 20,000 rows, and none of them needs the whole array:
