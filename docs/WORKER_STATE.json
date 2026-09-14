@@ -1,12 +1,12 @@
 {
-  "contract": "Manual continuation; automation stopped by user 2026-09-14",
+  "contract": "Autonomous continuation; scheduled loop re-enabled by explicit user request 2026-09-14",
   "phase": "Session 4 integrated private-v1 completion",
   "latest_continuation": "Page the ledger and snapshot reads by key instead of OFFSET, removing the quadratic rescan behind the 52,426 ms native Ledger load.",
   "latest_source_evidence": "280/280 tests across 65 files, lint, strict TypeScript, production build, schema, release configuration, money lint, native-gate unit tests and generated-file checks PASS. Local 20,000-row workspace 381 ms and snapshot 305 ms, with the 256-row native response budget unchanged.",
   "lease": null,
-  "automation_enabled": false,
-  "automation_id": "6aa6c8e99f20819181576d885cb21b46",
-  "mode": "Manual continuation",
+  "automation_enabled": true,
+  "automation_id": "trig_012YZ9183BjCCPyuc3towZDU",
+  "mode": "Autonomous gate-to-task loop",
   "candidate_sha": "7b8d247890faf50a4fcad2b80199ed7b2d9b46b4",
   "candidate_tree": "4ccfb7b13023c4292ed3a514151bb6e090ea226a",
   "run_id": 34868920857,
@@ -19,5 +19,6 @@
   "last_result": "IntelligenceInstrumentedTest passed 4/4 and startup passed at 746 ms median. LedgerPerformanceInstrumentedTest failed: 20,000-row ledger took 52426 ms against a 10000 ms budget, caused by quadratic OFFSET paging amplified by SQLCipher decryption.",
   "local_validation": "280/280 tests across 65 files, lint, strict TypeScript, production build, schema, release configuration, money lint, native-gate unit tests and generated-file checks PASS. Local 20,000-row workspace 381 ms and snapshot 305 ms, with the 256-row native response budget unchanged.",
   "next_action": "Verify the keyset paging repair natively against the 10-second 20,000-row Ledger budget. Then continue Session 4 visual/private-release acceptance; then all 36 Money Analysis capabilities plus six quiet-coaching concepts together per docs/SESSION_5_ARCHITECTURE.md.",
-  "candidate_role": "Last reviewed green candidate is 00d17faf; 7b8d247 cleared the intelligence classes but failed the Ledger performance budget and is superseded by the keyset paging repair."
+  "candidate_role": "Last reviewed green candidate is 00d17faf; 7b8d247 cleared the intelligence classes but failed the Ledger performance budget and is superseded by the keyset paging repair.",
+  "automation_note": "One hourly Routine 'Kairos gate \u2192 task loop' (trig_012YZ9183BjCCPyuc3towZDU) bound to session_014yKrn1AcvHWWwNHhiECEMD is the durable safety net; short one-shot check-ins are the fast path while a gate is mid-flight. Each tick checks the gate, fixes red, records green, advances the task queue, and leaves the next check-in scheduled. Delete the Routine when the queue is complete."
 }

@@ -1,3 +1,11 @@
+# Scheduled continuation re-enabled — 14 September 2026
+
+The user explicitly asked for a self-re-arming gate-to-task loop, which is the new explicit request the older "do not recreate or re-enable scheduled continuation" wording requires. One hourly Routine, `Kairos gate → task loop` (`trig_012YZ9183BjCCPyuc3towZDU`), is bound to this session as the durable safety net; short one-shot check-ins remain the fast path while a gate is mid-flight. Exactly one recurring Routine exists, consistent with the single-worker rule below.
+
+Each tick: establish state, then act. A running gate means do not push code — the workflow sets `concurrency: cancel-in-progress` per ref, so a push without `[skip ci]` kills the run in flight. A red gate is diagnosed from its failing job log once, repaired, validated against the full local gate and pushed. A green gate is recorded, then the queue advances: Session 4 remaining acceptance, then the 36 Money Analysis capabilities with the six quiet-coaching concepts per `SESSION_5_ARCHITECTURE.md`, then the low-effort usability pass. Delete the Routine once that queue is complete rather than looping on nothing.
+
+Acceptance thresholds, frozen tests and the permanent constraints below are unchanged by this loop.
+
 # Current authorization — 14 September 2026
 
 The user explicitly re-enabled autonomous Kairos Money continuation. This overrides older worker-disabled/manual-only and stop-on-active-CI wording below. Use the existing hourly Money worker only. Continue Session 4 as one integrated milestone, then the accepted 36-capability Money Analysis and six quiet-coaching concepts, then the complete low-effort usability pass. Notification capture remains deferred; no trading/job automation changes.
