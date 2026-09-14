@@ -1,25 +1,22 @@
 {
   "contract": "Autonomous continuation authorized 2026-09-14",
   "phase": "Session 4 integrated private-v1 completion",
-  "latest_continuation": "Resolving exact native failure from candidate 2be52d7; preserving all source and frozen acceptance checks.",
-  "latest_source_evidence": "Run 34821106864 source gate PASS (262 tests reported by prior context); Android compile, lint, signature, startup execution and seven preceding native classes ran. Intelligence capture failed before remaining native classes.",
-  "lease": {
-    "owner": "kairos-money-hourly",
-    "expires_at": "2026-09-14T09:32:00Z"
-  },
+  "latest_continuation": "Repaired the Android visual-evidence race without weakening the heading assertion or production FLAG_SECURE behavior.",
+  "latest_source_evidence": "Candidate 2be52d7 source gate PASS and Android build/lint/signature PASS. Seven preceding native classes passed. Replacement bbe5b97 changes only synthetic screenshot coordination and is queued in run 34824593148; no result claimed.",
+  "lease": null,
   "automation_enabled": true,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
   "mode": "Single hourly Money worker",
-  "candidate_sha": "2be52d786bd4bfce851d2195131ddd3a713495f1",
-  "candidate_tree": "20bc6fb317c6ec0bd81ad7f0354c7ed1eb54eda5",
-  "run_id": 34821106864,
-  "run_result": "failure",
+  "candidate_sha": "bbe5b97ab14a7290740dd6de5292775d4d016db8",
+  "candidate_tree": "9664543e5182e486b297e90552d910d36e430396",
+  "run_id": 34824593148,
+  "run_result": "queued",
   "integration_checkpoint_sha": "92450fef8f6856c1590f73fb730c43f976c05153",
   "integration_local_checkpoint": "598cd0f",
-  "integration_delivery_status": "Repairing the exact failed Android evidence assertion; no milestone PASS claimed.",
+  "integration_delivery_status": "Integrated replacement gate queued; full Session 4 remains OPEN.",
   "before_checkpoint": "2be52d786bd4bfce851d2195131ddd3a713495f1",
   "local_checkpoint": "598cd0f",
-  "last_result": "Latest gate failed because clearing/restoring FLAG_SECURE during a screenshot changed the distress heading position after the captured frame. Startup samples also exceeded thresholds (2636 ms fresh, 2279 ms median); retain the threshold and remeasure.",
-  "local_validation": "Source gate PASS; Android build/lint/signature PASS. Native PinRecovery, Foundation, KeyProtection, Hardening, Import, LargeImport and Revision suites PASS. Full native acceptance remains OPEN.",
-  "next_action": "Make heading visibility verification occur in the same unsecured committed frame that is captured, preserving FLAG_SECURE outside synthetic evidence. Publish one coherent repair and let the full gate remeasure startup. Continue remaining Session 4, Analysis and usability scope after gate resolution."
+  "last_result": "Run 34821106864 failed at distress-screen capture because changing FLAG_SECURE replaced the surface after the heading position check. The helper now clears FLAG_SECURE, commits that surface, positions and verifies the heading, commits again, captures, verifies again, then restores FLAG_SECURE. Startup limits remain unchanged after noisy failing samples (2636 ms fresh, 2279 ms median).",
+  "local_validation": "No local Android SDK in preserved checkout and its source ancestry is stale, so no local Gradle claim. The prior exact candidate's full source gate and Android compile/lint/signature passed; the replacement must establish compilation and device behavior in CI.",
+  "next_action": "Check run 34824593148 once next invocation. If unfinished, continue independent accepted Session 4/Analysis/usability work without another candidate. If red, retrieve only its failed job evidence once. If green, retrieve exact milestone evidence once, verify required screens and remaining acceptance before closure."
 }
