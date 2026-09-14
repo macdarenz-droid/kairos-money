@@ -24,6 +24,8 @@ public class LedgerPerformanceInstrumentedTest {
     private String lastPhase="not started";
     /** Last renderer JS heap reading; the app process survives a renderer crash only briefly. */
     private String rendererHeap="not sampled";
+    /** Time inside the sampled wait, so a last sample is not mistaken for a settled value. */
+    private long sampleElapsedMs=-1;
     private String js(String script) throws Exception {
         CountDownLatch done=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>();
         activity.runOnUiThread(()->activity.getBridge().getWebView().evaluateJavascript(script,r->{value.set(r);done.countDown();}));
@@ -42,17 +44,18 @@ public class LedgerPerformanceInstrumentedTest {
      * the renderer's own memory, which nothing here measured. Each sample is written to the device before
      * the next poll, because a renderer crash takes the app process with it and no assertion runs.
      */
-    private void awaitFirstRowSampled(JSONArray samples) throws Exception {
-        long deadline=SystemClock.elapsedRealtime()+60000;
+    private void awaitSampled(String phase,String condition,JSONArray samples) throws Exception {
+        long started=SystemClock.elapsedRealtime(),deadline=started+60000;
         for(int poll=0;SystemClock.elapsedRealtime()<deadline;poll++) {
-            if("true".equals(js("Boolean(document.querySelector('.windowed-list [role=listitem]'))")))return;
+            if("true".equals(js(condition)))return;
             if(poll%6==0) {
                 rendererHeap=js("(()=>{const m=performance.memory;return m?{used:m.usedJSHeapSize,total:m.totalJSHeapSize,limit:m.jsHeapSizeLimit}:null;})()");
-                checkpoint("ledger load",samples,null);
+                sampleElapsedMs=SystemClock.elapsedRealtime()-started;
+                checkpoint(phase,samples,null);
             }
             Thread.sleep(150);
         }
-        fail("First ledger row never reached the DOM; last renderer heap "+rendererHeap);
+        fail(phase+" never completed: "+condition+"; last renderer heap "+rendererHeap);
     }
     private void click(String name) throws Exception {
         String button="Array.from(document.querySelectorAll('button')).find(e=>e.textContent.trim()==="+JSONObject.quote(name)+")";
@@ -115,7 +118,7 @@ public class LedgerPerformanceInstrumentedTest {
             .put("java_heap_used_bytes",retained)
             .put("java_heap_after_gc_bytes",runtime.totalMemory()-runtime.freeMemory())
             .put("java_heap_max_bytes",runtime.maxMemory())
-            .put("renderer_js_heap",rendererHeap);
+            .put("renderer_js_heap",rendererHeap).put("sample_elapsed_ms",sampleElapsedMs);
         if(error!=null){java.io.StringWriter trace=new java.io.StringWriter();error.printStackTrace(new java.io.PrintWriter(trace));report.put("failure",trace.toString());}
         Files.write(new File(directory,"ledger-20000-progress.json").toPath(),report.toString(2).getBytes(StandardCharsets.UTF_8));
     }
@@ -166,13 +169,16 @@ public class LedgerPerformanceInstrumentedTest {
                 js("window.__kairosQueries&&window.__kairosQueries.reset()");
                 long started=SystemClock.elapsedRealtime();click("Ledger");
                 long tabMs=SystemClock.elapsedRealtime()-started;
-                awaitFirstRowSampled(samples);
+                awaitSampled("ledger first row","Boolean(document.querySelector('.windowed-list [role=listitem]'))",samples);
                 long firstRowMs=SystemClock.elapsedRealtime()-started;
                 // Which statements the device actually spent that time in. Shapes only, no values.
                 String profile=js("JSON.stringify((window.__kairosQueries&&window.__kairosQueries.read(5))||[])");
+                checkpoint("ledger search entry",samples,null);
                 input("Search transactions","Synthetic performance merchant");
                 long searchMs=SystemClock.elapsedRealtime()-started;
-                awaitJs("document.querySelector('.windowed-list [role=listitem]')?.getAttribute('aria-setsize')==='20000'");
+                // The measured window continues past the first row, so keep sampling: a crash after this
+                // point would otherwise be reported with a heap reading taken before the search ran.
+                awaitSampled("ledger search","document.querySelector('.windowed-list [role=listitem]')?.getAttribute('aria-setsize')==='20000'",samples);
                 long loadMs=SystemClock.elapsedRealtime()-started;
                 for(int zoom:new int[]{100,200}) {
                     phase="scroll text "+zoom;checkpoint(phase,samples,null);
