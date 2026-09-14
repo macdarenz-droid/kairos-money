@@ -1,3 +1,9 @@
+# Session 4 — verified-account net-worth ownership
+
+Combined net worth now joins manual holdings with only the latest reconciled statement closing balances the user explicitly includes. Every account requires an include/exclude ownership choice; rolled-back or unverified balances stay out and leave the picture visibly incomplete. Positive balances are assets, negative balances are liabilities, source dates remain visible, and manual history stays separate from the current combined position.
+
+Manual holdings can identify the imported account they represent. Currency mismatch, a second manual representation, or simultaneous manual/imported inclusion is rejected transactionally. Choices and links survive encrypted backup/restore without changing ledger, source or coverage rows. The clean complete regression passes all 257 tests in 59 files with one worker; lint, strict TypeScript, schema generation, diff checks and production build pass. The main JavaScript is 496.77 kB without a chunk warning after deferring the net-worth repository. The combined Android journey now captures account review and inclusion but remains unrun. Continue the same integrated Session 4 milestone through accessibility, hardening, device performance, camera/widget evidence and the signed private release; no gate or worker launched. See ADR/0030-explicit-net-worth-ownership.md.
+
 ## Session 4 — confirmed refunds
 
 Added explicit source-credit refund linking to an earlier same-currency imported purchase, including another account. Multiple partial credits are supported up to the full purchase amount. Payslip-linked salary, wrong-direction/pending/transfer sources and excess totals are rejected. Source amounts, categories, provenance and cashflow dates stay intact. Links survive backup and exact source rollback/reimport; changed or malformed links become inactive and remain removable.

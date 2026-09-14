@@ -218,7 +218,7 @@ public class IntelligenceInstrumentedTest {
                 awaitJs("document.querySelector('.money-visuals input[type=range]').value==='1'");
                 js("document.querySelector('.money-visuals').scrollIntoView()");NativeEvidence.capture(activity,theme.toLowerCase()+"-monthly-comparison");
                 click("Record a value");input("Item name","Synthetic valuation "+theme);input("Valuation date","2026-01-01");input("Positive value or amount owed","12000.00");
-                NativeEvidence.capture(activity,theme.toLowerCase()+"-valuation-entry");click("Save value");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Latest recorded total')");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-valuation-entry");click("Save value");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Latest manual total')");
                 awaitJs("document.body.innerText.includes('One valuation date recorded')");
                 captureHeading("Recorded net worth",theme.toLowerCase()+"-valuation-history");
                 click("Record a value");
@@ -228,6 +228,13 @@ public class IntelligenceInstrumentedTest {
                 captureHeading("Recorded net worth",theme.toLowerCase()+"-valuation-two-dates");
                 js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Manage recorded values').click()");click("Remove");click("Remove value");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('One valuation date recorded')");
                 js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Manage recorded values').parentElement.open=true");click("Remove");click("Remove value");awaitJs("!document.querySelector('dialog') && !document.body.innerText.includes('Synthetic valuation "+theme+"')");
+                js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Imported account ownership').parentElement.open=true");
+                awaitJs("document.body.innerText.includes('Latest reconciled statement closing balance')");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-net-worth-account-ownership");
+                js("(()=>{const d=Array.from(document.querySelectorAll('details')).find(e=>e.querySelector('summary')?.textContent==='Imported account ownership');const b=Array.from(d.querySelectorAll('button')).find(e=>e.textContent==='Include balance'&&!e.disabled);if(!b)throw new Error('No verified account balance');b.click();})()");
+                awaitJs("document.body.innerText.includes('included')");captureHeading("Combined position",theme.toLowerCase()+"-net-worth-combined");
+                js("(()=>{const d=Array.from(document.querySelectorAll('details')).find(e=>e.querySelector('summary')?.textContent==='Imported account ownership');Array.from(d.querySelectorAll('button')).find(e=>e.textContent==='Exclude balance').click();})()");
+                awaitJs("document.body.innerText.includes('excluded')");
                 click("Ledger");click("Change categories");awaitJs("Boolean(document.querySelector('dialog input[type=checkbox]'))");
                 js("document.querySelector('dialog input[type=checkbox]').click()");NativeEvidence.capture(activity,theme.toLowerCase()+"-bulk-categories");
                 js("document.querySelector('dialog .icon-button').click()");
