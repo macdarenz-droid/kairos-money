@@ -18,7 +18,7 @@ import { ColumnMapping } from './ColumnMapping';
 import { decodeFile, selectFiles, stageDroppedFiles } from '../../ingest/review/files';
 import { merchantName, normalizeAmount } from '../../ingest/normalize';
 import { coverage, coveredDays, dataHealth, gaps } from '../../ingest/reconcile';
-import type { Batch, ImportContext, LedgerRow, NormalizedRow } from '../../ingest/types';
+import type { BatchSummary, ImportContext, LedgerRow, NormalizedRow } from '../../ingest/types';
 import { ImportFailure } from '../../ingest/types';
 import { payMetrics } from '../../ledger/payslips';
 import { Amount, Button, EmptyState, Input, Row, Sheet } from '../design/primitives';
@@ -29,7 +29,7 @@ type Review = Awaited<ReturnType<Repository['imports']['review']>>;
 function Failure({ error }: { error: Error }) { return <div className="import-failure" role="alert">{error instanceof ImportFailure && <><p>{error.understood}</p><pre>{error.excerpt}</pre></>}<p>{error.message}</p></div>; }
 export function ImportWorkspace({ accounts, request, consumed }: { accounts: Account[]; request: number; consumed: () => void }) {
   const session = useSession(), query = useQueryClient();
-  const [fileId, setFileId] = useState<string | null>(null), [reviewId, setReviewId] = useState<string | null>(null), [transaction, setTransaction] = useState<LedgerRow | null>(null), [undo, setUndo] = useState<Batch | null>(null), [search, setSearch] = useState(''), [page, setPage] = useState(0), [notice, setNotice] = useState(''), [updateReview, setUpdateReview] = useState<string[] | null>(null);
+  const [fileId, setFileId] = useState<string | null>(null), [reviewId, setReviewId] = useState<string | null>(null), [transaction, setTransaction] = useState<LedgerRow | null>(null), [undo, setUndo] = useState<BatchSummary | null>(null), [search, setSearch] = useState(''), [page, setPage] = useState(0), [notice, setNotice] = useState(''), [updateReview, setUpdateReview] = useState<string[] | null>(null);
   const [backupSuggested, setBackupSuggested] = useState(false), [backupOpen, setBackupOpen] = useState(false);
   const [bulkOpen,setBulkOpen]=useState(false);
   function imported(message: string, added: number) { setNotice(message); if (added > 50) setBackupSuggested(true); }
@@ -60,7 +60,7 @@ export function ImportWorkspace({ accounts, request, consumed }: { accounts: Acc
     {undo && <Sheet title="Roll back this import?" onClose={() => { if (!rollback.isPending) setUndo(null); }}><div className="stack"><p>{undo.fileName}</p><p>Remove this statement’s contribution. Transactions supported by other committed statements remain. Rules created by this import are removed with it.</p>{rollback.error && <Failure error={rollback.error}/>}<Button variant="danger" disabled={rollback.isPending} onClick={() => rollback.mutate(undo.id)}>Confirm rollback</Button></div></Sheet>}
   </section>;
 }
-function Coverage({ account, batches, rows }: { account: Account; batches: Batch[]; rows: LedgerRow[] }) {
+function Coverage({ account, batches, rows }: { account: Account; batches: BatchSummary[]; rows: LedgerRow[] }) {
   const ranges = coverage(batches.filter(b => b.status === 'committed' && !b.payslip && b.context.accountId === account.id).map(b => b.context.period));
   if (!ranges.length) return null;
   const window = { start: ranges[0]!.start, end: ranges.at(-1)!.end }, missing = gaps(ranges, window), health = dataHealth(rows.filter(r => r.accountId === account.id), ranges, window, batches.filter(b=>b.status==='committed' && !b.payslip && b.context.accountId===account.id).map(b=>b.integrityTier??'A'));

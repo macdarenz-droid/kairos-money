@@ -1,8 +1,14 @@
-import {useCallback,useLayoutEffect,useMemo,useRef,useState,type ReactNode} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 /** Variable-height rows: measured at the current font size, with keyboard page access. */
 export function WindowedList<T>({items,id,render,label}:{items:T[];id:(item:T)=>string;render:(item:T)=>ReactNode;label:string}){
  const viewport=useRef<HTMLDivElement>(null),[top,setTop]=useState(0),[heights,setHeights]=useState(new Map<string,number>());
- const measure=useCallback((key:string,height:number)=>setHeights(old=>{if(old.get(key)===height)return old;const next=new Map(old);next.set(key,height);return next;}),[]);
+ const pendingHeights=useRef(new Map<string,number>()),measureFrame=useRef<number|null>(null);
+ const measure=useCallback((key:string,height:number)=>{
+  pendingHeights.current.set(key,height);
+  if(measureFrame.current!==null)return;
+  measureFrame.current=requestAnimationFrame(()=>{measureFrame.current=null;const pending=pendingHeights.current;pendingHeights.current=new Map();setHeights(old=>{let next:Map<string,number>|undefined;for(const [itemKey,itemHeight] of pending)if(old.get(itemKey)!==itemHeight){next??=new Map(old);next.set(itemKey,itemHeight);}return next??old;});});
+ },[]);
+ useEffect(()=>()=>{if(measureFrame.current!==null)cancelAnimationFrame(measureFrame.current);},[]);
  const offsets=useMemo(()=>{const result=[0];for(const item of items)result.push(result.at(-1)!+(heights.get(id(item))??80));return result;},[items,heights,id]);
  let lower=0,upper=items.length;while(lower<upper){const mid=(lower+upper)>>>1;if(offsets[mid+1]!<top)lower=mid+1;else upper=mid;}
  const start=Math.max(0,lower-3);let end=lower;while(end<items.length&&offsets[end]!<top+560)end++;end=Math.min(items.length,end+3);

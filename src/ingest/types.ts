@@ -7,6 +7,9 @@ export type NormalizedRow = { sourceId: string; accountId: string; date: string;
 export type Payslip = { employer: string; payDate: string; period: Period; currency: Currency; gross: string; net: string; tax: string; super: string; deductions: { name: string; minor: string }[]; allowances: { name: string; minor: string }[]; ytd: Record<string, string> };
 export type Document = { id: string; hash: string; fileName: string; parser: string; context: ImportContext; opening: string; closing: string; rows: NormalizedRow[]; payslip: Payslip | null; sessionId?: string; sourceRank?: number; sourceKind?: 'statement' | 'export'; integrityTier?: 'A' | 'B' | 'C'; rawRows?: RawRow[]; sourceText?: string };
 export type Batch = Document & { status: 'staged' | 'committed' | 'rolled_back' | 'quarantined' };
+export type BatchSummary = Pick<Batch, 'id' | 'fileName' | 'status' | 'integrityTier' | 'sessionId' | 'payslip'> & {
+  context: Pick<ImportContext, 'accountId' | 'period'>;
+};
 export type LedgerRow = NormalizedRow & { id: string; owner: string; transferGroup: string | null; sources: { batchId: string; sourceId: string }[] };
 export class ImportFailure extends Error {
   constructor(public understood: string, public unreadable: string, public excerpt: string, public action: string) { super(`${unreadable} ${action}`); this.name = 'ImportFailure'; }

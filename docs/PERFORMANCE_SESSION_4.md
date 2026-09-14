@@ -1,5 +1,13 @@
 # Session 4 performance evidence — incomplete
 
+## Green full journey and materialized-ledger repair
+
+Run **34853883508**, candidate **00d17faf**, passed the complete Android journey and cleanup. Startup passed at **1,695 ms median** and **1,977 ms fresh install**. The 40-page PDF completed in **3,972 ms** with visible progress, WebView responsiveness and activity-recreation continuity.
+
+Its 20,000-row report recorded **58,954 ms** Ledger load. At 100%/200% text, the virtual list mounted at most **16 / 10** rows and reached the final record, but raw programmatic-scroll intervals averaged approximately **97.64 / 92.50 ms**, with p95 approximately **183.34 / 166.67 ms**. A green functional class does not make those timings acceptable.
+
+The continuation replaces ordinary Ledger reconstruction from the full original document with paged reads from the committed materialized transaction and source-provenance tables. Import review and correction still use the validated original evidence. Today/coverage reads use compact batch summaries. Row-height observations are applied once per animation frame rather than once per newly mounted row. The latest local complete 20,000-row workspace reads in **603 ms** on Node 24.19.0 and must remain below **5,000 ms**. The Android test now requires Ledger load below **10,000 ms** and still records raw scroll intervals at both text sizes. Replacement Android measurements remain required.
+
 ## Latest reviewed measurements and repair
 
 Run **34847174081**, candidate **2a32c37**, completed 20,000-row traversal at 100% and 200% text with **16 / 10** maximum mounted rows and 120 raw frame intervals each. Ledger load was **62,376 ms**; mean intervals **110.97 / 104.58 ms**, maxima **316.67 / 333.33 ms**. The class failed in fixture cleanup, after writing its complete measurement report. These results establish reachability, not acceptable scrolling performance.

@@ -3,7 +3,6 @@ import { syncManual } from '../ledger/manual';
 import {applyCategoryEdits} from '../ledger/categories';
 import { hasStatementBalanceChain } from './normalize/statement-evidence';
 import type { Driver } from '../core/db/driver';
-import {queryPages} from '../core/db/query-pages';
 import { currency, money, toDatabase } from '../core/money';
 import { categorize, type CategoryRule } from '../ledger/rules';
 import { continuity } from './integrity';
@@ -11,7 +10,7 @@ import type { ExportMapping } from './sources/types';
 import { hash, isoDay, rowFingerprint, dayNumber, similarity } from './normalize';
 import { balance, gaps, nearDuplicates } from './reconcile';
 import { linkNet } from '../ledger/payslips';
-import type { Batch, Document, NormalizedRow } from './types';
+import type { Batch, BatchSummary, Document, NormalizedRow, Payslip } from './types';
 const integer = (s: string, c: string) => toDatabase(money(BigInt(s), currency(c)));
 function validate(doc: Document): void {
   if (doc.id !== hash(JSON.stringify([doc.context.accountId, doc.hash])) || !/^[a-f0-9]{64}$/.test(doc.hash)) throw new Error('Import identity does not match the source. Choose the file again.');
@@ -158,16 +157,32 @@ export function importService(driver: Driver) {
     return driver.transaction(async () => { const doc = (await batches()).find(b => b.id === id); if (!doc) throw new Error('That import was not found.'); await driver.execute("UPDATE import_batches SET status='rolled_back' WHERE id=?", [id]); await rebuild(); });
   }
   async function ledger() {
-    return ledgerFromBatches(await batches());
+    return (await import('./materialized')).materializedLedger(driver);
   }
-  async function ledgerFromBatches(documents: Batch[]) {
-    const rows = await reconcileAsync(documents.filter(b => b.status === 'committed'));
-    const labels = new Map((await queryPages(driver,'SELECT t.id,c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id ORDER BY t.id')).map(r => [String(r.id), r.name === null ? null : String(r.name)]));
-    return rows.map(r => ({ ...r, category: labels.has(r.id) ? labels.get(r.id)! : r.category }));
+  async function summaries(): Promise<BatchSummary[]> {
+    const rows = await driver.query(`SELECT b.id,b.file_name,b.account_id,b.period_start,b.period_end,b.status,b.integrity_tier,
+      CASE WHEN b.status IN ('staged','quarantined') THEN json_extract(d.payload,'$.sessionId') ELSE NULL END AS session_id,
+      p.employer,p.pay_date,p.period_start AS pay_period_start,p.period_end AS pay_period_end,p.gross_minor,p.net_minor,p.tax_minor,p.super_minor,p.deductions,p.allowances,p.ytd,p.currency AS pay_currency
+      FROM import_batches b JOIN staging_rows d ON d.import_batch_id=b.id AND d.source_row_id='__document__'
+      LEFT JOIN payslips p ON p.import_batch_id=b.id ORDER BY b.id`);
+    return rows.map(record => {
+      const payslip: Payslip | null = record.employer === null ? null : {
+        employer: String(record.employer), payDate: String(record.pay_date), period: { start: String(record.pay_period_start), end: String(record.pay_period_end) },
+        gross: String(record.gross_minor), net: String(record.net_minor), tax: String(record.tax_minor), super: String(record.super_minor),
+        deductions: JSON.parse(String(record.deductions)) as Payslip['deductions'], allowances: JSON.parse(String(record.allowances)) as Payslip['allowances'],
+        ytd: JSON.parse(String(record.ytd)) as Payslip['ytd'], currency: currency(String(record.pay_currency)),
+      };
+      return {
+        id: String(record.id), fileName: String(record.file_name), status: String(record.status) as BatchSummary['status'],
+        context: { accountId: String(record.account_id), period: { start: String(record.period_start), end: String(record.period_end) } },
+        ...(record.integrity_tier === null ? {} : { integrityTier: String(record.integrity_tier) as NonNullable<BatchSummary['integrityTier']> }),
+        ...(record.session_id === null ? {} : { sessionId: String(record.session_id) }), payslip,
+      };
+    });
   }
   async function workspace() {
-    const pending = await files(), documents = await batches();
-    return { files: pending, batches: documents, ledger: await ledgerFromBatches(documents) };
+    const pending = await files(), documents = await summaries();
+    return { files: pending, batches: documents, ledger: await ledger() };
   }
   async function stageFile(fileName: string, data: string, fileHash: string, sessionId = hash('session:'+fileHash)) {
     if (!/^[a-f0-9]{64}$/.test(fileHash) || data.length > 27962032) throw new Error('File is too large or its identity is invalid. Choose a file below 20 MB.');
@@ -192,5 +207,5 @@ export function importService(driver: Driver) {
   async function commitSession(ids: string[]) { return driver.transaction(async()=> { const results=[]; for(const id of ids) results.push(await commitUnlocked(id)); return results; }); }
   async function reminderDay(): Promise<number|null> { const r=(await driver.query("SELECT value FROM app_settings WHERE key='update-reminder'"))[0]; if(!r)return null;const value=JSON.parse(String(r.value)) as unknown;return typeof value==='number' && Number.isInteger(value)&&value>=0&&value<=6?value:null; }
   async function setReminderDay(day:number|null) { if(day!==null&&(!Number.isInteger(day)||day<0||day>6))throw new Error('Choose a weekday.');await driver.execute("INSERT OR REPLACE INTO app_settings(key,value) VALUES('update-reminder',?)",[JSON.stringify(day)]); }
-  return { workspace, leaveCategoriesUnassigned, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
+  return { workspace, leaveCategoriesUnassigned, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
 }

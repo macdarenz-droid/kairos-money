@@ -1,3 +1,11 @@
+# Session 4 — green lifecycle run and materialized-ledger continuation, 14 September 2026
+
+Run [34853883508](https://github.com/macdarenz-droid/kairos-money/actions/runs/34853883508) is GREEN on `00d17fafb5f06bf3f83458ceac3009d0f95840df`. All source/Android jobs and 13 native classes passed, including the lifecycle repair, 40-page recreation, notification policy, 20,000-row cleanup, 200% loaded screens in both themes, widget, backup/reset/restore and deletion. Startup passed at 1,695 ms median and 1,977 ms fresh install. Verified hashes and limitations are in `docs/evidence/session4-gate-34853883508.json`.
+
+Do not close Session 4 from that green status alone. Its 20,000-row Ledger required 58,954 ms to load and programmatic-scroll frame intervals averaged about 97.64/92.50 ms at 100%/200% text. The current continuation removes repeated full-document validation/reconciliation from ordinary Ledger and Today reads, loads the committed materialized transaction/provenance data in pages, uses compact batch summaries, and batches virtual-row measurements. The latest local 20,000-row workspace completes in 603 ms and has a 5-second source budget; the combined Android test now enforces a 10-second load budget without removing any existing check. Full local regression is 278/278 tests; lint, strict TypeScript, production build, schema and release checks pass. The main bundle is 499.66 kB without a warning. Publish once and do not poll its gate.
+
+Keep Session 4 as one milestone. Automation is disabled. After Session 4, implement all 36 offline Money Analysis capabilities and six quiet-coaching concepts together, followed by the complete low-effort usability/discoverability pass without removing features.
+
 # Session 4 — vault recreation lifecycle repair, 14 September 2026
 
 Reviewed completed run [34851477214](https://github.com/macdarenz-droid/kairos-money/actions/runs/34851477214) once on `c09fb8166fd1e4e39b29c7c3326e538d77aba608`. Source and all Android APK compilation/lint/signature checks passed. Startup passed unchanged limits at **1,681 ms median** and **1,681 ms fresh install**. The repaired readiness probe correctly survived transient UI Automator failures and still required a valid setup hierarchy.

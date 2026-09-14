@@ -154,7 +154,8 @@ public class LedgerPerformanceInstrumentedTest {
                     samples.put(sample.put("text_zoom",zoom).put("reached_last_row",true));
                 }
                 File directory=new File(activity.getExternalFilesDir(null),"evidence");assertTrue(directory.exists()||directory.mkdirs());
-                Files.write(new File(directory,"ledger-20000.json").toPath(),new JSONObject().put("rows",20000).put("source_links",20000).put("ledger_load_ms",loadMs).put("samples",samples).put("measurement","WebView requestAnimationFrame intervals during programmatic scroll on Android; raw timings require performance review, not a physical-device FPS claim.").toString(2).getBytes(StandardCharsets.UTF_8));
+                Files.write(new File(directory,"ledger-20000.json").toPath(),new JSONObject().put("rows",20000).put("source_links",20000).put("ledger_load_ms",loadMs).put("ledger_load_budget_ms",10000).put("samples",samples).put("measurement","WebView requestAnimationFrame intervals during programmatic scroll on Android; raw timings require performance review, not a physical-device FPS claim.").toString(2).getBytes(StandardCharsets.UTF_8));
+                assertTrue("20,000-row ledger took "+loadMs+" ms; budget is 10000 ms",loadMs<10000);
             } catch(Throwable error) {
                 primary=error;
                 android.util.Log.e("KairosPerformance","Failure during "+phase,error);
