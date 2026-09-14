@@ -1,3 +1,19 @@
+# Session 4 — the windowed Ledger loads; last-row reachability repaired, 14 September 2026
+
+Run [34897309077](https://github.com/macdarenz-droid/kairos-money/actions/runs/34897309077) on `c31e564` reached the native gate for the first time in three attempts, after `ci: stop requesting the withdrawn Android 'tools' package` repaired `android-actions/setup-android@v3`. Google withdrew the obsolete `tools` package, so the action's default package set failed `sdkmanager` before `npm ci`, the APK build and every test. Requesting `platform-tools` only fixed it; runs 34896635019 and 34896998882 had died there in about ten seconds each with source-gate fully green.
+
+**The windowed read works.** The Ledger no longer fails its 10-second budget. Ten classes passed, including `IntelligenceInstrumentedTest` 4/4, and startup passed at 1,022 ms median and 1,219 ms fresh install. The failing page dump shows the Transactions list rendered with rows, a correct **20000 transactions** count, and per-account health reporting **20000 uncategorised** from the aggregate query. The read that measured 52,310 ms now completes inside the journey.
+
+`LedgerPerformanceInstrumentedTest` failed later, on reachability rather than time:
+
+`Large ledger condition: Boolean(document.querySelector('.windowed-list [aria-posinset="20000"]'))`
+
+That is this change's own fault. Slots were keyed by row identity, so a placeholder's key (`loading:19999`) differed from the key of the row that replaced it. `WindowedList` stores each measured height against the key, so an arriving window discarded the measurement, the row fell back to the default height, offsets were recomputed and the list reflowed underneath a scroll the test had already set to `scrollHeight`. The last row was never reachable because the content moved after the scroll.
+
+Slots are now keyed by position, so a slot keeps its measured height when its window replaces the placeholder, and the placeholder carries the same row markup so its height matches what arrives. Offsets stay stable across window loads and the scroll lands where it was aimed.
+
+Local regression is 282/282 across 66 files with lint, strict TypeScript, build, schema, release configuration, money lint, native-gate unit tests and generated-file checks passing. The 10,000 ms budget, the 256-row native response budget and every other assertion are untouched. Session 4 remains OPEN.
+
 # Session 4 — the Ledger reads one window, 14 September 2026
 
 The phase split landed the answer. Run [34875373780](https://github.com/macdarenz-droid/kairos-money/actions/runs/34875373780) on `4b244e0` reported:
