@@ -2,6 +2,7 @@ import { ManualHistory, ManualSheet } from './screens/Manual';
 import { MoneyVisuals } from './screens/MoneyVisuals';
 import {NetWorth} from './screens/NetWorth';
 import {FirstImport} from './screens/FirstImport';
+import {useQuickAddLaunch} from './quick-add';
 import { NotificationSync } from './screens/Notifications';
 import { Intelligence } from './screens/Intelligence';
 import { useCallback, useEffect, useState } from 'react';
@@ -26,6 +27,8 @@ export default function App() {
   const [importRequest, setImportRequest] = useState(0);
   const consumeImport = useCallback(() => setImportRequest(0), []);
   const dismissToast = useCallback(() => setToast(''), []);
+  const openManual=useCallback(()=>setSheet('manual'),[]);
+  useQuickAddLaunch(session.state==='ready',openManual);
   useEffect(followSystem, []);
   useEffect(() => { if (session.state !== 'ready' && session.state !== 'preview') { setSheet(null); setSearch(''); setToast(''); } }, [session.state]);
   const accounts = useQuery({ queryKey: ['accounts'], queryFn: () => session.run(repo => repo.accounts()), enabled: session.state === 'ready' });

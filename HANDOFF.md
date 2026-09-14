@@ -25,4 +25,6 @@ Next: connect monthly fingerprint/comparison and charts to real repository data;
 Manual continuation; Money worker remains disabled, V16 suspended. Bank-notification capture/Addendum A remains after private v1. No trading repositories or automations are in scope.
 # Latest Session 4 continuation
 
+Home-screen quick add is now implemented as a nonfinancial Android launch widget. It routes through the existing unlock and manual-entry/account-loading guards. Three new source tests cover cold/warm launch, lock during completion and web exclusion. Native launcher placement, actual unlock transitions, typography and both-theme capture remain open. No component APK or new gate is issued for this checkpoint. Direct camera receipt capture remains unimplemented; the existing receipt file/OCR path is retained.
+
 Continue the whole private-v1 milestone. Added independent off-by-default local money notices, encrypted preferences, generic native alarm payloads, category treemap and distinct gap/stale cashflow shading. These additions are source work, not accepted native delivery or visual evidence. The original Session 4 product, onboarding, accessibility, hardening, performance and final release requirements remain open in docs/GATE_SESSION_4.md. Do not launch a component-only gate or enable bank-notification listening.

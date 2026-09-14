@@ -4,6 +4,7 @@ import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
+import android.content.Intent;
 import android.view.WindowManager;
 import com.getcapacitor.BridgeActivity;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -17,6 +18,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(KairosVaultPlugin.class);
         registerPlugin(KairosTextPlugin.class);
         registerPlugin(KairosReminderPlugin.class);
+        registerPlugin(KairosLaunchPlugin.class);
         super.onCreate(savedInstanceState);
         applyAppearance();
     }
@@ -29,6 +31,8 @@ public class MainActivity extends BridgeActivity {
         WindowInsetsControllerCompat bars = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         bars.setAppearanceLightStatusBars(light); bars.setAppearanceLightNavigationBars(light);
         if (getBridge() != null) getBridge().getWebView().setBackgroundColor(background);
+        QuickAddWidget.refresh(this);
     }
+    @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent);setIntent(intent);if(getBridge()!=null)getBridge().triggerWindowJSEvent("kairosQuickAdd"); }
     @Override public void onConfigurationChanged(Configuration configuration) { super.onConfigurationChanged(configuration); applyAppearance(); }
 }
