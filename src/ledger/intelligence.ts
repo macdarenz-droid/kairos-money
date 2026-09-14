@@ -1,3 +1,4 @@
+import {validSplit,type Split} from './splits';
 import {manualRepository} from './manual';
 import type {Driver} from '../core/db/driver';
 import {currency,money,toDatabase} from '../core/money';
@@ -14,6 +15,8 @@ export function intelligenceRepository(driver:Driver){
   const rows=await driver.query('SELECT t.*,c.kind AS category_kind,c.name AS category_name,m.canonical_name AS merchant FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN merchants m ON m.id=t.merchant_id ORDER BY t.posted_date,t.id');
   const metadata=await setting<Record<string,Partial<Pick<Transaction,'instrument'|'hour'|'planned'|'outsideRoutine'|'overdraftFee'>>>>('intelligence:metadata',{});
   const transactions:Transaction[]=rows.filter(r=>ids.includes(String(r.account_id))).map(r=>({id:String(r.id),accountId:String(r.account_id),date:String(r.posted_date),minor:String(r.amount_minor),currency:currency(String(r.currency)),description:String(r.merchant??r.raw_description),rawDescription:String(r.raw_description),category:String(r.category_name??'Uncategorised'),kind:(r.category_kind??'unknown') as Kind,status:r.status==='pending'?'pending':'settled',transfer:r.transfer_group_id!==null,recurring:r.is_recurring===1,...metadata[String(r.id)]}));
+  const splits=new Map((await driver.query("SELECT key,value FROM app_settings WHERE key LIKE 'split:%'")).map(r=>[String(r.key).slice(6),JSON.parse(String(r.value)) as Split]));
+  for(const t of transactions){const split=splits.get(t.id);if(split&&split.id===t.id&&t.status==='settled'&&!t.transfer&&validSplit(split,t.minor,t.currency))t.allocations=split.parts;}
   const coverage=(await driver.query("SELECT c.*,b.integrity_tier FROM coverage_ranges c JOIN import_batches b ON b.id=c.import_batch_id WHERE b.status='committed'")).filter(r=>ids.includes(String(r.account_id))).map(r=>({accountId:String(r.account_id),start:String(r.period_start),end:String(r.period_end),tier:(r.integrity_tier==='A'?'A':r.integrity_tier==='B'?'B':'C') as 'A'|'B'|'C'}));
   const pays=(await driver.query('SELECT * FROM payslips ORDER BY pay_date,id')).filter(r=>r.currency===c).map(r=>({id:String(r.id),employer:String(r.employer),date:String(r.pay_date),start:String(r.period_start),end:String(r.period_end),net:String(r.net_minor),gross:String(r.gross_minor),currency:c,transactionId:r.linked_transaction_id===null?null:String(r.linked_transaction_id)}));
   const s:Snapshot={asOf,currency:c,accountIds:ids,transactions,coverage,pays};const reflection=await setting<Snapshot['selfReport']|null>('intelligence:reflection',null);if(reflection)s.selfReport=reflection;

@@ -266,6 +266,10 @@ Encrypted app_settings category-edit:<canonical-transaction-id> stores the selec
 
 Encrypted app_settings cancellation:<JSON currency/merchant pair> stores normalized merchant, currency, requested/provider-confirmed status, contact/confirmation date and note. Entries are included in full export, backup, restore and deletion. They do not alter transactions, coverage, observed bills or forecast amounts. Records remain visible without an active detected pattern; later covered settled debits link back to statement evidence. See ADR/0024-cancellation-records.md.
 
+## Expense category splits
+
+Encrypted app_settings split:<canonical-transaction-id> retains the source id, currency, signed original minor amount and 2-10 positive category allocations (category, essential/discretionary kind, integer-string minor units). Allocations must conserve the complete expense amount. Snapshot readers apply only allocations that still match a settled non-transfer payment. Statement transactions, source rows and coverage are not modified. Rollback retains metadata for exact reimport; backup/restore/delete include it. See ADR/0026-expense-category-splits.md.
+
 ## Migration metadata
 
 `_migrations(version INTEGER PRIMARY KEY)` is maintained transactionally by the migration runner. It is not financial data and is removed with the database during deletion.

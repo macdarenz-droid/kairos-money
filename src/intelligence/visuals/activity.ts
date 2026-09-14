@@ -1,3 +1,4 @@
+import {categoryAmounts} from '../allocations';
 import {historical,covered,dates,shift,type Snapshot,type Window} from '../model';
 import {recurrences,scheduledDates} from '../forecast';
 export function activityHistory(snapshot:Snapshot,current:Window,previous:Window){
@@ -7,7 +8,7 @@ export function activityHistory(snapshot:Snapshot,current:Window,previous:Window
   const key=row.description.trim().toLocaleLowerCase('en-AU');const group=merchants.get(key)??{name:row.description,minor:0n,count:0,ids:[]};
   group.minor-=BigInt(row.minor);group.count++;group.ids.push(row.id);merchants.set(key,group);
  }
- const sumCategories=(window:Window)=>{const result=new Map<string,{value:bigint;ids:string[]}>();for(const t of historical(snapshot,window)){if(BigInt(t.minor)>=0n)continue;const r=result.get(t.category)??{value:0n,ids:[]};r.value-=BigInt(t.minor);r.ids.push(t.id);result.set(t.category,r);}return result;};
+ const sumCategories=(window:Window)=>{const result=new Map<string,{value:bigint;ids:string[]}>();for(const t of historical(snapshot,window)){if(BigInt(t.minor)>=0n)continue;for(const p of categoryAmounts(t)){const r=result.get(p.category)??{value:0n,ids:[]};r.value+=BigInt(p.minor);if(!r.ids.includes(t.id))r.ids.push(t.id);result.set(p.category,r);}}return result;};
  const a=sumCategories(current),b=sumCategories(previous);
  const complete=(w:Window)=>dates(w).every(d=>d<=snapshot.asOf&&covered(snapshot,d));
  const comparable=complete(current)&&complete(previous)&&current.end===new Date(Date.UTC(Number(current.start.slice(0,4)),Number(current.start.slice(5,7)),0)).toISOString().slice(0,10);

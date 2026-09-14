@@ -1,3 +1,4 @@
+import {splitRepository} from '../../ledger/splits';
 import {cancellationRepository} from '../../ledger/cancellations';
 import { manualRepository } from '../../ledger/manual';
 import {notificationRepository} from '../../ledger/notifications';
@@ -30,6 +31,7 @@ export function repository(driver: Driver) {
     cancellations: cancellationRepository(driver),
     netWorth: netWorthRepository(driver),
     categories: categoryRepository(driver),
+    splits: splitRepository(driver),
     attachments: attachmentRepository(driver),
     restoreBackup: (snapshot: unknown) => restoreSnapshot(driver, snapshot),
     intelligence: intelligenceRepository(driver),

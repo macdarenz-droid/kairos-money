@@ -1,3 +1,4 @@
+import {kindAmount} from '../allocations';
 import {covered,dates,day,historical,type Snapshot,type Window} from '../model';
 import {recurrences} from '../forecast';
 
@@ -5,7 +6,7 @@ import {recurrences} from '../forecast';
 export function paydayCurve(snapshot:Snapshot,window:Window){
  const pays=[...new Set(snapshot.pays.filter(p=>p.currency===snapshot.currency&&p.date<=window.end).map(p=>p.date))].sort();
  if(pays.length<3)return {status:'insufficient_data' as const,points:[]};
- const rows=historical(snapshot,window).filter(t=>t.kind==='discretionary'&&BigInt(t.minor)<0n);
+ const rows=historical(snapshot,window).filter(t=>BigInt(t.minor)<0n&&kindAmount(t,'discretionary')>0n).map(t=>({...t,minor:(-kindAmount(t,'discretionary')).toString()}));
  const byDate=new Map<string,typeof rows>();for(const row of rows){const group=byDate.get(row.date)??[];group.push(row);byDate.set(row.date,group);}
  const buckets=Array.from({length:31},(_,offset)=>({offset,days:0,total:0n,ids:[] as string[]}));
  for(const date of dates(window)){

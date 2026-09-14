@@ -1,3 +1,4 @@
+import {AllocationBreakdown} from './AllocationBreakdown';
 import {displayRatio} from '../../intelligence/visuals';
 import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
@@ -37,7 +38,7 @@ export function SpendingPatterns(){
  <h3>Spending by posting day</h3><p className="meta">Totals use bank posting dates, which may differ from purchase dates. They do not reveal the time of day or your motivation.</p><Bars rows={p.weekdays.map(d=>({label:d.name,minor:d.minor,ids:d.ids,note:`${d.count} recorded payments`}))} code={code} show={show}/>
  <details><summary>All identified merchant totals</summary>{p.merchants.map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,'Exact recorded payments grouped by statement merchant label.')}>{amount(m.minor,m.name)}</Button>}>{m.name}<p>{m.count} payments</p></Row>)}</details>
  </>}
- {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{s.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id} className="section-gap"><Row trailing={amount(t.minor,t.description)}>{t.rawDescription??t.description}<p>{t.date} · {t.category}</p></Row>{t.sources?.map((source,i)=><details key={i}><summary>{source.file} · {source.row}</summary><pre className="raw-excerpt">{source.raw}</pre></details>)}</div>)}{!detail.ids.length&&<p>No matching transactions in this selection.</p>}</Sheet>}
+ {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{s.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id} className="section-gap"><Row trailing={amount(t.minor,t.description)}>{t.rawDescription??t.description}<p>{t.date} · {t.category}</p></Row><AllocationBreakdown parts={t.allocations} code={t.currency}/>{t.sources?.map((source,i)=><details key={i}><summary>{source.file} · {source.row}</summary><pre className="raw-excerpt">{source.raw}</pre></details>)}</div>)}{!detail.ids.length&&<p>No matching transactions in this selection.</p>}</Sheet>}
  </section>;
 }
 function Bars({rows,code,show}:{rows:{label:string;minor:string;ids:string[];note:string}[];code:ReturnType<typeof currency>;show:(title:string,ids:string[],text:string)=>void}){

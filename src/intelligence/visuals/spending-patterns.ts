@@ -4,6 +4,7 @@ export function spendingMerchant(t:Transaction){return t.description.replace(/^(
 /** Describes evidence, never supplies ledger categories or changes a forecast. */
 export function spendingKind(t:Transaction):'transfer'|'review'|'spending'{
  if(t.transfer||t.kind==='transfer')return 'transfer';
+ if(t.allocations)return 'spending';
  const text=t.rawDescription??t.description;
  if(/\b(?:AFTERPAY|ZIPPAY|ZIP PAY|KLARNA|HUMM|TRANSFER|OSKO|PAYID|BPAY|WORLDREMIT|REMITLY|REVOLUT|ATM)\b|CASH WITHDRAWAL/i.test(text))return 'review';
  if(['essential','discretionary'].includes(t.kind)||/\b(?:CARD|EFTPOS|POS|PURCHASE|FEE)\b/i.test(text))return 'spending';
@@ -13,7 +14,7 @@ export function spendingPatterns(snapshot:Snapshot,month='all',account='all'){
  const eligible=snapshot.transactions.filter(t=>t.currency===snapshot.currency&&snapshot.accountIds.includes(t.accountId)&&t.date<=snapshot.asOf&&(account==='all'||t.accountId===account));
  const months=[...new Set(eligible.map(t=>t.date.slice(0,7)))].sort().reverse();
  const rows=eligible.filter(t=>t.status==='settled'&&(month==='all'||t.date.startsWith(month)));
- const repayments=rows.filter(t=>BigInt(t.minor)<0n&&!t.transfer&&t.kind!=='transfer'&&/\b(?:AFTERPAY|ZIPPAY|ZIP PAY|KLARNA|HUMM)\b/i.test(t.rawDescription??t.description));
+ const repayments=rows.filter(t=>BigInt(t.minor)<0n&&!t.transfer&&t.kind!=='transfer'&&!t.allocations&&/\b(?:AFTERPAY|ZIPPAY|ZIP PAY|KLARNA|HUMM)\b/i.test(t.rawDescription??t.description));
  const out=rows.filter(t=>BigInt(t.minor)<0n),spending=out.filter(t=>spendingKind(t)==='spending'),review=out.filter(t=>spendingKind(t)==='review'),transfers=rows.filter(t=>spendingKind(t)==='transfer');
  const total=(items:Transaction[])=>items.reduce((n,t)=>n+(BigInt(t.minor)<0n?-BigInt(t.minor):BigInt(t.minor)),0n).toString();
  const groups=new Map<string,{name:string;rows:Transaction[]}>();for(const t of spending){const name=spendingMerchant(t),key=name.toLowerCase();const group=groups.get(key)??{name,rows:[]};group.rows.push(t);groups.set(key,group);}

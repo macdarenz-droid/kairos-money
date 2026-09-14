@@ -1,21 +1,22 @@
+import {categoryAmounts,kindAmount} from '../allocations';
 import {currencyDigits} from '../../core/money';
 import {covered,cv,dates,day,historical,keys,median,ratio,shift,sum,type Snapshot,type Window,type Signal,type Key} from '../model';
 export function computeSignals(s:Snapshot,w:Window):Signal[]{
- const days=dates(w),valid=days.filter(d=>covered(s,d)),rows=historical(s,w),expenses=rows.filter(t=>BigInt(t.minor)<0n),income=sum(rows.filter(t=>t.kind==='income'&&BigInt(t.minor)>0n).map(t=>BigInt(t.minor))),disc=expenses.filter(t=>t.kind==='discretionary'),discTotal=sum(disc.map(t=>-BigInt(t.minor)));
+ const days=dates(w),valid=days.filter(d=>covered(s,d)),rows=historical(s,w),expenses=rows.filter(t=>BigInt(t.minor)<0n),income=sum(rows.filter(t=>t.kind==='income'&&BigInt(t.minor)>0n).map(t=>BigInt(t.minor))),disc=expenses.filter(t=>kindAmount(t,'discretionary')>0n).map(t=>({...t,minor:(-kindAmount(t,'discretionary')).toString()})),discTotal=sum(disc.map(t=>-BigInt(t.minor)));
  const unverified=valid.some(d=>s.accountIds.some(id=>!s.coverage.some(c=>c.accountId===id&&c.start<=d&&c.end>=d&&c.tier!=='C')));
  const confidence=Math.floor(valid.length/days.length*(unverified?50:100));
  const inputs={window:w,coveredDays:valid.length,transactions:s.transactions,coverage:s.coverage,pays:s.pays,liquid:s.liquid??null,selfReport:s.selfReport??null};
  const base=(key:Key):Signal=>({key,version:1,period:w.label,status:'insufficient_data',value:null,unit:'basis points',reason:'At least 20 covered days and 80% window coverage are needed.',confidence,unverified,inputs,evidence:rows.map(t=>t.id),details:{}});
  const result=keys.map(base); if(valid.length<20||valid.length*5<days.length*4)return result;
  const set=(key:Key,value:bigint|null,unit:string,reason:string,evidence=rows.map(t=>t.id),details:Record<string,string>={})=>{const r=result.find(x=>x.key===key)!;Object.assign(r,{status:value===null?'insufficient_data':'ok',value:value?.toString()??null,unit,reason:value===null?reason:'',evidence,details});};
- const daily=(kind?:string)=>valid.map(d=>sum(expenses.filter(t=>t.date===d&&(!kind||t.kind===kind)).map(t=>-BigInt(t.minor))));
+ const daily=(kind?:string)=>valid.map(d=>sum(expenses.filter(t=>t.date===d).map(t=>kind?kindAmount(t,kind as import('../model').Kind):-BigInt(t.minor))));
  const essential=median(daily('essential'));
- set('buffer_days',s.liquid&&s.liquid.asOf===w.end&&s.liquid.verified&&essential>0n?BigInt(s.liquid.minor)*10000n/essential:null,'days × 10000','A verified liquid balance at the window end and non-zero median essential spend are required.',[...expenses.filter(t=>t.kind==='essential').map(t=>t.id),...(s.liquid?.evidence??[])]);
+ set('buffer_days',s.liquid&&s.liquid.asOf===w.end&&s.liquid.verified&&essential>0n?BigInt(s.liquid.minor)*10000n/essential:null,'days × 10000','A verified liquid balance at the window end and non-zero median essential spend are required.',[...expenses.filter(t=>kindAmount(t,'essential')>0n).map(t=>t.id),...(s.liquid?.evidence??[])]);
  set('spend_volatility',sum(daily())>0n?cv(daily()):null,'basis points','No settled spending in this window.');
- const cat=new Map<string,bigint>();for(const t of expenses)cat.set(t.category,(cat.get(t.category)??0n)-BigInt(t.minor));const total=sum([...cat.values()]);
- set('category_concentration',total>0n&&!expenses.some(t=>t.kind==='unknown')?sum([...cat.values()].map(v=>v*v))*10000n/(total*total):null,'basis points','Categorise spending before measuring concentration.');
+ const cat=new Map<string,bigint>();for(const t of expenses)for(const p of categoryAmounts(t))cat.set(p.category,(cat.get(p.category)??0n)+BigInt(p.minor));const total=sum([...cat.values()]);
+ set('category_concentration',total>0n&&!expenses.some(t=>!t.allocations&&t.kind==='unknown')?sum([...cat.values()].map(v=>v*v))*10000n/(total*total):null,'basis points','Categorise spending before measuring concentration.');
  set('subscription_drag',income>0n?ratio(sum(expenses.filter(t=>t.recurring).map(t=>-BigInt(t.minor))),income):null,'basis points','Recorded net income is required.',rows.filter(t=>t.recurring||t.kind==='income').map(t=>t.id));
- set('fixed_burden',income>0n&&!expenses.some(t=>t.kind==='unknown')?ratio(sum(expenses.filter(t=>['essential','debt'].includes(t.kind)).map(t=>-BigInt(t.minor))),income):null,'basis points','Categorised spending and recorded net income are required.');
+ set('fixed_burden',income>0n&&!expenses.some(t=>!t.allocations&&t.kind==='unknown')?ratio(sum(expenses.map(t=>kindAmount(t,'essential')+kindAmount(t,'debt'))),income):null,'basis points','Categorised spending and recorded net income are required.');
  const limit=15n*10n**BigInt(currencyDigits[s.currency]),small=disc.filter(t=>-BigInt(t.minor)<limit),smallTotal=sum(small.map(t=>-BigInt(t.minor)));
  set('small_leak_index',discTotal>0n?BigInt(small.length)*smallTotal:null,'count × minor units','Categorised discretionary spending is required.',small.map(t=>t.id),{count:String(small.length),total:smallTotal.toString(),share:ratio(smallTotal,discTotal).toString(),limit:limit.toString()});
  const ticket=median(disc.map(t=>-BigInt(t.minor)));

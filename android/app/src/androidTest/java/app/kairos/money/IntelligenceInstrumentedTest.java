@@ -241,6 +241,19 @@ public class IntelligenceInstrumentedTest {
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-spending-months");
                 js("document.querySelector('.spending-patterns .row button').click()");awaitJs("Boolean(document.querySelector('dialog'))");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-spending-evidence");js("document.querySelector('dialog .icon-button').click()");
+                // Use an actual prior file import; intelligence-only SQL fixtures have no staged source document.
+                click("Ledger");input("Search transactions","");
+                String expense="Array.from(document.querySelectorAll('.transaction-row')).find(e=>e.querySelector('.amount')?.getAttribute('aria-label')?.startsWith('Negative') && !e.textContent.includes('Internal transfer') && !e.textContent.includes('Pending'))";
+                awaitJs("Boolean("+expense+")");js(expense+".click()");
+                awaitJs("Boolean(document.querySelector('dialog .amount'))");
+                String displayed=new JSONArray("["+js("document.querySelector('dialog .amount').textContent")+"]").getString(0);
+                java.math.BigDecimal total=new java.math.BigDecimal(displayed.replaceAll("[^0-9.]",""));
+                java.math.BigDecimal first=total.divide(new java.math.BigDecimal("2"),2,java.math.RoundingMode.DOWN);
+                assertTrue("Synthetic imported expense must support two positive portions",first.signum()>0);
+                click("Split this expense");input("Amount 1",first.toPlainString());input("Amount 2",total.subtract(first).toPlainString());
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-split-entry");click("Save category split");awaitJs("document.body.innerText.includes('Edit category split')");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-split-saved");click("Remove split");click("Confirm remove split");awaitJs("document.body.innerText.includes('Split this expense')");js("document.querySelector('dialog .icon-button').click()");
+
             }
         }
     }

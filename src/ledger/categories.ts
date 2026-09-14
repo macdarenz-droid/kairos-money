@@ -21,6 +21,7 @@ export function categoryRepository(driver:Driver){
   if(category!==null&&!editableCategories.some(c=>c===category))throw new Error('Choose a supported category.');
   return driver.transaction(async()=>{
    for(const id of unique){const row=(await driver.query('SELECT id,transfer_group_id FROM transactions WHERE id=?',[id]))[0];if(!row)throw new Error('A selected transaction was removed. Refresh the ledger and select it again.');if(row.transfer_group_id)throw new Error('Matched transfers keep their transfer classification. Remove them from this selection.');
+    if((await driver.query('SELECT key FROM app_settings WHERE key=?',['split:'+id])).length)throw new Error('Remove this transaction’s category split before assigning a single category.');
     const sources=await driver.query("SELECT s.transaction_id FROM transaction_sources s JOIN import_batches b ON b.id=s.import_batch_id WHERE s.transaction_id=? AND b.parser_version!='manual-entry-v1'",[id]);if(!sources.length)throw new Error('Edit manual entries from their transaction form.');}
    for(const id of unique){const edit={id,category};await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',['category-edit:'+id,JSON.stringify(edit)]);await apply(driver,edit);}
   });

@@ -1,3 +1,5 @@
+import {AllocationBreakdown} from './AllocationBreakdown';
+import {categoryAmounts} from '../../intelligence/allocations';
 import {Cancellations} from './Cancellations';
 import {activityHistory} from '../../intelligence/visuals/activity';
 import {categoryTiles} from '../../intelligence/visuals/treemap';
@@ -31,7 +33,7 @@ export function MoneyVisuals(){
  const shape=polygon(current),old=polygon(prior);const show=(title:string,ids:string[],text:string)=>setDetail({title,ids,text});
  const activity=activityHistory(snapshot,w,previous);
  const tx=historical(snapshot,w);const categories=new Map<string,{minor:bigint;ids:string[]}>();
- for(const t of tx){if(BigInt(t.minor)>=0n)continue;const row=categories.get(t.category)??{minor:0n,ids:[]};row.minor-=BigInt(t.minor);row.ids.push(t.id);categories.set(t.category,row);}
+ for(const t of tx){if(BigInt(t.minor)>=0n)continue;for(const p of categoryAmounts(t)){const row=categories.get(p.category)??{minor:0n,ids:[]};row.minor+=BigInt(p.minor);if(!row.ids.includes(t.id))row.ids.push(t.id);categories.set(p.category,row);}}
  const sorted=[...categories].sort((a,b)=>a[1].minor>b[1].minor?-1:1),total=sorted.reduce((n,[,r])=>n+r.minor,0n);
  return <section className="stack money-visuals" aria-label="Monthly money history">
  <h2>Money Fingerprint</h2><label className="input-label">History currency<select value={code} onChange={e=>setCode(e.target.value)}>{['AUD','USD','PHP','EUR','GBP','NZD','CAD','SGD','JPY','KWD'].map(c=><option key={c}>{c}</option>)}</select></label>
@@ -54,7 +56,7 @@ export function MoneyVisuals(){
  <Cancellations code={currency(code)} merchants={activity.recurring.map(r=>r.merchant)} payments={historical(snapshot,{start:'1970-01-01',end:today,label:''}).filter(t=>BigInt(t.minor)<0n).map(t=>({merchant:t.description,date:t.date,id:t.id}))} review={(merchant,ids)=>show(merchant,ids,'Settled payments on dates after your recorded cancellation contact or confirmation. These may be final charges; check the provider confirmation and statement before acting.')}/>
  <h2>Upcoming bills</h2><p className="meta">Next 30 days from observed recurrences. Confirm dates with the provider.</p>{activity.bills.map(b=><Row key={b.merchant+b.date} trailing={<Button variant="quiet" onClick={()=>show(b.merchant,b.ids,'Expected from previous settled payments; not confirmation of an upcoming charge.')}><Amount value={money(BigInt(b.minor),currency(code))} context={`expected ${b.merchant}`}/></Button>}>{b.date} · {b.merchant}</Row>)}
  <h2>Merchant history</h2>{activity.merchants.map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,`${m.count} settled purchases on covered days in ${w.label}.`)}><Amount value={money(BigInt(m.minor),currency(code))} context={m.name}/></Button>}>{m.name}<p className="meta">{m.count} purchases</p></Row>)}
- {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{snapshot.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id}><Row trailing={<Amount value={money(BigInt(t.minor),t.currency)} context={t.description}/>}><h3>{t.description}</h3><p>{t.date} · {t.category}</p></Row>{t.sources?.map((s,i)=><details key={i}><summary>{s.file} · {s.row}</summary><pre className="raw-excerpt">{s.raw}</pre></details>)}</div>)}{!detail.ids.length&&<p>No source transactions are available for this value.</p>}</Sheet>}
+ {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{snapshot.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id}><Row trailing={<Amount value={money(BigInt(t.minor),t.currency)} context={t.description}/>}><h3>{t.description}</h3><p>{t.date} · {t.category}</p></Row><AllocationBreakdown parts={t.allocations} code={t.currency}/>{t.sources?.map((s,i)=><details key={i}><summary>{s.file} · {s.row}</summary><pre className="raw-excerpt">{s.raw}</pre></details>)}</div>)}{!detail.ids.length&&<p>No source transactions are available for this value.</p>}</Sheet>}
  </section>;
 }
 function Cashflow({snapshot,window,show}:{snapshot:Snapshot;window:Window;show:(title:string,ids:string[],text:string)=>void}){
