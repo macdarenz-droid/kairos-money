@@ -12,18 +12,10 @@ import com.getcapacitor.BridgeActivity;
 import androidx.core.view.WindowInsetsControllerCompat;
 
 public class MainActivity extends BridgeActivity {
-    @Override public void onCreate(Bundle savedInstanceState) {
-        String preference = getSharedPreferences("kairos-appearance", MODE_PRIVATE).getString("theme", "system");
-        boolean light = preference.equals("light") || (preference.equals("system") && (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_NO);
-        setTheme(light ? R.style.AppTheme_Light : R.style.AppTheme_Dark);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
-        registerPlugin(KairosVaultPlugin.class);
-        registerPlugin(KairosLaunchPlugin.class);
-        super.onCreate(savedInstanceState);
-        applyAppearance(false);
-        deferNonLaunchWork();
-    }
-    private void deferNonLaunchWork() {
+    @Override protected void load() {
+        View webView = findViewById(com.getcapacitor.android.R.id.webview);
+        webView.setVisibility(View.INVISIBLE);
+        super.load();
         View decor = getWindow().getDecorView();
         decor.getViewTreeObserver().addOnDrawListener(new ViewTreeObserver.OnDrawListener() {
             private boolean scheduled;
@@ -33,12 +25,24 @@ public class MainActivity extends BridgeActivity {
                 decor.post(() -> {
                     if (decor.getViewTreeObserver().isAlive()) decor.getViewTreeObserver().removeOnDrawListener(this);
                     if (isFinishing() || isDestroyed() || getBridge() == null) return;
-                    getBridge().registerPlugin(KairosTextPlugin.class);
-                    getBridge().registerPlugin(KairosReminderPlugin.class);
+                    webView.setVisibility(View.VISIBLE);
                     QuickAddWidget.refresh(getApplicationContext());
                 });
             }
         });
+    }
+
+    @Override public void onCreate(Bundle savedInstanceState) {
+        String preference = getSharedPreferences("kairos-appearance", MODE_PRIVATE).getString("theme", "system");
+        boolean light = preference.equals("light") || (preference.equals("system") && (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_NO);
+        setTheme(light ? R.style.AppTheme_Light : R.style.AppTheme_Dark);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+        registerPlugin(KairosVaultPlugin.class);
+        registerPlugin(KairosTextPlugin.class);
+        registerPlugin(KairosReminderPlugin.class);
+        registerPlugin(KairosLaunchPlugin.class);
+        super.onCreate(savedInstanceState);
+        applyAppearance(false);
     }
     void applyAppearance(boolean refreshWidget) {
         String preference = getSharedPreferences("kairos-appearance", MODE_PRIVATE).getString("theme", "system");
