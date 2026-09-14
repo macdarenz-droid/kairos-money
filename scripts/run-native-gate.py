@@ -29,6 +29,30 @@ def adb(*args, timeout=120):
     return result.stdout
 
 
+DEVICE_EVIDENCE = '/sdcard/Android/data/app.kairos.money/files/evidence'
+
+
+def device_progress():
+    """Phase checkpoints a failing test wrote on the device.
+
+    A crashed process produces no assertion message, so a test that carries its phase timings in the
+    assertion loses them entirely. These checkpoints are written before each phase and say how far the
+    test reached; the evidence directory is only pulled into the artifact, so print them here too.
+    """
+    try:
+        listing = adb('shell', 'ls', DEVICE_EVIDENCE, timeout=30)
+    except Exception:
+        return ''
+    reports = []
+    for entry in listing.split():
+        if entry.endswith('.json') and 'progress' in entry:
+            try:
+                reports.append(entry + ':\n' + adb('shell', 'cat', DEVICE_EVIDENCE + '/' + entry, timeout=30))
+            except Exception:
+                continue
+    return '\n'.join(reports)
+
+
 def instrumentation(name, count):
     log = adb('shell', 'am', 'instrument', '-w', '-e', 'class',
               'app.kairos.money.' + name,
@@ -36,6 +60,10 @@ def instrumentation(name, count):
     (EVIDENCE / (name + '.log')).write_text(log)
     print(log, flush=True)
     if not re.search(r'OK \(' + str(count) + r' tests?\)', log):
+        progress = device_progress()
+        if progress:
+            (EVIDENCE / (name + '-progress.log')).write_text(progress)
+            print('device-progress:\n' + progress, flush=True)
         raise RuntimeError(name + ' did not pass; see its instrumentation log')
     completed_instrumentation.append(name)
 
@@ -240,3 +268,12 @@ finally:
         content = result.stdout + result.stderr
         (EVIDENCE / (label + '.log')).write_text(content)
         print(label + ':\n' + content, flush=True)
+    # A WebView renderer crash leaves no Java stack and no assertion; the page's own console output is
+    # the only JS-side record of what it was doing, and the full log only reaches the build artifact.
+    full_log = EVIDENCE / 'android-logcat-full.log'
+    if device_verified and full_log.exists():
+        console = [line for line in full_log.read_text(errors='replace').splitlines()
+                   if re.search(r'chromium|Capacitor|Console|kairos', line, re.IGNORECASE)]
+        tail = '\n'.join(console[-200:])
+        (EVIDENCE / 'android-webview-console.log').write_text(tail)
+        print('android-webview-console:\n' + tail, flush=True)
