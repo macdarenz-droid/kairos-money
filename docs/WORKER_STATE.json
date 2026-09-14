@@ -1,8 +1,8 @@
 {
   "contract": "Manual continuation; V16 suspended by user",
   "phase": "Session 4 integrated private-v1 completion",
-  "latest_continuation": "Expense splits across imported source UI, exact category analytics and evidence sheets, with backup/rollback/reimport and stale-allocation protection. One Session 4 milestone; no new gate.",
-  "latest_source_evidence": "236 tests in 55 files PASS in full regression; final lint, strict production build, schema generation and diff check PASS. Split tests cover exact amounts, original source preservation, backup/rollback/reimport, pending/transfer/stale-amount exclusion and both-theme editing. Native acceptance OPEN.",
+  "latest_continuation": "Manual expense split ownership through explicit statement matching, rollback, backup and deletion. Session 4 first; the 36-feature offline Money Analysis milestone remains planned after its closure.",
+  "latest_source_evidence": "Full regression PASS: 240 tests in 55 files; final lint, strict production build, schema generation and diff check PASS. Android checks are prepared but unrun; this remains a source checkpoint.",
   "lease": null,
   "automation_enabled": false,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",

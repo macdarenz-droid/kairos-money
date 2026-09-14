@@ -27,3 +27,21 @@ it('rejects mismatched, nonpositive, unsupported and transfer splits atomically;
  await driver.execute("UPDATE transactions SET status='settled',amount_minor=-1100 WHERE id=?",[id]);expect((await repo.intelligence.snapshot('2026-01-31','AUD')).transactions[0]!.allocations).toBeUndefined();
  await driver.execute("UPDATE transactions SET amount_minor=-1000,transfer_group_id='synthetic-transfer' WHERE id=?",[id]);await expect(repo.splits.save(id,parts)).rejects.toThrow('excluding transfers');expect((await repo.intelligence.snapshot('2026-01-31','AUD')).transactions[0]!.allocations).toBeUndefined();
 });
+it('preserves manual allocations through statement matching, rollback, backup and deletion without changing money',async()=>{
+ const {repo,doc,id}=await setup();
+ const entry={id:'manual-split',kind:'expense' as const,accountId:'a',destinationId:null,date:'2026-01-02',minor:'1000',description:'Synthetic store',category:'Shopping',notes:''};
+ await repo.manual.save(entry);const manualId=hash('manual-transaction:'+entry.id+':entry');await repo.splits.save(manualId,parts);
+ expect((await repo.intelligence.snapshot('2026-01-31','AUD')).transactions.find(t=>t.id===manualId)?.allocations).toHaveLength(2);
+ await repo.manual.match(entry.id,'entry',id);
+ let snapshot=await repo.intelligence.snapshot('2026-01-31','AUD');expect(snapshot.transactions).toHaveLength(1);expect(snapshot.transactions[0]?.allocations?.map(p=>p.minor)).toEqual(['600','400']);
+ await repo.imports.rollback(doc.id);snapshot=await repo.intelligence.snapshot('2026-01-31','AUD');expect(snapshot.transactions).toHaveLength(1);expect(snapshot.transactions[0]?.id).toBe(manualId);expect(snapshot.transactions[0]?.allocations).toHaveLength(2);
+ const fresh=memoryDriver();await migrate(fresh.driver);const restored=repository(fresh.driver);await restored.restoreBackup(await repo.exportAll());expect(await restored.splits.get(manualId)).toEqual(await repo.splits.get(manualId));
+ await repo.imports.stage(doc);await repo.imports.commit(doc.id);await repo.manual.remove(entry.id);expect(await repo.splits.get(manualId)).toBeNull();expect((await repo.intelligence.snapshot('2026-01-31','AUD')).transactions).toHaveLength(1);expect(await repo.splits.get(id)).not.toBeNull();
+});
+it('rejects conflicting split matches atomically and excludes outdated manual allocations',async()=>{
+ const {repo,id}=await setup();const entry={id:'manual-conflict',kind:'expense' as const,accountId:'a',destinationId:null,date:'2026-01-02',minor:'1000',description:'Synthetic store',category:'Shopping',notes:''};
+ await repo.manual.save(entry);const manualId=hash('manual-transaction:'+entry.id+':entry');await repo.splits.save(manualId,parts);await repo.splits.save(id,[{category:'Groceries',minor:'500'},{category:'Shopping',minor:'500'}]);
+ await expect(repo.manual.match(entry.id,'entry',id)).rejects.toThrow('different category splits');expect((await repo.manual.list())[0]?.links).toEqual({});expect((await repo.splits.get(id))?.parts[0]?.minor).toBe('500');
+ await repo.manual.save({...entry,minor:'1200'});expect((await repo.intelligence.snapshot('2026-01-31','AUD')).transactions.find(t=>t.id===manualId)?.allocations).toBeUndefined();
+ await repo.manual.remove(entry.id);await repo.manual.save(entry);expect(await repo.splits.get(manualId)).toBeNull();
+});

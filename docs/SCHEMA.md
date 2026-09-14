@@ -268,7 +268,7 @@ Encrypted app_settings cancellation:<JSON currency/merchant pair> stores normali
 
 ## Expense category splits
 
-Encrypted app_settings split:<canonical-transaction-id> retains the source id, currency, signed original minor amount and 2-10 positive category allocations (category, essential/discretionary kind, integer-string minor units). Allocations must conserve the complete expense amount. Snapshot readers apply only allocations that still match a settled non-transfer payment. Statement transactions, source rows and coverage are not modified. Rollback retains metadata for exact reimport; backup/restore/delete include it. See ADR/0026-expense-category-splits.md.
+Encrypted app_settings split:<canonical-transaction-id> retains the source id, currency, signed original minor amount and 2-10 positive category allocations (category, essential/discretionary kind, integer-string minor units). Allocations must conserve the complete expense amount. Snapshot readers apply only allocations that still match a settled non-transfer payment. Statement transactions, source rows and coverage are not modified. Rollback retains metadata for exact reimport; backup/restore/delete include it. Manual expenses use their stable projected transaction id. Explicit statement matching copies valid allocations atomically and rejects conflicting splits; the manual copy remains available on source rollback, and deleting the manual record removes only that copy. See ADR/0026-expense-category-splits.md and ADR/0027-manual-split-ownership.md.
 
 ## Migration metadata
 

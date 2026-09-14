@@ -169,6 +169,12 @@ public class IntelligenceInstrumentedTest {
                 awaitJs("document.body.innerText.includes('Synthetic manual purchase "+theme+"')");
                 captureHeading("Manual transactions",theme.toLowerCase()+"-manual-history");click("Edit");input("Amount","15.00");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-edit");click("Save transaction");awaitJs("!document.querySelector('dialog')");
+                js("[...document.querySelectorAll('summary')].find(e=>e.textContent==='Split expense categories').click()");
+                click("Split this expense");input("Amount 1","10.00");input("Amount 2","5.00");click("Save category split");
+                awaitJs("[...document.querySelectorAll('button')].some(e=>e.textContent==='Edit category split')");
+                captureHeading("Category split",theme.toLowerCase()+"-manual-category-split");
+                click("Remove split");click("Confirm remove split");
+                awaitJs("[...document.querySelectorAll('button')].some(e=>e.textContent==='Split this expense')");
                 click("Match with statement");awaitJs("document.body.innerText.includes('No imported entry with the same account')");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-match");js("document.querySelector('dialog .icon-button').click()");
                 click("Delete");NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-delete");click("Delete transaction");

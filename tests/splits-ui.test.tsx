@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import {ManualHistory} from '../src/ui/screens/Manual';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
@@ -18,4 +19,12 @@ it.each(['dark','light'])('validates, saves, edits and removes a category split 
  fireEvent.change(screen.getByLabelText('Amount 2'),{target:{value:'4.00'}});fireEvent.click(screen.getByRole('button',{name:'Save category split'}));await screen.findByRole('button',{name:'Edit category split'});expect((await state.repo!.splits.get(id))?.parts.map(p=>p.minor)).toEqual(['600','400']);
  fireEvent.click(screen.getByRole('button',{name:'Edit category split'}));fireEvent.change(screen.getByLabelText('Category 2'),{target:{value:'Eating out'}});fireEvent.click(screen.getByRole('button',{name:'Save category split'}));await screen.findByRole('button',{name:'Edit category split'});expect((await state.repo!.splits.get(id))?.parts[1]?.category).toBe('Eating out');
  fireEvent.click(screen.getByRole('button',{name:'Remove split'}));expect(await state.repo!.splits.get(id)).not.toBeNull();fireEvent.click(screen.getByRole('button',{name:'Confirm remove split'}));await waitFor(async()=>expect(await state.repo!.splits.get(id)).toBeNull());await screen.findByRole('button',{name:'Split this expense'});
+});
+
+it.each(['dark','light'])('opens the split editor from manual history in %s',async theme=>{
+ document.documentElement.dataset.theme=theme;await state.repo!.manual.save({id:'manual-ui-split',kind:'expense',accountId:'a',destinationId:null,date:'2026-01-02',minor:'1000',description:'Manual store',category:'Shopping',notes:''});
+ render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><ManualHistory accounts={await state.repo!.accounts()}/></QueryClientProvider>);
+ const summary=await screen.findByText('Split expense categories');const details=summary.closest('details')!;details.open=true;fireEvent(details,new Event('toggle'));
+ fireEvent.click(await screen.findByRole('button',{name:'Split this expense'}));fireEvent.change(screen.getByLabelText('Amount 1'),{target:{value:'6.00'}});fireEvent.change(screen.getByLabelText('Amount 2'),{target:{value:'4.00'}});fireEvent.click(screen.getByRole('button',{name:'Save category split'}));await screen.findByRole('button',{name:'Edit category split'});
+ expect((await state.repo!.splits.get(hash('manual-transaction:manual-ui-split:entry')))?.parts.map(p=>p.minor)).toEqual(['600','400']);
 });

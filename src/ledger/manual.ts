@@ -1,3 +1,4 @@
+import {splitRepository,validSplit} from './splits';
 import type { Driver } from '../core/db/driver';
 import { currency, money, toDatabase } from '../core/money';
 import { hash, isoDay, dayNumber } from '../ingest/normalize';
@@ -40,12 +41,13 @@ export function manualRepository(driver:Driver){
   if(input.kind==='transfer') {const to=(await driver.query('SELECT * FROM accounts WHERE id=? AND archived_at IS NULL',[input.destinationId]))[0];if(!to||input.accountId===input.destinationId||to.currency!==from.currency)throw new Error('Choose two different accounts in the same currency.');}
   if(input.category!==null && !['Groceries','Housing','Utilities','Transport','Health','Eating out','Shopping','Entertainment','Debt','Savings'].includes(input.category))throw new Error('Choose a supported category.');
   const prior=(await manualRecords(driver)).find(e=>e.id===input.id);
+  if(prior&&prior.category!==input.category&&await splitRepository(driver).get(hash('manual-transaction:'+input.id+':entry')))throw new Error('Remove the category split before changing the payment’s single category.');
   const changed=prior && ['kind','accountId','destinationId','date','minor'].some(k=>prior[k as keyof ManualInput]!==input[k as keyof ManualInput]);
   const entry:ManualEntry={...input,description,destinationId:input.kind==='transfer'?input.destinationId:null,links:changed?{}:prior?.links??{}};
   if(!prior){await driver.execute("INSERT INTO import_batches(id,source_file_hash,file_name,parser_version,status,created_at,integrity_tier,source_rank) VALUES(?,?,?,'manual-entry-v1','committed',?,'C',0)",[batchId(entry.id),hash('manual-origin:'+entry.id),'Manual entry',new Date().toISOString()]);await driver.execute('INSERT INTO staging_rows(id,import_batch_id,source_row_id,payload,confidence,issues) VALUES(?,?,?,?,10000,?)',[hash(batchId(entry.id)+marker),batchId(entry.id),marker,JSON.stringify(entry),'[]']);}else await write(entry);
   await syncManual(driver);return entry;
  });}
- async function remove(id:string){return driver.transaction(async()=>{const b=batchId(id);await driver.execute('DELETE FROM app_settings WHERE key=?',['ledger-detail:manual:'+id]);await driver.execute('DELETE FROM transaction_sources WHERE import_batch_id=?',[b]);await driver.execute('DELETE FROM transactions WHERE import_batch_id=?',[b]);await driver.execute('DELETE FROM staging_rows WHERE import_batch_id=?',[b]);await driver.execute("DELETE FROM import_batches WHERE id=? AND parser_version='manual-entry-v1'",[b]);});}
+ async function remove(id:string){return driver.transaction(async()=>{const b=batchId(id);await driver.execute('DELETE FROM app_settings WHERE key=?',['split:'+hash('manual-transaction:'+id+':entry')]);await driver.execute('DELETE FROM app_settings WHERE key=?',['ledger-detail:manual:'+id]);await driver.execute('DELETE FROM transaction_sources WHERE import_batch_id=?',[b]);await driver.execute('DELETE FROM transactions WHERE import_batch_id=?',[b]);await driver.execute('DELETE FROM staging_rows WHERE import_batch_id=?',[b]);await driver.execute("DELETE FROM import_batches WHERE id=? AND parser_version='manual-entry-v1'",[b]);});}
  async function candidates(id:string){const e=(await manualRecords(driver)).find(r=>r.id===id);if(!e)throw new Error('Manual entry not found.');const result:{leg:string;transactionId:string;date:string;description:string;batchId:string;sourceId:string}[]=[];
   for(const leg of legs(e)){const rows=await driver.query("SELECT t.id,t.posted_date,t.raw_description,t.transfer_group_id,s.import_batch_id,s.source_row_id FROM transactions t JOIN transaction_sources s ON s.transaction_id=t.id JOIN import_batches b ON b.id=s.import_batch_id WHERE b.parser_version<>'manual-entry-v1' AND t.status='settled' AND t.account_id=? AND t.amount_minor=?",[leg.accountId,toDatabase(money(leg.minor,currency(String((await driver.query('SELECT currency FROM accounts WHERE id=?',[leg.accountId]))[0]!.currency))))]);
    for(const r of rows)if(Math.abs(dayNumber(String(r.posted_date))-dayNumber(e.date))<=3 && (e.kind!=='transfer'||r.transfer_group_id!==null))result.push({leg:leg.key,transactionId:String(r.id),date:String(r.posted_date),description:String(r.raw_description),batchId:String(r.import_batch_id),sourceId:String(r.source_row_id)});
@@ -56,6 +58,15 @@ export function manualRepository(driver:Driver){
   const entries=await manualRecords(driver);
   for(const other of entries.filter(e=>e.id!==id))for(const link of Object.values(other.links)){const used=await driver.query('SELECT transaction_id FROM transaction_sources WHERE (import_batch_id=? AND source_row_id=?) OR transaction_id=?',[link.batchId,link.sourceId,link.transactionId??'']);if(used.some(r=>r.transaction_id===transactionId))throw new Error('That imported transaction already matches another manual entry.');}
   if(entries.some(e=>e.id!==id&&Object.values(e.links).some(l=>l.batchId===candidate.batchId&&l.sourceId===candidate.sourceId)))throw new Error('That imported transaction already matches another manual entry.');
+  const splitId=hash('manual-transaction:'+id+':'+leg),splits=splitRepository(driver),sourceSplit=await splits.get(splitId);
+  const source=(await driver.query('SELECT amount_minor,currency FROM transactions WHERE id=?',[splitId]))[0];
+  if(sourceSplit&&source&&validSplit(sourceSplit,String(source.amount_minor),String(source.currency))){
+   const targetSplit=await splits.get(transactionId);
+   if(targetSplit&&JSON.stringify(targetSplit.parts)!==JSON.stringify(sourceSplit.parts))throw new Error('These payments have different category splits. Review or remove one split before matching.');
+   const target=(await driver.query('SELECT amount_minor,currency,status,transfer_group_id FROM transactions WHERE id=?',[transactionId]))[0];
+   if(!target||target.status!=='settled'||target.transfer_group_id||!validSplit(sourceSplit,String(target.amount_minor),String(target.currency)))throw new Error('The imported payment can no longer receive this expense split.');
+   await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',['split:'+transactionId,JSON.stringify({...sourceSplit,id:transactionId})]);
+  }
   const entry=entries.find(e=>e.id===id)!;entry.links[leg]={batchId:candidate.batchId,sourceId:candidate.sourceId,transactionId};await write(entry);await syncManual(driver);
  });}
  async function unmatch(id:string){return driver.transaction(async()=>{const e=(await manualRecords(driver)).find(r=>r.id===id);if(!e)throw new Error('Manual entry not found.');e.links={};await write(e);await syncManual(driver);});}

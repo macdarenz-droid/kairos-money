@@ -6,8 +6,7 @@ export function validSplit(split:Split,minor:string,code:string){return split.mi
 export function splitRepository(driver:Driver){
  async function get(id:string):Promise<Split|null>{const r=(await driver.query('SELECT value FROM app_settings WHERE key=?',['split:'+id]))[0];return r?JSON.parse(String(r.value)) as Split:null;}
  async function save(id:string,parts:{category:string;minor:string}[]){return driver.transaction(async()=>{
-  const row=(await driver.query('SELECT * FROM transactions WHERE id=?',[id]))[0];if(!row||row.status!=='settled'||row.transfer_group_id||BigInt(String(row.amount_minor))>=0n)throw new Error('Choose a settled imported expense, excluding transfers.');
-  if(!(await driver.query("SELECT s.transaction_id FROM transaction_sources s JOIN import_batches b ON b.id=s.import_batch_id WHERE s.transaction_id=? AND b.parser_version!='manual-entry-v1'",[id])).length)throw new Error('Splits currently apply to imported expenses.');
+  const row=(await driver.query('SELECT * FROM transactions WHERE id=?',[id]))[0];if(!row||row.status!=='settled'||row.transfer_group_id||BigInt(String(row.amount_minor))>=0n)throw new Error('Choose a settled expense, excluding transfers.');
   const split:Split={id,currency:String(row.currency),minor:String(row.amount_minor),parts:parts.map(p=>({...p,kind:['Groceries','Housing','Utilities','Transport','Health'].includes(p.category)?'essential':'discretionary'}))};
   if(!validSplit(split,split.minor,split.currency))throw new Error('Use 2–10 positive category amounts that add up exactly to the payment.');
   await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',['split:'+id,JSON.stringify(split)]);
