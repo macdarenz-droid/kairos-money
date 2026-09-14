@@ -13,11 +13,11 @@
   "run_result": "success",
   "integration_checkpoint_sha": "00d17fafb5f06bf3f83458ceac3009d0f95840df",
   "integration_local_checkpoint": "6c1c215",
-  "integration_delivery_status": "Green full journey reviewed; materialized-ledger performance correction is the next integrated candidate. Session 4 OPEN.",
+  "integration_delivery_status": "Materialized-ledger performance correction published as a7f34a0beb3af319f8a4c8f5f6254a472a2e0396; replacement gate is unpolled. Session 4 OPEN.",
   "before_checkpoint": "2be52d786bd4bfce851d2195131ddd3a713495f1",
   "local_checkpoint": "6c1c215",
   "last_result": "Full gate PASS, including lifecycle recreation and all native classes. Startup median 1695 ms. The 20,000-row Ledger load was functionally green but unacceptable at 58954 ms, with roughly 98/92 ms mean programmatic-scroll intervals.",
   "local_validation": "278/278 tests across 65 files, lint, strict TypeScript, production build, schema and release configuration PASS. The latest 20,000-row local materialized workspace completed in 603 ms under its 5-second ceiling; main bundle 499.66 kB without a warning.",
-  "next_action": "Finish build/release checks, publish the materialized-ledger correction, and leave its combined gate unpolled. Continue Session 4 visual/private-release acceptance; then all 36 Money Analysis capabilities plus six quiet-coaching concepts together.",
-  "candidate_role": "Last reviewed green candidate; performance replacement is local and not yet published."
+  "next_action": "Check the materialized-ledger candidate only when the user requests it; do not poll. Continue Session 4 visual/private-release acceptance; then all 36 Money Analysis capabilities plus six quiet-coaching concepts together.",
+  "candidate_role": "Last reviewed green candidate is 00d17faf; published performance replacement a7f34a0 remains unreviewed."
 }
