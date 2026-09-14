@@ -1,3 +1,21 @@
+# Session 4 acceptance review — 14 September 2026
+
+Full gate [34839763247](https://github.com/macdarenz-droid/kairos-money/actions/runs/34839763247) is **GREEN** on `a6a9c41b16d85d8ea8ae0368c5aa1a25dbf6fbd3`. The previous widget repair passed the real touch, locked activity recreation, unlock, acknowledgement/no-replay and normal ActivityScenario teardown assertions. Source verification, Android compilation/lint, signatures, all native classes and the complete backup/reset/restore/delete continuation pass.
+
+Startup median is **1,575 ms**, with raw process-cold samples 1,833 / 1,574 / 1,575 ms. Fresh installation is 1,833 ms. The 40-page PDF extraction took 2,842 ms with visible progress and a responsive WebView after a staged file survived activity recreation. These are measured emulator results, with the existing limits unchanged.
+
+Downloaded APK/evidence archives match GitHub's SHA-256 digests. Reviewed all 151 current screenshots in 13 contact sheets. The evidence record preserves the artifact IDs, APK/archive/screenshot hashes, native reports and review limitations: `docs/evidence/session4-gate-34839763247.json`.
+
+Session 4 remains **one integrated milestone**. Green automation is not final product acceptance: the old 200% Insights/You captures showed loading placeholders, the 20,000-row frame benchmark existed only locally, and native money-notice delivery had not been exercised. This continuation expands the same full gate with loaded-content checks in both themes, a real encrypted 20,000-row ledger fixture and scroll/frame evidence, and Android broadcast/NotificationManager checks for permission refusal, all four generic private notices, daily caps, deduplication and cancellation. The generated ledger is an instrumentation-only asset. Its production ledger read was verified locally against all 20,000 IDs and source links. New Android assertions remain unrun until the combined gate executes them.
+
+Still required for final acceptance: real launcher placement/launch (the passing widget fixture hosts RemoteViews inside the activity); process death during an active import with no partial ledger (recreation before extraction is not that proof); native refund link confirmation/removal (current device capture only inspects the purchase section); complete visual/accessibility/performance review; real alarm timing beyond the prepared due-time broadcast fixture; and the privately signed final APK with release E2E. Current downloadable artifact is a signed **debug** APK. Private release signing remains fail-closed and requires the existing external signing credentials; the current workflow has not produced a private release APK.
+
+Next session, after Session 4 acceptance: **offline Money Analysis, all 36 accepted capabilities plus the six quiet-coaching concepts together**. The complete low-effort usability/navigation pass follows all agreed implementations, preserving every feature. Automation stays disabled; gate checks happen only when the user requests them. Do not poll a replacement run or divide the work into feature releases.
+
+Local verification of this continuation: **271/271 source tests across 62 files**, 11 host runner tests, lint, strict TypeScript, production build (497.83 kB main bundle), schema/generated-file and release-configuration checks PASS. All three changed/new instrumentation classes parse as Java; this is syntax validation only. Android compilation/execution of the extensions remains for the combined CI run.
+
+## Earlier checkpoint history
+
 # Widget delivery and lifecycle repair — 14 September 2026
 
 Checked completed run 34836848079 once, on candidate 794811a40af5b2bc173061e367b8702f4a05f56f. Source/build/lint/signature checks, startup (1,489 ms median), Intelligence and accessibility pass. Acceptance still fails to open the widget entry and teardown remains PAUSED. Verified the downloaded evidence SHA-256. The log proves QUICK_ADD reached Android; ActivityScenario then explicitly ignored RESUMED and later teardown because MainActivity replaced its original MAIN/LAUNCHER intent. The earlier claim that performClick did not dispatch was not established by the evidence.

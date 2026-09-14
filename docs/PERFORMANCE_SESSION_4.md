@@ -1,11 +1,19 @@
 # Session 4 performance evidence — incomplete
 
+## Reviewed Android measurements
+
+Green run **34839763247**, candidate **a6a9c41**: non-debuggable benchmark cold samples **1,833 / 1,574 / 1,575 ms**, median **1,575 ms**, fresh install **1,833 ms**. Both unchanged startup limits pass. A 40-page PDF extracted in **2,842 ms** with visible progress and responsive WebView. Its staged file survived activity recreation before extraction. This does not prove process death during extraction or commit.
+
+The integrated continuation adds `LedgerPerformanceInstrumentedTest`: 20,000 distinct synthetic transactions and source links in the real SQLCipher database, production import ledger read, fewer than 41 mounted rows, middle/final-row reachability at 100%/200% text, and 120 raw requestAnimationFrame intervals while scrolling each size. The fixture is generated only into instrumentation assets and removed from the device ledger afterward. Frame intervals describe programmatic WebView scrolling on the emulator; they require review and are not a physical-device FPS claim. The new test has not run on Android yet.
+
+## Earlier local measurements
+
 Run `npx vitest run tests/performance.test.ts tests/windowed-list.test.tsx --maxWorkers=1` for the synthetic local benchmark. This measures real pure reconciliation and a real Node SQLite snapshot with 20,000 source links, plus the DOM windowing mechanism. It does not measure Android SQLCipher bridge latency, cold start or dropped frames.
 
 Recorded local run (Node 24.19.0): reconciliation 2,846 ms; SQLite snapshot including complete per-transaction provenance 763 ms. The independent jsdom 20,000-row render/scroll check took 261 ms and kept fewer than 20 row elements mounted while reaching the final record. These are diagnostic timings, not device acceptance thresholds.
 
 PDF.js moved out of the initial bundle: approximately 876 KB to 517 KB minified before the later attachment/worker additions. The separate PDF parser chunk was approximately 377 KB. Final exact bundle sizes remain in the production build output; a bundle warning is not suppressed.
 
-Remaining required evidence: Android cold start below two seconds; 20,000-row scrolling/frame times at both normal and 200% text; 40-page PDF import with visible progress and responsive UI; kill mid-import and verify recovery with no partial ledger. Browser reconciliation above 200 rows now runs in a dedicated worker. Small inputs and Node tests use the same pure algorithm.
+Remaining required evidence: the prepared Android 20,000-row scrolling/frame results at normal and 200% text; kill during active import and verify recovery with no partial ledger. Cold start and 40-page extraction/progress are now measured above. Browser reconciliation above 200 rows now runs in a dedicated worker. Small inputs and Node tests use the same pure algorithm.
 
 Fixture correction: the first benchmark used numeric merchant suffixes, which normalization intentionally strips, so it did not describe 20,000 distinct transactions. The fixture now uses distinct alphabetic merchant suffixes, and asserts all 20,000 records and source links survive. No acceptance assertion was reduced.

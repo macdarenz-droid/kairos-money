@@ -15,7 +15,9 @@ COUNTS = {
     'PinRecoveryInstrumentedTest': 3, 'FoundationInstrumentedTest': 2,
     'KeyProtectionInstrumentedTest': 1, 'HardeningInstrumentedTest': 1,
     'ImportInstrumentedTest': 2, 'LargeImportInstrumentedTest': 1,
+    'NotificationsInstrumentedTest': 1,
     'RevisionInstrumentedTest': 2, 'IntelligenceInstrumentedTest': 4,
+    'LedgerPerformanceInstrumentedTest': 1,
     'AccessibilityInstrumentedTest': 1, 'AcceptanceInstrumentedTest': 1,
     'PostDeleteInstrumentedTest': 1,
 }

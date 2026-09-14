@@ -53,6 +53,8 @@ jobs:
       - run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
       - run: npm ci
       - run: npm run android:sync
+      - name: Generate synthetic instrumentation ledger
+        run: node --import tsx scripts/native-ledger-fixture.ts
       - name: Build benchmark, debug and instrumentation APKs
         working-directory: android
         run: ./gradlew :app:assembleBenchmark :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --no-daemon

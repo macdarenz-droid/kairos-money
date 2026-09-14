@@ -1,5 +1,15 @@
 # Session 4 gate — OPEN
 
+## Current reviewed evidence
+
+Run **34839763247** on **a6a9c41** is GREEN. Full native execution including widget lifecycle, backup/reset/restore, deletion and PostDelete passed. Startup median **1,575 ms**, fresh install **1,833 ms**. The complete source run is **271/271 tests**. All 151 current screenshots were reviewed in contact sheets; archive/APK/screenshot hashes and exact limitations are recorded in [the evidence record](evidence/session4-gate-34839763247.json).
+
+The integrated continuation adds loaded-content 200% checks in both themes, an encrypted 20,000-row ledger and raw frame intervals, and actual Android money-notice broadcast/delivery policy checks. Those additions are prepared, not yet Android-verified. Existing native/frozen assertions and startup limits remain intact.
+
+Remaining final acceptance: the newly prepared evidence; actual launcher placement; process death during active import without partial ledger; native refund confirmation/removal; full per-screen review and real alarm timing; privately signed release APK/install/E2E. The green artifact is a development-signed debug APK. Session 4 stays open as one milestone. Next comes all 36 offline Money Analysis capabilities and six quiet-coaching concepts together, then the complete usability pass.
+
+## Historical checkpoints (superseded by the review above)
+
 Run 34817043793 (`157189d`) passed the complete source gate, Android builds/lint and APK checks. Startup PASS: 2,339 / 1,269 / 1,314 ms, median 1,314 ms and fresh install 2,339 ms against unchanged limits. All 16 native tests through Intelligence passed, including the corrected both-theme net-worth ownership journey. Accessibility then failed because its harness expected Quick to become the current page; Quick correctly opens a modal over Ledger. The continuation asserts the named open Quick dialog, preserves the underlying current page, applies the existing 200% target/name/overflow checks, and closes Quick before proceeding. Source UI coverage verifies that modal/navigation contract. Downstream widget/backup/delete checks and final visual/private-release acceptance remain OPEN; corrected native accessibility still requires the combined gate.
 
 Run 34815121651 (`22a4513`): source, benchmark/debug/instrumentation compilation, Android lint and APK checks PASS. Startup median FAIL at 2,094 ms (2,136 / 1,597 / 2,094 ms samples). Twelve native tests through revision, including low-storage and the 40-page interruption journey, PASS. Intelligence monthly ownership failed because the test selected USD only for history charts, leaving the independent net-worth currency on AUD. The test now explicitly selects and verifies USD for that fixture in both themes. Ownership and timing assertions remain intact. Accessibility/widget and final backup/delete continuation were not reached; screenshots and performance still require acceptance. This is the same integrated Session 4 milestone.
