@@ -1,3 +1,27 @@
+# Session 4 — measuring the device instead of guessing, 14 September 2026
+
+Run [34901245504](https://github.com/macdarenz-droid/kairos-money/actions/runs/34901245504) on `44f26cb`:
+
+`20,000-row ledger took 47657 ms; budget is 10000 ms [tab_open=4 ms, first_row=47309 ms, search_entered=47338 ms]`
+
+Dropping the empty-search predicate bought about two seconds. That is the fourth repair aimed at the wrong thing, and the sequence now says something clearer than any individual result:
+
+| change | data moved per load | first_row |
+|---|---|---|
+| full document reconciliation | whole document | 58,954 ms |
+| materialized reads, offset paging | ~40,000 rows | 52,426 ms |
+| materialized reads, keyset paging | ~40,000 rows | 52,390 ms |
+| windowed read | ~400 rows / 326 KB | 49,351 ms |
+| no predicate for an empty search | ~400 rows / 326 KB | 47,309 ms |
+
+The data layer has been reduced by about 99% and the load by about 20%. Each repair was correct and is kept; none was the cost. The remaining time is not in the statements that were being optimised, and no further guess should be spent on it.
+
+The common cause of four misses is a measurement gap: local SQLite is unencrypted and in process, so it under-reports per-row decryption by orders of magnitude, and every hypothesis drawn from it looked sound and proved irrelevant natively. The device is the only place this behaviour exists, so the device now reports it.
+
+`src/core/db/native.ts` records, per statement shape, how many times it ran and how long it took, and exposes the slowest shapes for measurement. It records **shapes only, never bound values**, so no amount, description or other financial detail is retained; the map is bounded and resets when it grows. `LedgerPerformanceInstrumentedTest` resets it before opening the Ledger and prints the five slowest shapes in its assertion, so the next run names the statement holding the 47 seconds rather than inviting a fifth hypothesis.
+
+Local regression is 283/283 across 66 files with lint, strict TypeScript, build, schema, release configuration, money lint, native-gate unit tests and generated-file checks passing. The 10,000 ms budget, the 256-row native response budget and every other assertion are untouched. Session 4 remains OPEN.
+
 # Session 4 — the empty search was scanning every row, 14 September 2026
 
 Run [34899327435](https://github.com/macdarenz-droid/kairos-money/actions/runs/34899327435) on `c7675e3` reported:

@@ -132,10 +132,13 @@ public class LedgerPerformanceInstrumentedTest {
                 phase="ledger load";checkpoint(phase,samples,null);
                 // Split the load so the evidence says where the time goes: opening the tab, the first
                 // row reaching the DOM (data read and transferred), then filtering and full virtualization.
+                js("window.__kairosQueries&&window.__kairosQueries.reset()");
                 long started=SystemClock.elapsedRealtime();click("Ledger");
                 long tabMs=SystemClock.elapsedRealtime()-started;
                 awaitJs("Boolean(document.querySelector('.windowed-list [role=listitem]'))");
                 long firstRowMs=SystemClock.elapsedRealtime()-started;
+                // Which statements the device actually spent that time in. Shapes only, no values.
+                String profile=js("JSON.stringify((window.__kairosQueries&&window.__kairosQueries.read(5))||[])");
                 input("Search transactions","Synthetic performance merchant");
                 long searchMs=SystemClock.elapsedRealtime()-started;
                 awaitJs("document.querySelector('.windowed-list [role=listitem]')?.getAttribute('aria-setsize')==='20000'");
@@ -166,7 +169,8 @@ public class LedgerPerformanceInstrumentedTest {
                 // Phase timings ride the assertion message: the evidence directory is on the device and the
                 // gate only pulls it after every class passes, so on failure it is lost with the emulator.
                 assertTrue("20,000-row ledger took "+loadMs+" ms; budget is 10000 ms"
-                    +" [tab_open="+tabMs+" ms, first_row="+firstRowMs+" ms, search_entered="+searchMs+" ms]",loadMs<10000);
+                    +" [tab_open="+tabMs+" ms, first_row="+firstRowMs+" ms, search_entered="+searchMs+" ms]"
+                    +" slowest="+profile,loadMs<10000);
             } catch(Throwable error) {
                 primary=error;
                 android.util.Log.e("KairosPerformance","Failure during "+phase,error);
