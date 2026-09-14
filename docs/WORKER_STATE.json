@@ -1,25 +1,22 @@
 {
   "contract": "Autonomous continuation authorized 2026-09-14",
   "phase": "Session 4 integrated private-v1 completion",
-  "latest_continuation": "Repaired the Android visual-evidence race without weakening the heading assertion or production FLAG_SECURE behavior.",
-  "latest_source_evidence": "Candidate 2be52d7 source gate PASS and Android build/lint/signature PASS. Seven preceding native classes passed. Replacement bbe5b97 changes only synthetic screenshot coordination and is queued in run 34824593148; no result claimed.",
-  "lease": {
-    "owner": "kairos-money-hourly",
-    "expires_at": "2026-09-14T11:08:00Z"
-  },
+  "latest_continuation": "Synchronized the final widget PendingIntent acceptance flow back to RESUMED before ActivityScenario teardown; all export and widget assertions remain.",
+  "latest_source_evidence": "Prior replacement run passed source, Android compilation/lint/signature, startup (1751 ms), intelligence and accessibility. New candidate changes only final native test lifecycle synchronization; run 34832684247 is in progress.",
+  "lease": null,
   "automation_enabled": true,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
   "mode": "Single hourly Money worker",
-  "candidate_sha": "bbe5b97ab14a7290740dd6de5292775d4d016db8",
-  "candidate_tree": "9664543e5182e486b297e90552d910d36e430396",
-  "run_id": 34824593148,
-  "run_result": "failure",
+  "candidate_sha": "b2de377d78e814c8410339601f66cb4c0284de0c",
+  "candidate_tree": "4b7768b301e68e0b8af032032e78cd4ad6c39b85",
+  "run_id": 34832684247,
+  "run_result": "in_progress",
   "integration_checkpoint_sha": "92450fef8f6856c1590f73fb730c43f976c05153",
   "integration_local_checkpoint": "598cd0f",
-  "integration_delivery_status": "Integrated replacement gate queued; full Session 4 remains OPEN.",
+  "integration_delivery_status": "Integrated replacement running; full Session 4 remains OPEN.",
   "before_checkpoint": "2be52d786bd4bfce851d2195131ddd3a713495f1",
   "local_checkpoint": "598cd0f",
   "last_result": "Run 34824593148 passed startup (1751 ms fresh/median), Android build/lint/signature, the prior seven native suites, all four intelligence tests and accessibility. Final AcceptanceInstrumentedTest completed export and widget assertions, then ActivityScenario teardown timed out because the widget PendingIntent left its tracked activity PAUSED.",
   "local_validation": "No local Android SDK in preserved checkout and its source ancestry is stale, so no local Gradle claim. The prior exact candidate's full source gate and Android compile/lint/signature passed; the replacement must establish compilation and device behavior in CI.",
-  "next_action": "Synchronize the tracked ActivityScenario to RESUMED after the real widget PendingIntent returns, verify visible unlocked UI, then allow normal DESTROYED teardown. Preserve all existing export/widget assertions and publish the integrated replacement."
+  "next_action": "Check run 34832684247 once next invocation. If unfinished, continue independent accepted work without a competing candidate. If red, inspect only the failing evidence once; if green, retrieve and review exact evidence before Session 4 closure."
 }
