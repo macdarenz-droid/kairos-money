@@ -200,6 +200,9 @@ public class IntelligenceInstrumentedTest {
             for(String theme:new String[]{"Light","Dark"}) {
                 click("You");click(theme);awaitJs("Boolean(document.querySelector('.money-visuals select'))");
                 js("(()=>{const e=document.querySelector('.money-visuals select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+                // Net worth has its own currency filter; the reconciled fixture is USD.
+                js("(()=>{const e=Array.from(document.querySelectorAll('label')).find(l=>l.textContent.startsWith('Net worth currency')).querySelector('select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+                awaitJs("Array.from(document.querySelectorAll('label')).find(l=>l.textContent.startsWith('Net worth currency')).querySelector('select').value==='USD'");
                 awaitJs("Boolean(document.querySelector('.fingerprint'))");
                 for(String heading:new String[]{"Money Fingerprint","Daily cashflow","Spending after payday","Recurring payment timeline","Spending by category","What changed","Recurring costs","Upcoming bills","Merchant history","Recorded net worth"}) {
                     if (heading.equals("Recurring payment timeline")) {
@@ -232,9 +235,9 @@ public class IntelligenceInstrumentedTest {
                 awaitJs("document.body.innerText.includes('Latest reconciled statement closing balance')");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-net-worth-account-ownership");
                 js("(()=>{const d=Array.from(document.querySelectorAll('details')).find(e=>e.querySelector('summary')?.textContent==='Imported account ownership');const b=Array.from(d.querySelectorAll('button')).find(e=>e.textContent==='Include balance'&&!e.disabled);if(!b)throw new Error('No verified account balance');b.click();})()");
-                awaitJs("document.body.innerText.includes('included')");captureHeading("Combined position",theme.toLowerCase()+"-net-worth-combined");
+                awaitJs("Array.from(document.querySelectorAll('details')).find(e=>e.querySelector('summary')?.textContent==='Imported account ownership').innerText.includes(' · included')");captureHeading("Combined position",theme.toLowerCase()+"-net-worth-combined");
                 js("(()=>{const d=Array.from(document.querySelectorAll('details')).find(e=>e.querySelector('summary')?.textContent==='Imported account ownership');Array.from(d.querySelectorAll('button')).find(e=>e.textContent==='Exclude balance').click();})()");
-                awaitJs("document.body.innerText.includes('excluded')");
+                awaitJs("Array.from(document.querySelectorAll('details')).find(e=>e.querySelector('summary')?.textContent==='Imported account ownership').innerText.includes(' · excluded')");
                 click("Ledger");click("Change categories");awaitJs("Boolean(document.querySelector('dialog input[type=checkbox]'))");
                 js("document.querySelector('dialog input[type=checkbox]').click()");NativeEvidence.capture(activity,theme.toLowerCase()+"-bulk-categories");
                 js("document.querySelector('dialog .icon-button').click()");

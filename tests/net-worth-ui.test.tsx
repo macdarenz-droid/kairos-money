@@ -9,6 +9,16 @@ import {NetWorth} from '../src/ui/screens/NetWorth';
 const state=vi.hoisted(()=>({repo:undefined as Repository|undefined}));
 vi.mock('../src/ui/session',()=>({useSession:()=>({state:'ready',run:<T,>(fn:(r:Repository)=>Promise<T>)=>fn(state.repo!)})}));
 beforeEach(async()=>{const {driver}=memoryDriver();await migrate(driver);state.repo=repository(driver);await state.repo.addAccount({id:'bank',name:'Synthetic bank',institution:'Test',type:'checking',currency:'AUD',mask_last4:null,opening_balance_minor:0n});await driver.execute("INSERT INTO import_batches(id,account_id,source_file_hash,file_name,parser_version,period_start,period_end,status,stated_closing_minor,created_at,integrity_tier) VALUES('bank-import','bank','bank-hash','bank.csv','test','2026-01-01','2026-01-31','committed',150000,'2026-02-01','A')");HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};});afterEach(cleanup);
+it.each(['dark','light'])('selects the reconciled account currency independently in %s',async theme=>{
+ const {driver}=memoryDriver();await migrate(driver);state.repo=repository(driver);
+ for(const code of ['AUD','USD'] as const)await state.repo.addAccount({id:code,name:`Synthetic ${code}`,institution:'Test',type:'checking',currency:code,mask_last4:null,opening_balance_minor:0n});
+ await driver.execute("INSERT INTO import_batches(id,account_id,source_file_hash,file_name,parser_version,period_start,period_end,status,stated_closing_minor,created_at,integrity_tier) VALUES('usd-import','USD','usd-hash','usd.csv','test','2026-01-01','2026-01-31','committed',150000,'2026-02-01','A')");
+ document.documentElement.dataset.theme=theme;const q=new QueryClient({defaultOptions:{queries:{retry:false}}});render(<QueryClientProvider client={q}><NetWorth/></QueryClientProvider>);
+ await screen.findByText('Synthetic AUD');fireEvent.click(screen.getByText('Imported account ownership'));expect((screen.getByRole('button',{name:'Include balance'}) as HTMLButtonElement).disabled).toBe(true);
+ fireEvent.change(screen.getByLabelText('Net worth currency'),{target:{value:'USD'}});await screen.findByText('Synthetic USD');expect(screen.queryByText('Synthetic AUD')).toBeNull();expect(screen.getByText('Latest reconciled statement closing balance.')).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'Include balance'}));await screen.findByText(/2026-01-31 · included/);expect(screen.getByLabelText(/USD\s1,500\.00 USD, combined net worth/)).toBeTruthy();
+ expect((await state.repo.netWorth.accountPositions()).find(a=>a.accountId==='AUD')?.choice).toBe('review');
+});
 it.each(['dark','light'])('records and removes a dated asset without a ledger transaction in %s',async theme=>{
  document.documentElement.dataset.theme=theme;const q=new QueryClient({defaultOptions:{queries:{retry:false}}});render(<QueryClientProvider client={q}><NetWorth/></QueryClientProvider>);
  await waitFor(()=>expect((screen.getByRole('button',{name:'Record a value'}) as HTMLButtonElement).disabled).toBe(false));fireEvent.click(screen.getByRole('button',{name:'Record a value'}));
