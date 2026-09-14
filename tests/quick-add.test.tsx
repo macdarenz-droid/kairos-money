@@ -27,3 +27,9 @@ it('does not invoke the Android bridge on web',()=>{
  native.enabled=false;const hook=renderHook(()=>useQuickAddLaunch(true,vi.fn()));
  expect(native.consume).not.toHaveBeenCalled();hook.unmount();
 });
+it('discloses launch failure and clears it after a successful retry',async()=>{
+ native.consume.mockRejectedValueOnce(new Error('Native unavailable'));const open=vi.fn();const hook=renderHook(()=>useQuickAddLaunch(true,open));
+ await waitFor(()=>expect(hook.result.current).toContain('Quick add could not open'));
+ native.consume.mockResolvedValueOnce({addTransaction:true});act(()=>window.dispatchEvent(new Event('kairosQuickAdd')));
+ await waitFor(()=>expect(open).toHaveBeenCalledTimes(1));expect(hook.result.current).toBe('');hook.unmount();
+});

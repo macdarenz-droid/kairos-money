@@ -1,11 +1,9 @@
 import { ManualHistory, ManualSheet } from './screens/Manual';
-import { MoneyVisuals } from './screens/MoneyVisuals';
-import {NetWorth} from './screens/NetWorth';
 import {FirstImport} from './screens/FirstImport';
 import {useQuickAddLaunch} from './quick-add';
 import { NotificationSync } from './screens/Notifications';
 import { Intelligence } from './screens/Intelligence';
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, ChevronRight, FileText, Layers3, LockKeyhole, Plus, Search, ShieldCheck, WalletCards } from 'lucide-react';
@@ -15,11 +13,13 @@ import { followSystem } from './design/theme';
 import { useSession } from './session';
 import { Brand, LockScreen } from './screens/Lock';
 import { AccountSheet } from './screens/AccountSheet';
-import { ImportWorkspace } from './screens/ImportWorkspace';
 import { coveredDays } from '../ingest/reconcile';
 import { Freshness, UpdateAccounts } from './screens/UpdateAccounts';
 import { localDay, syncReminder } from '../ingest/reminders';
-import { Settings } from './screens/Settings';
+const ImportWorkspace=lazy(()=>import('./screens/ImportWorkspace').then(module=>({default:module.ImportWorkspace})));
+const MoneyVisuals=lazy(()=>import('./screens/MoneyVisuals').then(module=>({default:module.MoneyVisuals})));
+const NetWorth=lazy(()=>import('./screens/NetWorth').then(module=>({default:module.NetWorth})));
+import {Settings} from './screens/Settings';
 const useNavigation = create<{ tab: Tab; setTab: (tab: Tab) => void }>(set => ({ tab: 'Today', setTab: tab => set({ tab }) }));
 export default function App() {
   const { tab, setTab } = useNavigation(); const session = useSession();
@@ -28,7 +28,7 @@ export default function App() {
   const consumeImport = useCallback(() => setImportRequest(0), []);
   const dismissToast = useCallback(() => setToast(''), []);
   const openManual=useCallback(()=>setSheet('manual'),[]);
-  useQuickAddLaunch(session.state==='ready',openManual);
+  const quickAddError=useQuickAddLaunch(session.state==='ready',openManual);
   useEffect(followSystem, []);
   useEffect(() => { if (session.state !== 'ready' && session.state !== 'preview') { setSheet(null); setSearch(''); setToast(''); } }, [session.state]);
   const accounts = useQuery({ queryKey: ['accounts'], queryFn: () => session.run(repo => repo.accounts()), enabled: session.state === 'ready' });
@@ -45,11 +45,12 @@ export default function App() {
     {session.state === 'preview' && <p className="notice">Account storage and security require the Android app.</p>}
     <main><header className="screen-header"><div><h1>{tab === 'You' ? 'Your money, your way' : tab}</h1><p>{tab === 'Today' ? 'A clearer view starts with your data.' : tab === 'Ledger' ? 'Every account. One place to understand it.' : tab === 'Insights' ? 'Patterns need evidence.' : 'A private ledger you control.'}</p></div>{tab === 'Ledger' && <Button variant="quiet" className="icon-button" aria-label="Add account" onClick={() => setSheet('account')}><Plus size={20}/></Button>}</header>
     {accounts.error && <p className="error" role="alert">Accounts could not be read. Lock and reopen Kairos before continuing.</p>}
+    {quickAddError && <p className="error" role="alert">{quickAddError}</p>}
     {tab === 'Today' && <>{session.state==='ready'&&days===0&&<FirstImport hasAccount={count>0} loading={accounts.isPending} onAccount={()=>setSheet('account')} onRead={()=>{setTab('Ledger');setImportRequest(n=>n+1);}}/>}<Button variant="primary" onClick={()=>setSheet('manual')}>Add transaction</Button><ManualHistory accounts={accounts.data??[]} today/><Intelligence mode="today"/><Freshness accounts={accounts.data??[]} batches={statementData.data??[]} today={localDay()} onUpdate={()=>setSheet('update')}/><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} covered days` : 'No statements yet'}</span>}>Statement coverage</Row><div className="information"><ShieldCheck size={15}/><p>You stay in control. Every statement stays in staging until you confirm its review.</p></div></>}
-    {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Skeleton label="Reading accounts"/> : count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Opening balances</span></div>{accounts.data?.map(account => <Row key={account.id} trailing={<Amount value={fromDatabase(account.opening_balance_minor, currency(account.currency))} context={`${account.name} opening balance`}/>}><div className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><div><h3>{account.name}</h3><p>{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}</p></div></div></Row>)}</> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}{!(session.state==='ready' && accounts.isPending)&&<ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport}/>}</>}
+    {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Skeleton label="Reading accounts"/> : count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Opening balances</span></div>{accounts.data?.map(account => <Row key={account.id} trailing={<Amount value={fromDatabase(account.opening_balance_minor, currency(account.currency))} context={`${account.name} opening balance`}/>}><div className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><div><h3>{account.name}</h3><p>{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}</p></div></div></Row>)}</> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}{!(session.state==='ready' && accounts.isPending)&&<Suspense fallback={<Skeleton label="Opening imports"/>}><ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport}/></Suspense>}</>}
     {tab === 'Ledger' && count>0 && <><Button onClick={()=>setSheet('manual')}>Add transaction</Button><ManualHistory accounts={accounts.data??[]}/></>}
     {tab === 'Insights' && <Intelligence/>}
-    {tab === 'You' && <><MoneyVisuals/><NetWorth/><Settings onAccount={() => setSheet('account')} notify={setToast}/></>}
+    {tab === 'You' && <><Suspense fallback={<Skeleton label="Opening your money views"/>}><MoneyVisuals/><NetWorth/></Suspense><Settings onAccount={() => setSheet('account')} notify={setToast}/></>}
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} onClose={()=>setSheet(null)}/>}
     {sheet === 'update' && <UpdateAccounts accounts={accounts.data??[]} batches={statementData.data??[]} today={localDay()} onClose={()=>setSheet(null)} onImport={()=>{setTab('Ledger');setSheet(null);setImportRequest(n=>n+1);}}/>}

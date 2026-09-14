@@ -51,3 +51,11 @@ Local regression: full existing suite 167/167 PASS, plus the two newly added Com
 - Remaining product/accessibility/performance/release work above is unchanged. This is not a component release.
 
 Local regression for the manual-entry candidate: 180 tests across 32 files PASS, including all unchanged prior-session tests. Source lint, strict TypeScript and production build PASS. The bundle-size warning remains part of the open performance workstream. Android compilation/lint and native captures are delegated to the authorized CI gate; they are not claimed from local source results.
+
+## Integrated continuation — receipt capture and startup
+
+Direct receipt capture is now implemented in the bundled Android WebView: live rear-camera preview, explicit photo review, retake, cancellation and existing on-device OCR/encrypted attachment save. Capture creates no gallery/temp file and no money or coverage rows. Streams stop on removal; aborted captures cannot save after OCR or a later unlock. The existing file attachment path remains available. Actual Android permission, image readability, lifecycle and both-theme camera acceptance remain OPEN.
+
+Quick-add bridge failures now show an actionable error. Import UI and the money charts load on demand, while Settings remains immediately available to preserve the foundation flow. Main production JavaScript decreased from 540.38 kB to 489.68 kB; the chunk warning is resolved. Device cold-start performance is not inferred from bundle size.
+
+Full source regression: 222 tests across 49 files PASS, including unchanged earlier acceptance tests and the camera/attachment/quick-add checks. Strict TypeScript, lint, production build and Android asset sync pass. Native compilation remains unavailable locally because Gradle is not cached and its distribution download is blocked by network access. No component CI gate or APK was launched. Remaining original Session 4 product ownership, accessibility, hardening, device performance, final E2E and signing requirements remain binding. Next resume from this source checkpoint, finish the combined milestone, and obtain actual camera/device evidence before release. Workers and bank-notification capture remain off.
