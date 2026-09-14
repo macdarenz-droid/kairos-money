@@ -1,3 +1,15 @@
+# Session 4 — vault recreation lifecycle repair, 14 September 2026
+
+Reviewed completed run [34851477214](https://github.com/macdarenz-droid/kairos-money/actions/runs/34851477214) once on `c09fb8166fd1e4e39b29c7c3326e538d77aba608`. Source and all Android APK compilation/lint/signature checks passed. Startup passed unchanged limits at **1,681 ms median** and **1,681 ms fresh install**. The repaired readiness probe correctly survived transient UI Automator failures and still required a valid setup hierarchy.
+
+Native recovery, foundation, key protection, hardening and frozen import checks passed. The 40-page journey then exposed a real activity-recreation race: an obsolete WebView submitted one final vault status request after its plugin worker had begun shutdown. `RejectedExecutionException` escaped the plugin method and killed the process. The vault plugin now marks each destroyed instance before shutdown, rejects calls both before enqueue and on its worker, and catches a submission racing executor shutdown. Obsolete calls settle as errors; the replacement activity constructs its own plugin and worker. Accepted work continues graceful shutdown and secure operations are not replayed across activities.
+
+Because this run stopped early, it does not verify the prior 20,000-row cleanup repair or reach notifications, accessibility, Acceptance, backup/delete continuation. Session 4 stays open. Verified archive/per-file hashes and exact evidence are in `docs/evidence/session4-gate-34851477214.json`.
+
+Keep **one integrated Session 4 milestone** open. The next session remains all 36 offline Money Analysis capabilities plus six quiet-coaching concepts together, followed by the full low-effort usability/discoverability pass. Automation is disabled; check replacement gates only when the user asks.
+
+Local validation: Current repair: 14 host runner tests, lint, strict TypeScript, Java syntax and diff checks PASS. Previous candidate source tree: 278/278 tests and production build PASS. Native Android compilation/execution of the lifecycle repair remains pending CI.
+
 # Session 4 — ledger cleanup and readiness repair, 14 September 2026
 
 Reviewed completed run [34847174081](https://github.com/macdarenz-droid/kairos-money/actions/runs/34847174081) once on `2a32c37d3c6968148d748291be218472064bf452`. Source, Android APK compilation/lint/signatures and every native class through Intelligence passed, including native notification policy. The 20,000-row test now completed both scroll measurements and reached the final row at 100%/200% text with at most 16/10 rows mounted. Its failure was cleanup alone: removing the synthetic records in one database operation exceeded the test helper's 30-second bound.

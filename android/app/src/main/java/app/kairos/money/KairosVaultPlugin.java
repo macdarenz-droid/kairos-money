@@ -25,21 +25,35 @@ import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @CapacitorPlugin(name = "KairosVault")
 public class KairosVaultPlugin extends Plugin {
     private VaultStore store;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    private final AtomicBoolean destroyed = new AtomicBoolean();
     private volatile long pausedAt = -1;
     private byte[] exportBytes;
     @Override public void load() { store = new VaultStore(getContext()); }
     private interface Operation { void run() throws Exception; }
+    private void rejectDestroyed(PluginCall call) {
+        call.reject("Kairos changed activities before secure storage finished. Try again.");
+    }
     private void perform(PluginCall call, Operation operation) {
-        worker.execute(() -> {
-            try { operation.run(); }
-            catch (IllegalArgumentException | IllegalStateException error) { call.reject(error.getMessage()); }
-            catch (Exception error) { call.reject("Secure device storage is unavailable. Restart Kairos and try again."); }
-        });
+        if (destroyed.get()) { rejectDestroyed(call); return; }
+        try {
+            worker.execute(() -> {
+                if (destroyed.get()) { rejectDestroyed(call); return; }
+                try { operation.run(); }
+                catch (IllegalArgumentException | IllegalStateException error) { call.reject(error.getMessage()); }
+                catch (Exception error) { call.reject("Secure device storage is unavailable. Restart Kairos and try again."); }
+            });
+        } catch (RejectedExecutionException ignored) {
+            // Activity recreation may race one final call from the old WebView.
+            // That obsolete call must settle without crashing the replacement activity.
+            rejectDestroyed(call);
+        }
     }
     private boolean biometricAvailable() {
         return BiometricManager.from(getContext()).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS;
@@ -200,5 +214,10 @@ public class KairosVaultPlugin extends Plugin {
         ActivityManager manager = (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
         if (!manager.clearApplicationUserData()) throw new IllegalStateException("Android could not delete app data. Use Android Settings > Apps > Kairos > Storage > Clear data.");
     }); }
-    @Override protected void handleOnDestroy() { DatabaseLifecycle.close(getBridge()); store.lock(); if (exportBytes != null) Arrays.fill(exportBytes, (byte) 0); worker.shutdown(); }
+    @Override protected void handleOnDestroy() {
+        destroyed.set(true);
+        worker.shutdown();
+        DatabaseLifecycle.close(getBridge()); store.lock();
+        if (exportBytes != null) Arrays.fill(exportBytes, (byte) 0);
+    }
 }
