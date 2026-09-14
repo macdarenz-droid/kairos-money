@@ -22,6 +22,8 @@ public class LedgerPerformanceInstrumentedTest {
     private MainActivity activity;
     private final JSONArray cleanupSteps=new JSONArray();
     private String lastPhase="not started";
+    /** Last renderer JS heap reading; the app process survives a renderer crash only briefly. */
+    private String rendererHeap="not sampled";
     private String js(String script) throws Exception {
         CountDownLatch done=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>();
         activity.runOnUiThread(()->activity.getBridge().getWebView().evaluateJavascript(script,r->{value.set(r);done.countDown();}));
@@ -31,6 +33,26 @@ public class LedgerPerformanceInstrumentedTest {
         long deadline=SystemClock.elapsedRealtime()+60000;
         while(SystemClock.elapsedRealtime()<deadline){if("true".equals(js(condition)))return;Thread.sleep(150);}
         fail("Large ledger condition: "+condition+"; page: "+js("document.body.innerText"));
+    }
+    /**
+     * Wait for the first ledger row while sampling the renderer's JS heap.
+     *
+     * Collecting the fixture cut the app's Java heap to 8 MB and its RSS to 272 MB, below the run that
+     * last reached this assertion, and the WebView renderer still died in this phase. So the pressure is
+     * the renderer's own memory, which nothing here measured. Each sample is written to the device before
+     * the next poll, because a renderer crash takes the app process with it and no assertion runs.
+     */
+    private void awaitFirstRowSampled(JSONArray samples) throws Exception {
+        long deadline=SystemClock.elapsedRealtime()+60000;
+        for(int poll=0;SystemClock.elapsedRealtime()<deadline;poll++) {
+            if("true".equals(js("Boolean(document.querySelector('.windowed-list [role=listitem]'))")))return;
+            if(poll%6==0) {
+                rendererHeap=js("(()=>{const m=performance.memory;return m?{used:m.usedJSHeapSize,total:m.totalJSHeapSize,limit:m.jsHeapSizeLimit}:null;})()");
+                checkpoint("ledger load",samples,null);
+            }
+            Thread.sleep(150);
+        }
+        fail("First ledger row never reached the DOM; last renderer heap "+rendererHeap);
     }
     private void click(String name) throws Exception {
         String button="Array.from(document.querySelectorAll('button')).find(e=>e.textContent.trim()==="+JSONObject.quote(name)+")";
@@ -92,7 +114,8 @@ public class LedgerPerformanceInstrumentedTest {
             .put("cleanup",cleanupSteps)
             .put("java_heap_used_bytes",retained)
             .put("java_heap_after_gc_bytes",runtime.totalMemory()-runtime.freeMemory())
-            .put("java_heap_max_bytes",runtime.maxMemory());
+            .put("java_heap_max_bytes",runtime.maxMemory())
+            .put("renderer_js_heap",rendererHeap);
         if(error!=null){java.io.StringWriter trace=new java.io.StringWriter();error.printStackTrace(new java.io.PrintWriter(trace));report.put("failure",trace.toString());}
         Files.write(new File(directory,"ledger-20000-progress.json").toPath(),report.toString(2).getBytes(StandardCharsets.UTF_8));
     }
@@ -143,7 +166,7 @@ public class LedgerPerformanceInstrumentedTest {
                 js("window.__kairosQueries&&window.__kairosQueries.reset()");
                 long started=SystemClock.elapsedRealtime();click("Ledger");
                 long tabMs=SystemClock.elapsedRealtime()-started;
-                awaitJs("Boolean(document.querySelector('.windowed-list [role=listitem]'))");
+                awaitFirstRowSampled(samples);
                 long firstRowMs=SystemClock.elapsedRealtime()-started;
                 // Which statements the device actually spent that time in. Shapes only, no values.
                 String profile=js("JSON.stringify((window.__kairosQueries&&window.__kairosQueries.read(5))||[])");
@@ -178,6 +201,7 @@ public class LedgerPerformanceInstrumentedTest {
                 // gate only pulls it after every class passes, so on failure it is lost with the emulator.
                 assertTrue("20,000-row ledger took "+loadMs+" ms; budget is 10000 ms"
                     +" [tab_open="+tabMs+" ms, first_row="+firstRowMs+" ms, search_entered="+searchMs+" ms]"
+                    +" renderer_heap="+rendererHeap
                     +" slowest="+profile,loadMs<10000);
             } catch(Throwable error) {
                 primary=error;
