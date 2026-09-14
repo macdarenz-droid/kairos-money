@@ -201,6 +201,13 @@ public class IntelligenceInstrumentedTest {
                     }
                     captureHeading(heading,theme.toLowerCase()+"-monthly-"+heading.toLowerCase().replace(' ','-'));
                 }
+                click("Record cancellation · synthetic fortnightly membership");
+                input("Contact or confirmation date",java.time.LocalDate.now().minusDays(1).toString());
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-cancellation-entry");click("Save cancellation record");
+                awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Cancellation requested')");
+                click("Review 1 later payment");awaitJs("Boolean(document.querySelector('dialog')) && document.body.innerText.includes('These may be final charges')");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-cancellation-later-payment");js("document.querySelector('dialog .icon-button').click()");
+                click("Remove record");click("Remove cancellation record");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('No cancellation records in USD.')");
                 js("(()=>{const e=document.querySelector('.money-visuals input[type=range]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'1');e.dispatchEvent(new Event('input',{bubbles:true}));})()");
                 awaitJs("document.querySelector('.money-visuals input[type=range]').value==='1'");
                 js("document.querySelector('.money-visuals').scrollIntoView()");NativeEvidence.capture(activity,theme.toLowerCase()+"-monthly-comparison");

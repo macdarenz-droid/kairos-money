@@ -1,3 +1,4 @@
+import {cancellationRepository} from '../../ledger/cancellations';
 import { manualRepository } from '../../ledger/manual';
 import {notificationRepository} from '../../ledger/notifications';
 import {netWorthRepository} from '../../ledger/net-worth';
@@ -26,6 +27,7 @@ export function repository(driver: Driver) {
     imports: importService(driver),
     manual: manualRepository(driver),
     notifications: notificationRepository(driver),
+    cancellations: cancellationRepository(driver),
     netWorth: netWorthRepository(driver),
     categories: categoryRepository(driver),
     attachments: attachmentRepository(driver),

@@ -1,3 +1,9 @@
+## Cancellation progress integrated
+
+Recurring costs now include local cancellation records: requested/provider-confirmed status, contact/confirmation date, provider reference or note, edit and confirmed removal. Records are currency/merchant scoped across accounts and persist after a pattern disappears. Later covered settled non-transfer debits link to their original statement evidence; missing imports are disclosed. Records use encrypted settings and survive backup/restore without changing transactions, coverage, expected bills or forecasts. Confirmation requires a note. The form uses existing themed controls with a styled multiline note field.
+
+The combined Android monthly journey now records a request, inspects a later payment and removes the record in both themes. Native execution and visual acceptance remain OPEN, along with camera/widget, remaining product ownership, accessibility, performance, hardening and final private release. No new gate or workers launched. See ADR/0024-cancellation-records.md. Full regression: 226 tests in 51 files PASS; lint, production build, schema generation and diff check PASS. No native acceptance is claimed.
+
 ## Stronger native visual acceptance checks
 
 The next combined gate now waits for each requested heading to stay in the visible viewport before capturing, and checks it again after capture. This addresses the previously misplaced light manual-history screenshot and applies to monthly charts and valuation history in both themes.

@@ -262,6 +262,10 @@ Encrypted app_settings net-worth:<valuation-id> values contain id, itemId, name,
 
 Encrypted app_settings category-edit:<canonical-transaction-id> stores the selected category or explicit null. Import rebuilds replay it only for an existing non-transfer transaction; original statements, amounts and source provenance remain unchanged. Metadata survives source rollback and backup for later reimport. Bulk edits are transactional. See ADR/0021-user-category-overrides.md.
 
+## Cancellation progress
+
+Encrypted app_settings cancellation:<JSON currency/merchant pair> stores normalized merchant, currency, requested/provider-confirmed status, contact/confirmation date and note. Entries are included in full export, backup, restore and deletion. They do not alter transactions, coverage, observed bills or forecast amounts. Records remain visible without an active detected pattern; later covered settled debits link back to statement evidence. See ADR/0024-cancellation-records.md.
+
 ## Migration metadata
 
 `_migrations(version INTEGER PRIMARY KEY)` is maintained transactionally by the migration runner. It is not financial data and is removed with the database during deletion.
