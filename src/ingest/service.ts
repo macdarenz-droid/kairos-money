@@ -1,5 +1,6 @@
 import {reconcileAsync} from './reconcile/async';
 import { syncManual } from '../ledger/manual';
+import {applyCategoryEdits} from '../ledger/categories';
 import { hasStatementBalanceChain } from './normalize/statement-evidence';
 import type { Driver } from '../core/db/driver';
 import { currency, money, toDatabase } from '../core/money';
@@ -130,6 +131,7 @@ export function importService(driver: Driver) {
       else { const p = doc.payslip; await driver.execute('INSERT INTO payslips(id,employer,pay_date,period_start,period_end,gross_minor,net_minor,tax_minor,super_minor,deductions,allowances,ytd,currency,linked_transaction_id,import_batch_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [hash('payslip:' + doc.id), p.employer, p.payDate, p.period.start, p.period.end, integer(p.gross, p.currency), integer(p.net, p.currency), integer(p.tax, p.currency), integer(p.super, p.currency), JSON.stringify(p.deductions), JSON.stringify(p.allowances), JSON.stringify(p.ytd), p.currency, linkNet(p, ledger.filter(r => r.accountId === doc.context.accountId)), doc.id]); }
     }
     await syncManual(driver);
+    await applyCategoryEdits(driver);
   }
   async function commitUnlocked(id: string) {
       const check = await review(id);
@@ -157,7 +159,7 @@ export function importService(driver: Driver) {
   async function ledger() {
     const rows = await reconcileAsync((await batches()).filter(b => b.status === 'committed'));
     const labels = new Map((await driver.query('SELECT t.id,c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id')).map(r => [String(r.id), r.name === null ? null : String(r.name)]));
-    return rows.map(r => ({ ...r, category: labels.get(r.id) ?? r.category }));
+    return rows.map(r => ({ ...r, category: labels.has(r.id) ? labels.get(r.id)! : r.category }));
   }
   async function stageFile(fileName: string, data: string, fileHash: string, sessionId = hash('session:'+fileHash)) {
     if (!/^[a-f0-9]{64}$/.test(fileHash) || data.length > 27962032) throw new Error('File is too large or its identity is invalid. Choose a file below 20 MB.');

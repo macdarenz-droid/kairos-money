@@ -1,6 +1,7 @@
 import { manualRepository } from '../../ledger/manual';
 import {notificationRepository} from '../../ledger/notifications';
 import {netWorthRepository} from '../../ledger/net-worth';
+import {categoryRepository} from '../../ledger/categories';
 import { attachmentRepository } from '../../ledger/attachments';
 import { restoreSnapshot } from './restore';
 import { intelligenceRepository } from '../../ledger/intelligence';
@@ -26,6 +27,7 @@ export function repository(driver: Driver) {
     manual: manualRepository(driver),
     notifications: notificationRepository(driver),
     netWorth: netWorthRepository(driver),
+    categories: categoryRepository(driver),
     attachments: attachmentRepository(driver),
     restoreBackup: (snapshot: unknown) => restoreSnapshot(driver, snapshot),
     intelligence: intelligenceRepository(driver),

@@ -258,6 +258,10 @@ Encrypted app_settings keys ledger-detail:<transaction-id> and ledger-detail:man
 
 Encrypted app_settings net-worth:<valuation-id> values contain id, itemId, name, asset/liability kind, currency, ISO valuation date and positive integer-string minor units. Repeated values update the same holding over time without changing transactions or coverage. Notification preferences are stored under notifications:preferences, with four independent boolean opt-ins. Existing full export, backup and delete include both. Native notification alarms contain only generic kinds, event hashes and times, never financial amounts or descriptions.
 
+## User category overrides
+
+Encrypted app_settings category-edit:<canonical-transaction-id> stores the selected category or explicit null. Import rebuilds replay it only for an existing non-transfer transaction; original statements, amounts and source provenance remain unchanged. Metadata survives source rollback and backup for later reimport. Bulk edits are transactional. See ADR/0021-user-category-overrides.md.
+
 ## Migration metadata
 
 `_migrations(version INTEGER PRIMARY KEY)` is maintained transactionally by the migration runner. It is not financial data and is removed with the database during deletion.

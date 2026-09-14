@@ -177,6 +177,9 @@ public class IntelligenceInstrumentedTest {
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-valuation-entry");click("Save value");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Latest recorded total')");
                 js("Array.from(document.querySelectorAll('h2')).find(e=>e.textContent==='Recorded net worth').scrollIntoView()");NativeEvidence.capture(activity,theme.toLowerCase()+"-valuation-history");
                 js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Manage recorded values').click()");click("Remove");click("Remove value");awaitJs("!document.querySelector('dialog') && !document.body.innerText.includes('Synthetic valuation "+theme+"')");
+                click("Ledger");click("Change categories");awaitJs("Boolean(document.querySelector('dialog input[type=checkbox]'))");
+                js("document.querySelector('dialog input[type=checkbox]').click()");NativeEvidence.capture(activity,theme.toLowerCase()+"-bulk-categories");
+                js("document.querySelector('dialog .icon-button').click()");
             }
         }
     }
