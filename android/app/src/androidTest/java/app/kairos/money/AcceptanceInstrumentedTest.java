@@ -126,6 +126,12 @@ public class AcceptanceInstrumentedTest {
             assertTrue("The real document picker did not offer its Save action", saved);
             awaitJs("document.body.innerText.includes('Your JSON and CSV export was saved.')"); verifyExport();
             click("You"); click("Dark"); awaitJs("document.documentElement.dataset.theme==='dark'");verifyWidgetLaunch();
+            // The widget PendingIntent can finish its WebView action while the
+            // ActivityScenario still records PAUSED. Re-enter the tracked state
+            // before try-with-resources requests a real DESTROYED transition.
+            scenario.moveToState(Lifecycle.State.RESUMED);
+            scenario.onActivity(a -> activity = a);
+            awaitJs("document.visibilityState==='visible' && Boolean(document.querySelector('nav'))");
         }
     }
 }
