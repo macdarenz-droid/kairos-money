@@ -1,3 +1,7 @@
+## Revision 2 sequencing accepted 14 September 2026
+
+Immediate: explicit receipt-attachment label and visible save confirmation; Quick without automatic search focus. Implemented in the current continuation, pending native validation. Deferred to final pass: receipt OCR to an editable Tier C draft committed only on confirmation; visible disclosure affordances/counts; primary-action prominence; sheet back paths; shorter non-evidence copy; manual-history search/pagination. Preserve all features and current visual design. Validate keyboard behavior on Android rather than inferring from jsdom.
+
 # Final usability pass: fewer taps, less typing, all features retained
 
 Status: accepted future work; preliminary source scan only. No UI implementation or device usability acceptance is claimed.

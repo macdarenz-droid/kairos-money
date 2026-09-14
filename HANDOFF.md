@@ -1,3 +1,11 @@
+# Current continuation — 14 September 2026
+
+User authorized continued work and re-enabled the existing hourly Money worker. Run 34819848337 at a9a8e35 failed the frozen Session 2 contract: the preceding Quick regression had edited tests/ui.test.tsx. Restored that file byte-for-byte and moved the additional modal/navigation coverage to tests/session4-quick-dialog.test.tsx, also verifying search does not receive automatic focus.
+
+Immediate revision-2 changes: Quick search no longer autofocuses; receipt entry explicitly says Attach receipt to this transaction, explains before camera use that no purchase/balance changes occur, and shows a live save confirmation plus expanded saved receipt after persistence. Camera and file receipt paths share confirmation. Receipt-to-draft and wider navigation changes remain in the final usability pass after Session 4, the 36 analysis capabilities and six quiet coaching concepts. No financial logic changes.
+
+Session 4 remains OPEN. Preserve the combined native gate, both-theme visual review and final signed private APK requirements. Continue from the current branch and WORKER_STATE, not older source/run values below. No in-turn polling; perform independent work while a candidate runs and publish only one consolidated replacement after the previous run finishes.
+
 # Session 4 — integrated private-release continuation
 
 Run 34817043793 (`157189d`) passed the complete source gate, Android builds/lint and APK checks. Startup PASS: 2,339 / 1,269 / 1,314 ms, median 1,314 ms and fresh install 2,339 ms against unchanged limits. All 16 native tests through Intelligence passed, including the corrected both-theme net-worth ownership journey. Accessibility then failed because its harness expected Quick to become the current page; Quick correctly opens a modal over Ledger. The continuation asserts the named open Quick dialog, preserves the underlying current page, applies the existing 200% target/name/overflow checks, and closes Quick before proceeding. Source UI coverage verifies that modal/navigation contract. Downstream widget/backup/delete checks and final visual/private-release acceptance remain OPEN; corrected native accessibility still requires the combined gate.

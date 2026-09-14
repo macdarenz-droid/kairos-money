@@ -1,3 +1,13 @@
+# Current authorization — 14 September 2026
+
+The user explicitly re-enabled autonomous Kairos Money continuation. This overrides older worker-disabled/manual-only and stop-on-active-CI wording below. Use the existing hourly Money worker only. Continue Session 4 as one integrated milestone, then the accepted 36-capability Money Analysis and six quiet-coaching concepts, then the complete low-effort usability pass. Notification capture remains deferred; no trading/job automation changes.
+
+Check an outstanding gate once per invocation. No in-turn polling or waiting: continue independent local work if it is running, preserving its candidate. Consolidate changes; do not launch competing gates or per-feature releases. Android compilation/lint/device evidence may run through authorized GitHub Actions when local Gradle is unavailable. Keep acceptance thresholds and frozen tests intact. Read the current HANDOFF before stale historical entries. Maintain one bounded owner/expiry lease and checkpoint, compare the remote head and never force-push. Stop and report a genuine user-only blocker. Disable this worker after the agreed scope is complete.
+
+Receipt attachment labeling/save confirmation and Quick keyboard focus are authorized now. Receipt-to-draft and the remaining revision-2 navigation brief belong in the final usability pass. Keep every feature, visual design, and confirm-before-financial-commit behavior.
+
+## Historical contract (superseded where stated above)
+
 # Kairos Money continuation contract
 
 Latest user instruction: suspend V16 orchestration rules during manual repair and session continuity. GitHub Actions is explicitly authorized for Android compilation, lint and device testing instead of unavailable local tooling. Keep the worker disabled. The original product requirements, privacy guarantees and session acceptance criteria remain binding.

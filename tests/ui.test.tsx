@@ -48,15 +48,7 @@ describe('Foundation interactions using real SQLite and simulated native boundar
     fireEvent.change(screen.getByLabelText('PIN'), { target: { value: '246810' } }); fireEvent.click(screen.getByRole('button', { name: 'Unlock' })); await screen.findByRole('navigation');
   });
   it('filters Quick actions and navigates without a dead import action', async () => {
-    await setup(); fireEvent.click(screen.getByRole('button', { name: 'Ledger' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Quick' }));
-    expect(screen.getByRole('dialog', { name: 'Quick' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Ledger' }).getAttribute('aria-current')).toBe('page');
-    expect(screen.getByRole('button', { name: 'Quick' }).getAttribute('aria-current')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Close Quick' }));
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Ledger' }).getAttribute('aria-current')).toBe('page');
-    fireEvent.click(screen.getByRole('button', { name: 'Quick' })); fireEvent.change(screen.getByLabelText('Find an action'), { target: { value: 'settings' } });
+    await setup(); fireEvent.click(screen.getByRole('button', { name: 'Quick' })); fireEvent.change(screen.getByLabelText('Find an action'), { target: { value: 'settings' } });
     expect(screen.queryByRole('button', { name: 'Import file' })).toBeNull(); fireEvent.click(screen.getByRole('button', { name: 'Open settings' })); expect(screen.getByText('Appearance')).toBeTruthy();
   });
   it('renders every kitchen sink primitive and opens its sheet in both themes', async () => {
