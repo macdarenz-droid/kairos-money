@@ -1,14 +1,20 @@
 # Session 4 performance evidence — incomplete
 
-## Latest failure and repair
+## Latest reviewed measurements and repair
 
-Run **34843754745** passes startup at **1,653 ms** median and **2,263 ms** fresh install. The 20,000-row journey fails before reporting scroll timings; cleanup overwrote the original error. The log shows repeated blocking GC near the **192 MB** Java heap ceiling. Parsed fixture JSON is now scoped to loading/seeding only; the production row sets use 256-row bridge responses and indexed ordering, and native phase/heap/error checkpoints survive failure. No Android scroll PASS or exclusive root-cause proof is claimed yet. Individual large text fields are not byte-chunked by this row-pagination change.
+Run **34847174081**, candidate **2a32c37**, completed 20,000-row traversal at 100% and 200% text with **16 / 10** maximum mounted rows and 120 raw frame intervals each. Ledger load was **62,376 ms**; mean intervals **110.97 / 104.58 ms**, maxima **316.67 / 333.33 ms**. The class failed in fixture cleanup, after writing its complete measurement report. These results establish reachability, not acceptable scrolling performance.
+
+Startup raw samples were **2,152 / 2,073 / 1,333 ms**; the independently computed median **2,073 ms** exceeds the unchanged two-second limit. The old runner omitted the aggregate when UI Automator failed after dumping a hierarchy. Readiness now retries only its own probe within 30 seconds, verifies fresh complete XML, and records every attempt. Three measured cold launches are never resampled; their timing verdict survives a readiness failure.
+
+The replacement bounds each cleanup transaction to 256 rows, records per-table removal timings and errors, and checks exact removed counts, foreign keys and the pre-fixture user-row count. The original 30-second operation and 360-second instrumentation bounds remain. The product loads source documents once per Ledger refresh and reuses currency formatter configurations across row renders. No native timing improvement is claimed before the replacement runs.
+
+Evidence: `docs/evidence/session4-gate-34847174081.json`. The prior memory repair enabled the scroll measurements; individual large text fields are still not byte-chunked. Native performance acceptance remains OPEN.
 
 ## Previous reviewed Android measurements
 
 Green run **34839763247**, candidate **a6a9c41**: non-debuggable benchmark cold samples **1,833 / 1,574 / 1,575 ms**, median **1,575 ms**, fresh install **1,833 ms**. Both unchanged startup limits pass. A 40-page PDF extracted in **2,842 ms** with visible progress and responsive WebView. Its staged file survived activity recreation before extraction. This does not prove process death during extraction or commit.
 
-The integrated continuation adds `LedgerPerformanceInstrumentedTest`: 20,000 distinct synthetic transactions and source links in the real SQLCipher database, production import ledger read, fewer than 41 mounted rows, middle/final-row reachability at 100%/200% text, and 120 raw requestAnimationFrame intervals while scrolling each size. The fixture is generated only into instrumentation assets and removed from the device ledger afterward. Frame intervals describe programmatic WebView scrolling on the emulator; they require review and are not a physical-device FPS claim. The new test has not run on Android yet.
+The integrated continuation adds `LedgerPerformanceInstrumentedTest`: 20,000 distinct synthetic transactions and source links in the real SQLCipher database, production import ledger read, fewer than 41 mounted rows, middle/final-row reachability at 100%/200% text, and 120 raw requestAnimationFrame intervals while scrolling each size. The fixture is generated only into instrumentation assets and removed from the device ledger afterward. Frame intervals describe programmatic WebView scrolling on the emulator; they require review and are not a physical-device FPS claim. The test has now produced traversal/frame evidence above; its cleanup failure prevents a full class PASS.
 
 ## Earlier local measurements
 
@@ -18,6 +24,6 @@ Recorded local run (Node 24.19.0): reconciliation 2,846 ms; SQLite snapshot incl
 
 PDF.js moved out of the initial bundle: approximately 876 KB to 517 KB minified before the later attachment/worker additions. The separate PDF parser chunk was approximately 377 KB. Final exact bundle sizes remain in the production build output; a bundle warning is not suppressed.
 
-Remaining required evidence: the prepared Android 20,000-row scrolling/frame results at normal and 200% text; kill during active import and verify recovery with no partial ledger. Cold start and 40-page extraction/progress are now measured above. Browser reconciliation above 200 rows now runs in a dedicated worker. Small inputs and Node tests use the same pure algorithm.
+Remaining required evidence: acceptable Android 20,000-row load/scroll performance and successful cleanup; kill during active import and verify recovery with no partial ledger. Cold start and 40-page extraction/progress are now measured above. Browser reconciliation above 200 rows now runs in a dedicated worker. Small inputs and Node tests use the same pure algorithm.
 
 Fixture correction: the first benchmark used numeric merchant suffixes, which normalization intentionally strips, so it did not describe 20,000 distinct transactions. The fixture now uses distinct alphabetic merchant suffixes, and asserts all 20,000 records and source links survive. No acceptance assertion was reduced.

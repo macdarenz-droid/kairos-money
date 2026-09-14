@@ -20,6 +20,8 @@ import java.util.concurrent.atomic.AtomicReference;
 /** Real encrypted storage and shipped ledger UI; the synthetic asset is test-only. */
 public class LedgerPerformanceInstrumentedTest {
     private MainActivity activity;
+    private final JSONArray cleanupSteps=new JSONArray();
+    private String lastPhase="not started";
     private String js(String script) throws Exception {
         CountDownLatch done=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>();
         activity.runOnUiThread(()->activity.getBridge().getWebView().evaluateJavascript(script,r->{value.set(r);done.countDown();}));
@@ -77,12 +79,44 @@ public class LedgerPerformanceInstrumentedTest {
         return doc.getString("id");
     }
     private void checkpoint(String phase,JSONArray samples,Throwable error) throws Exception {
+        lastPhase=phase;
         File directory=new File(activity.getExternalFilesDir(null),"evidence");assertTrue(directory.exists()||directory.mkdirs());
         JSONObject report=new JSONObject().put("phase",phase).put("samples",samples)
+            .put("cleanup",cleanupSteps)
             .put("java_heap_used_bytes",Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())
             .put("java_heap_max_bytes",Runtime.getRuntime().maxMemory());
         if(error!=null){java.io.StringWriter trace=new java.io.StringWriter();error.printStackTrace(new java.io.PrintWriter(trace));report.put("failure",trace.toString());}
         Files.write(new File(directory,"ledger-20000-progress.json").toPath(),report.toString(2).getBytes(StandardCharsets.UTF_8));
+    }
+    private void removeFixture(String batch,JSONArray samples) throws Exception {
+        // Keep each test-only write bounded on encrypted mobile storage. Do not
+        // hold one transaction across all 60,001 rows or increase its 30s limit.
+        String[][] tables={{"transaction_sources","import_batch_id"},{"transactions","account_id"},{"staging_rows","import_batch_id"}};
+        for(String[] table:tables) {
+            String name=table[0],column=table[1],value=column.equals("account_id")?"native-performance":batch;
+            int removed=0;
+            while(true) {
+                String phase="cleanup "+name+" after "+removed+" rows";
+                checkpoint(phase,samples,null);
+                long started=SystemClock.elapsedRealtime();
+                int count=DatabaseDigest.transaction(activity,db->{
+                    db.execSQL("DELETE FROM "+name+" WHERE rowid IN (SELECT rowid FROM "+name+" WHERE "+column+"=? LIMIT 256)",new Object[]{value});
+                    try(Cursor changed=db.query("SELECT changes()")){if(!changed.moveToFirst())throw new IllegalStateException("Missing fixture cleanup count");return changed.getInt(0);}
+                });
+                cleanupSteps.put(new JSONObject().put("table",name).put("rows",count).put("elapsed_ms",SystemClock.elapsedRealtime()-started));
+                assertTrue("Fixture cleanup exceeded its batch bound",count>=0&&count<=256);
+                removed+=count;
+                if(count<256)break;
+            }
+            assertEquals("Fixture row count changed before cleanup: "+name,name.equals("staging_rows")?20001:20000,removed);
+        }
+        checkpoint("cleanup account",samples,null);
+        DatabaseDigest.transaction(activity,db->{
+            db.execSQL("DELETE FROM import_batches WHERE id=?",new Object[]{batch});
+            db.execSQL("DELETE FROM accounts WHERE id='native-performance'");
+            try(Cursor broken=db.query("PRAGMA foreign_key_check")){if(broken.moveToFirst())throw new IllegalStateException("Fixture cleanup broke a ledger relationship");}
+            return null;
+        });
     }
     @Test public void twentyThousandSourceRowsScrollAtNormalAndLargeText() throws Throwable {
         JSONArray samples=new JSONArray();
@@ -130,18 +164,18 @@ public class LedgerPerformanceInstrumentedTest {
                 try {
                     InstrumentationRegistry.getInstrumentation().runOnMainSync(()->activity.getBridge().getWebView().getSettings().setTextZoom(100));
                     if(batchId!=null) {
-                        final String batch=batchId;
-                        DatabaseDigest.transaction(activity,db->{
-                            db.execSQL("DELETE FROM transaction_sources WHERE import_batch_id=?",new Object[]{batch});
-                            db.execSQL("DELETE FROM transactions WHERE account_id='native-performance'");
-                            db.execSQL("DELETE FROM staging_rows WHERE import_batch_id=?",new Object[]{batch});
-                            db.execSQL("DELETE FROM import_batches WHERE id=?",new Object[]{batch});
-                            db.execSQL("DELETE FROM accounts WHERE id='native-performance'");return null;
-                        });
+                        phase="cleanup";
+                        removeFixture(batchId,samples);
                         assertEquals("Performance fixture left user records behind",before,DatabaseDigest.userRows(activity));
+                        checkpoint("complete",samples,null);
                     }
                 } catch(Throwable cleanup) {
-                    if(primary==null)throw cleanup;
+                    if(primary==null){
+                        android.util.Log.e("KairosPerformance","Cleanup failed",cleanup);
+                        // Retain the last per-table phase rather than replacing it.
+                        try{checkpoint(lastPhase,samples,cleanup);}catch(Throwable reporting){cleanup.addSuppressed(reporting);}
+                        throw cleanup;
+                    }
                     primary.addSuppressed(cleanup);
                     android.util.Log.e("KairosPerformance","Cleanup also failed; original failure retained",cleanup);
                     try{checkpoint(phase,samples,primary);}catch(Throwable reporting){primary.addSuppressed(reporting);}

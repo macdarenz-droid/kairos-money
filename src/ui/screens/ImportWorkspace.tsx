@@ -33,7 +33,7 @@ export function ImportWorkspace({ accounts, request, consumed }: { accounts: Acc
   const [backupSuggested, setBackupSuggested] = useState(false), [backupOpen, setBackupOpen] = useState(false);
   const [bulkOpen,setBulkOpen]=useState(false);
   function imported(message: string, added: number) { setNotice(message); if (added > 50) setBackupSuggested(true); }
-  const data = useQuery({ queryKey: ['imports'], queryFn: () => session.run(async repo => ({ files: await repo.imports.files(), batches: await repo.imports.batches(), ledger: await repo.imports.ledger() })), enabled: session.state === 'ready' });
+  const data = useQuery({ queryKey: ['imports'], queryFn: () => session.run(repo => repo.imports.workspace()), enabled: session.state === 'ready' });
   const pick = useMutation({ mutationFn: () => session.run(selectFiles), onSuccess: async count => { setNotice(count ? `${count} files staged. Confirm the account and statement details for each file.` : 'No files selected.'); await query.invalidateQueries({ queryKey: ['imports'] }); } });
   const drop = useMutation({mutationFn:(files:File[])=>session.run(repo=>stageDroppedFiles(repo,files)),onSuccess:async count=>{setNotice(`${count} files staged in one update. Review each file before confirming.`);await query.invalidateQueries({queryKey:['imports']});}});
   const requestHandled = useRef(false);

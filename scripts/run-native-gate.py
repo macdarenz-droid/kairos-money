@@ -7,6 +7,7 @@ import statistics
 import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ET
 
 completed_instrumentation = []
 performance_failures = []
@@ -61,14 +62,28 @@ def settle_startup(sample_number):
     # This is outside TotalTime; no warm sample is substituted for a cold launch.
     deadline = time.monotonic() + 30
     device_path = '/sdcard/kairos-startup-ready.xml'
+    attempts = []
     while time.monotonic() < deadline:
-        dump = adb('shell', 'uiautomator', 'dump', '--compressed', device_path, timeout=30)
-        if 'dumped to:' in dump:
-            hierarchy = adb('shell', 'cat', device_path)
-            (EVIDENCE / ('android-startup-ready-' + str(sample_number) + '.xml')).write_text(hierarchy)
-            adb('shell', 'rm', device_path)
-            if 'app.kairos.money' in hierarchy and 'Create private ledger' in hierarchy and 'android:id/aerr_' not in hierarchy:
-                return
+        attempt = {}
+        ready = False
+        try:
+            # A failed dumper may have written a partial file. Never reuse it on retry.
+            adb('shell', 'rm', '-f', device_path, timeout=max(0.1, deadline - time.monotonic()))
+            dump = subprocess.run(['adb', 'shell', 'uiautomator', 'dump', '--compressed', device_path],
+                                  capture_output=True, text=True, timeout=max(0.1, deadline - time.monotonic()))
+            attempt.update(returncode=dump.returncode, stdout=dump.stdout, stderr=dump.stderr)
+            if dump.returncode == 0 and 'dumped to:' in dump.stdout and time.monotonic() < deadline:
+                hierarchy = adb('shell', 'cat', device_path, timeout=max(0.1, deadline - time.monotonic()))
+                ET.fromstring(hierarchy)
+                (EVIDENCE / ('android-startup-ready-' + str(sample_number) + '.xml')).write_text(hierarchy)
+                ready = 'app.kairos.money' in hierarchy and 'Create private ledger' in hierarchy and 'android:id/aerr_' not in hierarchy
+        except (RuntimeError, subprocess.TimeoutExpired, ET.ParseError) as error:
+            attempt['error'] = str(error)
+        attempt['ready'] = ready
+        attempts.append(attempt)
+        (EVIDENCE / ('android-startup-ready-' + str(sample_number) + '-attempts.json')).write_text(json.dumps(attempts, indent=2) + '\n')
+        if ready:
+            return
         time.sleep(0.5)
     raise RuntimeError('Benchmark did not reach the real PIN setup page within 30 seconds')
 
@@ -85,6 +100,10 @@ def measure_startup():
         for number in range(1, 4):
             samples.append(cold_launch_sample())
             settle_startup(number)
+    except Exception as error:
+        performance_failures.append('Startup measurement failed: ' + str(error))
+    # Preserve the timing verdict even if the last sample's readiness probe failed.
+    if len(samples) == 3:
         median_ms = int(statistics.median(sample['total_time_ms'] for sample in samples))
         fresh_ms = samples[0]['total_time_ms']
         report.update(process_cold_median_ms=median_ms, fresh_install_ms=fresh_ms)
@@ -92,8 +111,6 @@ def measure_startup():
             performance_failures.append('Fresh-install launch exceeded 2500 ms: ' + str(fresh_ms) + ' ms')
         if median_ms >= 2000:
             performance_failures.append('Median process-cold launch exceeded 2000 ms: ' + str(median_ms) + ' ms')
-    except Exception as error:
-        performance_failures.append('Startup measurement failed: ' + str(error))
     report['status'] = 'FAIL' if performance_failures else 'PASS'
     report['failures'] = list(performance_failures)
     (EVIDENCE / 'android-cold-start.json').write_text(json.dumps(report, indent=2) + '\n')

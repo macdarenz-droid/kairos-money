@@ -1,3 +1,19 @@
+# Session 4 — ledger cleanup and readiness repair, 14 September 2026
+
+Reviewed completed run [34847174081](https://github.com/macdarenz-droid/kairos-money/actions/runs/34847174081) once on `2a32c37d3c6968148d748291be218472064bf452`. Source, Android APK compilation/lint/signatures and every native class through Intelligence passed, including native notification policy. The 20,000-row test now completed both scroll measurements and reached the final row at 100%/200% text with at most 16/10 rows mounted. Its failure was cleanup alone: removing the synthetic records in one database operation exceeded the test helper's 30-second bound.
+
+The replacement removes fixture rows in transactions of at most 256 rows, preserves the existing per-operation/instrumentation timeouts, verifies exact removed counts and relationship integrity, and retains the original user-row count check. Per-table timings and cleanup-only exceptions now preserve their exact phase. This bounds the known large cleanup operation; the prior log did not identify the particular SQL statement that consumed the time, so native success is not inferred.
+
+Startup remains OPEN. Raw samples 2,152 / 2,073 / 1,333 ms have a 2,073 ms median above the unchanged 2,000 ms limit. UI Automator (PID 2985) also crashed with a bad file descriptor after printing its hierarchy-dump line. Readiness now retries only that probe within the original 30-second budget, discards stale XML before each attempt, validates complete XML, and records every attempt. It never substitutes another cold launch. The runner now reports all measured timing failures even when final readiness fails.
+
+The same run measured 62,376 ms ledger load and approximately 111/105 ms mean frame intervals. Reachability does not close performance acceptance. The screen now loads/validates the imported documents once per refresh and reuses them for reconciliation. Currency formatting reuses a bounded set of locale/currency configurations without retaining monetary values. Source regressions preserve complete history, staged-file visibility, current category edits, invalid-source refusal and exact multi-currency output. Native improvement still needs measurement.
+
+Evidence archive and per-file hashes, raw measurements and limits are recorded in `docs/evidence/session4-gate-34847174081.json`. Reviewed the two final-row screenshots at full size; this is not a complete visual/AA/assistive-technology review. Loaded-screen accessibility and downstream Acceptance/backup/delete were not reached in this failed run. Prior green widget and backup evidence remains recorded separately.
+
+Keep **one integrated Session 4 milestone** open for performance, native cleanup, remaining launcher/import-death/refund/accessibility checks and the privately signed final APK/E2E. The next session remains all 36 offline Money Analysis capabilities plus six quiet-coaching concepts together, followed by the complete low-effort usability/discoverability pass. Automation stays disabled; no replacement-gate polling.
+
+Local validation: 278/278 source tests across 65 files, 14 host runner tests, lint, TypeScript, production build (498.45 kB main bundle), schema/generated-file checks, release configuration, money lint and diff checks PASS. Native Java syntax parsed; Android compilation/execution of this repair remains pending CI.
+
 # Session 4 gate — OPEN
 
 ## Latest gate and repair

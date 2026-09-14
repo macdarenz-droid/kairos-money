@@ -1,6 +1,7 @@
 """Host-only runner regressions. Every subprocess is mocked; no device is touched."""
 import contextlib
 import io
+import itertools
 import json
 from pathlib import Path
 import runpy
@@ -24,11 +25,15 @@ COUNTS = {
 
 
 class NativeGateTest(unittest.TestCase):
-    def run_gate(self, times=(1600, 1700, 1800), launch_state='COLD', fail_class=None, missing_time=False, emulator=True, existing_install=False):
+    def run_gate(self, times=(1600, 1700, 1800), launch_state='COLD', fail_class=None, missing_time=False, emulator=True, existing_install=False,
+                 failed_startup_dumps=0, unready_sample=None, malformed_sample=None):
         calls = []
         samples = iter(times)
+        sample_number = 0
+        remaining_dump_failures = failed_startup_dumps
 
         def command(args, **_kwargs):
+            nonlocal sample_number, remaining_dump_failures
             calls.append(args)
             output = ''
             if args[0] != 'adb':
@@ -43,10 +48,19 @@ class NativeGateTest(unittest.TestCase):
                 output = 'All broadcast queues are idle!'
             elif args[1:4] == ['shell', 'uiautomator', 'dump']:
                 output = 'UI hierarchy dumped to: ' + args[-1]
+                if args[-1].endswith('kairos-startup-ready.xml') and remaining_dump_failures:
+                    remaining_dump_failures -= 1
+                    return subprocess.CompletedProcess(args, 1, output, 'UiAutomation: Bad file descriptor')
             elif args[1:3] == ['shell', 'cat']:
                 output = ('<node package="app.kairos.money" text="Create private ledger"/>'
                           if args[-1].endswith('kairos-startup-ready.xml') else '<node package="com.android.launcher3"/>')
+                if args[-1].endswith('kairos-startup-ready.xml'):
+                    if sample_number == unready_sample:
+                        output = '<node package="app.kairos.money" text="Loading"/>'
+                    if sample_number == malformed_sample:
+                        output = '<node package="app.kairos.money" text="Create private ledger"'
             elif args[1:4] == ['shell', 'am', 'start'] and '-n' in args:
+                sample_number += 1
                 timing = '' if missing_time else 'TotalTime: ' + str(next(samples)) + '\n'
                 output = 'Status: ok\nLaunchState: ' + launch_state + '\n' + timing + 'Complete\n'
             elif args[1:4] == ['shell', 'am', 'instrument']:
@@ -61,7 +75,8 @@ class NativeGateTest(unittest.TestCase):
             runner = scripts / 'run-native-gate.py'
             shutil.copyfile(SCRIPTS / 'run-native-gate.py', runner)
             error = None
-            with patch('subprocess.run', side_effect=command), patch('subprocess.Popen', return_value=MagicMock()), contextlib.redirect_stdout(io.StringIO()):
+            with patch('subprocess.run', side_effect=command), patch('subprocess.Popen', return_value=MagicMock()), \
+                 patch('time.monotonic', side_effect=itertools.count()), patch('time.sleep'), contextlib.redirect_stdout(io.StringIO()):
                 try:
                     runpy.run_path(str(runner), run_name='__main__')
                 except RuntimeError as caught:
@@ -71,6 +86,7 @@ class NativeGateTest(unittest.TestCase):
                 'error': error, 'calls': calls,
                 'status': json.loads((evidence / 'native-run-status.json').read_text()),
                 'startup': json.loads((evidence / 'android-cold-start.json').read_text()) if (evidence / 'android-cold-start.json').exists() else None,
+                'readiness': {p.name: json.loads(p.read_text()) for p in evidence.glob('android-startup-ready-*-attempts.json')},
             }
 
     def test_refuses_physical_devices_and_existing_installations(self):
@@ -134,6 +150,36 @@ class NativeGateTest(unittest.TestCase):
         self.assertFalse(result['status']['functional_complete'])
         self.assertIn('2506 ms', result['status']['performance_failures'][0])
         self.assertEqual(result['status']['completed_instrumentation'], list(COUNTS)[:4])
+
+    def test_transient_dumper_failure_retries_readiness_without_resampling(self):
+        result = self.run_gate(failed_startup_dumps=1)
+        self.assertIsNone(result['error'])
+        self.assertEqual(len(result['startup']['samples']), 3)
+        attempts = result['readiness']['android-startup-ready-1-attempts.json']
+        self.assertEqual([a['ready'] for a in attempts], [False, True])
+        self.assertEqual(attempts[0]['returncode'], 1)
+        calls = result['calls']
+        for i, args in enumerate(calls):
+            if args[1:4] == ['shell', 'uiautomator', 'dump'] and args[-1].endswith('kairos-startup-ready.xml'):
+                self.assertEqual(calls[i-1], ['adb', 'shell', 'rm', '-f', '/sdcard/kairos-startup-ready.xml'])
+
+    def test_readiness_failure_preserves_all_measured_timings_and_limit_failure(self):
+        result = self.run_gate(times=(2152, 2073, 1333), unready_sample=3)
+        self.assertEqual(result['startup']['process_cold_median_ms'], 2073)
+        self.assertEqual(result['startup']['fresh_install_ms'], 2152)
+        self.assertEqual(result['startup']['status'], 'FAIL')
+        self.assertIn('PIN setup', result['error'])
+        self.assertIn('2073 ms', result['error'])
+        self.assertTrue(result['status']['functional_complete'])
+
+    def test_persistent_dumper_errors_and_partial_xml_cannot_pass_readiness(self):
+        for settings in ({'failed_startup_dumps': 100}, {'malformed_sample': 1}):
+            with self.subTest(settings=settings):
+                result = self.run_gate(**settings)
+                self.assertEqual(result['startup']['status'], 'FAIL')
+                self.assertEqual(len(result['startup']['samples']), 1)
+                self.assertIn('PIN setup', result['error'])
+                self.assertTrue(result['status']['functional_complete'])
 
 
 class BenchmarkApkTest(unittest.TestCase):

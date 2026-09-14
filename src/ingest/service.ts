@@ -158,9 +158,16 @@ export function importService(driver: Driver) {
     return driver.transaction(async () => { const doc = (await batches()).find(b => b.id === id); if (!doc) throw new Error('That import was not found.'); await driver.execute("UPDATE import_batches SET status='rolled_back' WHERE id=?", [id]); await rebuild(); });
   }
   async function ledger() {
-    const rows = await reconcileAsync((await batches()).filter(b => b.status === 'committed'));
+    return ledgerFromBatches(await batches());
+  }
+  async function ledgerFromBatches(documents: Batch[]) {
+    const rows = await reconcileAsync(documents.filter(b => b.status === 'committed'));
     const labels = new Map((await queryPages(driver,'SELECT t.id,c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id ORDER BY t.id')).map(r => [String(r.id), r.name === null ? null : String(r.name)]));
     return rows.map(r => ({ ...r, category: labels.has(r.id) ? labels.get(r.id)! : r.category }));
+  }
+  async function workspace() {
+    const pending = await files(), documents = await batches();
+    return { files: pending, batches: documents, ledger: await ledgerFromBatches(documents) };
   }
   async function stageFile(fileName: string, data: string, fileHash: string, sessionId = hash('session:'+fileHash)) {
     if (!/^[a-f0-9]{64}$/.test(fileHash) || data.length > 27962032) throw new Error('File is too large or its identity is invalid. Choose a file below 20 MB.');
@@ -185,5 +192,5 @@ export function importService(driver: Driver) {
   async function commitSession(ids: string[]) { return driver.transaction(async()=> { const results=[]; for(const id of ids) results.push(await commitUnlocked(id)); return results; }); }
   async function reminderDay(): Promise<number|null> { const r=(await driver.query("SELECT value FROM app_settings WHERE key='update-reminder'"))[0]; if(!r)return null;const value=JSON.parse(String(r.value)) as unknown;return typeof value==='number' && Number.isInteger(value)&&value>=0&&value<=6?value:null; }
   async function setReminderDay(day:number|null) { if(day!==null&&(!Number.isInteger(day)||day<0||day>6))throw new Error('Choose a weekday.');await driver.execute("INSERT OR REPLACE INTO app_settings(key,value) VALUES('update-reminder',?)",[JSON.stringify(day)]); }
-  return { leaveCategoriesUnassigned, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
+  return { workspace, leaveCategoriesUnassigned, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
 }
