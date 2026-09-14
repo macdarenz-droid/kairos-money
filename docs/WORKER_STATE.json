@@ -1,22 +1,25 @@
 {
   "contract": "Autonomous continuation authorized 2026-09-14",
   "phase": "Session 4 integrated private-v1 completion",
-  "latest_continuation": "Frozen UI contract repair, separate Quick modal regression, no search autofocus, receipt attachment copy and visible saved confirmation.",
-  "latest_source_evidence": "21 focused tests PASS including unchanged frozen Session 2 hashes, camera, both-theme attachment persistence, separate Quick modal regression. Lint, strict TypeScript and release configuration PASS. Combined native acceptance remains OPEN.",
-  "lease": null,
+  "latest_continuation": "Resolving exact native failure from candidate 2be52d7; preserving all source and frozen acceptance checks.",
+  "latest_source_evidence": "Run 34821106864 source gate PASS (262 tests reported by prior context); Android compile, lint, signature, startup execution and seven preceding native classes ran. Intelligence capture failed before remaining native classes.",
+  "lease": {
+    "owner": "kairos-money-hourly",
+    "expires_at": "2026-09-14T09:32:00Z"
+  },
   "automation_enabled": true,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",
   "mode": "Single hourly Money worker",
-  "candidate_sha": "a9a8e35d08a652721750f3ea3dbb3092e8967a32",
-  "candidate_tree": "b923723bdd04bb786998a6ec43100e217d1d998a",
-  "run_id": 34819848337,
+  "candidate_sha": "2be52d786bd4bfce851d2195131ddd3a713495f1",
+  "candidate_tree": "20bc6fb317c6ec0bd81ad7f0354c7ed1eb54eda5",
+  "run_id": 34821106864,
   "run_result": "failure",
   "integration_checkpoint_sha": "92450fef8f6856c1590f73fb730c43f976c05153",
-  "integration_local_checkpoint": "2ca22a9",
-  "integration_delivery_status": "Integrated replacement being published from this checkpoint; resolve current branch head and workflow before continuing.",
-  "before_checkpoint": "e341627b2e94f5924d2a1439e040577f44ecd846",
-  "local_checkpoint": "ce8cbe1a1ea3855f060e6fe42f7c450ddbed5641",
-  "last_result": "Prior source gate: 261 passed, one frozen-file hash failure; Android skipped. Repair in current worktree.",
-  "local_validation": "21 focused tests PASS including unchanged frozen Session 2 hashes, camera, both-theme attachment persistence, separate Quick modal regression. Lint, strict TypeScript and release configuration PASS. Combined native acceptance remains OPEN.",
-  "next_action": "Validate and publish integrated replacement; resolve its full native evidence without polling within a run. Finish Session 4, then accepted Money Analysis/quiet coaching, then final usability pass. Preserve signing prerequisite and deferred notification capture."
+  "integration_local_checkpoint": "598cd0f",
+  "integration_delivery_status": "Repairing the exact failed Android evidence assertion; no milestone PASS claimed.",
+  "before_checkpoint": "2be52d786bd4bfce851d2195131ddd3a713495f1",
+  "local_checkpoint": "598cd0f",
+  "last_result": "Latest gate failed because clearing/restoring FLAG_SECURE during a screenshot changed the distress heading position after the captured frame. Startup samples also exceeded thresholds (2636 ms fresh, 2279 ms median); retain the threshold and remeasure.",
+  "local_validation": "Source gate PASS; Android build/lint/signature PASS. Native PinRecovery, Foundation, KeyProtection, Hardening, Import, LargeImport and Revision suites PASS. Full native acceptance remains OPEN.",
+  "next_action": "Make heading visibility verification occur in the same unsecured committed frame that is captured, preserving FLAG_SECURE outside synthetic evidence. Publish one coherent repair and let the full gate remeasure startup. Continue remaining Session 4, Analysis and usability scope after gate resolution."
 }
