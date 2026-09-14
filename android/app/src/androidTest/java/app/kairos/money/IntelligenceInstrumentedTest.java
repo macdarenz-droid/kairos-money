@@ -49,6 +49,24 @@ public class IntelligenceInstrumentedTest {
         String button = "Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===" + JSONObject.quote(name) + ")";
         awaitJs("Boolean(" + button + ")"); js(button + ".click()");
     }
+    /** Wait for the target to remain visible across frames, including asynchronous layout. */
+    private void captureHeading(String heading, String name) throws Exception {
+        String element = "Array.from(document.querySelectorAll('h2')).find(e=>e.textContent===" + JSONObject.quote(heading) + ")";
+        awaitJs("Boolean(" + element + ")");
+        js(element + ".scrollIntoView({behavior:'instant',block:'start'})");
+        String visible = "(()=>{const e=" + element + ";if(!e)return false;const r=e.getBoundingClientRect();const nav=document.querySelector('nav');const bottom=nav?nav.getBoundingClientRect().top:innerHeight;return r.top>=0 && r.bottom<bottom;})()";
+        long deadline = System.currentTimeMillis() + 15000;
+        int stable = 0;
+        while (System.currentTimeMillis() < deadline && stable < 4) {
+            if ("true".equals(js(visible))) stable++;
+            else { stable = 0; js(element + ".scrollIntoView({behavior:'instant',block:'start'})"); }
+            Thread.sleep(150);
+        }
+        assertEquals("Heading must remain visible before capture: " + heading, 4, stable);
+        NativeEvidence.capture(activity, name);
+        assertEquals("Heading moved during capture: " + heading, "true", js(visible));
+    }
+
     private void input(String label, String value) throws Exception {
         awaitJs("Array.from(document.querySelectorAll('label')).some(x=>x.textContent.startsWith(" + JSONObject.quote(label) + ") && x.querySelector('input'))");
         String script = "(()=>{const l=Array.from(document.querySelectorAll('label')).find(x=>x.textContent.startsWith(" + JSONObject.quote(label) + "));const i=l.querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(i," + JSONObject.quote(value) + ");i.dispatchEvent(new Event('input',{bubbles:true}));})()";
@@ -149,8 +167,7 @@ public class IntelligenceInstrumentedTest {
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-entry");click("Save transaction");
                 awaitJs("!document.querySelector('dialog')");click("Ledger");
                 awaitJs("document.body.innerText.includes('Synthetic manual purchase "+theme+"')");
-                js("Array.from(document.querySelectorAll('h2')).find(e=>e.textContent==='Manual transactions').scrollIntoView()");
-                NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-history");click("Edit");input("Amount","15.00");
+                captureHeading("Manual transactions",theme.toLowerCase()+"-manual-history");click("Edit");input("Amount","15.00");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-edit");click("Save transaction");awaitJs("!document.querySelector('dialog')");
                 click("Match with statement");awaitJs("document.body.innerText.includes('No imported entry with the same account')");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-match");js("document.querySelector('dialog .icon-button').click()");
@@ -162,21 +179,42 @@ public class IntelligenceInstrumentedTest {
     @Test public void c_monthlyVisualEvidence() throws Exception {
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a->activity=a);unlock();
+            // Reuse settled source rows: preserve amounts, coverage and existing profile assertions.
+            click("Ledger");
+            DatabaseDigest.transaction(activity, db -> {
+                for (int offset : new int[]{28,14,0}) {
+                    String id = "s3-" + java.time.LocalDate.now().minusDays(offset) + "-essential";
+                    android.content.ContentValues values = new android.content.ContentValues();
+                    values.put("raw_description", "Synthetic fortnightly membership");
+                    assertEquals("Recurring fixture requires an existing settled source row", 1,
+                        db.update("transactions", values, "id=?", new String[]{id}));
+                }
+                return null;
+            });
             for(String theme:new String[]{"Light","Dark"}) {
                 click("You");click(theme);awaitJs("Boolean(document.querySelector('.money-visuals select'))");
                 js("(()=>{const e=document.querySelector('.money-visuals select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
                 awaitJs("Boolean(document.querySelector('.fingerprint'))");
                 for(String heading:new String[]{"Money Fingerprint","Daily cashflow","Spending after payday","Recurring payment timeline","Spending by category","What changed","Recurring costs","Upcoming bills","Merchant history","Recorded net worth"}) {
-                    js("Array.from(document.querySelectorAll('h2')).find(e=>e.textContent==="+JSONObject.quote(heading)+").scrollIntoView()");
-                    NativeEvidence.capture(activity,theme.toLowerCase()+"-monthly-"+heading.toLowerCase().replace(' ','-'));
+                    if (heading.equals("Recurring payment timeline")) {
+                        awaitJs("Array.from(document.querySelectorAll('svg[aria-label]')).some(e=>e.getAttribute('aria-label').startsWith('synthetic fortnightly membership:') && e.querySelectorAll('circle').length>0)");
+                    }
+                    captureHeading(heading,theme.toLowerCase()+"-monthly-"+heading.toLowerCase().replace(' ','-'));
                 }
                 js("(()=>{const e=document.querySelector('.money-visuals input[type=range]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'1');e.dispatchEvent(new Event('input',{bubbles:true}));})()");
                 awaitJs("document.querySelector('.money-visuals input[type=range]').value==='1'");
                 js("document.querySelector('.money-visuals').scrollIntoView()");NativeEvidence.capture(activity,theme.toLowerCase()+"-monthly-comparison");
                 click("Record a value");input("Item name","Synthetic valuation "+theme);input("Valuation date","2026-01-01");input("Positive value or amount owed","12000.00");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-valuation-entry");click("Save value");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Latest recorded total')");
-                js("Array.from(document.querySelectorAll('h2')).find(e=>e.textContent==='Recorded net worth').scrollIntoView()");NativeEvidence.capture(activity,theme.toLowerCase()+"-valuation-history");
-                js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Manage recorded values').click()");click("Remove");click("Remove value");awaitJs("!document.querySelector('dialog') && !document.body.innerText.includes('Synthetic valuation "+theme+"')");
+                awaitJs("document.body.innerText.includes('One valuation date recorded')");
+                captureHeading("Recorded net worth",theme.toLowerCase()+"-valuation-history");
+                click("Record a value");
+                js("(()=>{const e=document.querySelector('dialog select');e.value=e.options[1].value;e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+                input("Valuation date","2026-02-01");input("Positive value or amount owed","12500.00");click("Save value");
+                awaitJs("!document.querySelector('dialog') && Boolean(document.querySelector('svg[aria-label^=\"Recorded net worth\"]')) && !document.body.innerText.includes('One valuation date recorded')");
+                captureHeading("Recorded net worth",theme.toLowerCase()+"-valuation-two-dates");
+                js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Manage recorded values').click()");click("Remove");click("Remove value");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('One valuation date recorded')");
+                js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Manage recorded values').parentElement.open=true");click("Remove");click("Remove value");awaitJs("!document.querySelector('dialog') && !document.body.innerText.includes('Synthetic valuation "+theme+"')");
                 click("Ledger");click("Change categories");awaitJs("Boolean(document.querySelector('dialog input[type=checkbox]'))");
                 js("document.querySelector('dialog input[type=checkbox]').click()");NativeEvidence.capture(activity,theme.toLowerCase()+"-bulk-categories");
                 js("document.querySelector('dialog .icon-button').click()");

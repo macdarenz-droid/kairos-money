@@ -1,3 +1,9 @@
+## Stronger native visual acceptance checks
+
+The next combined gate now waits for each requested heading to stay in the visible viewport before capturing, and checks it again after capture. This addresses the previously misplaced light manual-history screenshot and applies to monthly charts and valuation history in both themes.
+
+The monthly fixture reuses three existing equal settled payments 14 days apart as a synthetic recurring merchant, preserving their amounts and coverage. The timeline capture now requires populated payment markers. Valuation evidence now covers a single date, a second date for the same holding, and removal back to a single date before cleanup. Earlier acceptance assertions remain intact. These are prepared instrumentation changes, not new screenshots or a native PASS; camera, launcher, accessibility, performance, remaining product work and private-release acceptance remain OPEN. No new gate launched. Full source regression: 222 tests in 49 files PASS; lint and production build PASS. Android compilation/execution unavailable locally, so the new instrumentation remains unverified.
+
 ## Gate review and chart follow-up
 
 Workflow 34796042182 PASS on candidate 7c83aa3438e1ba09873115291961663c92bcefcd. Downloaded APK/evidence archive digests match GitHub. Native encryption, manual-entry journey, PIN recovery, backup/reset/restore and deletion pass. Reviewed 38 new manual/chart/bulk/valuation screenshots; see docs/evidence/session4-gate-34796042182.json for hashes and limits. Camera and actual launcher-widget proof are absent; light manual-history capture does not reach the intended section; recurring timeline is only captured empty. These remain OPEN.
