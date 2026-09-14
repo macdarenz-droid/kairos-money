@@ -14,6 +14,8 @@ Implement this pass after Session 4, all 36 Money Analysis capabilities, the six
 
 The quiet-coaching presentation remains declarative: observations and concepts, without questions or acceptance/action buttons. Input shortcuts elsewhere must not introduce coaching response buttons.
 
+The app-wide input scan, including the interaction cost of each flow read from source and the one-tap candidates, is in [LAZY_USER_SCAN.md](LAZY_USER_SCAN.md). Its counts are source-derived, not device baselines, and do not satisfy the measured baseline this document requires.
+
 ## Preliminary source findings and candidates
 
 | Flow and source | Observed today | Candidate improvement to evaluate later |
