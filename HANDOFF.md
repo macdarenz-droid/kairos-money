@@ -1,3 +1,7 @@
+# Manual widget-input repair — 14 September 2026
+
+Run 34834884401 at 2346ad1 passed source, Android compilation/lint/signatures, startup, Intelligence and accessibility. Acceptance reached the real hosted widget, but View.performClick did not dispatch its PendingIntent on this run, so Add transaction never opened. The test now injects a real touchscreen down/up at the laid-out widget action centre and requires Android to accept both events before checking the existing Quick Add dialog assertion. The direct final task finish from 2346ad1 remains. Automation stays disabled.
+
 # Manual continuation — 14 September 2026
 
 The Kairos Money automation is disabled by explicit user request. Run 34832684247 at b2de377 passed the complete source gate, Android compilation/lint/signatures, startup, Intelligence and accessibility. The widget rendered and its real PendingIntent opened Add transaction. Final Acceptance teardown then failed because ActivityScenario could not force its tracked singleTask activity from PAUSED to RESUMED. The repair finishes the tracked task directly after all widget assertions and requires DESTROYED within 15 seconds. This preserves every functional assertion and removes the invalid intermediate lifecycle demand. Replacement native evidence remains required.

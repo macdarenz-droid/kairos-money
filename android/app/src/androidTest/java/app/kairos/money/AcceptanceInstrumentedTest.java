@@ -8,6 +8,9 @@ import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
 import android.graphics.Bitmap;
 import android.os.ParcelFileDescriptor;
+import android.os.SystemClock;
+import android.view.InputDevice;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -99,7 +102,16 @@ public class AcceptanceInstrumentedTest {
             CountDownLatch attached=new CountDownLatch(1);activity.runOnUiThread(()->{host.startListening();shown[0]=host.createView(activity,id,manager.getAppWidgetInfo(id));int height=Math.round(130*activity.getResources().getDisplayMetrics().density);activity.addContentView(shown[0],new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,height));attached.countDown();});
             assertTrue("Quick-add widget did not render",attached.await(15,TimeUnit.SECONDS));Thread.sleep(500);
             View add=shown[0].findViewById(R.id.widget_add);assertNotNull("Quick-add widget action is missing",add);assertEquals("Add transaction",String.valueOf(((android.widget.TextView)add).getText()));
-            screenshot("dark-launcher-widget");activity.runOnUiThread(add::performClick);awaitJs("Boolean(document.querySelector('dialog')) && document.body.innerText.includes('Add transaction')");screenshot("dark-widget-unlocked-entry");js("document.querySelector('dialog .icon-button').click()");
+            screenshot("dark-launcher-widget");
+            int[] center=new int[2];boolean[] visible=new boolean[1];CountDownLatch located=new CountDownLatch(1);
+            activity.runOnUiThread(()->{int[] location=new int[2];add.getLocationOnScreen(location);center[0]=location[0]+add.getWidth()/2;center[1]=location[1]+add.getHeight()/2;visible[0]=add.isShown()&&add.getWidth()>0&&add.getHeight()>0;located.countDown();});
+            assertTrue("Quick-add widget action was not laid out",located.await(15,TimeUnit.SECONDS)&&visible[0]);
+            long downTime=SystemClock.uptimeMillis();UiAutomation input=InstrumentationRegistry.getInstrumentation().getUiAutomation();
+            MotionEvent down=MotionEvent.obtain(downTime,downTime,MotionEvent.ACTION_DOWN,center[0],center[1],0);down.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+            MotionEvent up=MotionEvent.obtain(downTime,SystemClock.uptimeMillis(),MotionEvent.ACTION_UP,center[0],center[1],0);up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+            assertTrue("Android rejected the widget touch down",input.injectInputEvent(down,true));
+            assertTrue("Android rejected the widget touch up",input.injectInputEvent(up,true));down.recycle();up.recycle();
+            awaitJs("Boolean(document.querySelector('dialog')) && document.body.innerText.includes('Add transaction')");screenshot("dark-widget-unlocked-entry");js("document.querySelector('dialog .icon-button').click()");
         } finally {activity.runOnUiThread(()->{if(shown[0]!=null&&shown[0].getParent() instanceof ViewGroup)((ViewGroup)shown[0].getParent()).removeView(shown[0]);host.stopListening();host.deleteAppWidgetId(id);});}
     }
     @Test public void launchResumeAndRealDocumentExport() throws Exception {
