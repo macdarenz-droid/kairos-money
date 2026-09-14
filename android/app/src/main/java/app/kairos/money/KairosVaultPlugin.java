@@ -153,7 +153,7 @@ public class KairosVaultPlugin extends Plugin {
         String theme = call.getString("theme", "system");
         if (!theme.equals("system") && !theme.equals("dark") && !theme.equals("light")) { call.reject("Unknown theme."); return; }
         if (!getContext().getSharedPreferences("kairos-appearance", Context.MODE_PRIVATE).edit().putString("theme", theme).commit()) { call.reject("Could not save appearance."); return; }
-        getActivity().runOnUiThread(() -> ((MainActivity) getActivity()).applyAppearance());
+        getActivity().runOnUiThread(() -> ((MainActivity) getActivity()).applyAppearance(true));
         if (Build.VERSION.SDK_INT >= 31) {
             UiModeManager manager = (UiModeManager) getContext().getSystemService(Context.UI_MODE_SERVICE);
             manager.setApplicationNightMode(theme.equals("dark") ? UiModeManager.MODE_NIGHT_YES : theme.equals("light") ? UiModeManager.MODE_NIGHT_NO : UiModeManager.MODE_NIGHT_AUTO);

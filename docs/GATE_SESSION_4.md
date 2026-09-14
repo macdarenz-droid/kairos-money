@@ -1,5 +1,7 @@
 # Session 4 gate — OPEN
 
+Run 34809849810: source gate, Android compilation/lint and debug APK signature verification PASS. The fresh-install emulator launch measured 2,149 ms against the unchanged 2,000 ms limit, so the runner stopped before instrumentation. The next source candidate defers widget IPC plus OCR and notification plugin reflection until immediately after the first draw; vault status and quick-launch intent handling remain on the launch path, and theme changes still update the widget. The limit and failure behavior are unchanged. This optimization has not yet produced native timing evidence.
+
 Current local integrated candidate: **260/260 source tests PASS across 60 files** with one worker. The unchanged six-order import invariant passed in 33.482 seconds; the 20,000-row synthetic reconciliation completed in 1.939 seconds and the provenance snapshot in 0.631 seconds. Lint, strict TypeScript, production build, schema/generated-file diff and release-configuration checks pass. Main JavaScript is 497.11 kB without a warning. These local measurements are not Android device evidence.
 
 Version `1.0.0-rc.1` / code 4 is prepared with fail-closed external release signing. `preReleaseBuild` requires the keystore path, store password, key alias and key password; release cannot fall back to the debug certificate or an unsigned APK. Actual release compilation, certificate continuity, APK signature verification and install/E2E remain OPEN for the combined gate. Local Gradle could not run because its distribution is unavailable in this runtime.
