@@ -20,7 +20,27 @@ public class AccessibilityInstrumentedTest {
     @Test public void majorScreensRemainNamedAndOperableAtTwoHundredPercentText() throws Exception {
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a->activity=a);inputPin();activity.runOnUiThread(()->activity.getBridge().getWebView().getSettings().setTextZoom(200));
-            try {for(String tab:new String[]{"Today","Ledger","Quick","Insights","You"}){click(tab);awaitJs("document.querySelector('nav [aria-current=page]').textContent.trim()==="+JSONObject.quote(tab));assertEquals("0",js("Array.from(document.querySelectorAll('button')).filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.height&&(r.width<44||r.height<44)}).length"));assertEquals("0",js("Array.from(document.querySelectorAll('button,input,select,textarea')).filter(e=>{const r=e.getBoundingClientRect();if(!r.width||!r.height)return false;if(e.matches('button'))return !e.textContent.trim()&&!e.getAttribute('aria-label');return !e.labels?.length&&!e.getAttribute('aria-label')}).length"));assertEquals("false",js("document.documentElement.scrollWidth>window.innerWidth"));NativeEvidence.capture(activity,"text-200-"+tab.toLowerCase());}}
+            try {
+                for(String tab:new String[]{"Today","Ledger","Quick","Insights","You"}) {
+                    String previousPage=js("document.querySelector('nav [aria-current=page]').textContent.trim()");
+                    click(tab);
+                    if("Quick".equals(tab)) {
+                        awaitJs("Boolean(document.querySelector('dialog[open] h2')?.textContent.trim()==='Quick')");
+                        assertEquals("Quick preserves the underlying page",previousPage,js("document.querySelector('nav [aria-current=page]').textContent.trim()"));
+                    } else {
+                        awaitJs("document.querySelector('nav [aria-current=page]').textContent.trim()==="+JSONObject.quote(tab));
+                    }
+                    assertEquals("0",js("Array.from(document.querySelectorAll('button')).filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.height&&(r.width<44||r.height<44)}).length"));
+                    assertEquals("0",js("Array.from(document.querySelectorAll('button,input,select,textarea')).filter(e=>{const r=e.getBoundingClientRect();if(!r.width||!r.height)return false;if(e.matches('button'))return !e.textContent.trim()&&!e.getAttribute('aria-label');return !e.labels?.length&&!e.getAttribute('aria-label')}).length"));
+                    assertEquals("false",js("document.documentElement.scrollWidth>window.innerWidth"));
+                    NativeEvidence.capture(activity,"text-200-"+tab.toLowerCase());
+                    if("Quick".equals(tab)) {
+                        js("document.querySelector('dialog[open] button[aria-label=\"Close Quick\"]').click()");
+                        awaitJs("!document.querySelector('dialog[open]')");
+                        assertEquals(previousPage,js("document.querySelector('nav [aria-current=page]').textContent.trim()"));
+                    }
+                }
+            }
             finally {activity.runOnUiThread(()->activity.getBridge().getWebView().getSettings().setTextZoom(100));}
         }
     }

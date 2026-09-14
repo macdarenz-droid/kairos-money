@@ -1,5 +1,9 @@
 # Gated roadmap
 
+## Accepted final usability pass — after all agreed implementations
+
+After Session 4, all 36 Money Analysis capabilities, the six quiet-coaching concepts and other accepted conversation additions are implemented, audit the complete app as a low-effort everyday user. Reduce navigation, taps, repeated typing and date entry without removing any feature. Retain advanced controls and financial correctness. The user authorizes a preliminary scan now, with final implementation and a complete rescan after the agreed feature set exists. See [LOW_EFFORT_USABILITY.md](LOW_EFFORT_USABILITY.md) for the initial source audit, candidate improvements and acceptance method. This does not replace or close any existing milestone, start the deferred redesign now, or authorize gate polling.
+
 The user-supplied four-session brief governs this project. Do not advance until the previous session gate is PASS. Every session ends with runnable/installable artifacts, HANDOFF.md, ADRs, regenerated schema and a criterion-by-criterion gate report. No shipped synthetic data, guesses, placeholder implementations or unresolved failing tests.
 
 ## Delivery model — revised at the user’s request
