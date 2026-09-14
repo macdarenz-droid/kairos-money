@@ -1,5 +1,11 @@
 # Session 4 performance evidence — incomplete
 
+## Materialized-ledger scope repair
+
+Candidate `a7f34a0` failed run **34859716515** functionally, not on timing: the unscoped materialized read raised "Stored transaction evidence is incomplete" and emptied the Ledger. Scoping both reads to batches holding a staged source document restores it.
+
+The scope is resolved once per load. Per-row alternatives were measured on the same machine against a **666 ms** unscoped baseline: correlated `EXISTS` **824 ms**, direct `JOIN` **890 ms**, non-correlated `IN` **4,467 ms**. Resolving it once costs about **700 ms** (679, 690, 699, 716, 744 ms), roughly 5% over baseline and well inside the 5-second source ceiling. The 10-second combined Android budget is untouched. Device load and frame timings still require measurement.
+
 ## Green full journey and materialized-ledger repair
 
 Run **34853883508**, candidate **00d17faf**, passed the complete Android journey and cleanup. Startup passed at **1,695 ms median** and **1,977 ms fresh install**. The 40-page PDF completed in **3,972 ms** with visible progress, WebView responsiveness and activity-recreation continuity.
