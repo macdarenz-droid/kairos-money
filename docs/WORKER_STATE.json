@@ -1,8 +1,8 @@
 {
   "contract": "Manual continuation; V16 suspended by user",
   "phase": "Session 4 integrated private-v1 completion",
-  "latest_continuation": "Session 4 original-currency evidence: exact implied rates, source-sheet edit/removal, inactive changed transactions, safe malformed-note removal, backup/rollback/reimport. Statement-only coaching preference retained for the later Money Analysis milestone.",
-  "latest_source_evidence": "Final clean full regression: 246 tests in 57 files PASS. Final lint, strict type checking, production build, schema generation and diff check PASS. Main JavaScript is 497.85 kB with no chunk warning. Native execution remains OPEN.",
+  "latest_continuation": "Session 4 confirmed refund links: whole credits and multiple partial refunds, exact purchase-cohort net totals, derived non-income classification, cross-account and salary-conflict safeguards, backup/rollback/reimport. Six declarative coaching concepts and savings scenarios retained for the later Money Analysis session.",
+  "latest_source_evidence": "Full regression PASS: 253 tests in 59 files. Lint, strict production build, schema generation and diff check PASS. Main JavaScript is 498.38 kB, without a chunk warning. Native refund linking remains OPEN.",
   "lease": null,
   "automation_enabled": false,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",

@@ -266,6 +266,10 @@ Encrypted app_settings category-edit:<canonical-transaction-id> stores the selec
 
 Encrypted app_settings cancellation:<JSON currency/merchant pair> stores normalized merchant, currency, requested/provider-confirmed status, contact/confirmation date and note. Entries are included in full export, backup, restore and deletion. They do not alter transactions, coverage, observed bills or forecast amounts. Records remain visible without an active detected pattern; later covered settled debits link back to statement evidence. See ADR/0024-cancellation-records.md.
 
+## Confirmed refund links
+
+Encrypted app_settings refund:<credit-id> holds the original purchase id and both source amounts, currencies, account ids and dates. Only settled imported non-transfer credits and earlier same-currency purchases are eligible. Whole credits link once; multiple partial refunds cannot exceed the original purchase. Payslip-linked salary is excluded. Changed, missing, malformed or over-refunded sources make links inactive. Snapshot classification is derived as refund without writing ledger categories; original cash movements remain intact. Purchase-cohort net totals may include later refunds through the analysis date and are distinct from period cashflow. Backup and exact rollback/reimport preserve metadata. See ADR/0029-confirmed-refund-links.md.
+
 ## Recorded original currency
 
 Encrypted app_settings foreign-amount:<transaction-id> holds posted amount/currency, original positive amount/currency and a required source note. Reads are active only while the settled transaction matches the saved posted values. Exact rational implied rates are derived in major currency units, with a rounded six-decimal display; no live quote, fee inference or ledger conversion. Settings survive source rollback/reimport and encrypted backup. Transaction FX columns remain reserved and unchanged, preventing reconciliation from silently dropping user notes. See ADR/0028-recorded-original-currency.md.

@@ -1,0 +1,11 @@
+# ADR 0029 — Explicit refund links and purchase-cohort totals
+
+A settled imported credit may be explicitly linked to one earlier purchase in the same currency, including another account. Several partial refunds may link to one purchase, but their complete credits cannot exceed its original amount. This workflow does not allocate a single credit between purchases or label ambiguous bank wording automatically. Payslip-linked credits are ineligible, including if the payslip link is created after the refund annotation.
+
+Encrypted settings bind each link to both source identities, signed amounts, currency, accounts and dates. Changed/missing/pending/transfer sources, malformed metadata and over-refunded groups are inactive. Reconciliation retains the annotation independently; exact reimport reactivates it. Save validates within one transaction; conflicting changes roll back. Remove deletes only the relation. Original ledger/source/category/coverage rows are not rewritten.
+
+Snapshot readers give active refund credits the derived refund kind and original purchase id, excluding them from income classification. Cashflow keeps the actual positive movement on its posted date. Gross purchase counts, merchant/timing charts, category allocations and expense signals keep the original negative payments. The observed-spending view additionally shows refunds linked to the selected purchases through the analysis date and the resulting purchase-cohort net total. Later refunds can adjust a selected earlier purchase; this is explicitly not the selected period's cashflow. No refunds are projected as future income.
+
+Repository loading is deferred; no-link snapshots avoid reading the complete refund source graph. Candidate UI searches by merchant/date/account and limits the visible option list to 100, with ordinary currency formatting. Invalid saved links can be reviewed or removed without deleting either payment.
+
+Tests cover exact partial/full totals, excess rejection, source immutability, derived classification, period/account boundaries, salary conflicts, changed statuses/amounts, malformed metadata, backup/rollback/reimport and both-theme confirmation/removal. The native source sheet adds purchase-refund capture; full native linking proof remains open for the combined E2E. Session 4 is not closed by this source work.

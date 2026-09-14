@@ -25,7 +25,9 @@ export function repository(driver: Driver) {
     const rows = (await driver.query(sql, values(params))).map(row => Object.values(row));
     return { rows: method === 'get' ? (rows[0] ?? []) : rows };
   }, { schema });
+  const refunds=()=>import('../../ledger/refunds').then(m=>m.refundRepository(driver));
   return {
+    refunds:{read:async(id:string)=>(await refunds()).read(id),save:async(creditId:string,purchaseId:string)=>(await refunds()).save(creditId,purchaseId),remove:async(id:string)=>(await refunds()).remove(id)},
     imports: importService(driver),
     manual: manualRepository(driver),
     notifications: notificationRepository(driver),

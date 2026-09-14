@@ -1,3 +1,11 @@
+## Session 4 — confirmed refunds
+
+Added explicit source-credit refund linking to an earlier same-currency imported purchase, including another account. Multiple partial credits are supported up to the full purchase amount. Payslip-linked salary, wrong-direction/pending/transfer sources and excess totals are rejected. Source amounts, categories, provenance and cashflow dates stay intact. Links survive backup and exact source rollback/reimport; changed or malformed links become inactive and remain removable.
+
+Analysis derives a refund classification instead of income and shows selected purchases after their confirmed refunds through the analysis date. Original merchant/timing/category counts and charts remain gross; later refunds are not incorrectly moved into the purchase month's cashflow or projected as future income. Both-theme source tests cover confirmation/removal, while native capture now includes the purchase-refund section. Actual native linking remains OPEN.
+
+Continue the original Session 4 scope, including verified-account net-worth ownership, remaining product/accessibility/hardening/performance, camera/widget/device evidence and the signed private release. No new gate or worker launched. The 36-feature Money Analysis and six quiet coaching concepts remain accepted for the following session; no coaching implementation has begun. See ADR/0029-confirmed-refund-links.md. Full regression PASS: 253 tests in 59 files. Lint, strict production build, schema generation and diff check PASS. Main JavaScript is 498.38 kB, without a chunk warning. Native refund linking remains OPEN.
+
 ## Session 4 — original-currency evidence
 
 The source transaction sheet now records an original foreign amount and source note, shows an exact-ratio implied rate rounded to six decimals, and supports edit/removal. Posted account amounts, source records, coverage and fees are unchanged. The note survives encrypted backup and rollback/reimport; changed posted values make its rate inactive. Malformed records fail safely and can be removed independently. Manual split UI loads on demand to keep startup code below the existing bundle warning threshold.

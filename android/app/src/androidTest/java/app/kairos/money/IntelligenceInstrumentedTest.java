@@ -262,6 +262,7 @@ public class IntelligenceInstrumentedTest {
                 click("Record original amount");input("Original positive amount","10.00");input("Source of original amount","Synthetic receipt for native verification");
                 click("Save original amount");awaitJs("document.body.innerText.includes('Implied rate:')");
                 captureHeading("Original currency",theme.toLowerCase()+"-original-currency");
+                captureHeading("Refunds received",theme.toLowerCase()+"-purchase-refunds");
                 click("Remove original amount");click("Confirm remove original amount");awaitJs("document.body.innerText.includes('Record original amount') && !document.body.innerText.includes('Implied rate:')");
                 js("document.querySelector('dialog .icon-button').click()");
 
