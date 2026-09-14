@@ -81,10 +81,18 @@ public class LedgerPerformanceInstrumentedTest {
     private void checkpoint(String phase,JSONArray samples,Throwable error) throws Exception {
         lastPhase=phase;
         File directory=new File(activity.getExternalFilesDir(null),"evidence");assertTrue(directory.exists()||directory.mkdirs());
+        // The fixture is parsed inside the app process, so its Java objects compete with the WebView
+        // renderer for device memory. A renderer crash during "ledger load" recorded 172 MB of a 192 MB
+        // heap here and 418 MB process RSS, so collect before each phase and report both figures: a
+        // large drop means the fixture was collectable garbage, a small one means it is still retained.
+        Runtime runtime=Runtime.getRuntime();
+        long retained=runtime.totalMemory()-runtime.freeMemory();
+        runtime.gc();
         JSONObject report=new JSONObject().put("phase",phase).put("samples",samples)
             .put("cleanup",cleanupSteps)
-            .put("java_heap_used_bytes",Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())
-            .put("java_heap_max_bytes",Runtime.getRuntime().maxMemory());
+            .put("java_heap_used_bytes",retained)
+            .put("java_heap_after_gc_bytes",runtime.totalMemory()-runtime.freeMemory())
+            .put("java_heap_max_bytes",runtime.maxMemory());
         if(error!=null){java.io.StringWriter trace=new java.io.StringWriter();error.printStackTrace(new java.io.PrintWriter(trace));report.put("failure",trace.toString());}
         Files.write(new File(directory,"ledger-20000-progress.json").toPath(),report.toString(2).getBytes(StandardCharsets.UTF_8));
     }
