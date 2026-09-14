@@ -78,7 +78,18 @@ try:
         result = adb('install', '-r', str(ROOT / name))
         if 'Success' not in result:
             raise RuntimeError('APK installation failed: ' + result)
+    adb('shell', 'appwidget', 'grantbind', '--package', 'app.kairos.money')
     adb('shell', 'cmd', 'connectivity', 'airplane-mode', 'enable')
+    adb('shell', 'am', 'force-stop', 'app.kairos.money')
+    cold_launch = adb('shell', 'am', 'start', '-W', '-n', 'app.kairos.money/.MainActivity', timeout=30)
+    cold_match = re.search(r'TotalTime:\s*(\d+)', cold_launch)
+    if cold_match is None:
+        raise RuntimeError('Android did not report a cold-start TotalTime: ' + cold_launch)
+    cold_ms = int(cold_match.group(1))
+    (EVIDENCE / 'android-cold-start.json').write_text(json.dumps({'status': 'PASS' if cold_ms < 2000 else 'FAIL', 'total_time_ms': cold_ms, 'limit_ms': 2000, 'measurement': cold_launch}, indent=2) + '\n')
+    if cold_ms >= 2000:
+        raise RuntimeError('Cold start exceeded 2000 ms: ' + str(cold_ms) + ' ms')
+    adb('shell', 'am', 'force-stop', 'app.kairos.money')
     (EVIDENCE / 'android-webview-provider.txt').write_text(adb('shell', 'dumpsys', 'webviewupdate'))
     instrumentation('PinRecoveryInstrumentedTest', 3)
     instrumentation('FoundationInstrumentedTest', 2)
@@ -86,6 +97,7 @@ try:
     instrumentation('ImportInstrumentedTest', 2)
     instrumentation('RevisionInstrumentedTest', 2)
     instrumentation('IntelligenceInstrumentedTest', 4)
+    instrumentation('AccessibilityInstrumentedTest', 1)
     instrumentation('AcceptanceInstrumentedTest', 1)
     adb('pull', '/sdcard/Android/data/app.kairos.money/files/evidence', str(SCREENS))
     subprocess.run(['node', '--import', 'tsx', str(ROOT / 'scripts/verify-native-ocr.ts'), str(SCREENS)], cwd=ROOT, check=True)
@@ -96,7 +108,7 @@ try:
         'status': 'PASS', 'installed': True, 'instrumentation_executed': True,
         'authentication_bound_key_tests': 1, 'pin_recovery_tests': 3, 'foundation_tests': 2, 'import_tests': 2, 'revision_tests': 2, 'intelligence_tests': 1, 'manual_entry_tests': 1, 'monthly_visual_tests': 1, 'spending_pattern_tests': 1, 'acceptance_tests': 1,
         'forgot_pin_device_tests': 1, 'backup_before_reset_tests': 1, 'backup_after_reset_tests': 1, 'post_delete_tests': 1,
-        'native_encryption_proven': True, 'native_delete_proven': True,
+        'native_encryption_proven': True, 'native_delete_proven': True, 'cold_start_under_2_seconds': True, 'text_zoom_200_percent_tests': 1,
         'real_document_export_proven': True, 'background_unlock': '1 second retained; 61 seconds locked',
         'runner': 'Android 34 emulator; airplane mode enabled',
         'screenshots_require_review': True,

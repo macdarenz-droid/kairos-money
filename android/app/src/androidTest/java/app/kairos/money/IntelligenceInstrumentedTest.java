@@ -193,7 +193,7 @@ public class IntelligenceInstrumentedTest {
                     android.content.ContentValues values = new android.content.ContentValues();
                     values.put("raw_description", "Synthetic fortnightly membership");
                     assertEquals("Recurring fixture requires an existing settled source row", 1,
-                        db.update("transactions", values, "id=?", new String[]{id}));
+                        db.update("transactions", android.database.sqlite.SQLiteDatabase.CONFLICT_NONE, values, "id=?", new Object[]{id}));
                 }
                 return null;
             });
@@ -242,6 +242,7 @@ public class IntelligenceInstrumentedTest {
         }
     }
     @Test public void d_spendingPatternsEvidence() throws Exception {
+        InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission(InstrumentationRegistry.getInstrumentation().getTargetContext().getPackageName(),android.Manifest.permission.CAMERA);
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a->activity=a);unlock();
             for(String theme:new String[]{"Light","Dark"}) {
@@ -271,6 +272,10 @@ public class IntelligenceInstrumentedTest {
                 captureHeading("Original currency",theme.toLowerCase()+"-original-currency");
                 captureHeading("Refunds received",theme.toLowerCase()+"-purchase-refunds");
                 click("Remove original amount");click("Confirm remove original amount");awaitJs("document.body.innerText.includes('Record original amount') && !document.body.innerText.includes('Implied rate:')");
+                click("Take receipt photo");awaitJs("Boolean(document.querySelector('video[aria-label=\"Live receipt camera preview\"]')) && Array.from(document.querySelectorAll('button')).some(e=>e.textContent==='Take photo'&&!e.disabled)");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-receipt-camera-preview");click("Take photo");
+                awaitJs("Boolean(document.querySelector('img[alt=\"Receipt photo to review before attaching\"]'))");NativeEvidence.capture(activity,theme.toLowerCase()+"-receipt-camera-review");
+                click("Cancel camera");awaitJs("!document.querySelector('[aria-label=\"Receipt camera\"]')");
                 js("document.querySelector('dialog .icon-button').click()");
 
             }
