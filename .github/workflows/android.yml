@@ -44,6 +44,11 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          # Google withdrew the obsolete 'tools' package, so the action's default package set now
+          # fails sdkmanager with "Failed to find package 'tools'". adb comes from platform-tools;
+          # the platform and build-tools this gate needs are installed explicitly below.
+          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
       - name: Preserve development signing identity
         uses: actions/cache@v4
