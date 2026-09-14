@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0-rc.1 — Integrated private-v1 candidate
+
+- Added local CSV, OFX, QIF, XLSX and PDF statement ingestion with mandatory review, reconciliation tiers, overlap handling, rollback and visible source evidence.
+- Added encrypted manual expenses, income and transfers; statement matching; bulk categories; exact category splits; notes and receipt attachments; confirmed refunds; and original-currency evidence.
+- Added coverage-aware cashflow, merchant and category views, recurring-payment timelines, bills, payday analysis, forecasts, goals, scenarios and explicit imported-account ownership in net worth.
+- Added opt-in local money notices, recovery-code acknowledgement, encrypted backup/reset/restore, corruption checks and transactional low-storage rollback evidence.
+- Added direct receipt camera review, Android quick-add widget, long-import interruption checks, 20,000-row windowing, 200% text checks and cold-start measurement to the combined native gate.
+- Prepared fail-closed private release signing. Release builds require an explicit keystore path, store password, key alias and key password; there is no debug-key or unsigned fallback.
+
+This is a release candidate. Session 4 remains open until the complete Android gate, screenshot review, signing verification and final private APK evidence pass.
+
 ## 0.1.0 — Session 1 foundation (gate pending native evidence)
 
 - Added React 18, strict TypeScript, Vite, Capacitor 6 and Android project configuration.

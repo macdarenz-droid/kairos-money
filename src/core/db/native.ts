@@ -1,6 +1,7 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 import type { Driver, SqlRow, SqlValue } from './driver';
 import { migrate } from './migrate';
+import { verifyIntegrity } from './integrity';
 import { repository } from './repository';
 import { Vault } from '../crypto/native';
 const name = 'kairos-money';
@@ -38,6 +39,7 @@ export async function openDatabase() {
       async transaction(work) { await db.beginTransaction(); try { const result = await work(); await db.commitTransaction(); return result; } catch (e) { await db.rollbackTransaction(); throw e; } },
     };
     await migrate(driver);
+    await verifyIntegrity(driver);
     connection = db;
     return repository(driver);
   } catch (e) { await sqlite.closeConnection(name, false).catch(() => undefined); throw e; }

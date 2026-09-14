@@ -9,6 +9,7 @@ import java.lang.reflect.Field;
 import java.util.Dictionary;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import android.util.Base64;
 import java.nio.ByteBuffer;
@@ -28,30 +29,37 @@ final class DatabaseDigest {
     interface Operation<T> { T run(SupportSQLiteDatabase db) throws Exception; }
     /** Test-only transaction on the authenticated connection and its owning worker. */
     static <T> T transaction(MainActivity activity, Operation<T> operation) throws Exception {
-        CountDownLatch done = new CountDownLatch(1);
-        AtomicReference<T> result = new AtomicReference<>();
-        AtomicReference<Exception> failure = new AtomicReference<>();
-        activity.getBridge().execute(() -> {
-            try {
-                Object plugin = activity.getBridge().getPlugin("CapacitorSQLite").getInstance();
-                Field implementation = CapacitorSQLitePlugin.class.getDeclaredField("implementation");
-                implementation.setAccessible(true);
-                Field connections = CapacitorSQLite.class.getDeclaredField("dbDict");
-                connections.setAccessible(true);
-                Dictionary<?, ?> dictionary = (Dictionary<?, ?>) connections.get(implementation.get(plugin));
-                Database connection = (Database) dictionary.get("RW_kairos-money");
-                if (connection == null) throw new IllegalStateException("Kairos database connection is not open.");
-                SupportSQLiteDatabase db = connection.getDb();
-                if (db.inTransaction()) throw new IllegalStateException("Ledger writes have not finished before the acceptance snapshot.");
-                db.beginTransaction();
-                try { result.set(operation.run(db)); db.setTransactionSuccessful(); }
-                finally { db.endTransaction(); }
-            } catch (Exception error) { failure.set(error); }
-            finally { done.countDown(); }
-        });
-        if (!done.await(30, TimeUnit.SECONDS)) throw new IllegalStateException("Database snapshot timed out.");
-        if (failure.get() != null) throw failure.get();
-        return result.get();
+        long deadline = System.currentTimeMillis() + 30000;
+        while (System.currentTimeMillis() < deadline) {
+            CountDownLatch done = new CountDownLatch(1);
+            AtomicReference<T> result = new AtomicReference<>();
+            AtomicReference<Exception> failure = new AtomicReference<>();
+            AtomicBoolean busy = new AtomicBoolean();
+            activity.getBridge().execute(() -> {
+                try {
+                    Object plugin = activity.getBridge().getPlugin("CapacitorSQLite").getInstance();
+                    Field implementation = CapacitorSQLitePlugin.class.getDeclaredField("implementation");
+                    implementation.setAccessible(true);
+                    Field connections = CapacitorSQLite.class.getDeclaredField("dbDict");
+                    connections.setAccessible(true);
+                    Dictionary<?, ?> dictionary = (Dictionary<?, ?>) connections.get(implementation.get(plugin));
+                    Database connection = (Database) dictionary.get("RW_kairos-money");
+                    if (connection == null) throw new IllegalStateException("Kairos database connection is not open.");
+                    SupportSQLiteDatabase db = connection.getDb();
+                    if (db.inTransaction()) { busy.set(true); return; }
+                    db.beginTransaction();
+                    try { result.set(operation.run(db)); db.setTransactionSuccessful(); }
+                    finally { db.endTransaction(); }
+                } catch (Exception error) { failure.set(error); }
+                finally { done.countDown(); }
+            });
+            long remaining = deadline - System.currentTimeMillis();
+            if (remaining <= 0 || !done.await(remaining, TimeUnit.MILLISECONDS)) throw new IllegalStateException("Database snapshot timed out.");
+            if (failure.get() != null) throw failure.get();
+            if (!busy.get()) return result.get();
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Ledger writes did not finish before the acceptance snapshot timeout.");
     }
     static String hash(MainActivity activity) throws Exception {
         return transaction(activity, DatabaseDigest::hashConnection);

@@ -1,10 +1,10 @@
 # Kairos Money Tracker
 
-A private, on-device money tracker with exact money math, an encrypted Android ledger, account setup, app lock, export/delete and a quiet two-theme interface. Session 2 adds local file extraction, mandatory import review, reconciliation and reversible commits. Session 2 passed its native gate; Session 2.5 adds export-first updates and has passed its native and both-theme visual gates. Intelligence has not started.
+A private, on-device money tracker with exact money math, an encrypted Android ledger, account setup, app lock, encrypted backup/recovery, export/delete and a quiet two-theme interface. It imports local statements through mandatory review and reversible reconciliation, supports manual history and evidence, and derives coverage-aware charts and insights without sending financial data to a server. Session 4 remains open until its combined native, accessibility, hardening, performance and private-release gate passes.
 
 **Session 1 gate: PASS** on Android 34 AOSP; [verified run](https://github.com/macdarenz-droid/kairos-money/actions/runs/34747556681).
 
-Read `HANDOFF.md` and `docs/GATE_SESSION_2.md` before continuing. A source-test pass is not an Android install/security pass.
+Read `HANDOFF.md` and `docs/GATE_SESSION_4.md` before continuing. A source-test pass is not an Android install/security pass.
 
 ## Run the UI
 
@@ -34,7 +34,20 @@ npm ci
 npm run android:debug
 ```
 
-Output: `android/app/build/outputs/apk/debug/app-debug.apk`. The debug certificate is for development only. CI preserves it through a cache where available. A different signing certificate requires uninstalling the existing debug app; export data before that operation. Release signing is a separate Session 4 task.
+Output: `android/app/build/outputs/apk/debug/app-debug.apk`. The debug certificate is for development only. CI preserves it through a cache where available. A different signing certificate requires uninstalling the existing debug app; export data before that operation. The private release uses a separate protected signing identity.
+
+Private release builds fail closed unless all four signing values are supplied. Keep the keystore and passwords outside Git:
+
+```sh
+export KAIROS_RELEASE_STORE_FILE=/absolute/private/path/kairos-release.jks
+export KAIROS_RELEASE_STORE_PASSWORD='...'
+export KAIROS_RELEASE_KEY_ALIAS='...'
+export KAIROS_RELEASE_KEY_PASSWORD='...'
+cd android
+./gradlew :app:assembleRelease
+```
+
+Output: `android/app/build/outputs/apk/release/app-release.apk`. Verify that exact artifact with Android build-tools `apksigner` before installation. Reuse the same protected keystore for every later update; losing it prevents an in-place upgrade of the installed app.
 
 The GitHub Actions workflow runs source checks, builds/signs a debug APK, runs native encryption and UI tests on an Android 34 emulator, and publishes the APK only after that gate passes. CI evidence is a separate artifact. A newly created destination repository must be accessible to the connected GitHub app before it can receive this source.
 
@@ -65,13 +78,13 @@ It proves encrypted-file behavior on the host, not native Android execution. Nat
 - `core/db`: canonical SQL migrations, typed Drizzle query schema, Capacitor SQLite driver, repositories and export.
 - `core/crypto`: native vault boundary and resume-time policy. Android implements this in `KairosVaultPlugin` / `VaultStore`.
 - `ui/design`: OKLCH tokens, contrast aliases, primitives and persisted theme.
-- `ui/screens`: native lock, account setup, settings and development-only kitchen sink.
+- `ui/screens`: native lock, accounts, import review, manual records, charts, insights, settings and the development-only kitchen sink.
 - `ingest`: offline extraction, parser registry, normalization, encrypted staging, reconciliation and review.
-- `ledger`: deterministic categorisation rules and merchant/MCC suggestions.
+- `ledger`: deterministic categorisation, evidence ownership, transfers, recurring costs, net worth and read-only financial analysis.
 - `tests`: property, database, privacy and interaction verification. Synthetic data never enters the production import graph.
 - `ADR`: rationale for non-obvious choices. `docs/SCHEMA.md` is regenerated from SQL.
 
-Ingest writes staging only until confirmation. Intelligence will consume a read-only ledger interface. SQL writes use the serialized transaction boundary; SQLCipher encryption must never fall back to plain SQLite.
+Ingest writes staging only until confirmation. Intelligence consumes a read-only ledger view and does not change imported evidence. SQL writes use the serialized transaction boundary; SQLCipher encryption must never fall back to plain SQLite.
 
 ## Privacy and recovery
 
@@ -79,7 +92,7 @@ No account, analytics, financial-data network calls or internet permission. A na
 
 Exports contain readable JSON and per-table CSV inside a ZIP and are written to the Android document location explicitly chosen by the user. Keep those files private. Delete all data clears the app's database, files, preferences and keys, then Android closes it. User-created exports outside the app must be deleted separately.
 
-There is no account-based PIN recovery. Encrypted backup/restore is Session 4. iOS configuration is prepared, but a Keychain/LocalAuthentication vault implementation is still required; there is no insecure fallback.
+There is no account-based PIN recovery. Kairos displays a recovery code during setup and can export and restore an authenticated encrypted backup. iOS configuration is prepared, but a Keychain/LocalAuthentication vault implementation is still required; there is no insecure fallback.
 
 ## Weekly export workflow
 
@@ -91,6 +104,6 @@ Leave stated balances blank for transaction exports. Tier A verifies a statement
 
 Pending transactions are retained as commitments. A matching settlement updates the original ID and records its prior values; ambiguous candidates need review. The import result explains additions, already-known transactions and superseded pending rows. An optional local weekday reminder is off by default and skipped while data is fresh. Android may delay delivery; open the app after reboot to restore scheduling.
 
-The new UI uses the existing design primitives. Session 2.5's device/visual acceptance is tracked in `docs/GATE_SESSION_2_5.md`. Do not start Session 3 before that gate passes.
+The app retains the device and visual acceptance established in earlier sessions. The current combined acceptance contract is tracked in `docs/GATE_SESSION_4.md`; Session 4 must remain one integrated candidate until that contract passes.
 
-**Session 2.5 gate: PASS.** 100 source tests, eight native tests and 39 reviewed screenshots. [Regression report](docs/GATE_SESSION_2_5.md) · [Verified workflow](https://github.com/macdarenz-droid/kairos-money/actions/runs/34754456134). Session 3 has not started.
+**Session 2.5 gate: PASS.** 100 source tests, eight native tests and 39 reviewed screenshots. [Regression report](docs/GATE_SESSION_2_5.md) · [Verified workflow](https://github.com/macdarenz-droid/kairos-money/actions/runs/34754456134). Later Session 4 evidence is recorded in the current gate document and CI artifacts.

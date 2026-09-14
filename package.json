@@ -1,6 +1,6 @@
 {
   "name": "kairos-money",
-  "version": "0.2.5",
+  "version": "1.0.0-rc.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -15,7 +15,8 @@
     "lint": "eslint src tests scripts eslint.config.mjs",
     "tokens": "node scripts/tokens.mjs",
     "schema": "node scripts/schema-doc.mjs",
-    "check": "npm run lint && npm run test && npm run build && npm run schema",
+    "release:config": "node scripts/verify-release-config.mjs",
+    "check": "npm run lint && npm run test && npm run build && npm run schema && npm run release:config",
     "android:sync": "npm run build && cap sync android",
     "android:debug": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "dev:fixtures": "tsx scripts/seed-fixtures.ts"

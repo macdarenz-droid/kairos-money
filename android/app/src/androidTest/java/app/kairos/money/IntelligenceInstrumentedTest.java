@@ -51,7 +51,7 @@ public class IntelligenceInstrumentedTest {
     }
     /** Wait for the target to remain visible across frames, including asynchronous layout. */
     private void captureHeading(String heading, String name) throws Exception {
-        String element = "Array.from(document.querySelectorAll('h2')).find(e=>e.textContent===" + JSONObject.quote(heading) + ")";
+        String element = "Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,[role=heading]')).find(e=>e.textContent.trim()===" + JSONObject.quote(heading) + ")";
         awaitJs("Boolean(" + element + ")");
         js(element + ".scrollIntoView({behavior:'instant',block:'start'})");
         String visible = "(()=>{const e=" + element + ";if(!e)return false;const r=e.getBoundingClientRect();const nav=document.querySelector('nav');const bottom=nav?nav.getBoundingClientRect().top:innerHeight;return r.top>=0 && r.bottom<bottom;})()";
