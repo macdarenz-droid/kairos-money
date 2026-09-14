@@ -9,12 +9,14 @@ import type { Driver, SqlRow, SqlValue } from './driver';
  * what the device was doing. This records the shape of each statement and how long it took, never
  * the bound values, so no amount, description or other financial detail is retained.
  */
-const profile = new Map<string, { calls: number; ms: number }>();
+const profile = new Map<string, { calls: number; ms: number; max: number }>();
 const shape = (sql: string) => sql.replace(/\s+/g, ' ').trim().slice(0, 70);
 function record(sql: string, started: number): void {
   if (profile.size > 300) profile.clear();
-  const key = shape(sql), seen = profile.get(key) ?? { calls: 0, ms: 0 };
-  seen.calls += 1; seen.ms += Math.round(performance.now() - started);
+  const key = shape(sql), seen = profile.get(key) ?? { calls: 0, ms: 0, max: 0 };
+  const elapsed = Math.round(performance.now() - started);
+  // `max` separates a shape that is slow on every call from one that stalled once.
+  seen.calls += 1; seen.ms += elapsed; seen.max = Math.max(seen.max, elapsed);
   profile.set(key, seen);
 }
 /** Slowest statement shapes since the last reset, for performance measurement on a real device. */
