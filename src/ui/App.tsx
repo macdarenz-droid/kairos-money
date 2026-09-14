@@ -28,11 +28,13 @@ export default function App() {
   const [importRequest, setImportRequest] = useState(0);
   const consumeImport = useCallback(() => setImportRequest(0), []);
   const dismissToast = useCallback(() => setToast(''), []);
-  const openManual=useCallback(()=>setSheet('manual'),[]);
-  const quickAddError=useQuickAddLaunch(session.state==='ready',openManual);
+  const [quickAddRequest,setQuickAddRequest]=useState<string|null>(null);
+  const openManual=useCallback((requestId:string)=>{setQuickAddRequest(requestId);setSheet('manual');},[]);
   useEffect(followSystem, []);
-  useEffect(() => { if (session.state !== 'ready' && session.state !== 'preview') { setSheet(null); setSearch(''); setToast(''); } }, [session.state]);
+  useEffect(() => { if (session.state !== 'ready' && session.state !== 'preview') { setSheet(null); setQuickAddRequest(null); setSearch(''); setToast(''); } }, [session.state]);
   const accounts = useQuery({ queryKey: ['accounts'], queryFn: () => session.run(repo => repo.accounts()), enabled: session.state === 'ready' });
+  const quickAddDisplayed=(sheet==='manual'&&Boolean(accounts.data?.length))||(sheet==='account'&&accounts.data?.length===0);
+  const quickAddError=useQuickAddLaunch(session.state==='ready',openManual,quickAddDisplayed?quickAddRequest:null);
   const statementData = useQuery({ queryKey: ['coverage-summary'], queryFn: () => session.run(repo => repo.imports.batches()), enabled: session.state === 'ready' });
   useEffect(()=>{if(session.state==='ready' && accounts.data && statementData.data)void session.run(repo=>repo.imports.reminderDay()).then(day=>syncReminder(day,accounts.data!.map(a=>a.id),statementData.data!,localDay())).catch(()=>undefined);},[session.state,accounts.data,statementData.data]);
   useEffect(()=>{if(sheet==='manual' && accounts.data?.length===0)setSheet('account');},[sheet,accounts.data]);

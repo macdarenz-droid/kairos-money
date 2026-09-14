@@ -1,6 +1,18 @@
-# Manual widget-input repair — 14 September 2026
+# Widget delivery and lifecycle repair — 14 September 2026
 
-Run 34834884401 at 2346ad1 passed source, Android compilation/lint/signatures, startup, Intelligence and accessibility. Acceptance reached the real hosted widget, but View.performClick did not dispatch its PendingIntent on this run, so Add transaction never opened. The test now injects a real touchscreen down/up at the laid-out widget action centre and requires Android to accept both events before checking the existing Quick Add dialog assertion. The direct final task finish from 2346ad1 remains. Automation stays disabled.
+Checked completed run 34836848079 once, on candidate 794811a40af5b2bc173061e367b8702f4a05f56f. Source/build/lint/signature checks, startup (1,489 ms median), Intelligence and accessibility pass. Acceptance still fails to open the widget entry and teardown remains PAUSED. Verified the downloaded evidence SHA-256. The log proves QUICK_ADD reached Android; ActivityScenario then explicitly ignored RESUMED and later teardown because MainActivity replaced its original MAIN/LAUNCHER intent. The earlier claim that performClick did not dispatch was not established by the evidence.
+
+This continuation keeps the original activity intent intact and stores a saved-instance pending navigation ID separately. Peek is nondestructive; acknowledgement matches the request ID and occurs only after the unlocked entry or required account setup form is displayed with account data available. A regression reproduced the old pause-before-bridge-completion loss and passes with the new delivery protocol. Stale reads and acknowledgements cannot displace a newer tap.
+
+The same combined Acceptance journey retains real Android touch injection, requires the named open entry, checks original intent/RESUMED tracking, and adds a locked light-theme tap plus recreation before unlock. It verifies acknowledgement and no replay, then uses ordinary ActivityScenario teardown. This is still a hosted RemoteViews widget test; it does not claim home-screen launcher placement. No timing or functional gate requirement is weakened.
+
+Local source verification: 271/271 tests in 62 files PASS; 11 native-runner tests PASS; lint, strict TypeScript, production build (497.83 kB main JavaScript), schema/generated files, release-signing configuration, Android asset sync, money lint and diff checks PASS. The exact published base was reconstructed locally and its full Git tree matched 8775ff5aa3e9b3079d6daad3e8459a0e578aa252 before editing. Android SDK and Gradle distribution are absent locally, so native compile/device verification remains OPEN for the replacement full gate. See ADR/0032-acknowledged-widget-navigation.md and docs/evidence/widget-launch-34836848079.json.
+
+Publish this consolidated repair to the existing Session 4 branch. Automation remains disabled; do not poll the replacement. Session 4, downstream backup/deletion evidence, visual acceptance and the signed private release remain OPEN. The analysis/coaching and final usability roadmap are unchanged.
+
+# Earlier widget-input attempt — superseded
+
+Run 34834884401 at 2346ad1 passed source, Android compilation/lint/signatures, startup, Intelligence and accessibility. Acceptance reached the hosted widget but Add transaction did not appear. The next candidate replaced performClick with Android touchscreen down/up. Run 34836848079 showed that this was insufficient and established the activity-intent mismatch described above. Direct task finishing is superseded by the lifecycle repair. Automation stays disabled.
 
 # Manual continuation — 14 September 2026
 

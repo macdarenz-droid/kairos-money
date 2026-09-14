@@ -10,8 +10,12 @@ import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import com.getcapacitor.BridgeActivity;
 import androidx.core.view.WindowInsetsControllerCompat;
+import java.util.UUID;
 
 public class MainActivity extends BridgeActivity {
+    private static final String QUICK_ADD_STATE = "kairos.pendingQuickAdd";
+    private String pendingQuickAdd;
+
     @Override protected void load() {
         View webView = findViewById(com.getcapacitor.android.R.id.webview);
         webView.setVisibility(View.INVISIBLE);
@@ -33,6 +37,9 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override public void onCreate(Bundle savedInstanceState) {
+        pendingQuickAdd = savedInstanceState == null
+            ? (QuickAddWidget.QUICK_ADD.equals(getIntent().getAction()) ? UUID.randomUUID().toString() : null)
+            : savedInstanceState.getString(QUICK_ADD_STATE);
         String preference = getSharedPreferences("kairos-appearance", MODE_PRIVATE).getString("theme", "system");
         boolean light = preference.equals("light") || (preference.equals("system") && (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_NO);
         setTheme(light ? R.style.AppTheme_Light : R.style.AppTheme_Dark);
@@ -55,6 +62,24 @@ public class MainActivity extends BridgeActivity {
         if (getBridge() != null) getBridge().getWebView().setBackgroundColor(background);
         if (refreshWidget) QuickAddWidget.refresh(this);
     }
-    @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent);setIntent(intent);if(getBridge()!=null)getBridge().triggerWindowJSEvent("kairosQuickAdd"); }
+    @Override protected void onNewIntent(Intent intent) {
+        // BridgeActivity also forwards the original cold-start intent during load.
+        // Keep that intent unchanged: pending navigation is separate activity state.
+        if (intent != getIntent() && QuickAddWidget.QUICK_ADD.equals(intent.getAction())) {
+            pendingQuickAdd = UUID.randomUUID().toString();
+        }
+        super.onNewIntent(intent);
+        if (pendingQuickAdd != null && getBridge() != null) getBridge().triggerWindowJSEvent("kairosQuickAdd");
+    }
+    @Override public void onSaveInstanceState(Bundle outState) {
+        outState.putString(QUICK_ADD_STATE, pendingQuickAdd);
+        super.onSaveInstanceState(outState);
+    }
+    String pendingQuickAddRequest() { return pendingQuickAdd; }
+    boolean acknowledgeQuickAdd(String requestId) {
+        if (requestId == null || !requestId.equals(pendingQuickAdd)) return false;
+        pendingQuickAdd = null;
+        return true;
+    }
     @Override public void onConfigurationChanged(Configuration configuration) { super.onConfigurationChanged(configuration); applyAppearance(true); }
 }

@@ -1,0 +1,18 @@
+{
+  "run_id": 34836848079,
+  "candidate_sha": "794811a40af5b2bc173061e367b8702f4a05f56f",
+  "result": "FAIL",
+  "artifact_sha256": "67ddf519ba1599cd437732178fabd89de6ea673d9cea1a53d4371355c37e1374",
+  "source_and_android_build_checks": "PASS",
+  "startup_median_ms": 1489,
+  "startup_result": "PASS",
+  "failed_assertion": "Named Add transaction entry did not appear after the hosted widget tap; ActivityScenario cleanup also timed out with last state PAUSED.",
+  "log_evidence": [
+    {"time": "11:26:56.302", "event": "ActivityTaskManager START QUICK_ADD with LAUNCH_SINGLE_TASK; result code=3"},
+    {"time": "11:26:56.376", "event": "ActivityScenario ignored real RESUMED: initial MAIN/LAUNCHER intent differs from current QUICK_ADD intent"},
+    {"time": "11:27:41.475", "event": "Lifecycle still ignored after action became MAIN: current intent lacks initial LAUNCHER category"}
+  ],
+  "finding": "Input dispatch succeeded. Replacing the activity intent caused the lifecycle monitor mismatch. A separate destructive-read race is reproduced by a local regression; its exact device ordering is not asserted.",
+  "next_native_evidence": "Require successful named widget entry, original intent preservation, locked request recreation/unlock, acknowledgement and ordinary teardown in the full combined gate.",
+  "automation_enabled": false
+}

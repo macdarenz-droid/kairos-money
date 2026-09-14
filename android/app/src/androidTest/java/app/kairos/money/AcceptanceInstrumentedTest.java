@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetHost;
 import android.appwidget.AppWidgetHostView;
 import android.appwidget.AppWidgetManager;
 import android.content.ComponentName;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
@@ -92,7 +93,18 @@ public class AcceptanceInstrumentedTest {
         // This external file contains only this test's synthetic account; remove it after verification.
         shellBytes("rm /sdcard/Download/Kairos-money-export.zip");
     }
-    private void verifyWidgetLaunch() throws Exception {
+    private String widgetRequest() {
+        AtomicReference<String> request=new AtomicReference<>();
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(()->request.set(activity.pendingQuickAddRequest()));
+        return request.get();
+    }
+    private void awaitWidgetRequest(boolean pending) throws Exception {
+        long deadline=SystemClock.uptimeMillis()+15000;
+        while ((widgetRequest()!=null)!=pending && SystemClock.uptimeMillis()<deadline) Thread.sleep(100);
+        assertEquals("Widget request was not "+(pending?"retained":"acknowledged after display"),pending,widgetRequest()!=null);
+    }
+    private void verifyWidgetLaunch(ActivityScenario<MainActivity> scenario,String theme,boolean locked) throws Exception {
+        Intent originalIntent=new Intent(activity.getIntent());
         AppWidgetManager manager=AppWidgetManager.getInstance(activity);AppWidgetHost host=new AppWidgetHost(activity,9420);int id=host.allocateAppWidgetId();AppWidgetHostView[] shown=new AppWidgetHostView[1];
         try {
             ComponentName provider=new ComponentName(activity,QuickAddWidget.class);
@@ -102,17 +114,30 @@ public class AcceptanceInstrumentedTest {
             CountDownLatch attached=new CountDownLatch(1);activity.runOnUiThread(()->{host.startListening();shown[0]=host.createView(activity,id,manager.getAppWidgetInfo(id));int height=Math.round(130*activity.getResources().getDisplayMetrics().density);activity.addContentView(shown[0],new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,height));attached.countDown();});
             assertTrue("Quick-add widget did not render",attached.await(15,TimeUnit.SECONDS));Thread.sleep(500);
             View add=shown[0].findViewById(R.id.widget_add);assertNotNull("Quick-add widget action is missing",add);assertEquals("Add transaction",String.valueOf(((android.widget.TextView)add).getText()));
-            screenshot("dark-launcher-widget");
+            screenshot(theme+"-launcher-widget");
             int[] center=new int[2];boolean[] visible=new boolean[1];CountDownLatch located=new CountDownLatch(1);
             activity.runOnUiThread(()->{int[] location=new int[2];add.getLocationOnScreen(location);center[0]=location[0]+add.getWidth()/2;center[1]=location[1]+add.getHeight()/2;visible[0]=add.isShown()&&add.getWidth()>0&&add.getHeight()>0;located.countDown();});
             assertTrue("Quick-add widget action was not laid out",located.await(15,TimeUnit.SECONDS)&&visible[0]);
             long downTime=SystemClock.uptimeMillis();UiAutomation input=InstrumentationRegistry.getInstrumentation().getUiAutomation();
             MotionEvent down=MotionEvent.obtain(downTime,downTime,MotionEvent.ACTION_DOWN,center[0],center[1],0);down.setSource(InputDevice.SOURCE_TOUCHSCREEN);
             MotionEvent up=MotionEvent.obtain(downTime,SystemClock.uptimeMillis(),MotionEvent.ACTION_UP,center[0],center[1],0);up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-            assertTrue("Android rejected the widget touch down",input.injectInputEvent(down,true));
-            assertTrue("Android rejected the widget touch up",input.injectInputEvent(up,true));down.recycle();up.recycle();
-            awaitJs("Boolean(document.querySelector('dialog')) && document.body.innerText.includes('Add transaction')");screenshot("dark-widget-unlocked-entry");js("document.querySelector('dialog .icon-button').click()");
-        } finally {activity.runOnUiThread(()->{if(shown[0]!=null&&shown[0].getParent() instanceof ViewGroup)((ViewGroup)shown[0].getParent()).removeView(shown[0]);host.stopListening();host.deleteAppWidgetId(id);});}
+            try {
+                assertTrue("Android rejected the widget touch down",input.injectInputEvent(down,true));
+                assertTrue("Android rejected the widget touch up",input.injectInputEvent(up,true));
+            } finally {down.recycle();up.recycle();}
+            if(locked){
+                awaitWidgetRequest(true);String request=widgetRequest();
+                assertEquals("false",js("Boolean(document.querySelector('dialog[open]'))"));
+                scenario.recreate();scenario.onActivity(a->activity=a);
+                assertEquals("Pending widget request did not survive recreation",request,widgetRequest());
+                unlock();
+            }
+            awaitJs("Boolean(document.querySelector('dialog[open] h2')) && document.querySelector('dialog[open] h2').textContent==='Add transaction'");
+            awaitWidgetRequest(false);
+            scenario.onActivity(a->{assertTrue("Widget changed the activity launch identity",originalIntent.filterEquals(a.getIntent()));assertNull(a.pendingQuickAddRequest());});
+            assertEquals("Scenario missed the real activity resume",Lifecycle.State.RESUMED,scenario.getState());
+            screenshot(theme+"-widget-unlocked-entry");js("document.querySelector('button[aria-label=\"Close Add transaction\"]').click()");
+        } finally {InstrumentationRegistry.getInstrumentation().runOnMainSync(()->{if(shown[0]!=null&&shown[0].getParent() instanceof ViewGroup)((ViewGroup)shown[0].getParent()).removeView(shown[0]);host.stopListening();host.deleteAppWidgetId(id);});}
     }
     @Test public void launchResumeAndRealDocumentExport() throws Exception {
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {
@@ -137,14 +162,15 @@ public class AcceptanceInstrumentedTest {
             if (!saved) NativeEvidence.captureSystem(activity, "document-picker-save-unavailable");
             assertTrue("The real document picker did not offer its Save action", saved);
             awaitJs("document.body.innerText.includes('Your JSON and CSV export was saved.')"); verifyExport();
-            click("You"); click("Dark"); awaitJs("document.documentElement.dataset.theme==='dark'");verifyWidgetLaunch();
-            // The real widget PendingIntent has already proved the app route.
-            // Finish the tracked task directly; asking ActivityScenario to resume
-            // a PAUSED singleTask instance can deadlock its teardown bookkeeping.
-            activity.runOnUiThread(activity::finishAndRemoveTask);
-            long destroyDeadline=System.currentTimeMillis()+15000;
-            while(!activity.isDestroyed()&&System.currentTimeMillis()<destroyDeadline)Thread.sleep(100);
-            assertTrue("Tracked activity did not finish after the widget journey",activity.isDestroyed());
+            click("You"); click("Dark"); awaitJs("document.documentElement.dataset.theme==='dark'");verifyWidgetLaunch(scenario,"dark",false);
+            click("Light");awaitJs("document.documentElement.dataset.theme==='light'");click("Lock now");
+            awaitJs("document.body.innerText.includes('Welcome back')");verifyWidgetLaunch(scenario,"light",true);
+            // A displayed/acknowledged request must not replay on the next resume.
+            scenario.moveToState(Lifecycle.State.CREATED);scenario.moveToState(Lifecycle.State.RESUMED);
+            awaitJs("Boolean(document.querySelector('.app:not([aria-hidden=true]) nav')) && !document.querySelector('dialog[open]')");
+            scenario.onActivity(a->{assertNull(a.pendingQuickAddRequest());});
+            click("You");click("Dark");awaitJs("document.documentElement.dataset.theme==='dark'");
+            // Preserve the original normal ActivityScenario teardown assertion.
         }
     }
 }
