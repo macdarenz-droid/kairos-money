@@ -1,8 +1,8 @@
 {
   "contract": "Manual continuation; V16 suspended by user",
   "phase": "Session 4 integrated private-v1 completion",
-  "latest_continuation": "Cancellation records with provider status/date/note, backup/restore, retained history and later-payment evidence links; integrated into Recurring costs and combined native checks. Preserve original Session 4 scope.",
-  "latest_source_evidence": "226 tests in 51 files PASS in full regression; lint, production build, schema generation and diff check PASS. Includes cancellation backup/currency isolation/validation and both-theme edit/remove/later-payment links. Native execution remains OPEN.",
+  "latest_continuation": "Statement-derived spending view on Insights with Today shortcut, historical/account/currency filters, exact evidence-linked charts and conservative transfer/repayment separation. Private PDFs reproduced missing current/shared coverage; raw files/results excluded from git.",
+  "latest_source_evidence": "232 tests in 53 files PASS in full regression, plus separate private production-PDF reproduction. Final lint, strict production build and diff check PASS. Native spending/profile captures prepared; device acceptance remains OPEN.",
   "lease": null,
   "automation_enabled": false,
   "automation_id": "6aa6c8e99f20819181576d885cb21b46",

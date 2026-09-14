@@ -24,7 +24,7 @@ export function MoneyVisuals(){
  if(session.state!=='ready')return null;
  if(q.isPending)return <Skeleton label="Reading monthly history"/>;
  if(q.error)return <p role="alert">Monthly history could not be read. Reopen this screen to try again.</p>;
- const snapshot=q.data,w=monthWindow(today,offset),previous=monthWindow(today,offset+1);
+ const snapshot=q.data,latest=snapshot.transactions.filter(t=>t.date<=today).map(t=>t.date).sort().at(-1)??today,w=monthWindow(latest,offset),previous=monthWindow(latest,offset+1);
  const signalsFor=(window:Window)=>{const dated={...snapshot,asOf:window.end};if(window.end!==snapshot.asOf)delete dated.liquid;return computeSignals(dated,window);};
  const current=moneyFingerprint(signalsFor(w),w.label),prior=moneyFingerprint(signalsFor(previous),previous.label);
  const polygon=(f:typeof current)=>f.axes.every(a=>a.radius!==null)?f.axes.map((a,i)=>point(i,Number(a.radius)*.009)).join(' '):null;

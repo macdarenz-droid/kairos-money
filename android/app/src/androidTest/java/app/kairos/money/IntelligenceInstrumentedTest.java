@@ -228,15 +228,31 @@ public class IntelligenceInstrumentedTest {
             }
         }
     }
+    @Test public void d_spendingPatternsEvidence() throws Exception {
+        try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(a->activity=a);unlock();
+            for(String theme:new String[]{"Light","Dark"}) {
+                click("You");click(theme);click("Insights");
+                awaitJs("Boolean(document.querySelector('.spending-patterns select'))");
+                js("(()=>{const e=document.querySelector('.spending-patterns select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+                awaitJs("document.querySelector('.spending-patterns').innerText.includes('settled transactions')");
+                captureHeading("Your spending patterns",theme.toLowerCase()+"-spending-patterns");
+                js("Array.from(document.querySelectorAll('.spending-patterns h3')).find(e=>e.textContent==='Monthly recorded spending').scrollIntoView({behavior:'instant'})");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-spending-months");
+                js("document.querySelector('.spending-patterns .row button').click()");awaitJs("Boolean(document.querySelector('dialog'))");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-spending-evidence");js("document.querySelector('dialog .icon-button').click()");
+            }
+        }
+    }
     private void selectCurrency() throws Exception {click("Insights");awaitJs("Boolean(document.querySelector('.intelligence select'))");js("(()=>{const e=document.querySelector('.intelligence select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");}
     @Test public void a_intelligenceEvidenceAndThemes() throws Exception {
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
-            scenario.onActivity(a->activity=a);unlock();seed(20,false);selectCurrency();awaitJs("document.body.innerText.includes('Still learning') && document.body.innerText.includes('20 covered days')");for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('20 covered days')");js("window.scrollTo(0,0)");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-learning");}
+            scenario.onActivity(a->activity=a);unlock();seed(20,false);selectCurrency();awaitJs("document.body.innerText.includes('Still learning') && document.body.innerText.includes('20 covered days')");for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('20 covered days')");captureHeading("Still learning",theme.toLowerCase()+"-intelligence-learning");}
         }
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a->activity=a);unlock();seed(182,false);
             for(String theme:new String[]{"Light","Dark"}) {
-                click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('The Drifter') && document.body.innerText.includes('Small purchases add up')");js("window.scrollTo(0,0)");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-profile");
+                click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('The Drifter') && document.body.innerText.includes('Small purchases add up')");captureHeading("The Drifter",theme.toLowerCase()+"-intelligence-profile");
                 js("document.querySelector('.intelligence .surface button').click()");awaitJs("Boolean(document.querySelector('dialog')) && document.body.innerText.includes('Synthetic discretionary')");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-evidence");click("Confirm purchase context");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-context");js("document.querySelector('dialog .icon-button').click()");
                 click("Optional reflections");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-reflections");click("Keep these unknown");awaitJs("!document.querySelector('dialog')");
                 click("See assumptions and sources");awaitJs("Boolean(document.querySelector('dialog'))");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-forecast");js("document.querySelector('dialog .icon-button').click()");
@@ -246,7 +262,7 @@ public class IntelligenceInstrumentedTest {
         }
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a->activity=a);unlock();seed(182,true);selectCurrency();awaitJs("document.body.innerText.includes('Focus on essentials')");assertEquals("false",js("document.body.innerText.includes('Cashflow outlook')"));
-            for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('Focus on essentials')");js("window.scrollTo(0,0)");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-triage");}
+            for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('Focus on essentials')");captureHeading("Focus on essentials",theme.toLowerCase()+"-intelligence-triage");}
         }
     }
 }

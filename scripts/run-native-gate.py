@@ -85,7 +85,7 @@ try:
     instrumentation('KeyProtectionInstrumentedTest', 1)
     instrumentation('ImportInstrumentedTest', 2)
     instrumentation('RevisionInstrumentedTest', 2)
-    instrumentation('IntelligenceInstrumentedTest', 3)
+    instrumentation('IntelligenceInstrumentedTest', 4)
     instrumentation('AcceptanceInstrumentedTest', 1)
     adb('pull', '/sdcard/Android/data/app.kairos.money/files/evidence', str(SCREENS))
     subprocess.run(['node', '--import', 'tsx', str(ROOT / 'scripts/verify-native-ocr.ts'), str(SCREENS)], cwd=ROOT, check=True)
@@ -94,7 +94,7 @@ try:
     instrumentation('PostDeleteInstrumentedTest', 1)
     (EVIDENCE / 'native-run-status.json').write_text(json.dumps({
         'status': 'PASS', 'installed': True, 'instrumentation_executed': True,
-        'authentication_bound_key_tests': 1, 'pin_recovery_tests': 3, 'foundation_tests': 2, 'import_tests': 2, 'revision_tests': 2, 'intelligence_tests': 1, 'manual_entry_tests': 1, 'monthly_visual_tests': 1, 'acceptance_tests': 1,
+        'authentication_bound_key_tests': 1, 'pin_recovery_tests': 3, 'foundation_tests': 2, 'import_tests': 2, 'revision_tests': 2, 'intelligence_tests': 1, 'manual_entry_tests': 1, 'monthly_visual_tests': 1, 'spending_pattern_tests': 1, 'acceptance_tests': 1,
         'forgot_pin_device_tests': 1, 'backup_before_reset_tests': 1, 'backup_after_reset_tests': 1, 'post_delete_tests': 1,
         'native_encryption_proven': True, 'native_delete_proven': True,
         'real_document_export_proven': True, 'background_unlock': '1 second retained; 61 seconds locked',
