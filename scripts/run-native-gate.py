@@ -8,6 +8,10 @@ import subprocess
 import sys
 import time
 
+completed_instrumentation = []
+performance_failures = []
+functional_complete = False
+
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE = ROOT / 'docs/evidence'
 EVIDENCE.mkdir(parents=True, exist_ok=True)
@@ -32,20 +36,79 @@ def instrumentation(name, count):
     print(log, flush=True)
     if not re.search(r'OK \(' + str(count) + r' tests?\)', log):
         raise RuntimeError(name + ' did not pass; see its instrumentation log')
+    completed_instrumentation.append(name)
+
+
+def install_apk(name):
+    result = adb('install', '-r', str(ROOT / name))
+    if 'Success' not in result:
+        raise RuntimeError('APK installation failed: ' + result)
 
 
 def cold_launch_sample():
     adb('shell', 'am', 'force-stop', 'app.kairos.money')
     measurement = adb('shell', 'am', 'start', '-W', '-n', 'app.kairos.money/.MainActivity', timeout=30)
+    if not re.search(r'^Status:\s*ok\s*$', measurement, re.MULTILINE) or not re.search(r'^LaunchState:\s*COLD\s*$', measurement, re.MULTILINE):
+        raise RuntimeError('Android did not confirm a successful process-cold launch: ' + measurement)
     match = re.search(r'TotalTime:\s*(\d+)', measurement)
     if match is None:
         raise RuntimeError('Android did not report a cold-start TotalTime: ' + measurement)
     return {'total_time_ms': int(match.group(1)), 'measurement': measurement}
 
 
+def settle_startup(sample_number):
+    # Let WebView finish its real setup page before force-stopping the next sample.
+    # This is outside TotalTime; no warm sample is substituted for a cold launch.
+    deadline = time.monotonic() + 30
+    device_path = '/sdcard/kairos-startup-ready.xml'
+    while time.monotonic() < deadline:
+        dump = adb('shell', 'uiautomator', 'dump', '--compressed', device_path, timeout=30)
+        if 'dumped to:' in dump:
+            hierarchy = adb('shell', 'cat', device_path)
+            (EVIDENCE / ('android-startup-ready-' + str(sample_number) + '.xml')).write_text(hierarchy)
+            adb('shell', 'rm', device_path)
+            if 'app.kairos.money' in hierarchy and 'Create private ledger' in hierarchy and 'android:id/aerr_' not in hierarchy:
+                return
+        time.sleep(0.5)
+    raise RuntimeError('Benchmark did not reach the real PIN setup page within 30 seconds')
+
+
+def measure_startup():
+    samples = []
+    report = {
+        'status': 'FAIL', 'variant': 'benchmark', 'debuggable': False,
+        'metric': 'Android TotalTime to first activity frame; setup readiness checked separately',
+        'process_cold_limit_ms': 2000, 'fresh_install_limit_ms': 2500,
+        'samples': samples,
+    }
+    try:
+        for number in range(1, 4):
+            samples.append(cold_launch_sample())
+            settle_startup(number)
+        median_ms = int(statistics.median(sample['total_time_ms'] for sample in samples))
+        fresh_ms = samples[0]['total_time_ms']
+        report.update(process_cold_median_ms=median_ms, fresh_install_ms=fresh_ms)
+        if fresh_ms >= 2500:
+            performance_failures.append('Fresh-install launch exceeded 2500 ms: ' + str(fresh_ms) + ' ms')
+        if median_ms >= 2000:
+            performance_failures.append('Median process-cold launch exceeded 2000 ms: ' + str(median_ms) + ' ms')
+    except Exception as error:
+        performance_failures.append('Startup measurement failed: ' + str(error))
+    report['status'] = 'FAIL' if performance_failures else 'PASS'
+    report['failures'] = list(performance_failures)
+    (EVIDENCE / 'android-cold-start.json').write_text(json.dumps(report, indent=2) + '\n')
+    print(json.dumps(report), flush=True)
+
+
 log_stream = None
 log_file = None
+device_verified = False
 try:
+    if adb('shell', 'getprop', 'ro.kernel.qemu').strip() != '1':
+        raise RuntimeError('Native gate is restricted to a disposable Android emulator')
+    if 'package:app.kairos.money' in adb('shell', 'pm', 'list', 'packages', 'app.kairos.money').splitlines():
+        raise RuntimeError('Native gate requires a fresh emulator with no existing Kairos installation')
+    device_verified = True
     adb('logcat', '-c')
     log_file = (EVIDENCE / 'android-logcat-full.log').open('w')
     log_stream = subprocess.Popen(['adb', 'logcat', '-b', 'all', '-v', 'threadtime'], stdout=log_file, stderr=subprocess.STDOUT)
@@ -83,30 +146,18 @@ try:
         'launcher_visible_without_error_dialog': True,
     }, indent=2) + '\n')
     adb('shell', 'locksettings', 'set-pin', '739182')
+    install_apk('android/app/build/outputs/apk/benchmark/app-benchmark.apk')
+    measure_startup()
+    adb('shell', 'am', 'force-stop', 'app.kairos.money')
+    # This script is exclusively for a disposable fresh emulator. Remove only the
+    # test benchmark installation so the original debug journey starts fresh.
+    if 'Success' not in adb('uninstall', 'app.kairos.money'):
+        raise RuntimeError('Could not remove the disposable benchmark installation')
     for name in ['android/app/build/outputs/apk/debug/app-debug.apk',
                  'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk']:
-        result = adb('install', '-r', str(ROOT / name))
-        if 'Success' not in result:
-            raise RuntimeError('APK installation failed: ' + result)
+        install_apk(name)
     adb('shell', 'appwidget', 'grantbind', '--package', 'app.kairos.money')
     adb('shell', 'cmd', 'connectivity', 'airplane-mode', 'enable')
-    cold_samples = [cold_launch_sample() for _ in range(3)]
-    cold_median_ms = int(statistics.median(sample['total_time_ms'] for sample in cold_samples))
-    fresh_install_ms = cold_samples[0]['total_time_ms']
-    cold_pass = cold_median_ms < 2000 and fresh_install_ms < 2500
-    (EVIDENCE / 'android-cold-start.json').write_text(json.dumps({
-        'status': 'PASS' if cold_pass else 'FAIL',
-        'process_cold_median_ms': cold_median_ms,
-        'process_cold_limit_ms': 2000,
-        'fresh_install_ms': fresh_install_ms,
-        'fresh_install_limit_ms': 2500,
-        'samples': cold_samples,
-    }, indent=2) + '\n')
-    if fresh_install_ms >= 2500:
-        raise RuntimeError('Fresh-install launch exceeded 2500 ms: ' + str(fresh_install_ms) + ' ms')
-    if cold_median_ms >= 2000:
-        raise RuntimeError('Median process-cold launch exceeded 2000 ms: ' + str(cold_median_ms) + ' ms')
-    adb('shell', 'am', 'force-stop', 'app.kairos.money')
     (EVIDENCE / 'android-webview-provider.txt').write_text(adb('shell', 'dumpsys', 'webviewupdate'))
     instrumentation('PinRecoveryInstrumentedTest', 3)
     instrumentation('FoundationInstrumentedTest', 2)
@@ -123,8 +174,13 @@ try:
     subprocess.run([sys.executable, str(ROOT / 'scripts/verify-android-backup-restore.py')], check=True)
     subprocess.run([sys.executable, str(ROOT / 'scripts/verify-android-delete.py')], check=True)
     instrumentation('PostDeleteInstrumentedTest', 1)
+    functional_complete = True
+    if performance_failures:
+        raise RuntimeError('; '.join(performance_failures))
     (EVIDENCE / 'native-run-status.json').write_text(json.dumps({
         'status': 'PASS', 'installed': True, 'instrumentation_executed': True,
+        'functional_complete': True, 'startup_variant': 'benchmark',
+        'completed_instrumentation': completed_instrumentation,
         'authentication_bound_key_tests': 1, 'pin_recovery_tests': 3, 'foundation_tests': 2, 'hardening_tests': 1, 'import_tests': 2, 'large_import_tests': 1, 'revision_tests': 2, 'intelligence_tests': 4, 'manual_entry_tests': 1, 'monthly_visual_tests': 1, 'spending_pattern_tests': 1, 'acceptance_tests': 1,
         'forgot_pin_device_tests': 1, 'backup_before_reset_tests': 1, 'backup_after_reset_tests': 1, 'post_delete_tests': 1,
         'native_encryption_proven': True, 'native_delete_proven': True, 'cold_start_under_2_seconds': True, 'text_zoom_200_percent_tests': 1,
@@ -135,13 +191,16 @@ try:
 except Exception as error:
     (EVIDENCE / 'native-run-status.json').write_text(json.dumps({
         'status': 'FAIL', 'reason': str(error),
+        'functional_complete': functional_complete,
+        'completed_instrumentation': completed_instrumentation,
+        'performance_failures': performance_failures,
         'runner': 'Android 34 emulator',
         'evidence': 'Read the individual instrumentation logs for completed assertions; the full native gate did not pass.',
     }, indent=2) + '\n')
     raise
 finally:
     # Preserve failure evidence even if an assertion interrupts the happy path.
-    if not SCREENS.exists():
+    if device_verified and not SCREENS.exists():
         subprocess.run(['adb', 'pull', '/sdcard/Android/data/app.kairos.money/files/evidence',
                         str(SCREENS)], capture_output=True)
     if log_stream is not None:
@@ -153,10 +212,10 @@ finally:
             log_stream.wait(timeout=10)
     if log_file is not None:
         log_file.close()
-    for label, command in [
+    for label, command in ([
         ('android-logcat', ['logcat', '-b', 'crash', '-d']),
         ('android-exit-info', ['shell', 'dumpsys', 'activity', 'exit-info', 'app.kairos.money']),
-    ]:
+    ] if device_verified else []):
         result = subprocess.run(['adb', *command], capture_output=True, text=True, timeout=30)
         content = result.stdout + result.stderr
         (EVIDENCE / (label + '.log')).write_text(content)

@@ -21,6 +21,7 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: node scripts/test-money-lint.mjs
+      - run: python3 scripts/test-native-gate.py
       - run: npm run dev:fixtures
       - uses: actions/setup-python@v5
         with:
@@ -52,11 +53,13 @@ jobs:
       - run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
       - run: npm ci
       - run: npm run android:sync
-      - name: Build signed debug and instrumentation APKs
+      - name: Build benchmark, debug and instrumentation APKs
         working-directory: android
-        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --no-daemon
+        run: ./gradlew :app:assembleBenchmark :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --no-daemon
       - name: Verify APK signature
         run: "$ANDROID_HOME/build-tools/34.0.0/apksigner verify --verbose android/app/build/outputs/apk/debug/app-debug.apk"
+      - name: Verify non-debuggable benchmark APK
+        run: python3 scripts/verify-benchmark-apk.py
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

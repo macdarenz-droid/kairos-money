@@ -29,6 +29,7 @@ for (const key of [
 requireMatch(gradle.includes("task.name == 'preReleaseBuild'"), 'Release signing verification is not attached to preReleaseBuild')
 requireMatch(gradle.includes("throw new GradleException('Private release signing is not configured."), 'Missing release credentials do not fail closed')
 requireMatch(!/signingConfig\s+signingConfigs\.debug/.test(gradle), 'Release build falls back to the debug signing identity')
+requireMatch(/benchmark\s*\{\s*initWith release\s+debuggable false\s+signingConfig signingConfigs\.getByName\('debug'\)\s+matchingFallbacks = \['release'\]\s*\}/.test(gradle), 'Benchmark must inherit release behavior, disable debugging and use only the CI debug identity')
 
 if (failures.length > 0) {
   throw new Error(`Private release configuration failed:\n- ${failures.join('\n- ')}`)

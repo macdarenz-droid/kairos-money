@@ -51,6 +51,8 @@ Output: `android/app/build/outputs/apk/release/app-release.apk`. Verify that exa
 
 The GitHub Actions workflow runs source checks, builds/signs a debug APK, runs native encryption and UI tests on an Android 34 emulator, and publishes the APK only after that gate passes. CI evidence is a separate artifact. A newly created destination repository must be accessible to the connected GitHub app before it can receive this source.
 
+Startup timing uses a separate non-debuggable `benchmark` variant that inherits release behavior and uses the CI development key. It is not a private release APK and is not published for installation. The disposable runner removes that fresh benchmark install before running the debug functional journey. A timing failure does not suppress functional evidence, but still fails the combined gate. The runner refuses physical devices and any emulator that already has Kairos installed.
+
 ## Native verification
 
 Use a fresh emulator or test install: the tests intentionally create synthetic financial data. They are not intended to run over a real ledger.

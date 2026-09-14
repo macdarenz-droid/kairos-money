@@ -49,6 +49,14 @@ android {
                 signingConfig signingConfigs.release
             }
         }
+        // Performance evidence must not include the debug runtime's overhead.
+        // This local/CI-only variant is not the privately signed release artifact.
+        benchmark {
+            initWith release
+            debuggable false
+            signingConfig signingConfigs.getByName('debug')
+            matchingFallbacks = ['release']
+        }
     }
 }
 
