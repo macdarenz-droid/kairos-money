@@ -59,3 +59,28 @@ it('loads every transaction and source into the production snapshot without an o
   expect(maxRows).toBeLessThanOrEqual(256);
  }finally{raw.close();}
 });
+
+it('reads the ledger and snapshot by key so paging never rescans earlier rows',async()=>{
+ const {migrate}=await import('../src/core/db/migrate');
+ const {intelligenceRepository}=await import('../src/ledger/intelligence');
+ const {repository}=await import('../src/core/db/repository');
+ const {driver,raw}=memoryDriver();
+ try{
+  await migrate(driver);
+  raw.exec("INSERT INTO accounts(id,name,institution,type,currency,opening_balance_minor) VALUES('a','Synthetic','Synthetic','checking','AUD',0)");
+  raw.exec("INSERT INTO import_batches(id,account_id,source_file_hash,file_name,parser_version,period_start,period_end,status,created_at) VALUES('b','a','synthetic','Synthetic.csv','native-fixture','2026-01-01','2026-01-31','committed','2026-01-01')");
+  raw.prepare("INSERT INTO staging_rows(id,import_batch_id,source_row_id,payload,confidence,issues) VALUES('b-doc','b','__document__',?,10000,'[]')").run('{}');
+  const transaction=raw.prepare("INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,type,fingerprint,import_batch_id,confidence,status) VALUES(?,'a','2026-01-02',-1000,'AUD','Synthetic','debit',?,'b',10000,'settled')");
+  const source=raw.prepare("INSERT INTO transaction_sources VALUES(?,'b',?,?)");
+  for(let i=0;i<300;i++){
+   const id='row-'+String(i).padStart(4,'0');transaction.run(id,id);
+   source.run(id,String(i),JSON.stringify({sourceId:String(i),reference:'',merchant:'Synthetic',mcc:null,fingerprint:String(i).padStart(64,'0'),issues:[],duplicateOf:null,occurrence:'',createRule:false,pending:false,verified:false,confidence:10000}));
+  }
+  // OFFSET paging is quadratic and re-decrypts discarded rows on the device database.
+  const offsets:string[]=[];
+  const watched:Driver={...driver,async query(sql,values){if(/\bOFFSET\b/i.test(sql))offsets.push(sql);return driver.query(sql,values);}};
+  await intelligenceRepository(watched).snapshot('2026-01-31','AUD');
+  await repository(watched).imports.ledger();
+  expect(offsets).toEqual([]);
+ }finally{raw.close();}
+});

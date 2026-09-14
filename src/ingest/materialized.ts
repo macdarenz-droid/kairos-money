@@ -16,7 +16,7 @@ export async function materializedLedger(driver:Driver):Promise<LedgerRow[]> {
   t.transfer_group_id,t.import_batch_id,t.confidence,t.user_verified,t.status,m.canonical_name,m.mcc,c.name AS category
   FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id
   LEFT JOIN merchants m ON m.id=t.merchant_id LEFT JOIN categories c ON c.id=t.category_id
-  WHERE b.status='committed' AND b.parser_version<>'manual-entry-v1' ORDER BY t.id`);
+  WHERE b.status='committed' AND b.parser_version<>'manual-entry-v1'`,[],['id']);
  const provenance=await queryPages(driver,`SELECT s.transaction_id,s.import_batch_id,s.source_row_id,b.source_rank,
   json_extract(s.original_payload,'$.sourceId') AS original_source_id,json_extract(s.original_payload,'$.reference') AS reference,
   json_extract(s.original_payload,'$.merchant') AS merchant,json_extract(s.original_payload,'$.mcc') AS mcc,
@@ -26,8 +26,7 @@ export async function materializedLedger(driver:Driver):Promise<LedgerRow[]> {
   json_extract(s.original_payload,'$.pending') AS pending,json_extract(s.original_payload,'$.verified') AS verified,
   json_extract(s.original_payload,'$.confidence') AS confidence
   FROM transaction_sources s JOIN import_batches b ON b.id=s.import_batch_id
-  WHERE b.status='committed' AND b.parser_version<>'manual-entry-v1'
-  ORDER BY s.transaction_id,s.import_batch_id,s.source_row_id`);
+  WHERE b.status='committed' AND b.parser_version<>'manual-entry-v1'`,[],['transaction_id','import_batch_id','source_row_id']);
  const scoped=new Set((await driver.query("SELECT import_batch_id FROM staging_rows WHERE source_row_id='__document__'")).map(record=>String(record.import_batch_id)));
  const sources=new Map<string,Source[]>();
  for(const record of provenance){

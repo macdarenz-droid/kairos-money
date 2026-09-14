@@ -13,7 +13,7 @@ export function intelligenceRepository(driver:Driver){
  async function set(key:string,value:unknown){await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',[key,JSON.stringify(value)]);}
  async function snapshot(asOf:string,code:string):Promise<Snapshot>{
   const c=currency(code),accounts=await driver.query('SELECT * FROM accounts WHERE archived_at IS NULL AND currency=?',[c]),ids=accounts.map(a=>String(a.id));
-  const rows=await queryPages(driver,'SELECT t.*,c.kind AS category_kind,c.name AS category_name,m.canonical_name AS merchant FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN merchants m ON m.id=t.merchant_id ORDER BY t.id');
+  const rows=await queryPages(driver,'SELECT t.*,c.kind AS category_kind,c.name AS category_name,m.canonical_name AS merchant FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN merchants m ON m.id=t.merchant_id',[],['id']);
   // Use the primary-key index for each bounded read, then stable-sort dates once.
   // Equal dates retain SQLite's id order without repeatedly sorting the full table.
   rows.sort((a,b)=>String(a.posted_date)<String(b.posted_date)?-1:String(a.posted_date)>String(b.posted_date)?1:0);
@@ -28,7 +28,7 @@ export function intelligenceRepository(driver:Driver){
   const coverage=(await driver.query("SELECT c.*,b.integrity_tier FROM coverage_ranges c JOIN import_batches b ON b.id=c.import_batch_id WHERE b.status='committed'")).filter(r=>ids.includes(String(r.account_id))).map(r=>({accountId:String(r.account_id),start:String(r.period_start),end:String(r.period_end),tier:(r.integrity_tier==='A'?'A':r.integrity_tier==='B'?'B':'C') as 'A'|'B'|'C'}));
   const pays=(await driver.query('SELECT * FROM payslips ORDER BY pay_date,id')).filter(r=>r.currency===c).map(r=>({id:String(r.id),employer:String(r.employer),date:String(r.pay_date),start:String(r.period_start),end:String(r.period_end),net:String(r.net_minor),gross:String(r.gross_minor),currency:c,transactionId:r.linked_transaction_id===null?null:String(r.linked_transaction_id)}));
   const s:Snapshot={asOf,currency:c,accountIds:ids,transactions,coverage,pays};const reflection=await setting<Snapshot['selfReport']|null>('intelligence:reflection',null);if(reflection)s.selfReport=reflection;
-  const provenance=await queryPages(driver,'SELECT s.transaction_id,s.source_row_id,s.original_payload,b.file_name FROM transaction_sources s JOIN import_batches b ON b.id=s.import_batch_id ORDER BY s.transaction_id,s.import_batch_id,s.source_row_id');
+  const provenance=await queryPages(driver,'SELECT s.transaction_id,s.import_batch_id,s.source_row_id,s.original_payload,b.file_name FROM transaction_sources s JOIN import_batches b ON b.id=s.import_batch_id',[],['transaction_id','import_batch_id','source_row_id']);
   const sources=new Map<string,NonNullable<Transaction['sources']>>();
   for(const r of provenance){const id=String(r.transaction_id),group=sources.get(id)??[];group.push({file:String(r.file_name),row:String(r.source_row_id),raw:String(r.original_payload)});sources.set(id,group);}
   for(const t of transactions)t.sources=sources.get(t.id)??[];

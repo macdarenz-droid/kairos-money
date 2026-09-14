@@ -1,5 +1,19 @@
 # Session 4 performance evidence — incomplete
 
+## Keyset ledger paging
+
+Run 34868920857 measured the 20,000-row Ledger at **52,426 ms** against a 10,000 ms budget, barely below the 58,954 ms of the last green run. The cause was OFFSET paging in `queryPages`, which is O(rows squared / page) and re-decrypts every rescanned row on the encrypted device database.
+
+Local paging cost at page 256, by strategy and row count:
+
+| rows | OFFSET | keyset |
+|---|---|---|
+| 10,000 | 26 ms | 10 ms |
+| 20,000 | 91 ms | 19 ms |
+| 40,000 | 365 ms | 40 ms |
+
+OFFSET quadruples per doubling; keyset doubles. After the change the local 20,000-row workspace is **381 ms** (from 679 ms) and the intelligence snapshot **305 ms** (from 468 ms), with the 256-row native response budget unchanged. Native load and frame timings still require device measurement.
+
 ## Materialized-ledger scope repair
 
 Candidate `a7f34a0` failed run **34859716515** functionally, not on timing: the unscoped materialized read raised "Stored transaction evidence is incomplete" and emptied the Ledger. Scoping both reads to batches holding a staged source document restores it.

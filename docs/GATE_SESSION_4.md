@@ -1,3 +1,15 @@
+# Session 4 — keyset ledger paging, 14 September 2026
+
+Run [34868920857](https://github.com/macdarenz-droid/kairos-money/actions/runs/34868920857) confirmed the materialized-ledger scope repair: `IntelligenceInstrumentedTest` passed all four tests, and the nine classes before it passed with startup at 746 ms median and 849 ms fresh install. The gate then failed one class later, in `LedgerPerformanceInstrumentedTest`: **20,000-row ledger took 52,426 ms; budget is 10,000 ms**.
+
+That is only 11% better than the 58,954 ms the last green run recorded, while the same read completes in well under a second locally. The gap was `queryPages`, not the SQL it wrapped. It paged with `LIMIT ? OFFSET ?`, so each page re-read and discarded every earlier row; a full traversal costs O(rows squared / page), and on the encrypted device database every discarded row is decrypted again. Measured locally at page 256, offset paging cost 26/91/365 ms over 10,000/20,000/40,000 rows — quadrupling per doubling — against 10/19/40 ms for keyset paging, which doubles. Locally that is 91 ms and easy to miss; natively, with SQLCipher decrypting each rescanned row, it is the whole 52 s.
+
+`queryPages` now seeks past the last row already read, ordering by caller-supplied unique keys, for the four ledger-sized traversals: the materialized transaction and provenance reads and the intelligence snapshot's transaction and provenance reads. OFFSET remains for bounded reads and for orderings a key cannot express, such as the descending and aliased reads the existing contract test exercises. The 256-row native response budget is unchanged and still asserted, so the earlier memory-pressure fix stands.
+
+Local 20,000-row workspace improves from 679 ms to 381 ms and the intelligence snapshot from 468 ms to 305 ms, with bridge calls for one workspace load unchanged in kind but no longer rescanning. Regression is 280/280 tests across 65 files, including a new guard asserting neither the ledger nor the snapshot issues an OFFSET page. Lint, strict TypeScript, build, schema, release configuration, money lint, native-gate unit tests and generated-file checks pass.
+
+Native timing of this repair is still required; no emulator ran here. Session 4 remains OPEN.
+
 # Session 4 — materialized-ledger scope repair, 14 September 2026
 
 Run [34859716515](https://github.com/macdarenz-droid/kairos-money/actions/runs/34859716515) FAILED on candidate `a7f34a0beb3af319f8a4c8f5f6254a472a2e0396`. The source gate passed in full. The Android gate reached `IntelligenceInstrumentedTest`, where `c_monthlyVisualEvidence` and `d_spendingPatternsEvidence` failed: the Ledger rendered "No transactions yet" behind "Stored transaction evidence is incomplete", so neither "Change categories" nor any `.transaction-row` existed to act on. The nine preceding native classes and startup (1,915 ms median, 1,986 ms fresh install) passed.
