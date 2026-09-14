@@ -1,5 +1,17 @@
 # Session 4 performance evidence — incomplete
 
+## Local elimination while the phase-split run executed
+
+Two of the three candidate phases were ruled out locally, so the phase evidence has less to decide.
+
+`WindowedList` at ledger scale, rendered in jsdom: mount **6 ms** and re-render **2 ms** at 20,000 rows, measured at 5,000/10,000/20,000 with the same inline `id` callback `ImportWorkspace` passes, which changes identity every render and invalidates the offsets memo. Rebuilding a 20,001-element offsets array is simply cheap, and `MeasuredRow` only measures the at most 40 mounted rows, not all 20,000. The renderer is not the cost. (Caveat: jsdom performs no layout, so `getBoundingClientRect` and `ResizeObserver` do not fire; the bounded row count means that cannot account for 52 s either.)
+
+`ImportWorkspace`'s `filtered` is a single O(n log n) filter and sort, memoized on `[rows, search]`. At 20,000 rows that is tens of milliseconds.
+
+What remains is the one link that exists on the device and not locally: transferring roughly 40,000 rows — 20,000 transactions and 20,000 provenance records — across the Capacitor SQLite bridge in about 85 responses of 256 rows. It also explains the earlier document-reconciliation path measuring 58,954 ms: that moved one 20,000-row JSON document across the same bridge. Every read strategy tried so far moves a large payload over it, which is why none of them moved the number.
+
+If `first_row_ms` holds most of the total, that is confirmed, and the repair is to stop loading 20,000 rows to display about sixteen rather than to change the SQL again.
+
 ## The native Ledger cost is not in the data layer
 
 Three different read strategies, one native figure:
