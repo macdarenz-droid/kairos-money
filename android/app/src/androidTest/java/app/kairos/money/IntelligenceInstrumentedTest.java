@@ -53,18 +53,18 @@ public class IntelligenceInstrumentedTest {
     private void captureHeading(String heading, String name) throws Exception {
         String element = "Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,[role=heading]')).find(e=>e.textContent.trim()===" + JSONObject.quote(heading) + ")";
         awaitJs("Boolean(" + element + ")");
-        js(element + ".scrollIntoView({behavior:'instant',block:'start'})");
         String visible = "(()=>{const e=" + element + ";if(!e)return false;const r=e.getBoundingClientRect();const nav=document.querySelector('nav');const bottom=nav?nav.getBoundingClientRect().top:innerHeight;return r.top>=0 && r.bottom<bottom;})()";
-        long deadline = System.currentTimeMillis() + 15000;
-        int stable = 0;
-        while (System.currentTimeMillis() < deadline && stable < 4) {
-            if ("true".equals(js(visible))) stable++;
-            else { stable = 0; js(element + ".scrollIntoView({behavior:'instant',block:'start'})"); }
-            Thread.sleep(150);
-        }
-        assertEquals("Heading must remain visible before capture: " + heading, 4, stable);
-        NativeEvidence.capture(activity, name);
-        assertEquals("Heading moved during capture: " + heading, "true", js(visible));
+        NativeEvidence.capture(activity, name, () -> {
+            js(element + ".scrollIntoView({behavior:'instant',block:'start'})");
+            long deadline = System.currentTimeMillis() + 15000;
+            int stable = 0;
+            while (System.currentTimeMillis() < deadline && stable < 4) {
+                if ("true".equals(js(visible))) stable++;
+                else { stable = 0; js(element + ".scrollIntoView({behavior:'instant',block:'start'})"); }
+                Thread.sleep(150);
+            }
+            assertEquals("Heading must remain visible before capture: " + heading, 4, stable);
+        }, () -> assertEquals("Heading moved during capture: " + heading, "true", js(visible)));
     }
 
     private void input(String label, String value) throws Exception {
