@@ -1,3 +1,23 @@
+# Session 4 — the empty search was scanning every row, 14 September 2026
+
+Run [34899327435](https://github.com/macdarenz-droid/kairos-money/actions/runs/34899327435) on `c7675e3` reported:
+
+`20,000-row ledger took 49702 ms; budget is 10000 ms [tab_open=25 ms, first_row=49351 ms, search_entered=49368 ms]`
+
+Correcting the previous entry: the windowed read did **not** clear the load budget. Run 34897309077 failed at the reachability check on line 157, which precedes the budget assertion on line 168, so the budget was never evaluated and was wrongly recorded as passing. Position-keyed slots fixed reachability, execution reached line 168, and the budget then failed at 49,702 ms — about 5% better than the 52,491 ms before the windowed read.
+
+The windowed read was not wasted, but it was not the cost either. A local probe of one Ledger mount showed the whole data layer transferring **326 KB across 13 queries**, the largest 91 KB, so payload size is no longer the problem.
+
+The cost was the search predicate, introduced when search moved into SQL:
+
+`LOWER(t.raw_description||' '||t.posted_date||' '||COALESCE(c.name,'')) LIKE '%'||LOWER(?)||'%'`
+
+`first_row` is measured **before the search term is typed**, so it ran with an empty term. `LIKE '%%'` matches everything but cannot be optimised away: the expression concatenates decrypted columns, no index can serve it, and SQLite must build and test a string for every one of 20,000 rows, for both the count and the ordered page. Locally, unencrypted and in memory, that is 75 ms; on SQLCipher on the emulator it is 49 seconds.
+
+The predicate is now issued only when something is actually being searched, in both the list read and the bulk-categorisation read. With no term there is nothing to match, so the count and the ordered page use the index instead. A guard asserts that no `LIKE` is issued for an empty or whitespace term, that a real term still filters in SQL, and that a whitespace term returns the unfiltered total.
+
+Local regression is 283/283 across 66 files with lint, strict TypeScript, build, schema, release configuration, money lint, native-gate unit tests and generated-file checks passing. The 10,000 ms budget, the 256-row native response budget and every other assertion are untouched. Session 4 remains OPEN.
+
 # Session 4 — the windowed Ledger loads; last-row reachability repaired, 14 September 2026
 
 Run [34897309077](https://github.com/macdarenz-droid/kairos-money/actions/runs/34897309077) on `c31e564` reached the native gate for the first time in three attempts, after `ci: stop requesting the withdrawn Android 'tools' package` repaired `android-actions/setup-android@v3`. Google withdrew the obsolete `tools` package, so the action's default package set failed `sdkmanager` before `npm ci`, the APK build and every test. Requesting `platform-tools` only fixed it; runs 34896635019 and 34896998882 had died there in about ten seconds each with source-gate fully green.

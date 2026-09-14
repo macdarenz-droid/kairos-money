@@ -68,3 +68,22 @@ it('offers bulk categorisation candidates without transferring the whole ledger'
  expect((await repo.imports.ledgerBulk(merchant)).rows.every(r=>r.merchant===merchant)).toBe(true);
  expect((await repo.imports.ledgerBulk('no such merchant')).total).toBe(0);
 });
+
+it('does not scan every row for a search term the reader never typed',async()=>{
+ const {driver}=await refundFixture();
+ // The search expression concatenates decrypted columns, so no index can serve it and SQLite builds
+ // a string for every row. An empty term matched everything and still paid that scan: 49,351 ms of a
+ // 49,702 ms native load. With no term the predicate must not be issued at all.
+ const issued:string[]=[];
+ const watched:Driver={...driver,async query(sql,values){issued.push(sql);return driver.query(sql,values);}};
+ const paged=repository(watched).imports;
+ await paged.ledgerPage();
+ await paged.ledgerBulk();
+ expect(issued.filter(sql=>/\bLIKE\b/i.test(sql))).toEqual([]);
+ // A real term still filters, in SQL, exactly as the list and the sheet present it.
+ issued.length=0;
+ const hit=(await paged.ledgerPage('refund thirty')).rows;
+ expect(hit.map(r=>r.description)).toEqual(['Synthetic refund thirty']);
+ expect(issued.some(sql=>/\bLIKE\b/i.test(sql))).toBe(true);
+ expect((await paged.ledgerPage('  ')).total).toBe((await paged.ledgerPage()).total);
+});

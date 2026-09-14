@@ -70,8 +70,17 @@ const provenanceColumns=`s.transaction_id,s.import_batch_id,s.source_row_id,b.so
 
 /** Ledger ordering as the Transactions list presents it: newest first, stable by id. */
 const listOrder='ORDER BY t.posted_date DESC,t.id ASC';
-/** Search as the list applies it: merchant-or-description, date and category, case-insensitively. */
-const listMatch="LOWER(t.raw_description||' '||t.posted_date||' '||COALESCE(c.name,'')) LIKE '%'||LOWER(?)||'%'";
+/**
+ * Search as the list applies it: description, date and category, case-insensitively.
+ *
+ * Only when something is actually being searched. The expression is a concatenation of decrypted
+ * columns, so no index can serve it and SQLite must build and test a string for every row; an empty
+ * term still forced that full scan, which measured 49,351 ms of a 49,702 ms native load for a term
+ * the user had not typed. With no term there is nothing to match, so the predicate is left out and
+ * the count and the ordered page use the index instead.
+ */
+const listMatch=(column:string)=>`LOWER(${column}||' '||t.posted_date||' '||COALESCE(c.name,'')) LIKE '%'||LOWER(?)||'%'`;
+const searching=(search:string)=>search.trim().length>0;
 
 export type LedgerPage = {rows:LedgerRow[];total:number};
 
@@ -86,17 +95,19 @@ export type LedgerPage = {rows:LedgerRow[];total:number};
 export async function materializedPage(driver:Driver,search:string,offset:number,limit:number):Promise<LedgerPage> {
  const scoped=[...await scopedBatches(driver)];
  if(!scoped.length)return {rows:[],total:0};
- const batches=scoped.map(()=>'?').join(','),bounds:SqlValue[]=[...scoped,search];
+ const batches=scoped.map(()=>'?').join(',');
+ const match=searching(search)?` AND ${listMatch('t.raw_description')}`:'';
+ const bounds:SqlValue[]=searching(search)?[...scoped,search]:[...scoped];
  const where=`FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id
   LEFT JOIN categories c ON c.id=t.category_id
-  WHERE b.status='committed' AND b.parser_version<>'manual-entry-v1' AND b.id IN (${batches}) AND ${listMatch}`;
+  WHERE b.status='committed' AND b.parser_version<>'manual-entry-v1' AND b.id IN (${batches})${match}`;
  const total=Number((await driver.query(`SELECT COUNT(*) AS total ${where}`,bounds))[0]?.total??0);
  if(!total)return {rows:[],total:0};
  const transactions=await driver.query(`SELECT t.id,t.account_id,t.posted_date,t.amount_minor,t.currency,t.raw_description,
   t.transfer_group_id,t.import_batch_id,t.confidence,t.user_verified,t.status,m.canonical_name,m.mcc,c.name AS category
   FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id
   LEFT JOIN merchants m ON m.id=t.merchant_id LEFT JOIN categories c ON c.id=t.category_id
-  WHERE b.status='committed' AND b.parser_version<>'manual-entry-v1' AND b.id IN (${batches}) AND ${listMatch}
+  WHERE b.status='committed' AND b.parser_version<>'manual-entry-v1' AND b.id IN (${batches})${match}
   ${listOrder} LIMIT ? OFFSET ?`,[...bounds,Math.max(0,limit),Math.max(0,offset)]);
  if(!transactions.length)return {rows:[],total};
  const ids=transactions.map(record=>String(record.id)),keys=ids.map(()=>'?').join(',');
@@ -147,12 +158,13 @@ export async function materializedHealth(driver:Driver):Promise<LedgerHealth[]> 
 export async function materializedBulk(driver:Driver,search:string,limit=1001):Promise<LedgerPage> {
  const scoped=[...await scopedBatches(driver)];
  if(!scoped.length)return {rows:[],total:0};
- const batches=scoped.map(()=>'?').join(','),bounds:SqlValue[]=[...scoped,search];
+ const batches=scoped.map(()=>'?').join(',');
+ const match=searching(search)?` AND ${listMatch("COALESCE(m.canonical_name,'')")}`:'';
+ const bounds:SqlValue[]=searching(search)?[...scoped,search]:[...scoped];
  const where=`FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id
   LEFT JOIN merchants m ON m.id=t.merchant_id LEFT JOIN categories c ON c.id=t.category_id
   WHERE b.status='committed' AND b.parser_version<>'manual-entry-v1' AND b.id IN (${batches})
-  AND t.transfer_group_id IS NULL
-  AND LOWER(COALESCE(m.canonical_name,'')||' '||t.posted_date||' '||COALESCE(c.name,'')) LIKE '%'||LOWER(?)||'%'`;
+  AND t.transfer_group_id IS NULL${match}`;
  const total=Number((await driver.query(`SELECT COUNT(*) AS total ${where}`,bounds))[0]?.total??0);
  if(!total)return {rows:[],total:0};
  const transactions=await driver.query(`SELECT t.id,t.account_id,t.posted_date,t.amount_minor,t.currency,t.raw_description,
