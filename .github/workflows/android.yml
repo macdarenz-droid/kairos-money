@@ -90,7 +90,7 @@ jobs:
           heap-size: 512M
           disk-size: 2048M
           emulator-boot-timeout: 300
-          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -no-metrics
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
           disable-animations: true
           disable-spellchecker: true
           enable-hw-keyboard: true
