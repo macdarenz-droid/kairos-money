@@ -1,5 +1,20 @@
 # Session 4 performance evidence — incomplete
 
+## What holds the full ledger array, if the bridge is confirmed
+
+Scoped while the phase-split run executed, so the repair can start immediately rather than begin with this survey. Four consumers in `ImportWorkspace` hold all 20,000 rows, and none of them needs the whole array:
+
+| Consumer | Needs | Served instead by |
+|---|---|---|
+| `filtered` into `WindowedList` | the rows actually on screen, about sixteen | a paged read that applies the search term and ordering in SQL |
+| `rows.length` gating "Change categories" | a count | `SELECT COUNT` |
+| `Coverage` → `dataHealth(rows.filter(by account))` | a per-account aggregate | an aggregate query per account, not row transfer |
+| `BulkCategories rows={rows}` | its own filtered set, already capped at 1,000 | its own bounded query |
+
+The search currently runs in JavaScript over the whole array, so moving display to a paged read means the search term moves into SQL with it. That is the substance of the change, and it is why this is a real refactor rather than a constant to tune.
+
+Not started: the bridge hypothesis is unconfirmed until `first_row_ms` lands. Beginning a four-consumer refactor on an unconfirmed hypothesis would repeat the keyset mistake at considerably higher cost. The existing workspace contract tests, which assert the returned ledger's contents, must keep passing or be extended deliberately rather than relaxed.
+
 ## Local elimination while the phase-split run executed
 
 Two of the three candidate phases were ruled out locally, so the phase evidence has less to decide.
