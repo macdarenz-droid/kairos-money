@@ -1,3 +1,9 @@
+## Gate review and chart follow-up
+
+Workflow 34796042182 PASS on candidate 7c83aa3438e1ba09873115291961663c92bcefcd. Downloaded APK/evidence archive digests match GitHub. Native encryption, manual-entry journey, PIN recovery, backup/reset/restore and deletion pass. Reviewed 38 new manual/chart/bulk/valuation screenshots; see docs/evidence/session4-gate-34796042182.json for hashes and limits. Camera and actual launcher-widget proof are absent; light manual-history capture does not reach the intended section; recurring timeline is only captured empty. These remain OPEN.
+
+Continued the visual repairs identified in that review: non-scaling cashflow/payday/net-worth strokes, exact currency scale labels, payday day labels, and a clear single-valuation message instead of a tiny point in a mostly empty chart. No money calculations or source provenance changed. Full regression PASS: 222 tests in 49 files; lint and production build PASS. Final scale-label wording is checked separately by the focused visual tests. This follow-up is newer than the green candidate and has no new native acceptance yet. Preserve every other original Session 4 requirement.
+
 ## Integrated continuation — receipt capture and startup
 
 Direct receipt capture is now implemented in the bundled Android WebView: live rear-camera preview, explicit photo review, retake, cancellation and existing on-device OCR/encrypted attachment save. Capture creates no gallery/temp file and no money or coverage rows. Streams stop on removal; aborted captures cannot save after OCR or a later unlock. The existing file attachment path remains available. Actual Android permission, image readability, lifecycle and both-theme camera acceptance remain OPEN.
