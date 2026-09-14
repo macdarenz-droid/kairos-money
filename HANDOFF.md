@@ -1,3 +1,7 @@
+# Manual continuation — 14 September 2026
+
+The Kairos Money automation is disabled by explicit user request. Run 34832684247 at b2de377 passed the complete source gate, Android compilation/lint/signatures, startup, Intelligence and accessibility. The widget rendered and its real PendingIntent opened Add transaction. Final Acceptance teardown then failed because ActivityScenario could not force its tracked singleTask activity from PAUSED to RESUMED. The repair finishes the tracked task directly after all widget assertions and requires DESTROYED within 15 seconds. This preserves every functional assertion and removes the invalid intermediate lifecycle demand. Replacement native evidence remains required.
+
 # Current continuation — 14 September 2026
 
 User authorized continued work and re-enabled the existing hourly Money worker. Run 34819848337 at a9a8e35 failed the frozen Session 2 contract: the preceding Quick regression had edited tests/ui.test.tsx. Restored that file byte-for-byte and moved the additional modal/navigation coverage to tests/session4-quick-dialog.test.tsx, also verifying search does not receive automatic focus.
