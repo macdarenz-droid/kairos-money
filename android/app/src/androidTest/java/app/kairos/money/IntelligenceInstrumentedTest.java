@@ -166,13 +166,17 @@ public class IntelligenceInstrumentedTest {
                 click("You");click(theme);awaitJs("Boolean(document.querySelector('.money-visuals select'))");
                 js("(()=>{const e=document.querySelector('.money-visuals select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
                 awaitJs("Boolean(document.querySelector('.fingerprint'))");
-                for(String heading:new String[]{"Money Fingerprint","Daily cashflow","What changed","Recurring costs","Upcoming bills","Merchant history"}) {
+                for(String heading:new String[]{"Money Fingerprint","Daily cashflow","Spending after payday","Recurring payment timeline","Spending by category","What changed","Recurring costs","Upcoming bills","Merchant history","Recorded net worth"}) {
                     js("Array.from(document.querySelectorAll('h2')).find(e=>e.textContent==="+JSONObject.quote(heading)+").scrollIntoView()");
                     NativeEvidence.capture(activity,theme.toLowerCase()+"-monthly-"+heading.toLowerCase().replace(' ','-'));
                 }
                 js("(()=>{const e=document.querySelector('.money-visuals input[type=range]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'1');e.dispatchEvent(new Event('input',{bubbles:true}));})()");
                 awaitJs("document.querySelector('.money-visuals input[type=range]').value==='1'");
                 js("document.querySelector('.money-visuals').scrollIntoView()");NativeEvidence.capture(activity,theme.toLowerCase()+"-monthly-comparison");
+                click("Record a value");input("Item name","Synthetic valuation "+theme);input("Valuation date","2026-01-01");input("Positive value or amount owed","12000.00");
+                NativeEvidence.capture(activity,theme.toLowerCase()+"-valuation-entry");click("Save value");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Latest recorded total')");
+                js("Array.from(document.querySelectorAll('h2')).find(e=>e.textContent==='Recorded net worth').scrollIntoView()");NativeEvidence.capture(activity,theme.toLowerCase()+"-valuation-history");
+                js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Manage recorded values').click()");click("Remove");click("Remove value");awaitJs("!document.querySelector('dialog') && !document.body.innerText.includes('Synthetic valuation "+theme+"')");
             }
         }
     }

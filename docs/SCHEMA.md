@@ -254,6 +254,10 @@ Manual entries use explicit manual-entry-v1 source envelopes in import_batches a
 
 Encrypted app_settings keys ledger-detail:<transaction-id> and ledger-detail:manual:<manual-id> retain a note and receipt records (id, name, base64 data and locally extracted text). Receipts never create ledger transactions or coverage. Existing export/backup/delete include these values; manual deletion removes its attachment key. Import rollback retains attachment metadata for source reimport. See ADR/0018-session4-visuals-and-responsive-ledger.md.
 
+## Recorded valuations and notification preferences
+
+Encrypted app_settings net-worth:<valuation-id> values contain id, itemId, name, asset/liability kind, currency, ISO valuation date and positive integer-string minor units. Repeated values update the same holding over time without changing transactions or coverage. Notification preferences are stored under notifications:preferences, with four independent boolean opt-ins. Existing full export, backup and delete include both. Native notification alarms contain only generic kinds, event hashes and times, never financial amounts or descriptions.
+
 ## Migration metadata
 
 `_migrations(version INTEGER PRIMARY KEY)` is maintained transactionally by the migration runner. It is not financial data and is removed with the database during deletion.

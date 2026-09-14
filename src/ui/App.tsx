@@ -1,5 +1,6 @@
 import { ManualHistory, ManualSheet } from './screens/Manual';
 import { MoneyVisuals } from './screens/MoneyVisuals';
+import {NetWorth} from './screens/NetWorth';
 import { NotificationSync } from './screens/Notifications';
 import { Intelligence } from './screens/Intelligence';
 import { useCallback, useEffect, useState } from 'react';
@@ -44,7 +45,7 @@ export default function App() {
     {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Skeleton label="Reading accounts"/> : count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Opening balances</span></div>{accounts.data?.map(account => <Row key={account.id} trailing={<Amount value={fromDatabase(account.opening_balance_minor, currency(account.currency))} context={`${account.name} opening balance`}/>}><div className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><div><h3>{account.name}</h3><p>{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}</p></div></div></Row>)}</> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}{!(session.state==='ready' && accounts.isPending)&&<ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport}/>}</>}
     {tab === 'Ledger' && count>0 && <><Button onClick={()=>setSheet('manual')}>Add transaction</Button><ManualHistory accounts={accounts.data??[]}/></>}
     {tab === 'Insights' && <Intelligence/>}
-    {tab === 'You' && <><MoneyVisuals/><Settings onAccount={() => setSheet('account')} notify={setToast}/></>}
+    {tab === 'You' && <><MoneyVisuals/><NetWorth/><Settings onAccount={() => setSheet('account')} notify={setToast}/></>}
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} onClose={()=>setSheet(null)}/>}
     {sheet === 'update' && <UpdateAccounts accounts={accounts.data??[]} batches={statementData.data??[]} today={localDay()} onClose={()=>setSheet(null)} onImport={()=>{setTab('Ledger');setSheet(null);setImportRequest(n=>n+1);}}/>}

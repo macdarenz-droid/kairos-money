@@ -1,5 +1,6 @@
 import {activityHistory} from '../../intelligence/visuals/activity';
 import {categoryTiles} from '../../intelligence/visuals/treemap';
+import {TimingCharts} from './TimingCharts';
 import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {useSession} from '../session';
@@ -44,6 +45,7 @@ export function MoneyVisuals(){
  {!shape&&<p>Missing axes stay unknown. No complete shape is inferred.</p>}
  {current.axes.map(a=><Button key={a.key} variant="quiet" onClick={()=>show(a.label,a.evidence,`${a.reason} ${a.value===null?'Unknown':`Stored signal value: ${a.value}.`} Shape uses a fixed display scale, not a diagnosis or a score of financial worth.`)}>{a.label} · {a.value===null?'Unknown':'View evidence'}</Button>)}
  <h2>Daily cashflow</h2><Cashflow snapshot={snapshot} window={w} show={show}/>
+ <TimingCharts snapshot={snapshot} window={w} show={show}/>
  <h2>Spending by category</h2><p className="meta">Settled spending on covered days only. Transfers and pending entries are excluded.</p>
  {total===0n?<p>No covered spending for this month.</p>:<><svg viewBox="0 0 1000 600" role="img" aria-label="Category treemap. Rectangle area represents settled spending; exact amounts and sources follow below.">{categoryTiles(sorted.map(([name,row])=>({name,minor:row.minor.toString()}))).map((tile,i)=><g key={tile.name}><title>{tile.name}</title><rect x={tile.x} y={tile.y} width={tile.width} height={tile.height} fill={`var(--surface-${i%2+2})`} stroke="var(--border-default)"/>{tile.width>150&&tile.height>70&&<text x={tile.x+20} y={tile.y+40} fill="var(--text-primary)" fontSize="32">{tile.name.length>Math.floor(tile.width/20)?tile.name.slice(0,Math.max(1,Math.floor(tile.width/20)-2))+'…':tile.name}</text>}</g>)}</svg>{sorted.map(([name,row])=><Row key={name} trailing={<Button variant="quiet" onClick={()=>show(name,row.ids,'Sum of settled spending in this category on covered days.')}><Amount value={money(row.minor,currency(code))} context={name}/></Button>}>{name}</Row>)}</>}
  <h2>What changed</h2>{!activity.comparable?<p>Two fully covered months are needed for a fair monthly comparison.</p>:activity.changes.map(c=><Row key={c.category} trailing={<Button variant="quiet" onClick={()=>show(c.category,c.ids,`Previous month ${c.previous}; selected month ${c.current} minor units. Difference is observed spending, not an inferred cause.`)}><Amount value={money(BigInt(c.difference),currency(code))} context={`change in ${c.category}`}/></Button>}>{c.category}</Row>)}

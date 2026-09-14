@@ -1,5 +1,6 @@
 import { manualRepository } from '../../ledger/manual';
 import {notificationRepository} from '../../ledger/notifications';
+import {netWorthRepository} from '../../ledger/net-worth';
 import { attachmentRepository } from '../../ledger/attachments';
 import { restoreSnapshot } from './restore';
 import { intelligenceRepository } from '../../ledger/intelligence';
@@ -24,6 +25,7 @@ export function repository(driver: Driver) {
     imports: importService(driver),
     manual: manualRepository(driver),
     notifications: notificationRepository(driver),
+    netWorth: netWorthRepository(driver),
     attachments: attachmentRepository(driver),
     restoreBackup: (snapshot: unknown) => restoreSnapshot(driver, snapshot),
     intelligence: intelligenceRepository(driver),
