@@ -17,3 +17,4 @@ android/capacitor-cordova-android-plugins/
 !.env.example
 test-results/
 fixtures/generated/
+android/app/src/androidTest/assets/generated/

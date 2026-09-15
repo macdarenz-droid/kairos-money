@@ -1,0 +1,21 @@
+import {paydayCurve,subscriptionTimeline} from '../../intelligence/visuals/timing';
+import {displayRatio} from '../../intelligence/visuals';
+import {day,type Snapshot,type Window} from '../../intelligence/model';
+import {money} from '../../core/money';
+import {Amount,Button,Row} from '../design/primitives';
+export function TimingCharts({snapshot,window,show}:{snapshot:Snapshot;window:Window;show:(title:string,ids:string[],text:string)=>void}){
+ const curve=paydayCurve(snapshot,window),timeline=subscriptionTimeline(snapshot,window);
+ const ceiling=curve.points.reduce((max,p)=>BigInt(p.average??'0')>max?BigInt(p.average!):max,1n);
+ const segments:string[][]=[];let segment:string[]=[];
+ for(const p of curve.points){if(p.average===null){if(segment.length)segments.push(segment);segment=[];}else segment.push(`${10+p.offset*980/30},${190-Number(displayRatio(p.average,ceiling.toString()))*180/1000000}`);}if(segment.length)segments.push(segment);
+ return <><h2>Spending after payday</h2><p className="meta">Average discretionary spending per covered day since the latest recorded pay. Day 0 is payday. This describes timing, not intent.</p>{curve.status==='insufficient_data'?<p>At least three recorded pay dates are needed.</p>:<><Row trailing={<Amount value={money(ceiling,snapshot.currency)} context="payday chart scale maximum"/>}>Scale maximum · {snapshot.currency}</Row><svg viewBox="0 0 1000 200" role="img" aria-label="Discretionary spending from payday through day 30. Missing observations break the line.">{segments.map((points,i)=><polyline key={i} points={points.join(' ')} stroke="var(--accent)" fill="none" strokeWidth="2" vectorEffect="non-scaling-stroke"/>)}</svg><Row trailing={<Amount value={money(0n,snapshot.currency)} context="payday chart scale minimum"/>}>Scale minimum</Row><Row trailing={<span>Day 30</span>}>Day 0 · payday</Row><details><summary>Payday amounts and sources</summary>{curve.points.map(p=><Row key={p.offset} trailing={p.average===null?<span>No covered observations</span>:<Button variant="quiet" onClick={()=>show(`Day ${p.offset} after pay`,p.ids,`Total discretionary spending ${p.total} minor units divided by ${p.days} covered days. Integer average rounds down to the nearest minor unit.`)}><Amount value={money(BigInt(p.average),snapshot.currency)} context={`average spending ${p.offset} days after pay`}/></Button>}>Day {p.offset}<p className="meta">{p.days} covered observations</p></Row>)}</details></>}
+ <h2>Recurring payment timeline</h2><p className="meta">Recorded payments from {window.start} to {window.end}. A recurring pattern does not confirm a subscription contract.</p>{!timeline.length?<p>No supported recurring payments in this period.</p>:timeline.map(group=><section key={group.merchant}><h3>{group.merchant}</h3><svg viewBox="0 0 1000 60" role="img" aria-label={`${group.merchant}: ${group.events.length} recorded payments. Dates and sources follow.`}>
+   {/* The dates are marks on a period, so the period has to be drawn. Without this line the dots floated in
+       an empty box with nothing to read them against, and a merchant billed once in the window was a single
+       speck in whitespace. The line spans the whole window named in the caption above. */}
+   <line x1="10" y1="30" x2="990" y2="30" stroke="var(--border-default)"/>
+   {/* r=12, not 8: this viewBox is 1000 wide inside 371px of phone, so a radius of 8 drew a 6px dot — under
+       the 8px floor a mark needs to be seen, let alone aimed at. 12 renders about 9px and still leaves a
+       clear gap between monthly payments. */}
+   {group.events.map(event=><circle key={event.id} cx={10+(day(event.date)-day(window.start))*980/Math.max(1,day(window.end)-day(window.start))} cy="30" r="12" fill="var(--accent)"><title>{event.date}</title></circle>)}</svg><details><summary>Payment dates and amounts</summary>{group.events.map(event=><Row key={event.id} trailing={<Button variant="quiet" onClick={()=>show(group.merchant,[event.id],'Actual settled payment.')}><Amount value={money(BigInt(event.minor),snapshot.currency)} context={group.merchant}/></Button>}>{event.date}</Row>)}</details></section>)}</>;
+}

@@ -1,9 +1,9 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { shiftDay } from './normalize';
 import { accountFreshness } from './freshness';
-import type { Batch } from './types';
-export const Reminder = registerPlugin<{ schedule(o:{at:number}):Promise<void>; cancel():Promise<void>; request():Promise<{granted:boolean}> }>('KairosReminder');
-export function nextReminder(weekday:number,accountIds:string[],batches:readonly Batch[],today:string):number|null {
+import type { BatchSummary } from './types';
+export const Reminder = registerPlugin<{ schedule(o:{at:number}):Promise<void>; cancel():Promise<void>; request():Promise<{granted:boolean}>; notices(o:{queue:{kind:string;key:string;at:number}[]}):Promise<void> }>('KairosReminder');
+export function nextReminder(weekday:number,accountIds:string[],batches:readonly BatchSummary[],today:string):number|null {
  if(!Number.isInteger(weekday)||weekday<0||weekday>6||!accountIds.length)return null;
  let day=shiftDay(today,1);
  for(let i=0;i<15;i++,day=shiftDay(day,1)) {
@@ -12,7 +12,7 @@ export function nextReminder(weekday:number,accountIds:string[],batches:readonly
  }
  return null;
 }
-export async function syncReminder(weekday:number|null,ids:string[],batches:readonly Batch[],today:string) {
+export async function syncReminder(weekday:number|null,ids:string[],batches:readonly BatchSummary[],today:string) {
  if(!Capacitor.isNativePlatform())return;
  const at=weekday===null?null:nextReminder(weekday,ids,batches,today);
  if(at===null)await Reminder.cancel();else await Reminder.schedule({at});

@@ -1,0 +1,19 @@
+# 0036 — A stored signal cites the ledger instead of copying it
+
+Status: accepted; device-verified by run 34912806907 on 3c446b0, the first green Android gate of this milestone.
+
+`Signal.inputs` carries `transactions: Transaction[]` so a signal's calculation can be re-derived in memory from exactly the rows that produced it, and every `Transaction` in that array carries its own `sources` provenance payload. `analyse()` persisted each signal with `JSON.stringify(v)`, so one screen open serialised the whole windowed corpus once per signal. Measured at 20,000 transactions: 45,721,866 bytes across 24 rows, the largest row 5,796,371 bytes. The column is declared `CHECK(json_valid(inputs))`, so SQLite parses each of those strings before SQLCipher encrypts the pages they land on.
+
+On the device this was the dominant cost of the Ledger screen, not a background one. Run 34911381620 recorded 24 writes totalling 37,403 ms with a 1,663 ms maximum — uniformly slow, which is what a per-row multi-megabyte payload looks like rather than a stall — inside a 43,789 ms first row, while every ledger read together came to 3,382 ms.
+
+Persist the citation. The stored signal keeps its key, period, status, value, unit, reason, confidence, unverified flag, details, `evidence` and an `inputs` object holding window, coverage, pays, liquid, self-report, covered days and a transaction count. It drops the duplicated `transactions` array. `evidence` already lists the transaction ids, and the ledger with `transaction_sources` already holds the rows, so the audit record points at the single copy of provenance instead of adding twenty-four more.
+
+In-memory `Signal.inputs` is unchanged, so `computeSignals`, `profile`, `insights`, `forecast` and the assertions that check `inputs.transactions` against the snapshot are unaffected. Nothing reads the `inputs` column back; it exists for audit and export, and a reference serves both.
+
+Two failures shared this cause. Batching those writes into one statement put roughly 45 MB into a single Capacitor bridge message and killed the WebView renderer on five consecutive runs; reverting the batching restored the assertion. With the payload fixed there is nothing worth batching, so `src/core/db/write-rows.ts` stays unused by `analyse()` while remaining tested for future callers. The same cause explains why four earlier read-side repairs — keyset paging, list virtualization, windowed reads and a conditional search predicate — moved the load only about 20% between them: each was correct, and none touched a write.
+
+Alternatives: raising the budget or dropping the payload column would hide the defect rather than fix it; storing a compressed copy keeps the duplication and adds a codec; recomputing signals on demand removes the cache the intelligence screens rely on; keeping the copy and batching the writes is what crashed the renderer.
+
+Why it survived review: `JSON.stringify` on a shared reference is invisible in the source and free at fixture scale, where twenty-four copies of a dozen transactions cost nothing. No test or benchmark exercised `analyse()` at ledger scale in either time or size. `tests/analyse-scale.test.ts` now does both and asserts a size budget, so a stored signal that scales with corpus size fails locally in seconds instead of on an emulator half an hour later.
+
+Validation: 288 source tests in 68 files, lint, strict TypeScript, production build, regenerated and diff-checked schema, release configuration, money lint and 14 native-gate runner tests. Locally at 20,000 transactions the signals payload fell from 45,721,866 to 475,050 bytes, the largest row from 5,796,371 to 140,519, the 26 writes from 3,239 ms to 15 ms and `analyse()` from 7,221 ms to 2,020 ms. On the device, `LedgerPerformanceInstrumentedTest` passed, so its `loadMs < 10000` assertion was evaluated and held; its class runtime fell from 160.1 s to 51.0 s and `IntelligenceInstrumentedTest` from 159.8 s to 142.0 s.

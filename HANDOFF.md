@@ -1,35 +1,490 @@
-# Kairos Money Tracker — Sessions 1–2.5 PASS
+# Session 4 — measuring the device instead of guessing, 14 September 2026
 
-## State
+Run [34901245504](https://github.com/macdarenz-droid/kairos-money/actions/runs/34901245504) on `44f26cb`:
 
-Sessions 1–2 PASS. Session 2 passed on commit 282460630e9ae5419f7224b8cf8e63d174334e40, workflow 34752125659: 78 source tests, six native tests and 27 reviewed screenshots. Session 2.5 passed on commit 4c5ef38bfaf563aa527a0753233a9adafb1e3582, workflow 34754456134: 100 source tests, eight native tests and all 39 screenshots reviewed, including 12 new screens in both themes. Do not start Session 3.
+`20,000-row ledger took 47657 ms; budget is 10000 ms [tab_open=4 ms, first_row=47309 ms, search_entered=47338 ms]`
 
-Repository: `macdarenz-droid/kairos-money`. Active local source: `/workspace/scratch/19f118d9b907/session25-gate`, remote branch `main`. The GitHub connector and local Git have different commit IDs; always use the current remote head as the parent of connector commits.
+Dropping the empty-search predicate bought about two seconds. That is the fourth repair aimed at the wrong thing, and the sequence now says something clearer than any individual result:
 
-## Built this session
+| change | data moved per load | first_row |
+|---|---|---|
+| full document reconciliation | whole document | 58,954 ms |
+| materialized reads, offset paging | ~40,000 rows | 52,426 ms |
+| materialized reads, keyset paging | ~40,000 rows | 52,390 ms |
+| windowed read | ~400 rows / 326 KB | 49,351 ms |
+| no predicate for an empty search | ~400 rows / 326 KB | 47,309 ms |
 
-- Pure detection, CSV/OFX/QIF/positional parsers, date/sign/merchant normalization, exact balance quarantine, fingerprint/near-duplicate reconciliation, coverage union/gaps and deterministic source provenance.
-- Real SQLite staging, atomic commit and batch rollback. Entire selected files are encrypted in reserved staging rows until extraction. Normalized documents remain staged after commit to preserve contributions. Correction-created rules become live only on commit and are removed on batch rollback.
-- pdf.js legacy build with bundled worker, positional page stitching, safe XLSX XML extraction preserving decimal strings, and a Capacitor-native bundled ML Kit OCR bridge. No INTERNET permission, no model download, no server parsing.
-- Actual Android file picker; per-file account/date/balance confirmation; manual column mapping; uncertain row and payslip corrections; explicit review; ledger search/source detail; rollback; coverage map and data health.
-- Payslip labels, net-pay linkage, pay-cycle detection, exact take-home/tax ratios and net-pay distribution/variability. Payslips never create a second salary transaction or bank coverage.
-- Synthetic fixtures: three layouts per bank account class and payslip, real PDFs, page breaks and four scanned images/image-only PDFs. No fixtures enter production assets; Android instrumentation owns its test assets separately.
+The data layer has been reduced by about 99% and the load by about 20%. Each repair was correct and is kept; none was the cost. The remaining time is not in the statements that were being optimised, and no further guess should be spent on it.
 
-## Evidence and continuation
+The common cause of four misses is a measurement gap: local SQLite is unencrypted and in process, so it under-reports per-row decryption by orders of magnitude, and every hypothesis drawn from it looked sound and proved irrelevant natively. The device is the only place this behaviour exists, so the device now reports it.
 
-`docs/GATE_SESSION_2.md` is authoritative. Source tests cover all six import orders (15 randomized amounts), overlap, idempotence, balance quarantine, transfers, middle rollback, interrupted commit, pending-to-posted review, payslip linking, formats/golden files and both-theme import UI. Android app and instrumentation compile and lint; Session 2 device gate and screenshots are verified. Session 2.5 native assertions and all 12 new screenshots are verified; docs/GATE_SESSION_2_5.md records the regression results and APK hashes.
+`src/core/db/native.ts` records, per statement shape, how many times it ran and how long it took, and exposes the slowest shapes for measurement. It records **shapes only, never bound values**, so no amount, description or other financial detail is retained; the map is bounded and resets when it grows. `LedgerPerformanceInstrumentedTest` resets it before opening the Ledger and prints the five slowest shapes in its assertion, so the next run names the statement holding the 47 seconds rather than inviting a fifth hypothesis.
 
-1. Sessions 1, 2 and 2.5 are complete. The verified debug APK includes the approved K logo.
-2. Preserve the acceptance baseline in `docs/SESSION_2_BASELINE.json` unmodified.
-3. Source boundary, integrity-tier and supersession decisions are in ADR 0005–0007; schema is current.
-4. Do not start Session 3 without the user's next instruction. Carry its integrity/gap/pending constraints forward.
+Local regression is 283/283 across 66 files with lint, strict TypeScript, build, schema, release configuration, money lint, native-gate unit tests and generated-file checks passing. The 10,000 ms budget, the 256-row native response budget and every other assertion are untouched. Session 4 remains OPEN.
 
-## Known scope and deferred work
+# Session 4 — the empty search was scanning every row, 14 September 2026
 
-Session 2.5 adds no-balance exports, headerless/issuer inference, remembered mappings, source hierarchy and adapters, audited changed-amount supersession, weekly freshness and reminders. Native and visual evidence passed. PDF/OCR remains supported throughout. Direct bank APIs are out of v1; credential scraping is permanently excluded. Optional email ingestion stays off unless every required revision gate passes first.
+Run [34899327435](https://github.com/macdarenz-droid/kairos-money/actions/runs/34899327435) on `c7675e3` reported:
 
-Transfer automation requires explicit transfer evidence plus a unique reciprocal candidate; ambiguous matches remain visible rather than excluding unrelated purchases. Repeated identical purchases require consistent confirmed occurrence identity across overlaps. Canonical order independence refers to sorted logical ledger/source state, not SQLCipher bytes or import timestamps.
+`20,000-row ledger took 49702 ms; budget is 10000 ms [tab_open=25 ms, first_row=49351 ms, search_entered=49368 ms]`
 
-Intelligence, research catalogue, forecasts, fingerprint/charts, release signing, broader device/biometric compatibility and Session 4 performance/accessibility remain deferred. Session 3 must respect integrity tiers and gaps and exclude pending history; Session 4 distinguishes gaps from staleness and labels partial-month fingerprints provisional.
+Correcting the previous entry: the windowed read did **not** clear the load budget. Run 34897309077 failed at the reachability check on line 157, which precedes the budget assertion on line 168, so the budget was never evaluated and was wrongly recorded as passing. Position-keyed slots fixed reachability, execution reached line 168, and the budget then failed at 49,702 ms — about 5% better than the 52,491 ms before the windowed read.
 
-The full native status, deletion result, artifact IDs and all 39 screenshot SHA-256 hashes are recorded in `docs/evidence/session-2.5-final.json`.
+The windowed read was not wasted, but it was not the cost either. A local probe of one Ledger mount showed the whole data layer transferring **326 KB across 13 queries**, the largest 91 KB, so payload size is no longer the problem.
+
+The cost was the search predicate, introduced when search moved into SQL:
+
+`LOWER(t.raw_description||' '||t.posted_date||' '||COALESCE(c.name,'')) LIKE '%'||LOWER(?)||'%'`
+
+`first_row` is measured **before the search term is typed**, so it ran with an empty term. `LIKE '%%'` matches everything but cannot be optimised away: the expression concatenates decrypted columns, no index can serve it, and SQLite must build and test a string for every one of 20,000 rows, for both the count and the ordered page. Locally, unencrypted and in memory, that is 75 ms; on SQLCipher on the emulator it is 49 seconds.
+
+The predicate is now issued only when something is actually being searched, in both the list read and the bulk-categorisation read. With no term there is nothing to match, so the count and the ordered page use the index instead. A guard asserts that no `LIKE` is issued for an empty or whitespace term, that a real term still filters in SQL, and that a whitespace term returns the unfiltered total.
+
+Local regression is 283/283 across 66 files with lint, strict TypeScript, build, schema, release configuration, money lint, native-gate unit tests and generated-file checks passing. The 10,000 ms budget, the 256-row native response budget and every other assertion are untouched. Session 4 remains OPEN.
+
+# Session 4 — the windowed Ledger loads; last-row reachability repaired, 14 September 2026
+
+Run [34897309077](https://github.com/macdarenz-droid/kairos-money/actions/runs/34897309077) on `c31e564` reached the native gate for the first time in three attempts, after `ci: stop requesting the withdrawn Android 'tools' package` repaired `android-actions/setup-android@v3`. Google withdrew the obsolete `tools` package, so the action's default package set failed `sdkmanager` before `npm ci`, the APK build and every test. Requesting `platform-tools` only fixed it; runs 34896635019 and 34896998882 had died there in about ten seconds each with source-gate fully green.
+
+**The windowed read works.** The Ledger no longer fails its 10-second budget. Ten classes passed, including `IntelligenceInstrumentedTest` 4/4, and startup passed at 1,022 ms median and 1,219 ms fresh install. The failing page dump shows the Transactions list rendered with rows, a correct **20000 transactions** count, and per-account health reporting **20000 uncategorised** from the aggregate query. The read that measured 52,310 ms now completes inside the journey.
+
+`LedgerPerformanceInstrumentedTest` failed later, on reachability rather than time:
+
+`Large ledger condition: Boolean(document.querySelector('.windowed-list [aria-posinset="20000"]'))`
+
+That is this change's own fault. Slots were keyed by row identity, so a placeholder's key (`loading:19999`) differed from the key of the row that replaced it. `WindowedList` stores each measured height against the key, so an arriving window discarded the measurement, the row fell back to the default height, offsets were recomputed and the list reflowed underneath a scroll the test had already set to `scrollHeight`. The last row was never reachable because the content moved after the scroll.
+
+Slots are now keyed by position, so a slot keeps its measured height when its window replaces the placeholder, and the placeholder carries the same row markup so its height matches what arrives. Offsets stay stable across window loads and the scroll lands where it was aimed.
+
+Local regression is 282/282 across 66 files with lint, strict TypeScript, build, schema, release configuration, money lint, native-gate unit tests and generated-file checks passing. The 10,000 ms budget, the 256-row native response budget and every other assertion are untouched. Session 4 remains OPEN.
+
+# Session 4 — the Ledger reads one window, 14 September 2026
+
+The phase split landed the answer. Run [34875373780](https://github.com/macdarenz-droid/kairos-money/actions/runs/34875373780) on `4b244e0` reported:
+
+`20,000-row ledger took 52491 ms; budget is 10000 ms [tab_open=22 ms, first_row=52310 ms, search_entered=52473 ms]`
+
+Opening the tab cost **22 ms**. Entering the search term and fully virtualizing cost about **180 ms** between them. The data read cost **52,310 ms — 99.7% of the load**. That matches the local elimination exactly: `WindowedList` mounts 20,000 rows in 6 ms and re-renders in 2 ms, and `ImportWorkspace`'s filter is one memoized pass, so neither could ever have been the cost.
+
+The Transactions list virtualizes to about sixteen visible rows, yet the read moved roughly 40,000 rows — 20,000 transactions and 20,000 provenance records — across the Capacitor SQLite bridge on every open. The repair is to read a window instead of the ledger.
+
+`materializedPage` reads one window with search and ordering applied in SQL, plus a count. `materializedBulk` reads the bulk-categorisation candidates the same way, matched on merchant, date and category and excluding matched transfers exactly as that sheet always has, bounded by the 1,000-row cap it already enforced. `materializedHealth` aggregates the per-account counts `dataHealth` needs; the transfer wording SQL cannot judge is narrowed by LIKE to a small candidate set and decided by the original expression, so the result is identical to reading every row. `materializedLedger` is unchanged and still reads everything, which keeps every existing assertion about the full ledger honest.
+
+`WindowedList` gained one optional callback reporting its visible range, so the list requests the window it is showing. Rows outside the loaded window render as a reading placeholder until their window arrives.
+
+Local 20,000-row workspace falls from **679 ms** through 381 ms to **101 ms**, and the last window, at offset 19,800, costs **75 ms** — deep scrolling stays as cheap as the first page, which the benchmark now asserts. Roughly 40,000 rows crossing the bridge become about 400 plus counts.
+
+Regression is 281/281 tests across 65 files with lint, strict TypeScript, build, schema, release configuration, money lint, native-gate unit tests and generated-file checks passing. The workspace contract test was extended rather than relaxed, and the transfer-exclusion guarantee moved to the layer that now enforces it. The 10,000 ms budget, the 256-row native response budget and every other assertion are untouched.
+
+Native verification of this repair is still required. Session 4 remains OPEN.
+
+# Session 4 — keyset paging did not move the native Ledger, 14 September 2026
+
+Run [34871468723](https://github.com/macdarenz-droid/kairos-money/actions/runs/34871468723) on `881e6f3` failed the same class: **20,000-row ledger took 52,390 ms; budget is 10,000 ms**. The previous run measured 52,426 ms. Keyset paging moved the native number by 36 ms.
+
+That falsifies the hypothesis behind `881e6f3`. The quadratic OFFSET rescan is real and the local measurements were correct — offset paging quadruples per doubling where keyset doubles, and the local workspace improved from 679 ms to 381 ms — but it is not where the device spends its time. The change is kept because it is correct and strictly faster, not because it fixed this.
+
+The stronger signal is across three runs. Three materially different data paths produced nearly the same native figure: document reconciliation on every read measured 58,954 ms, materialized transaction and provenance reads measured 52,426 ms, and keyset-paged materialized reads measured 52,390 ms. A bottleneck that survives replacing the entire read strategy is not in the read strategy. Everything below the UI has now been ruled out by measurement rather than by argument.
+
+`IntelligenceInstrumentedTest` passed 4/4 again and the nine classes before it passed, so the scope repair holds. Startup was not the problem either.
+
+The measured window is `click("Ledger")` through the virtualized list reporting `aria-setsize=20000`, which covers opening the tab, the data read crossing the Capacitor bridge, entering the search term and full virtualization in one number. It cannot distinguish them, which is why the next run splits it: `tab_open_ms`, `first_row_ms`, `search_entered_ms` and the unchanged `ledger_load_ms` are now recorded in `docs/evidence/ledger-20000.json`. The 10-second assertion is untouched.
+
+No further repair is proposed until that evidence says which phase holds the time. Guessing a second time would cost another gate cycle and risk another correct-but-irrelevant fix. Session 4 remains OPEN.
+
+# Session 4 — keyset ledger paging, 14 September 2026
+
+Run [34868920857](https://github.com/macdarenz-droid/kairos-money/actions/runs/34868920857) confirmed the materialized-ledger scope repair: `IntelligenceInstrumentedTest` passed all four tests, and the nine classes before it passed with startup at 746 ms median and 849 ms fresh install. The gate then failed one class later, in `LedgerPerformanceInstrumentedTest`: **20,000-row ledger took 52,426 ms; budget is 10,000 ms**.
+
+That is only 11% better than the 58,954 ms the last green run recorded, while the same read completes in well under a second locally. The gap was `queryPages`, not the SQL it wrapped. It paged with `LIMIT ? OFFSET ?`, so each page re-read and discarded every earlier row; a full traversal costs O(rows squared / page), and on the encrypted device database every discarded row is decrypted again. Measured locally at page 256, offset paging cost 26/91/365 ms over 10,000/20,000/40,000 rows — quadrupling per doubling — against 10/19/40 ms for keyset paging, which doubles. Locally that is 91 ms and easy to miss; natively, with SQLCipher decrypting each rescanned row, it is the whole 52 s.
+
+`queryPages` now seeks past the last row already read, ordering by caller-supplied unique keys, for the four ledger-sized traversals: the materialized transaction and provenance reads and the intelligence snapshot's transaction and provenance reads. OFFSET remains for bounded reads and for orderings a key cannot express, such as the descending and aliased reads the existing contract test exercises. The 256-row native response budget is unchanged and still asserted, so the earlier memory-pressure fix stands.
+
+Local 20,000-row workspace improves from 679 ms to 381 ms and the intelligence snapshot from 468 ms to 305 ms, with bridge calls for one workspace load unchanged in kind but no longer rescanning. Regression is 280/280 tests across 65 files, including a new guard asserting neither the ledger nor the snapshot issues an OFFSET page. Lint, strict TypeScript, build, schema, release configuration, money lint, native-gate unit tests and generated-file checks pass.
+
+Native timing of this repair is still required; no emulator ran here. Session 4 remains OPEN.
+
+# Session 4 — materialized-ledger scope repair, 14 September 2026
+
+Run [34859716515](https://github.com/macdarenz-droid/kairos-money/actions/runs/34859716515) FAILED on candidate `a7f34a0beb3af319f8a4c8f5f6254a472a2e0396`. The source gate passed in full. The Android gate reached `IntelligenceInstrumentedTest`, where `c_monthlyVisualEvidence` and `d_spendingPatternsEvidence` failed: the Ledger rendered "No transactions yet" behind "Stored transaction evidence is incomplete", so neither "Change categories" nor any `.transaction-row` existed to act on. The nine preceding native classes and startup (1,915 ms median, 1,986 ms fresh install) passed.
+
+The cause is in `a7f34a0` itself, not the device. `materializedLedger` read every committed non-manual `import_batches` row, but the importer's ledger has always covered only the batches it rebuilt — those holding a `staging_rows` document (`source_row_id='__document__'`), which is the same scope `rebuild()` writes and deletes under and the scope the new `summaries()` already keeps. Screens outside the importer seed their own committed batches directly into `transactions`: the intelligence fixture's `s3-batch` carries pay rows with no provenance at all, and its `INSERT OR IGNORE` provenance rows are silently dropped by the `json_valid(original_payload)` CHECK constraint. Reading them as importer evidence raised "incomplete" and emptied the whole Ledger. `materializedLedger` now resolves that document scope once and applies it to both reads, restoring the behaviour of the last green run without weakening either evidence check.
+
+The scope is resolved in one query rather than per row: no `staging_rows` index makes `source_row_id='__document__'` a seek, and the per-row forms cost measurably more (`EXISTS` 824 ms, `JOIN` 890 ms, `IN` 4,467 ms against a 666 ms unscoped baseline). The 20,000-row local workspace now completes in about 700 ms (679–744 ms across five runs) under its 5-second source ceiling, so the 10-second combined Android budget is unchanged. Local regression is 279/279 tests across 65 files, including a new test that reproduced the device failure before the fix; lint, strict TypeScript, production build, schema, release configuration, money lint, native-gate unit tests and generated-file checks pass. The main bundle stays 499.66 kB without a warning.
+
+Native verification of this repair is still required; no emulator ran here. Session 4 remains OPEN.
+
+# Session 4 — green lifecycle run and materialized-ledger continuation, 14 September 2026
+
+Run [34853883508](https://github.com/macdarenz-droid/kairos-money/actions/runs/34853883508) is GREEN on `00d17fafb5f06bf3f83458ceac3009d0f95840df`. All source/Android jobs and 13 native classes passed, including the lifecycle repair, 40-page recreation, notification policy, 20,000-row cleanup, 200% loaded screens in both themes, widget, backup/reset/restore and deletion. Startup passed at 1,695 ms median and 1,977 ms fresh install. Verified hashes and limitations are in `docs/evidence/session4-gate-34853883508.json`.
+
+Do not close Session 4 from that green status alone. Its 20,000-row Ledger required 58,954 ms to load and programmatic-scroll frame intervals averaged about 97.64/92.50 ms at 100%/200% text. Published candidate `a7f34a0beb3af319f8a4c8f5f6254a472a2e0396` removes repeated full-document validation/reconciliation from ordinary Ledger and Today reads, loads the committed materialized transaction/provenance data in pages, uses compact batch summaries, and batches virtual-row measurements. The latest local 20,000-row workspace completes in 603 ms and has a 5-second source budget; the combined Android test now enforces a 10-second load budget without removing any existing check. Full local regression is 278/278 tests; lint, strict TypeScript, production build, schema and release checks pass. The main bundle is 499.66 kB without a warning. Do not poll its gate.
+
+Keep Session 4 as one milestone. Automation is disabled. After Session 4, implement all 36 offline Money Analysis capabilities and six quiet-coaching concepts together, followed by the complete low-effort usability/discoverability pass without removing features.
+
+# Session 4 — vault recreation lifecycle repair, 14 September 2026
+
+Reviewed completed run [34851477214](https://github.com/macdarenz-droid/kairos-money/actions/runs/34851477214) once on `c09fb8166fd1e4e39b29c7c3326e538d77aba608`. Source and all Android APK compilation/lint/signature checks passed. Startup passed unchanged limits at **1,681 ms median** and **1,681 ms fresh install**. The repaired readiness probe correctly survived transient UI Automator failures and still required a valid setup hierarchy.
+
+Native recovery, foundation, key protection, hardening and frozen import checks passed. The 40-page journey then exposed a real activity-recreation race: an obsolete WebView submitted one final vault status request after its plugin worker had begun shutdown. `RejectedExecutionException` escaped the plugin method and killed the process. The vault plugin now marks each destroyed instance before shutdown, rejects calls both before enqueue and on its worker, and catches a submission racing executor shutdown. Obsolete calls settle as errors; the replacement activity constructs its own plugin and worker. Accepted work continues graceful shutdown and secure operations are not replayed across activities.
+
+Because this run stopped early, it does not verify the prior 20,000-row cleanup repair or reach notifications, accessibility, Acceptance, backup/delete continuation. Session 4 stays open. Verified archive/per-file hashes and exact evidence are in `docs/evidence/session4-gate-34851477214.json`.
+
+Keep **one integrated Session 4 milestone** open. The next session remains all 36 offline Money Analysis capabilities plus six quiet-coaching concepts together, followed by the full low-effort usability/discoverability pass. Automation is disabled; check replacement gates only when the user asks.
+
+Local validation: Current repair: 14 host runner tests, lint, strict TypeScript, Java syntax and diff checks PASS. Previous candidate source tree: 278/278 tests and production build PASS. Native Android compilation/execution of the lifecycle repair remains pending CI.
+
+## Earlier checkpoint history
+
+# Session 4 — ledger cleanup and readiness repair, 14 September 2026
+
+Reviewed completed run [34847174081](https://github.com/macdarenz-droid/kairos-money/actions/runs/34847174081) once on `2a32c37d3c6968148d748291be218472064bf452`. Source, Android APK compilation/lint/signatures and every native class through Intelligence passed, including native notification policy. The 20,000-row test now completed both scroll measurements and reached the final row at 100%/200% text with at most 16/10 rows mounted. Its failure was cleanup alone: removing the synthetic records in one database operation exceeded the test helper's 30-second bound.
+
+The replacement removes fixture rows in transactions of at most 256 rows, preserves the existing per-operation/instrumentation timeouts, verifies exact removed counts and relationship integrity, and retains the original user-row count check. Per-table timings and cleanup-only exceptions now preserve their exact phase. This bounds the known large cleanup operation; the prior log did not identify the particular SQL statement that consumed the time, so native success is not inferred.
+
+Startup remains OPEN. Raw samples 2,152 / 2,073 / 1,333 ms have a 2,073 ms median above the unchanged 2,000 ms limit. UI Automator (PID 2985) also crashed with a bad file descriptor after printing its hierarchy-dump line. Readiness now retries only that probe within the original 30-second budget, discards stale XML before each attempt, validates complete XML, and records every attempt. It never substitutes another cold launch. The runner now reports all measured timing failures even when final readiness fails.
+
+The same run measured 62,376 ms ledger load and approximately 111/105 ms mean frame intervals. Reachability does not close performance acceptance. The screen now loads/validates the imported documents once per refresh and reuses them for reconciliation. Currency formatting reuses a bounded set of locale/currency configurations without retaining monetary values. Source regressions preserve complete history, staged-file visibility, current category edits, invalid-source refusal and exact multi-currency output. Native improvement still needs measurement.
+
+Evidence archive and per-file hashes, raw measurements and limits are recorded in `docs/evidence/session4-gate-34847174081.json`. Reviewed the two final-row screenshots at full size; this is not a complete visual/AA/assistive-technology review. Loaded-screen accessibility and downstream Acceptance/backup/delete were not reached in this failed run. Prior green widget and backup evidence remains recorded separately.
+
+Keep **one integrated Session 4 milestone** open for performance, native cleanup, remaining launcher/import-death/refund/accessibility checks and the privately signed final APK/E2E. The next session remains all 36 offline Money Analysis capabilities plus six quiet-coaching concepts together, followed by the complete low-effort usability/discoverability pass. Automation stays disabled; no replacement-gate polling.
+
+Local validation: 278/278 source tests across 65 files, 14 host runner tests, lint, TypeScript, production build (498.45 kB main bundle), schema/generated-file checks, release configuration, money lint and diff checks PASS. Native Java syntax parsed; Android compilation/execution of this repair remains pending CI.
+
+## Earlier checkpoint history
+
+# Session 4 — large-ledger memory repair, 14 September 2026
+
+Checked completed run [34843754745](https://github.com/macdarenz-droid/kairos-money/actions/runs/34843754745) once on `3262bfd47611098221b48a8b88c7b73e989b5d61`. Source, all APK compilation/lint/signature checks, startup (1,653 ms median; 2,263 ms fresh install) and every native class through Intelligence passed. The new notification test proves permission refusal, actual Android receiver/NotificationManager delivery of all four generic private notices, daily caps, deduplication, future/stale refusal and cancellation. Its due-time fixture still does not measure Doze/alarm punctuality.
+
+The 20,000-row test failed with a cleanup database timeout, which replaced the primary exception. The full log shows repeated blocking garbage collection and 24 MB allocation attempts near the 192 MB Java heap ceiling after recreation. The test retained both full parsed fixture representations during measurement. Their loading/seeding now finishes in a separate method returning only the batch ID, allowing those objects to be collected before the real app reads the ledger. The dataset and all assertions remain intact.
+
+The production transaction, source-provenance and ledger-label reads now cross the native bridge in pages of at most 256 rows. Every record/value is preserved; transaction date/id order is retained by reading the primary-key index and stable-sorting dates once. This avoids repeatedly sorting the full table for each page. These are row-count bounds, not a byte cap for an individual large text field. The native test now records phase/heap checkpoints and retains the original exception with any cleanup error suppressed beneath it. Native performance is still OPEN until this repair runs.
+
+Verified evidence archive SHA-256 and recorded exact results/limitations in `docs/evidence/session4-gate-34843754745.json`. The previous completely green candidate remains `a6a9c41`; this failure does not invalidate its narrower passing widget/backup/delete proof. New loaded-screen accessibility and downstream acceptance were not reached by the current failed run.
+
+Continue **one integrated Session 4 milestone**. Preserve all remaining launcher, active-import process-death, native-refund, visual/accessibility, alarm timing and privately signed release/E2E requirements. Next session is all 36 offline Money Analysis capabilities plus the six quiet-coaching concepts together, followed by the complete usability pass. Automation remains disabled; no replacement-gate polling.
+
+Local validation: 274/274 source tests across 63 files; lint, TypeScript, production build (498.18 kB main bundle), schema/generated-file and release-configuration checks, 11 runner tests, money lint and diff checks PASS. Native test Java syntax PASS; actual repair compilation/execution pending combined CI. See ADR/0033-bounded-native-ledger-reads.md.
+
+## Earlier checkpoint history
+
+# Session 4 acceptance review — 14 September 2026
+
+Full gate [34839763247](https://github.com/macdarenz-droid/kairos-money/actions/runs/34839763247) is **GREEN** on `a6a9c41b16d85d8ea8ae0368c5aa1a25dbf6fbd3`. The previous widget repair passed the real touch, locked activity recreation, unlock, acknowledgement/no-replay and normal ActivityScenario teardown assertions. Source verification, Android compilation/lint, signatures, all native classes and the complete backup/reset/restore/delete continuation pass.
+
+Startup median is **1,575 ms**, with raw process-cold samples 1,833 / 1,574 / 1,575 ms. Fresh installation is 1,833 ms. The 40-page PDF extraction took 2,842 ms with visible progress and a responsive WebView after a staged file survived activity recreation. These are measured emulator results, with the existing limits unchanged.
+
+Downloaded APK/evidence archives match GitHub's SHA-256 digests. Reviewed all 151 current screenshots in 13 contact sheets. The evidence record preserves the artifact IDs, APK/archive/screenshot hashes, native reports and review limitations: `docs/evidence/session4-gate-34839763247.json`.
+
+Session 4 remains **one integrated milestone**. Green automation is not final product acceptance: the old 200% Insights/You captures showed loading placeholders, the 20,000-row frame benchmark existed only locally, and native money-notice delivery had not been exercised. This continuation expands the same full gate with loaded-content checks in both themes, a real encrypted 20,000-row ledger fixture and scroll/frame evidence, and Android broadcast/NotificationManager checks for permission refusal, all four generic private notices, daily caps, deduplication and cancellation. The generated ledger is an instrumentation-only asset. Its production ledger read was verified locally against all 20,000 IDs and source links. New Android assertions remain unrun until the combined gate executes them.
+
+Still required for final acceptance: real launcher placement/launch (the passing widget fixture hosts RemoteViews inside the activity); process death during an active import with no partial ledger (recreation before extraction is not that proof); native refund link confirmation/removal (current device capture only inspects the purchase section); complete visual/accessibility/performance review; real alarm timing beyond the prepared due-time broadcast fixture; and the privately signed final APK with release E2E. Current downloadable artifact is a signed **debug** APK. Private release signing remains fail-closed and requires the existing external signing credentials; the current workflow has not produced a private release APK.
+
+Next session, after Session 4 acceptance: **offline Money Analysis, all 36 accepted capabilities plus the six quiet-coaching concepts together**. The complete low-effort usability/navigation pass follows all agreed implementations, preserving every feature. Automation stays disabled; gate checks happen only when the user requests them. Do not poll a replacement run or divide the work into feature releases.
+
+Local verification of this continuation: **271/271 source tests across 62 files**, 11 host runner tests, lint, strict TypeScript, production build (497.83 kB main bundle), schema/generated-file and release-configuration checks PASS. All three changed/new instrumentation classes parse as Java; this is syntax validation only. Android compilation/execution of the extensions remains for the combined CI run.
+
+## Earlier checkpoint history
+
+# Widget delivery and lifecycle repair — 14 September 2026
+
+Checked completed run 34836848079 once, on candidate 794811a40af5b2bc173061e367b8702f4a05f56f. Source/build/lint/signature checks, startup (1,489 ms median), Intelligence and accessibility pass. Acceptance still fails to open the widget entry and teardown remains PAUSED. Verified the downloaded evidence SHA-256. The log proves QUICK_ADD reached Android; ActivityScenario then explicitly ignored RESUMED and later teardown because MainActivity replaced its original MAIN/LAUNCHER intent. The earlier claim that performClick did not dispatch was not established by the evidence.
+
+This continuation keeps the original activity intent intact and stores a saved-instance pending navigation ID separately. Peek is nondestructive; acknowledgement matches the request ID and occurs only after the unlocked entry or required account setup form is displayed with account data available. A regression reproduced the old pause-before-bridge-completion loss and passes with the new delivery protocol. Stale reads and acknowledgements cannot displace a newer tap.
+
+The same combined Acceptance journey retains real Android touch injection, requires the named open entry, checks original intent/RESUMED tracking, and adds a locked light-theme tap plus recreation before unlock. It verifies acknowledgement and no replay, then uses ordinary ActivityScenario teardown. This is still a hosted RemoteViews widget test; it does not claim home-screen launcher placement. No timing or functional gate requirement is weakened.
+
+Local source verification: 271/271 tests in 62 files PASS; 11 native-runner tests PASS; lint, strict TypeScript, production build (497.83 kB main JavaScript), schema/generated files, release-signing configuration, Android asset sync, money lint and diff checks PASS. The exact published base was reconstructed locally and its full Git tree matched 8775ff5aa3e9b3079d6daad3e8459a0e578aa252 before editing. Android SDK and Gradle distribution are absent locally, so native compile/device verification remains OPEN for the replacement full gate. See ADR/0032-acknowledged-widget-navigation.md and docs/evidence/widget-launch-34836848079.json.
+
+Publish this consolidated repair to the existing Session 4 branch. Automation remains disabled; do not poll the replacement. Session 4, downstream backup/deletion evidence, visual acceptance and the signed private release remain OPEN. The analysis/coaching and final usability roadmap are unchanged.
+
+# Earlier widget-input attempt — superseded
+
+Run 34834884401 at 2346ad1 passed source, Android compilation/lint/signatures, startup, Intelligence and accessibility. Acceptance reached the hosted widget but Add transaction did not appear. The next candidate replaced performClick with Android touchscreen down/up. Run 34836848079 showed that this was insufficient and established the activity-intent mismatch described above. Direct task finishing is superseded by the lifecycle repair. Automation stays disabled.
+
+# Manual continuation — 14 September 2026
+
+The Kairos Money automation is disabled by explicit user request. Run 34832684247 at b2de377 passed the complete source gate, Android compilation/lint/signatures, startup, Intelligence and accessibility. The widget rendered and its real PendingIntent opened Add transaction. Final Acceptance teardown then failed because ActivityScenario could not force its tracked singleTask activity from PAUSED to RESUMED. The repair finishes the tracked task directly after all widget assertions and requires DESTROYED within 15 seconds. This preserves every functional assertion and removes the invalid intermediate lifecycle demand. Replacement native evidence remains required.
+
+# Current continuation — 14 September 2026
+
+User authorized continued work and re-enabled the existing hourly Money worker. Run 34819848337 at a9a8e35 failed the frozen Session 2 contract: the preceding Quick regression had edited tests/ui.test.tsx. Restored that file byte-for-byte and moved the additional modal/navigation coverage to tests/session4-quick-dialog.test.tsx, also verifying search does not receive automatic focus.
+
+Immediate revision-2 changes: Quick search no longer autofocuses; receipt entry explicitly says Attach receipt to this transaction, explains before camera use that no purchase/balance changes occur, and shows a live save confirmation plus expanded saved receipt after persistence. Camera and file receipt paths share confirmation. Receipt-to-draft and wider navigation changes remain in the final usability pass after Session 4, the 36 analysis capabilities and six quiet coaching concepts. No financial logic changes.
+
+Session 4 remains OPEN. Preserve the combined native gate, both-theme visual review and final signed private APK requirements. Continue from the current branch and WORKER_STATE, not older source/run values below. No in-turn polling; perform independent work while a candidate runs and publish only one consolidated replacement after the previous run finishes.
+
+# Session 4 — integrated private-release continuation
+
+Run 34817043793 (`157189d`) passed the complete source gate, Android builds/lint and APK checks. Startup PASS: 2,339 / 1,269 / 1,314 ms, median 1,314 ms and fresh install 2,339 ms against unchanged limits. All 16 native tests through Intelligence passed, including the corrected both-theme net-worth ownership journey. Accessibility then failed because its harness expected Quick to become the current page; Quick correctly opens a modal over Ledger. The continuation asserts the named open Quick dialog, preserves the underlying current page, applies the existing 200% target/name/overflow checks, and closes Quick before proceeding. Source UI coverage verifies that modal/navigation contract. Downstream widget/backup/delete checks and final visual/private-release acceptance remain OPEN; corrected native accessibility still requires the combined gate.
+
+Accepted future requirement: after all agreed implementations (including the 36 analysis capabilities and six quiet-coaching concepts), perform a complete low-effort usability audit and simplification pass. Preserve every feature while reducing taps, navigation and repeated input. Preliminary source findings and final acceptance method are saved in docs/LOW_EFFORT_USABILITY.md and linked from docs/ROADMAP.md. Planning only; no UI changes, gate polling or replacement run for this addition.
+
+Run 34815121651 (`22a4513`) passed the complete source gate, benchmark/debug/instrumentation compilation, lint and both APK checks. Release-equivalent startup samples were 2,136 / 1,597 / 2,094 ms: the median remains above the unchanged 2,000 ms limit. Deferring that failure correctly allowed 12 native tests through recovery, foundation, key protection, low-storage, imports, the 40-page interruption journey and revision checks to pass. Intelligence then failed in monthly net-worth ownership: its USD reconciled fixture was inspected with the separate net-worth filter still on AUD. The test now explicitly selects and verifies USD before both-theme valuation and ownership checks. No ledger rule, fixture balance, ownership assertion or performance threshold changes. Startup acceptance, downstream device checks and visual review remain OPEN; the corrected currency journey still needs the full native run.
+
+Run 34813835994 (`3b4609e`) passed source, Android compilation/lint and debug signature checks but failed at a 2,506 ms startup median (raw samples 2,339 / 2,558 / 2,506 ms). The renderer change did not fix startup. Artifact SHA-256: `ce121745c74299a5ad6e8155130315550725b26f0de17376028c3fb7f14e59d8`. Earlier references to the whole slow frame as GPU time were too strong: that duration also includes scheduling and UI traversal, and these logs do not isolate the root cause.
+
+The continued candidate corrects two gate-design issues: performance was measured on a debuggable APK, and a timing failure suppressed every functional test. A CI-only `benchmark` variant now inherits release behavior, explicitly disables debugging and uses the development signing identity; its packaged manifest and signature are verified before measurement. Three confirmed COLD launches keep the same 2,000 ms median and 2,500 ms first-install limits. Each sample reaches the real PIN-setup page before the next force-stop; setup readiness is separate from Android's first-frame TotalTime. The disposable benchmark is removed before the unchanged debug/native journey, and any timing failure still fails the overall gate after functional evidence has been collected. Physical devices and pre-existing Kairos installs are refused before mutation. Private release signing and the complete Session 4 scope remain unchanged. See ADR/0031-release-equivalent-startup-evidence.md. New host runner/manifest regressions pass; native compilation and improved timings remain unverified until the next full gate. No claim of a startup performance PASS is made.
+
+Run 34812815722 (`8e7789d`) passed the complete source gate, Android compilation, lint and signature checks, then stopped before instrumentation because its three process-cold launches had a 2,142 ms median. The device log shows graphics/rendering contention rather than an app crash, consistent with the earlier 1,534 ms first GPU frame and 4,918 ms Android-launcher render on the same headless emulator. The workflow had overridden Android Emulator Runner's supported headless renderer with direct `swiftshader`; it now uses the action's documented `swiftshader_indirect` mode. The app's median-below-2,000 ms requirement, first-install ceiling, Pixel 6 profile and every downstream native assertion are unchanged.
+
+Runs 34809849810 (`20db289`), 34810938628 (`d509d89`) and 34811818647 (`c00cce7`) passed the complete source gate, Android compilation, lint and debug signature verification. Their single fresh-install measurements were 2,149 ms, 2,150 ms and 2,112 ms. The latest log shows app creation at about 604 ms but a 1,534 ms GPU frame on an emulator whose launcher itself took 4,918 ms. The app retains its secure first-frame/WebView reveal improvement. The native runner now records three force-stopped process-cold launches: their median must remain below 2,000 ms, and the first post-install launch independently must remain below 2,500 ms. Every sample and raw `am start -W` result is retained. This replaces one system-noise-sensitive observation with repeatable cold-start evidence while preserving the two-second requirement and adding a first-install ceiling. Full instrumentation still follows and remains mandatory.
+
+The corrected local continuation passes **260 tests in 60 files** with one worker, including the protected import-order invariant, all real-source orders, the 20,000-row benchmark, integrity checks and every UI suite. Lint, strict TypeScript, production build, schema/generated-file checks and the release-configuration contract pass. Main JavaScript is 497.11 kB without a chunk warning. Local Gradle execution remains unavailable because the distribution cannot be downloaded in this runtime; no native result is inferred.
+
+The app is prepared as version `1.0.0-rc.1` / code 4. Release builds require an external keystore plus all four signing values and fail before `preReleaseBuild` if configuration is missing or the keystore path is unreadable. There is no unsigned or debug-key fallback. The changelog and README now describe the integrated candidate and private build procedure. Final `1.0.0`, signing continuity, the tested release APK and Session 4 closure remain contingent on the complete native gate and evidence review.
+
+Run 34807588499 on published candidate `b875f08f` passed the full source gate, Android compilation, lint and signature checks, then failed in `IntelligenceInstrumentedTest`. The app page evidence showed both requested sections present, but `captureHeading` incorrectly searched only `h2` elements; a following fixture also rejected a briefly active WebView database transaction instead of waiting for it to finish. The local harness now finds exact visible heading text across semantic heading levels and retries the authenticated database boundary without blocking its worker, up to the existing 30-second timeout. No product assertion or frozen earlier-session test is weakened.
+
+Local commits after `b875f08f` also add the 40-page interruption/responsiveness journey in its own Session 4 acceptance class, fail-closed database integrity checks, encrypted low-storage rollback evidence, restored frozen-test hashes and this release preparation. The repaired combined native candidate remains unrun.
+
+# Session 4 — verified-account net-worth ownership
+
+Gate 34806961541 passed the complete source job, then stopped before emulator execution because the recurring-payment Android fixture used the wrong AndroidX SQLite update overload. The fixture now supplies an explicit no-conflict policy and object arguments. The same continuation adds actual Camera permission/live-preview/photo-review captures in both themes, a bound native quick-add widget whose real pending intent must open transaction entry, a measured cold-start limit below two seconds, and named/44px/no-overflow checks across all major screens at 200% WebView text zoom. A generated 40-page PDF must remain staged across activity recreation, show real extraction progress, keep the WebView responsive and emit measured evidence before removal. These native additions are compiled only by the next full Android run; local Gradle download remains unavailable.
+
+Encrypted storage now runs SQLite page and foreign-key integrity checks before exposing the repository after unlock. A damaged ledger fails closed with backup-recovery guidance; focused tests cover a valid migrated ledger, a failed page check and readable pages containing broken transaction links. The native continuation also constrains an encrypted fixture to its current page count, requires a storage-full failure inside a transaction, and verifies that no partial rows survive reopening while the original record remains encrypted. Native hardening acceptance remains part of the combined device gate.
+
+Combined net worth now joins manual holdings with only the latest reconciled statement closing balances the user explicitly includes. Every account requires an include/exclude ownership choice; rolled-back or unverified balances stay out and leave the picture visibly incomplete. Positive balances are assets, negative balances are liabilities, source dates remain visible, and manual history stays separate from the current combined position.
+
+Manual holdings can identify the imported account they represent. Currency mismatch, a second manual representation, or simultaneous manual/imported inclusion is rejected transactionally. Choices and links survive encrypted backup/restore without changing ledger, source or coverage rows. The clean complete regression passes all 257 tests in 59 files with one worker; lint, strict TypeScript, schema generation, diff checks and production build pass. The main JavaScript is 496.77 kB without a chunk warning after deferring the net-worth repository. The combined Android journey now captures account review and inclusion but remains unrun. Continue the same integrated Session 4 milestone through accessibility, hardening, device performance, camera/widget evidence and the signed private release; no gate or worker launched. See ADR/0030-explicit-net-worth-ownership.md.
+
+## Session 4 — confirmed refunds
+
+Added explicit source-credit refund linking to an earlier same-currency imported purchase, including another account. Multiple partial credits are supported up to the full purchase amount. Payslip-linked salary, wrong-direction/pending/transfer sources and excess totals are rejected. Source amounts, categories, provenance and cashflow dates stay intact. Links survive backup and exact source rollback/reimport; changed or malformed links become inactive and remain removable.
+
+Analysis derives a refund classification instead of income and shows selected purchases after their confirmed refunds through the analysis date. Original merchant/timing/category counts and charts remain gross; later refunds are not incorrectly moved into the purchase month's cashflow or projected as future income. Both-theme source tests cover confirmation/removal, while native capture now includes the purchase-refund section. Actual native linking remains OPEN.
+
+Continue the original Session 4 scope, including verified-account net-worth ownership, remaining product/accessibility/hardening/performance, camera/widget/device evidence and the signed private release. No new gate or worker launched. The 36-feature Money Analysis and six quiet coaching concepts remain accepted for the following session; no coaching implementation has begun. See ADR/0029-confirmed-refund-links.md. Full regression PASS: 253 tests in 59 files. Lint, strict production build, schema generation and diff check PASS. Main JavaScript is 498.38 kB, without a chunk warning. Native refund linking remains OPEN.
+
+## Session 4 — original-currency evidence
+
+The source transaction sheet now records an original foreign amount and source note, shows an exact-ratio implied rate rounded to six decimals, and supports edit/removal. Posted account amounts, source records, coverage and fees are unchanged. The note survives encrypted backup and rollback/reimport; changed posted values make its rate inactive. Malformed records fail safely and can be removed independently. Manual split UI loads on demand to keep startup code below the existing bundle warning threshold.
+
+Native both-theme source-sheet save/removal is added to the combined journey, but is unrun. Session 4 remains OPEN for refund ownership, verified-account net worth, remaining product/accessibility/hardening/performance, camera/widget/device evidence and the signed private release. No gate or worker launched. The subsequent 36-feature Money Analysis scope remains planned, with declarative observations and no coaching action buttons. See ADR/0028-recorded-original-currency.md. Final clean full regression: 246 tests in 57 files PASS. Final lint, strict type checking, production build, schema generation and diff check PASS. Main JavaScript is 497.85 kB with no chunk warning. Native execution remains OPEN.
+
+## Manual expense splits continued in Session 4
+
+Manual-history expenses now share the exact category split editor. An explicit statement match copies valid allocations atomically, refuses conflicting imported splits, and retains the manual copy for source rollback. Deleting a manual entry removes only its split; imported allocations remain. Changed amounts exclude stale allocations, and single-category changes require removing a conflicting split first. Added matching/rollback/reimport/backup/deletion/conflict tests and both-theme manual-history UI tests. The combined Android journey now captures manual splitting and removal; native execution is still OPEN.
+
+The user ordered completion of Session 4 before the separate 36-capability offline Money Analysis milestone. That follow-on scope is recorded in ROADMAP.md and has not started. Remaining original Session 4 refunds/FX/net-worth ownership, accessibility, hardening, device performance, camera/widget evidence and signed private release remain OPEN. No new gate or worker launched. See ADR/0027-manual-split-ownership.md. Full regression PASS: 240 tests in 55 files; final lint, strict production build, schema generation and diff check PASS. Android checks are prepared but unrun; this remains a source checkpoint.
+
+## Expense splits integrated into Session 4
+
+Imported settled expenses can now be split into 2–10 exact category amounts from the source-transaction sheet. Original payment/source/coverage records remain intact. Category charts, comparison, concentration, essential/discretionary signals and payday portions use allocations; cashflow, recurrence and merchant counts keep one parent payment. Evidence sheets show allocations beneath the complete payment. Single-category bulk edits reject conflicting splits. Backup/restore and exact rollback/reimport retain allocations; changed amount/currency/status makes them inactive until reviewed. Manual expenses and credits still need their remaining ownership work before Session 4 can close.
+
+The combined native spending journey now exercises split save/removal in both themes. It has not run; no new gate or worker is launched. Continue the existing four-session plan: Session 4 remains OPEN for remaining refunds/FX/net-worth ownership, camera/widget and native acceptance, accessibility, hardening, performance and private release. See ADR/0026-expense-category-splits.md. Full regression: 236 tests in 55 files PASS; final lint, strict production build, schema generation and diff check PASS. Native compilation/execution remains unverified locally.
+
+## Statement-derived spending patterns
+
+Added Your spending patterns at the top of Insights and a Today shortcut. It starts with all imported dates and supports account/currency/month filtering. Exact recorded purchase/fee totals, monthly bars, repeated merchants, small-payment accumulation and posting-day bars link to transaction/source evidence. Matched transfers are excluded; unclear transfers/cash and recognised repayment services stay separate; credits are not called salary or savings. Missing categories, payslips or shared coverage no longer prevent these basic observations. Coverage-qualified profiles and forecasts remain strict. Existing historical charts now anchor to the latest recorded transaction month.
+
+Private supplied PDFs were checked through the production parser and import review; both balance chains passed and the missing-current-month/shared-coverage problem reproduced. No private statement contents or spending results are committed. Synthetic regressions cover the same failure conditions. Existing Android profile captures are preserved at their intended headings, and an additional both-theme spending test is included in the combined gate. Native acceptance remains OPEN; no new gate or workers launched. Preserve the rest of Session 4. See ADR/0025-observed-spending-before-profile.md. Full regression: 232 tests in 53 files PASS; final lint, strict production build and diff check PASS. Private production-PDF reproduction passed separately. This source checkpoint is newer than the last APK and is not yet native-verified.
+
+## Cancellation progress integrated
+
+Recurring costs now include local cancellation records: requested/provider-confirmed status, contact/confirmation date, provider reference or note, edit and confirmed removal. Records are currency/merchant scoped across accounts and persist after a pattern disappears. Later covered settled non-transfer debits link to their original statement evidence; missing imports are disclosed. Records use encrypted settings and survive backup/restore without changing transactions, coverage, expected bills or forecasts. Confirmation requires a note. The form uses existing themed controls with a styled multiline note field.
+
+The combined Android monthly journey now records a request, inspects a later payment and removes the record in both themes. Native execution and visual acceptance remain OPEN, along with camera/widget, remaining product ownership, accessibility, performance, hardening and final private release. No new gate or workers launched. See ADR/0024-cancellation-records.md. Full regression: 226 tests in 51 files PASS; lint, production build, schema generation and diff check PASS. No native acceptance is claimed.
+
+## Stronger native visual acceptance checks
+
+The next combined gate now waits for each requested heading to stay in the visible viewport before capturing, and checks it again after capture. This addresses the previously misplaced light manual-history screenshot and applies to monthly charts and valuation history in both themes.
+
+The monthly fixture reuses three existing equal settled payments 14 days apart as a synthetic recurring merchant, preserving their amounts and coverage. The timeline capture now requires populated payment markers. Valuation evidence now covers a single date, a second date for the same holding, and removal back to a single date before cleanup. Earlier acceptance assertions remain intact. These are prepared instrumentation changes, not new screenshots or a native PASS; camera, launcher, accessibility, performance, remaining product work and private-release acceptance remain OPEN. No new gate launched. Full source regression: 222 tests in 49 files PASS; lint and production build PASS. Android compilation/execution unavailable locally, so the new instrumentation remains unverified.
+
+## Gate review and chart follow-up
+
+Workflow 34796042182 PASS on candidate 7c83aa3438e1ba09873115291961663c92bcefcd. Downloaded APK/evidence archive digests match GitHub. Native encryption, manual-entry journey, PIN recovery, backup/reset/restore and deletion pass. Reviewed 38 new manual/chart/bulk/valuation screenshots; see docs/evidence/session4-gate-34796042182.json for hashes and limits. Camera and actual launcher-widget proof are absent; light manual-history capture does not reach the intended section; recurring timeline is only captured empty. These remain OPEN.
+
+Continued the visual repairs identified in that review: non-scaling cashflow/payday/net-worth strokes, exact currency scale labels, payday day labels, and a clear single-valuation message instead of a tiny point in a mostly empty chart. No money calculations or source provenance changed. Full regression PASS: 222 tests in 49 files; lint and production build PASS. Final scale-label wording is checked separately by the focused visual tests. This follow-up is newer than the green candidate and has no new native acceptance yet. Preserve every other original Session 4 requirement.
+
+## Integrated continuation — receipt capture and startup
+
+Direct receipt capture is now implemented in the bundled Android WebView: live rear-camera preview, explicit photo review, retake, cancellation and existing on-device OCR/encrypted attachment save. Capture creates no gallery/temp file and no money or coverage rows. Streams stop on removal; aborted captures cannot save after OCR or a later unlock. The existing file attachment path remains available. Actual Android permission, image readability, lifecycle and both-theme camera acceptance remain OPEN.
+
+Quick-add bridge failures now show an actionable error. Import UI and the money charts load on demand, while Settings remains immediately available to preserve the foundation flow. Main production JavaScript decreased from 540.38 kB to 489.68 kB; the chunk warning is resolved. Device cold-start performance is not inferred from bundle size.
+
+Full source regression: 222 tests across 49 files PASS, including unchanged earlier acceptance tests and the camera/attachment/quick-add checks. Strict TypeScript, lint, production build and Android asset sync pass. Native compilation remains unavailable locally because Gradle is not cached and its distribution download is blocked by network access. No component CI gate or APK was launched. Remaining original Session 4 product ownership, accessibility, hardening, device performance, final E2E and signing requirements remain binding. Next resume from this source checkpoint, finish the combined milestone, and obtain actual camera/device evidence before release. Workers and bank-notification capture remain off.
+
+Session 4 remains one integrated milestone. The user explicitly rejected per-feature gates and continuation stops. New requests augment the original roadmap. Continue independent implementation while CI runs, and consolidate evidence-backed repairs with the rest of the session. The obsolete stop-on-active-CI rule in ROADMAP.md has been replaced. Do not launch another full gate for only the current routing repair.
+
+Current continuation adds atomic bulk category changes for imported transactions and a four-step first-import guide on Today, with the real file-picker action once an account exists. Category overrides preserve source evidence and survive rollback/reimport; clearing a source-supplied category now stays visibly uncategorised. 211 tests in 46 files pass in one complete run; lint, TypeScript, production build and schema generation pass. Native bulk-selection capture is added to the existing combined visual test but has not run. Splits/refunds/FX, direct receipt camera capture, widget, complete verified-account net worth, notification device acceptance, accessibility, hardening, performance and final E2E remain binding Session 4 work. No component gate or release was launched.
+
+Latest integrated additions: coverage-aware payday spending curve, actual recurring-payment timeline, and manually recorded asset/liability valuations with dated step history. Valuations are encrypted, included in export/backup/restore, and never create cashflow or coverage. Imported account balances are explicitly not auto-added to this manual total. Added source tests and expanded the existing Android monthly visual test to exercise valuation save/remove and capture the new charts in both themes. Native evidence is still required. Remaining product editing, onboarding, direct receipt camera capture, widget, accessibility, hardening, performance and final private-release E2E are not waived.
+
+Current integrated work: manual entry run 34788034278 failed because Add transaction routed to account setup while accounts were loading. Fixed by retaining the requested action until accounts resolve; a delayed-account regression passes. Native typing now waits for the input. The same worktree now connects Money Fingerprint/month comparison, daily cashflow/category views, merchant history, annualiser, upcoming bills and coverage-qualified monthly changes. Recovery-code groups are visible together. Receipt-file OCR/attachment and notes are separate from ledger money and included in backup. Large ledgers use measured row windowing; PDF.js is lazy loaded; source provenance and reconciliation are indexed; reconciliation above 200 rows runs outside the browser UI thread. Native/visual acceptance remains OPEN. See GATE_SESSION_4.md and ADR/0018-session4-visuals-and-responsive-ledger.md for remaining original scope.
+
+Manual expense/income/same-currency transfer entry is implemented from Today, Quick and Ledger, with edit/delete and explicit statement matching. Original manual records remain independent of imported transactions; source rollback restores their projection if needed. Possible duplicates are disclosed and prevent verified safe-to-spend. No manual source creates statement coverage.
+
+CommBank repair workflow 34785441843 is green (source and Android). CommBank Smart Access PDF support was added after private supplied-file reproduction. Named-month dates, wrapped descriptions/final-line amounts, CR/DR suffixes, page headers and explicit period/balance metadata now parse. Private local production-registry staging/review/commit/idempotence/rollback passed; no private source or extracted payload is committed. Synthetic regression fixtures live in tests/commbank-statement.test.ts.
+
+Import now displays a shared ledger-row animation with actual page/stage text, visible at the top of the sheet. Reduced-motion disables animation. Source UI behaviour is tested in dark/light; actual animation/device visual review remains open. Existing Westpac source/UI tests are unchanged and pass.
+
+User priority in Session 4: Add transaction from Today and Quick for expense/income/transfer, editable/deletable manual history, with import matching to avoid double-counting. This is required before release and independent of deferred notification ingestion. Continue the integrated remaining Session 4 scope after verifying this repair.
+
+# Kairos Money — Session 4 active
+
+Session 3 and the consolidated S1/import repair gate are PASS: workflow 34783225808, tested candidate 50824556acbe40afea58ab1c7c70780bd3b3e6d7. See docs/GATE_SESSION_3.md for exact device and visual evidence. Tested APK is the debug artifact on that run; Session 4 has not produced a release APK yet.
+
+Session 4 starts as one integrated completion milestone. Added pure visual-data modules for deterministic monthly fingerprint axes and exact daily cashflow, retaining unknown axes, Tier C disclosure, partial-month provisional status, pending/transfer exclusion and separate gaps/stale/future states. Three targeted tests and TypeScript compilation pass. These modules are not yet connected to screens; no new UI is claimed as complete.
+
+Next: connect monthly fingerprint/comparison and charts to real repository data; complete product features, accessibility, worker imports, performance and hardening using docs/GATE_SESSION_4.md. Existing recovery-code fields need an all-groups-visible presentation. Preserve prior source/native regressions and schema/provenance integrity. Do not fetch the already-reviewed Session 3 artifacts again.
+
+Manual continuation; Money worker remains disabled, V16 suspended. Bank-notification capture/Addendum A remains after private v1. No trading repositories or automations are in scope.
+# Latest Session 4 continuation
+
+Home-screen quick add is now implemented as a nonfinancial Android launch widget. It routes through the existing unlock and manual-entry/account-loading guards. Three new source tests cover cold/warm launch, lock during completion and web exclusion. Native launcher placement, actual unlock transitions, typography and both-theme capture remain open. No component APK or new gate is issued for this checkpoint. Direct camera receipt capture remains unimplemented; the existing receipt file/OCR path is retained.
+
+Continue the whole private-v1 milestone. Added independent off-by-default local money notices, encrypted preferences, generic native alarm payloads, category treemap and distinct gap/stale cashflow shading. These additions are source work, not accepted native delivery or visual evidence. The original Session 4 product, onboarding, accessibility, hardening, performance and final release requirements remain open in docs/GATE_SESSION_4.md. Do not launch a component-only gate or enable bank-notification listening.
+
+## Gate PASS — run 34912806907 (3c446b0)
+
+Both jobs green: source-gate and android-gate, every step including the full native instrumentation run
+(encryption, app flow, both themes, accessibility, acceptance, backup/restore, delete, post-delete).
+LedgerPerformanceInstrumentedTest passed, so `assertTrue(loadMs < 10000)` was evaluated and held: the
+20,000-row Ledger load is now under the 10,000 ms budget, from 44,012 ms on the immediately preceding
+commit. The exact phase timings are in that run's artifact (docs/evidence/ledger-20000.json) and are not
+quoted here, because artifact download is blocked from this environment; the passing assertion is the
+bound.
+
+Root cause, for the record. Signal.inputs embedded `transactions: Transaction[]` — the whole windowed
+corpus, every transaction carrying its own provenance payload — and analyse() serialised that once per
+signal. One screen open wrote 45,721,866 bytes across 24 rows, largest 5,796,371, into a column declared
+CHECK(json_valid(inputs)), so SQLite parsed each string before SQLCipher encrypted the pages. Device
+measurement: 24 writes, 37,403 ms, max 1,663 ms, of a 43,789 ms first row, against 3,382 ms for every
+ledger read combined.
+
+The fix stores the citation rather than the copy: window, coverage, pays, covered days, a transaction
+count, and the `evidence` list of transaction ids that was already there. The ledger and
+transaction_sources remain the single copy of provenance. In-memory Signal.inputs is unchanged, so
+computation and its tests are unaffected.
+
+| measure (20,000 transactions, local) | before | after |
+|---|---|---|
+| signals table payload | 45,721,866 B | 475,050 B |
+| largest stored signal | 5,796,371 B | 140,519 B |
+| 26 writes | 3,239 ms | 15 ms |
+| analyse() total | 7,221 ms | 2,020 ms |
+
+Two failures shared this one cause. The renderer crash on five consecutive runs was the same payload
+batched into a single ~45 MB bridge message; reverting the batching restored the assertion, and with the
+payload fixed there is nothing worth batching, so it stays reverted. And four earlier read-side repairs
+moved the load only ~20% between them because the cost was never a read.
+
+Why it survived review: JSON.stringify on a shared reference is invisible in the source and free at
+fixture scale, and nothing exercised analyse() at ledger scale in either time or size.
+tests/analyse-scale.test.ts now does, with a size budget, so a stored signal that scales with corpus size
+fails locally in seconds instead of on an emulator half an hour later.
+
+## Session 5 candidate — Money Analysis and quiet coaching
+
+Phases 5.0-5.6 are implemented and locally green; this is the consolidated candidate for the native gate.
+
+- `src/analysis/model.ts` — 36 capability keys, the Metric contract, the Observation contract. Observation has no action, prompt, question or acceptance field, so no surface can render an action affordance.
+- `src/analysis/index.ts` — `buildIndex` makes one ordered pass and every capability reads it; `registry` and `analyse` are the single entry point.
+- `src/analysis/metric.ts` — the shared invariants in one place: below 20 covered days or 80% coverage a metric is `insufficient_data` with a reason rather than a zero; Tier C halves confidence and sets `unverified`; evidence is capped at 50 ids with the true count in `details.evidenceTotal`.
+- `src/analysis/metrics/` — all 36 capabilities across seven families.
+- `src/analysis/observations/` — the six concepts, guarded mechanically against questions, imperatives, motive verbs and shaming tone.
+- `src/ui/screens/Analysis.tsx` — reachable from Insights, existing primitives only, trailing-90 window, evidence in two taps. Opening it performs no write.
+
+Two snapshot additions were required and follow the existing precedent for splits and refund links: stored original-currency evidence (`foreign-amount:<id>`) and recorded goals, both of which the analysis layer needs and neither of which reached the snapshot before.
+
+Local measurements over a 20,000-row ledger: `analyse()` 185-232 ms against a 1,500 ms budget, `observe()` 1 ms, 36 metrics serialising to 21,025 bytes. Local figures are a floor for the device, not a device claim.
+
+Nothing in this layer has device evidence until this gate reports. Session 4's gate is green (run 34912806907) with two criteria still open for human artifact review: the installable APK and the both-theme visual review.
+
+## Session 5 and the usability pass are device-verified — run 34930224329
+
+`d52c8c6`, both jobs green, 14 instrumented classes and 22 tests. Session 5's 36 capabilities, six
+concepts and Analysis screen are device-verified, as are the usability pass's one-tap bulk categorisation,
+repeat-entry tiles, amount-first entry with date and category chips, the remembered account preference and
+the exact-bigint split helpers. No feature was removed to reduce a tap: the full category select, the full
+manual form and the Change-categories flow are all still present, with the shortcuts beside them.
+
+`UsabilityBaselineInstrumentedTest` drives the shipped UI and counts every tap and typing session it
+performs. It asserts only what this pass actually claims — repeating an entry needs no typing, costs no
+more taps than entering from scratch, and still ends at a Save the user presses — and asserts no target
+tap count, because a target invented before a measurement is the thing that file exists to prevent.
+
+The figures themselves are not yet quoted anywhere, and that is deliberate. Until `625f656`'s run reports
+them through instrumentation status, they exist and are enforced but have not been read, so no improvement
+is claimed from them. `docs/LOW_EFFORT_USABILITY.md` is where they land.
+
+Still open, unchanged and not closable from this environment: the installable APK and the both-theme
+visual review, both of which need a human to open the run artifact. Artifact download is refused by the
+egress proxy under organization policy; no bypass was attempted.
+
+## Run 34934836916 green — the usability baseline is measured, and two virtualization defects are fixed
+
+`f1ce686`, both jobs, 14 classes, 22 tests. This run carries everything: Session 4, Session 5, the
+usability pass, the two remaining proposal kinds, and the `WindowedList` fixes.
+
+The baseline figures exist now instead of being asserted-but-unreadable. From scratch: 2 taps, 2 typing
+sessions. Repeating from the tile: 2 taps, 0 typing sessions. Confirmation retained in both. **Repeating
+removes the typing, not the taps** — the tap counts are identical, so there is no tap-count improvement to
+claim, and the numbers are a floor rather than a typical entry because the measured path takes every
+default it is offered and sets no category.
+
+Getting there cost two red gates, both genuine app defects at 200% text zoom, both in the virtualized
+ledger: a constant row-height estimate, and a height cache that survived the text-size change. Either one
+alone left the last transaction unreachable by scrolling. Someone reading at 200% text is the person least
+able to work around that, so this was worth the two runs. `ADR/0039`.
+
+Still open and unchanged, still the user's to close: the installable APK and the both-theme visual review.
+Artifact download is refused by the egress proxy under organization policy; no bypass was attempted.
+
+## Run 34941709710 green — the lazy-user pass is implemented in full
+
+`1a89a8e`. All nine flows in `LAZY_USER_SCAN.md` are implemented and device-gated. The last three landed
+here: the original amount a statement line already states is offered as an editable prefill that cites the
+line, cancellation dates have Today/Yesterday chips, and institution is labelled optional.
+
+One candidate from that scan was implemented and then reverted. Defaulting an account's currency from the
+device region broke `FoundationInstrumentedTest`, and the test was right: an account's currency decides how
+every amount in it is read and whether an imported statement reconciles, which makes it a financial fact
+rather than a preference. The rule it produced is recorded in `LAZY_USER_SCAN.md` — a shortcut may default
+anything the user can see and correct, but never a value that changes how money is interpreted.
+
+What is **not** done, and is not a code task: the per-task usability inventory `LOW_EFFORT_USABILITY.md`
+requires — taps, typed fields, backtracking and one-handed reach for every task, in both themes, at 200%
+text, under screen reader and keyboard, with a before/after matrix. Two tasks are device-measured. The
+flows are implemented and tested; they are not usability-accepted, and nothing here should be read as
+claiming they are.
+
+Also still open for the user: the installable APK and the both-theme visual review, both needing the run
+artifact, which this environment cannot download.
+
+## Run 34956035910 green — the app now reads plainly, and old statements count
+
+`df6d927`. The owner's two complaints after using the app drove this: he could not tell what to do on the
+home screen, and a statement ending three months ago produced no insights at all.
+
+Today now answers one question — what did I spend, and is there anything to do. Private vocabulary is gone
+from the surface, features that cannot work yet stay silent instead of listing their requirements, and the
+two opaque buttons say what they do. `docs/PLAIN_APP.md` records the four rules and the nineteen-block
+count that motivated them.
+
+The second complaint was a real defect: analysis windows were anchored to today, so statements ending
+earlier fell outside them and every capability reported insufficient data over a ledger that held the
+answer. `describeWindows()` anchors to the last covered day and names the period. Forecasting still anchors
+to today, deliberately — a claim about money available now needs data from now.
+
+The usability baseline now measures the lazy path at 200% text as well: 2 taps, no typing, tile on screen
+without scrolling — the same cost as at default text.
+
+Still open and still the owner's: the installable APK and the both-theme visual review. Still missing and
+not a code task: the per-task usability inventory.
+
+## Run 34958400240 green — screenshots allowed
+
+`59f65ca`. The owner could not screenshot or record the app, so he could not show anyone what was wrong
+with it. FLAG_SECURE is removed. The gate's own screenshot path changed with it — `NativeEvidence` no
+longer clears and restores the flag, which would have re-enabled blocking at runtime — and green confirms
+the evidence captures still work.
+
+Trade recorded in the code, the README and the gate log: app content is now visible in the recent-apps
+switcher and to screen recorders; the app lock, encrypted database and key protection are unchanged. If it
+is ever wanted back, a setting defaulting to protected with a one-tap allow is the shape to use, not the
+blanket flag.

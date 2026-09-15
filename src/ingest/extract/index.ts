@@ -1,12 +1,10 @@
 import { registerPlugin } from '@capacitor/core';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import { detect } from '../detect';
 import { ImportFailure } from '../types';
 import { textLines, type TextItem } from '../parse/positional';
 import { csvRows } from '../parse/csv';
 import { extractXlsx } from './xlsx';
-GlobalWorkerOptions.workerSrc = pdfWorker;
 export type Extracted = { kind: ReturnType<typeof detect>['kind']; text: string; items: TextItem[]; table: string[][] | null; ocr: boolean; issuer: string | null };
 export const OfflineText = registerPlugin<{ recognize(options: { base64: string }): Promise<{ items: { text: string; x: number; y: number; width: number; height: number }[] }> }>('KairosText');
 function base64(bytes: Uint8Array): string { let s = ''; for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode(...bytes.subarray(i, i + 8192)); return btoa(s); }
@@ -17,6 +15,8 @@ async function extractLocal(bytes: Uint8Array, fileName: string, progress: (mess
   if (['csv', 'ofx', 'qif'].includes(detected.kind)) { result.text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); if (detected.kind === 'csv') result.table = csvRows(result.text); return result; }
   if (detected.kind === 'image') { progress('Reading image on this device'); result.ocr = true; result.items = (await OfflineText.recognize({ base64: base64(bytes) })).items.map(i => ({ ...i, page: 1 })); }
   else {
+    const {getDocument,GlobalWorkerOptions}=await import('pdfjs-dist/legacy/build/pdf.mjs');
+    if(typeof window!=='undefined')GlobalWorkerOptions.workerSrc=pdfWorker;
     const task = getDocument({ data: bytes.slice(), isEvalSupported: false, useSystemFonts: true, disableFontFace: true });
     try {
       const pdf = await task.promise; if (pdf.numPages > 100) throw new Error('This PDF exceeds 100 pages. Split it into smaller statements.');

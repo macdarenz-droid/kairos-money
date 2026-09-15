@@ -1,8 +1,10 @@
 package app.kairos.money;
 
 import android.content.Context;
+import com.getcapacitor.community.database.sqlite.SQLite.UtilsSecret;
 import android.content.SharedPreferences;
 import android.util.Base64;
+import android.os.SystemClock;
 import androidx.security.crypto.EncryptedSharedPreferences;
 import androidx.security.crypto.MasterKey;
 import java.io.File;
@@ -19,6 +21,7 @@ final class VaultStore {
     private final Context context;
     private SharedPreferences prefs;
     private boolean unlocked;
+    private long recoveryUntil;
     VaultStore(Context context) { this.context = context; }
     private synchronized SharedPreferences prefs() throws Exception {
         if (prefs == null) {
@@ -54,6 +57,7 @@ final class VaultStore {
     }
     synchronized void unlock(String pin) throws Exception {
         if (!configured()) throw new IllegalStateException("Set a PIN before opening the ledger.");
+        if (prefs().getBoolean("pinReplacementRequired", false)) throw new IllegalStateException("Authenticate with your device and choose a new Kairos PIN first.");
         long now = System.currentTimeMillis();
         if (now < prefs().getLong("nextAttempt", 0) || now < prefs().getLong("lastAttempt", 0))
             throw new IllegalStateException("Please wait before trying your PIN again.");
@@ -75,15 +79,74 @@ final class VaultStore {
     }
     synchronized void requireUnlocked() { if (!unlocked) throw new IllegalStateException("Unlock Kairos to continue."); }
     synchronized boolean isUnlocked() { return unlocked; }
-    synchronized void lock() { unlocked = false; }
+    synchronized void lock() { UtilsSecret.clearSessionSecret(); unlocked = false; recoveryUntil = 0; }
     synchronized boolean biometricEnabled() throws Exception { return configured() && prefs().getBoolean("biometric", false); }
     synchronized void setBiometric(boolean enabled) throws Exception {
         requireUnlocked();
         if (!prefs().edit().putBoolean("biometric", enabled).commit()) throw new IllegalStateException("Could not save biometric preference.");
     }
     synchronized void biometricUnlock() throws Exception {
+        if (prefs().getBoolean("pinReplacementRequired", false)) throw new IllegalStateException("Choose a new Kairos PIN before unlocking.");
         if (!biometricEnabled()) throw new IllegalStateException("Biometric unlock is not enabled.");
         unlocked = true;
     }
-    synchronized String secret() throws Exception { requireUnlocked(); return prefs().getString("dbSecret", ""); }
+    synchronized void authorizePinReplacement() throws Exception {
+        if (!configured()) throw new IllegalStateException("Set up Kairos first.");
+        unlocked = false;
+        if (!prefs().edit().putBoolean("pinReplacementRequired", true).commit())
+            throw new IllegalStateException("Could not save recovery state. Try device authentication again.");
+        recoveryUntil = SystemClock.elapsedRealtime() + 300000;
+    }
+    synchronized void replacePin(String pin, String confirmation) throws Exception {
+        if (recoveryUntil == 0 || SystemClock.elapsedRealtime() >= recoveryUntil)
+            throw new IllegalStateException("Authenticate with your device again before replacing your PIN.");
+        if (pin == null || !pin.matches("[0-9]{6,12}")) throw new IllegalArgumentException("Choose a PIN with 6 to 12 digits.");
+        if (!pin.equals(confirmation)) throw new IllegalArgumentException("The PINs do not match.");
+        byte[] salt = new byte[32]; new SecureRandom().nextBytes(salt);
+        byte[] hash = derive(pin, salt);
+        try {
+            if (!prefs().edit().putString("salt", encode(salt)).putString("pinHash", encode(hash))
+                .putBoolean("pinReplacementRequired", false).putInt("attempts", 0)
+                .putLong("nextAttempt", 0).putLong("lastAttempt", 0).commit())
+                throw new IllegalStateException("The new PIN could not be saved. Free device storage and try again.");
+        } finally { Arrays.fill(hash, (byte) 0); }
+        recoveryUntil = 0; unlocked = true;
+    }
+    synchronized String backupRecoveryCode() throws Exception {
+        requireUnlocked();
+        String existing = prefs().getString("backupRecoveryCode", null);
+        if (existing != null) return existing;
+        String alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+        byte[] entropy = new byte[40]; new SecureRandom().nextBytes(entropy);
+        StringBuilder code = new StringBuilder();
+        for (int i = 0; i < entropy.length; i++) {
+            if (i > 0 && i % 4 == 0) code.append('-');
+            code.append(alphabet.charAt(entropy[i] & 31));
+        }
+        Arrays.fill(entropy, (byte) 0);
+        String generated = code.toString();
+        if (!prefs().edit().putString("backupRecoveryCode", generated).commit())
+            throw new IllegalStateException("Could not save your recovery code. Free device storage and try again.");
+        return generated;
+    }
+    synchronized boolean backupCodeAcknowledged() throws Exception { requireUnlocked(); return prefs().getBoolean("backupCodeAcknowledged", false); }
+    synchronized void acknowledgeBackupCode(String code) throws Exception {
+        requireUnlocked();
+        if (!backupRecoveryCode().equals(code)) throw new IllegalArgumentException("Review your current recovery code before continuing.");
+        if (!prefs().edit().putBoolean("backupCodeAcknowledged", true).commit()) throw new IllegalStateException("Could not save recovery-code confirmation.");
+    }
+    synchronized String protectedSecret() throws Exception {
+        requireUnlocked();
+        String wrapped = prefs().getString("authenticatedDbSecret", null);
+        if (wrapped == null) {
+            String legacy = prefs().getString("dbSecret", null);
+            if (legacy == null || legacy.isEmpty()) throw new IllegalStateException("The database key is unavailable. Restore a backup after resetting Kairos.");
+            wrapped = AuthenticatedKey.wrap(context, legacy);
+            if (!legacy.equals(AuthenticatedKey.unwrap(context, wrapped))) throw new IllegalStateException("Device key verification failed.");
+            if (!prefs().edit().putString("authenticatedDbSecret", wrapped).remove("dbSecret").commit())
+                throw new IllegalStateException("Could not migrate the device key. Free storage and try again.");
+        }
+        return AuthenticatedKey.unwrap(context, wrapped);
+    }
+    synchronized String secret() throws Exception { requireUnlocked(); return prefs().contains("authenticatedDbSecret") ? protectedSecret() : prefs().getString("dbSecret", ""); }
 }
