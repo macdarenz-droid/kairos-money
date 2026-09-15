@@ -82,6 +82,28 @@ export function importService(driver: Driver) {
     }).sort((a, b) => Number(b.blocked) - Number(a.blocked) || a.row.confidence - b.row.confidence || a.row.sourceId.localeCompare(b.row.sourceId));
     return { doc, items, continuity: continuity(doc.context.period, all.filter(b=>b.status==='committed' && !b.payslip && b.context.accountId===doc.context.accountId).map(b=>b.context.period)), supersededCount: items.filter(i=>i.superseded).length, balance: balance(doc), coverageAdded: doc.payslip ? [] : gaps(all.filter(b => b.status === 'committed' && b.id !== id && b.context.accountId === doc.context.accountId && !b.payslip).map(b => b.context.period), doc.context.period), newCount: new Set(items.filter(i => !i.duplicate).map(i => i.row.fingerprint)).size, duplicateCount: items.filter(i => i.duplicate && !i.superseded).length, uncertainCount: items.filter(i => i.blocked).length };
   }
+  /**
+   * Accepts the category the app already worked out for each row it could not be certain enough about.
+   *
+   * Until this existed the only one-press way past the category review was to throw every suggestion
+   * away, so a statement the app had read correctly still arrived as hundreds of uncategorised rows —
+   * and an uncategorised ledger makes every category figure in the app useless. Nothing is invented
+   * here: a row with no suggestion stays uncategorised, and each accepted category is marked as coming
+   * from a suggestion rather than from the person, so it can be found and changed later.
+   */
+  async function useSuggestedCategories(id: string) {
+    return driver.transaction(async () => {
+      const check = await review(id);
+      if (!['staged', 'quarantined'].includes(check.doc.status)) throw new Error('Only staged categories can be reviewed.');
+      for (const item of check.items) {
+        if (!item.categoryOnly || !item.suggestion.category) continue;
+        item.row.category = item.suggestion.category;
+        item.row.categoryFrom = 'suggestion';
+        item.row.verified = true;
+      }
+      await save(check.doc);
+    });
+  }
   async function leaveCategoriesUnassigned(id: string) {
     return driver.transaction(async () => {
       const check = await review(id);
@@ -220,5 +242,5 @@ export function importService(driver: Driver) {
   async function commitSession(ids: string[]) { return driver.transaction(async()=> { const results=[]; for(const id of ids) results.push(await commitUnlocked(id)); return results; }); }
   async function reminderDay(): Promise<number|null> { const r=(await driver.query("SELECT value FROM app_settings WHERE key='update-reminder'"))[0]; if(!r)return null;const value=JSON.parse(String(r.value)) as unknown;return typeof value==='number' && Number.isInteger(value)&&value>=0&&value<=6?value:null; }
   async function setReminderDay(day:number|null) { if(day!==null&&(!Number.isInteger(day)||day<0||day>6))throw new Error('Choose a weekday.');await driver.execute("INSERT OR REPLACE INTO app_settings(key,value) VALUES('update-reminder',?)",[JSON.stringify(day)]); }
-  return { workspace, ledgerPage, ledgerBulk, ledgerHealth, leaveCategoriesUnassigned, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
+  return { workspace, ledgerPage, ledgerBulk, ledgerHealth, leaveCategoriesUnassigned, useSuggestedCategories, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
 }

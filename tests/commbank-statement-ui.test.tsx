@@ -33,7 +33,10 @@ it.each(['dark','light'])('reads statement details without manual date entry and
   expect((screen.getByLabelText('Stated closing balance') as HTMLInputElement).value).toBe('90.00');
   fireEvent.click(screen.getByRole('button',{name:'Extract for review'}));
   await screen.findByText('✓ Balance check passed'); expect(await state.repo!.imports.ledger()).toHaveLength(0);
-  fireEvent.click(screen.getByRole('button',{name:'Leave categories unassigned'}));
+  // Accepting the worked-out categories is the primary choice now; this test takes the other one, and
+  // asserts both are offered, because for a long time only the discarding one was.
+  expect(screen.getByRole('button',{name:'Use these categories'})).toBeTruthy();
+  fireEvent.click(screen.getByRole('button',{name:'Leave them uncategorised'}));
   await waitFor(()=>expect((screen.getByRole('button',{name:'Confirm import'}) as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(screen.getByRole('button',{name:'Confirm import'}));
   await waitFor(async()=>expect(await state.repo!.imports.ledger()).toHaveLength(1));
