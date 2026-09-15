@@ -31,16 +31,22 @@ public class UsabilityBaselineInstrumentedTest {
     private static final String PROBE="Synthetic usability probe";
     private MainActivity activity;
     private int taps=0,typingSessions=0;
+    /** DOM facts captured the moment the repeat tile is tapped at 200% text, reported either way. */
+    private String sheetState="not captured";
 
     private String js(String script) throws Exception {
         CountDownLatch done=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>();
         activity.runOnUiThread(()->activity.getBridge().getWebView().evaluateJavascript(script,r->{value.set(r);done.countDown();}));
         assertTrue("WebView did not respond",done.await(15,TimeUnit.SECONDS));return value.get();
     }
-    private void awaitJs(String condition) throws Exception {
+    private void awaitJs(String condition) throws Exception {awaitJs(condition,"");}
+    private void awaitJs(String condition,String context) throws Exception {
         long deadline=SystemClock.elapsedRealtime()+30000;
         while(SystemClock.elapsedRealtime()<deadline){if("true".equals(js(condition)))return;Thread.sleep(150);}
-        fail("Condition never held: "+condition+"; page: "+js("document.body.innerText"));
+        fail("Condition never held: "+condition+(context.isEmpty()?"":"; "+context)
+            +"; DOM now "+js("(()=>{const d=Array.from(document.querySelectorAll('dialog'));"
+            +"return JSON.stringify({dialogs:d.length,open:d.map(x=>x.open),buttons:document.querySelectorAll('button').length});})()")
+            +"; page: "+js("document.body.innerText"));
     }
     private static String named(String name){
         return "Array.from(document.querySelectorAll('button')).find(e=>e.textContent.trim()==="+JSONObject.quote(name)+")";
@@ -120,7 +126,18 @@ public class UsabilityBaselineInstrumentedTest {
             try {
                 taps=0;typingSessions=0;
                 tap(labelled("Record "+PROBE));
-                awaitJs("Boolean("+named("Save transaction")+")");
+                // Two runs have failed here waiting for the sheet the tile opens, and the page text alone
+                // could not say why: a closed <dialog> and an unrendered one look identical in innerText.
+                // The tap is now proven to land, so what is left to distinguish is whether the sheet was
+                // rendered at all. These are the facts that separate the remaining explanations, reported
+                // whether or not the wait succeeds.
+                sheetState=js("(()=>{const dialogs=Array.from(document.querySelectorAll('dialog'));return JSON.stringify({"
+                    +"dialogs:dialogs.length,open:dialogs.map(d=>d.open),"
+                    +"tile:Boolean("+labelled("Record "+PROBE)+"),"
+                    +"save:Boolean("+named("Save transaction")+"),"
+                    +"buttons:document.querySelectorAll('button').length,"
+                    +"zoom:Math.round(window.devicePixelRatio*100)/100});})()");
+                awaitJs("Boolean("+named("Save transaction")+")","after tapping the repeat tile at 200% text; DOM at tap time was "+sheetState);
                 tap(named("Save transaction"));
                 awaitJs("!Boolean("+named("Save transaction")+")");
                 zoomTaps=taps;zoomTyping=typingSessions;
@@ -146,7 +163,7 @@ public class UsabilityBaselineInstrumentedTest {
                 .put("measurement","Taps and typing sessions performed against the shipped UI on an Android 34 emulator.")
                 .put("note","A baseline, not a target. A tap count that improves while a confirmation disappears is a regression.")
                 .put("not_measured_here","Categorising at entry. The category chips are built from the user's own filed history, and no class before this one files a categorised manual entry, so the chip row is absent on the gate's device and the only route left is a select this harness cannot press as a tap. A number measured down the fallback route would not be the number a real user with history sees.")
-                .put("confirmation_retained",true).put("tasks",tasks);
+                .put("confirmation_retained",true).put("dom_at_200_percent_tap",sheetState).put("tasks",tasks);
             Bundle status=new Bundle();
             status.putString("stream","\nusability-baseline: "+report.toString()+"\n");
             InstrumentationRegistry.getInstrumentation().sendStatus(0,status);
