@@ -77,3 +77,22 @@ nothing removed.
 
 What that test cannot show is how the proposal reads on a real screen at 200% text, which remains part of the
 both-theme visual review that needs a human looking at the artifact.
+
+### What the baseline test cost to write, and the rule it produced
+
+It failed three times, each time the test rather than the app, and both causes generalise to any
+instrumented class added later.
+
+The gate installs the app once and runs its classes in sequence, so a class inherits whatever the earlier
+ones left. The first version assumed a pristine app and tapped "Set up an account"; the captured page said
+"Accounts set up 2". An instrumented class must therefore assume no starting state, use what it finds, and
+skip a measurement it cannot take honestly rather than manufacturing the conditions for it.
+
+The second version created two manual entries and deleted them by walking the DOM. That depends on where a
+row renders and which button sits inside it, and the loop broke out silently when a lookup missed, leaving
+entries for the acceptance and post-delete classes to inherit. Cleanup is not a place for best-effort: it
+now deletes by batch id in SQL, runs `PRAGMA foreign_key_check`, and asserts on a returned count so a
+failure names how many rows are left instead of reporting false.
+
+The rule: a class that writes must remove exactly what it wrote, by identity rather than by position, and
+say how much remains when it cannot.
