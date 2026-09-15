@@ -40,3 +40,29 @@ That reframing is what makes one-tap realistic without inventing data. Every pro
 The instrumented tests locate fields by **label text**, not document order (`IntelligenceInstrumentedTest.input()` matches `label` elements by `textContent`). Reordering a form to put amount first therefore does not break them — but adding a chip row above an input does not change the label lookup either, so the existing native assertions stay valid. Verify keyboard behaviour on a device rather than inferring it from jsdom.
 
 The highest-value item is not in the manual form at all. Statements import the transactions; what recurs forever is **categorising them**. Fix that first.
+
+## Implementation status — all nine flows, run 34934836916 and after
+
+Every flow in the table above now has its candidate implemented. Recorded here so the scan stops reading
+like a plan.
+
+| Flow | Landed as |
+|---|---|
+| Add transaction | Repeat tiles from manual history, amount first and focused, category chips over the full select, remembered account preference, Today/Yesterday chips. Device-measured: 2 taps and 2 typing sessions from scratch, 2 taps and none repeating. |
+| Bulk categorise | `BulkProposals` surfaces "N uncategorised from MERCHANT — set all to CATEGORY" where the work appears, from a category the user already applied to that merchant. |
+| Category split | Split evenly and Fill remainder, exact in bigint for either sign, extracted to `src/ui/proposals/allocate.ts` and tested at their boundaries. |
+| Net worth value | `value_update` proposals beside each holding, stalest first, carrying everything except the amount. |
+| Account setup | Currency defaults to the device region where Kairos supports it; institution is labelled optional and says why it is safe to leave blank. |
+| Foreign amount | The original amount the statement line already states is offered as an editable prefill that cites the line; the chosen original currency is remembered as a preference. |
+| Cancellations | Today/Yesterday chips beside the date field, which stays. |
+| Refunds | Candidates ranked by evidence — same merchant and amount, then amount, then merchant, then recency — each showing why. |
+| Quick sheet | Verbs first, navigation below; every previous entry still present. |
+
+No feature was removed to add any of this. Every shortcut sits beside the full route it shortens: the
+category select, the manual form, Change categories, the refund search and its hundred-purchase select, the
+typed date fields and the currency select are all still there and still reachable.
+
+What remains is not implementation. `LOW_EFFORT_USABILITY.md` asks for a full task inventory with taps,
+typed fields, backtracking and one-handed reach recorded per task, in both themes, at 200% text, under
+screen reader and keyboard. Two tasks are measured on the device; the rest of that inventory is not, and no
+before/after matrix exists for the flows above. They are implemented and tested, not usability-accepted.

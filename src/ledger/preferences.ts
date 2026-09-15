@@ -7,7 +7,7 @@ import type {Driver} from '../core/db/driver';
  * provenance, and nothing here is read back into a ledger figure. The key set is closed so this cannot
  * drift into general-purpose storage, and every value is a short string.
  */
-export const preferenceKeys=['preferred-account'] as const;
+export const preferenceKeys=['preferred-account','preferred-original-currency'] as const;
 export type PreferenceKey=typeof preferenceKeys[number];
 
 export function preferenceRepository(driver:Driver){

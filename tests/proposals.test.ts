@@ -90,7 +90,12 @@ describe('the preference store',()=>{
    await preferences.clear('preferred-account');
    expect(await preferences.read('preferred-account')).toBeNull();
    await expect(preferences.write('unknown' as 'preferred-account','x')).rejects.toThrow('Unknown preference.');
-   expect(preferenceKeys).toEqual(['preferred-account']);
+   // Pinned to the exact list on purpose: adding a preference has to be a deliberate act that updates this
+   // line, so the store cannot quietly become general-purpose storage. Still an exact match, not a subset.
+   expect(preferenceKeys).toEqual(['preferred-account','preferred-original-currency']);
+   await preferences.write('preferred-original-currency','USD');
+   expect(await preferences.read('preferred-original-currency')).toBe('USD');
+   await preferences.clear('preferred-original-currency');
   }finally{raw.close();}
  });
 

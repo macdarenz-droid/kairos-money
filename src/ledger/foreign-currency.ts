@@ -17,8 +17,10 @@ export function foreignCurrencyRepository(driver:Driver){
    money(BigInt(value.originalMinor),currency(value.originalCurrency));money(BigInt(value.postedMinor),currency(value.postedCurrency));
    if(value.originalCurrency===value.postedCurrency)throw new Error('The saved currencies must be different.');
   }
-  const row=(await driver.query('SELECT amount_minor,currency,status FROM transactions WHERE id=?',[id]))[0];
-  return {value,active:!!value&&!!row&&value.id===id&&row.status==='settled'&&value.postedMinor===String(row.amount_minor)&&value.postedCurrency===row.currency};
+  const row=(await driver.query('SELECT amount_minor,currency,status,raw_description FROM transactions WHERE id=?',[id]))[0];
+  // The statement line itself, so the surface can offer what it already states rather than ask for it again.
+  const description=row?String(row.raw_description??''):'';
+  return {value,description,active:!!value&&!!row&&value.id===id&&row.status==='settled'&&value.postedMinor===String(row.amount_minor)&&value.postedCurrency===row.currency};
  }
  async function save(id:string,input:{originalMinor:string;originalCurrency:string;note:string}){return driver.transaction(async()=>{
   const row=(await driver.query('SELECT amount_minor,currency,status FROM transactions WHERE id=?',[id]))[0];
