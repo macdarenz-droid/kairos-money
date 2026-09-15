@@ -82,7 +82,11 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
             </div>
           </div>)}
 
-          {readable.length > 1 && <Button variant="quiet" disabled={busy} onClick={() => decide(readable, true)}>
+          {/* Not a quiet button. Sitting under three pairs of chromed ones, a borderless control reads as a
+              caption and nobody presses it — and this is the row that matters most when the bank has sent
+              five. It stays outlined rather than filled, so the per-purchase Approve is still the louder
+              thing on the screen and approving everything at once takes the more deliberate press. */}
+          {readable.length > 1 && <Button disabled={busy} onClick={() => decide(readable, true)}>
             Approve all {readable.length}
           </Button>}
         </>}

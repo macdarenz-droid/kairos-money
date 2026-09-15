@@ -192,3 +192,9 @@ details[open] > summary::before { transform: rotate(45deg); }
   box-shadow: 0 0 0 2px var(--surface-1); }
 .axis-value { text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 340px) { .axis-row { grid-template-columns: 68px 1fr 48px; } }
+
+/* Consecutive paragraphs in a settings block had nothing between them, because the reset zeroes p margins
+   and this container is not a flex stack. The notification disclosure is two paragraphs — what the app
+   reads, and what granting the access actually costs — and they ran together as one eight-line wall, on
+   the most consequential text in the app. */
+.settings-section p + p { margin-top: 10px; }

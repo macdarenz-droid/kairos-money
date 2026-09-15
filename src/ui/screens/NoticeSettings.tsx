@@ -66,7 +66,10 @@ export function NoticeSettings() {
         <span>{app.label}<span className="meta"> · {app.id}</span></span>
       </label>)}
       {!listed.length && <p className="meta">No app here matches that. Try part of your bank's name.</p>}
-      {!search && hidden > 0 && <Button variant="quiet" onClick={() => setAll(shown => !shown)}>
+      {/* Chromed, not quiet. Offering the likely apps first is only safe because this is here: a bank whose
+          name does not match the hint has to be reachable, and a borderless control at the end of a list
+          reads as a caption. If this is missed, the shortlist stops being a shortcut and becomes a wall. */}
+      {!search && hidden > 0 && <Button onClick={() => setAll(shown => !shown)}>
         {all ? 'Show money apps only' : `Show all ${(apps.data ?? []).length} apps`}
       </Button>}
       {!watched.length && <p className="meta">Nothing is ticked, so nothing is being read yet.</p>}
