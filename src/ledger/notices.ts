@@ -87,5 +87,11 @@ export function noticeRepository(driver: Driver) {
       await driver.execute("DELETE FROM import_batches WHERE id=? AND parser_version='notice-v1'", [batch]);
     });
   }
-  return {approve, remove, records: () => noticeRecords(driver), sync: () => syncNotices(driver)};
+  /** Approved notifications still waiting for a statement to confirm them. */
+  async function awaiting() {
+    const rows = await driver.query(
+      "SELECT COUNT(*) AS count FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version='notice-v1' AND t.status='pending'");
+    return Number(rows[0]?.count ?? 0);
+  }
+  return {approve, remove, awaiting, records: () => noticeRecords(driver), sync: () => syncNotices(driver)};
 }

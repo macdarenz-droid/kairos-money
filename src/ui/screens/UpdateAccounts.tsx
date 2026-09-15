@@ -4,7 +4,7 @@ import type { BatchSummary } from '../../ingest/types';
 import { accountFreshness, newestIsStale } from '../../ingest/freshness';
 import { Button, Row, Sheet, Surface } from '../design/primitives';
 import { ReminderSettings } from './reminders';
-export function Freshness({accounts,batches,today,onUpdate}:{accounts:Account[];batches:BatchSummary[];today:string;onUpdate:()=>void}) {
+export function Freshness({accounts,batches,today,onUpdate,awaiting=0}:{accounts:Account[];batches:BatchSummary[];today:string;onUpdate:()=>void;awaiting?:number}) {
  if(!accounts.length)return null;
  const stale=newestIsStale(accounts.map(a=>a.id),batches,today);
  // On the home screen this is the one "anything I need to do?" line, so when there is nothing to do it
@@ -12,7 +12,9 @@ export function Freshness({accounts,batches,today,onUpdate}:{accounts:Account[];
  // asked for is what made this screen unreadable.
  if(!stale)return null;
  return <Surface className="surface-muted"><h2>Your statements are out of date</h2>
-  <p>Kairos only knows about money up to the last statement you imported, so the figures here are older than today.</p>
+  {awaiting>0
+   ? <p>Since your last statement, Kairos only knows what your bank announced and you approved — {awaiting} {awaiting===1?'purchase':'purchases'} no statement has confirmed yet. Anything your bank did not announce is still missing.</p>
+   : <p>Kairos only knows about money up to the last statement you imported, so the figures here are older than today.</p>}
   {accounts.map(a=>{const f=accountFreshness(a.id,batches,today);return <Row key={a.id}><h3>{a.name}</h3><p>{f.asOf?`Last statement ${f.asOf}, ${f.staleDays} days ago`:'No statement imported yet'}</p></Row>;})}
   <Button onClick={onUpdate}>Bring my statements up to date</Button></Surface>;
 }

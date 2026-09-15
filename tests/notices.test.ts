@@ -148,3 +148,16 @@ it('counts an approved notification on today, without calling it confirmed', asy
  expect(totals).toMatchObject({currency: 'AUD', spending: '0', income: '0',
    awaitingSpending: '1250', awaitingIncome: '500'});
 });
+
+it('counts what no statement has confirmed, for the home screen to say so honestly', async () => {
+ // "Kairos only knows about money up to the last statement you imported" stopped being true the moment a
+ // notification was approved, and a home screen that says something false about its own knowledge is
+ // worse than one that says nothing.
+ const {repo, notices} = await ready();
+ expect(await repo.notices.awaiting()).toBe(0);
+ await notices.approve(notice());
+ expect(await repo.notices.awaiting()).toBe(1);
+ // Once the statement confirms it, there is nothing outstanding to warn about.
+ await importStatement(repo, '12.50', '11/02/26');
+ expect(await repo.notices.awaiting()).toBe(0);
+});
