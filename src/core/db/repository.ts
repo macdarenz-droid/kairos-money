@@ -4,6 +4,7 @@ import {cancellationRepository} from '../../ledger/cancellations';
 import { manualRepository } from '../../ledger/manual';
 import {notificationRepository} from '../../ledger/notifications';
 import {categoryRepository} from '../../ledger/categories';
+import {preferenceRepository} from '../../ledger/preferences';
 import { attachmentRepository } from '../../ledger/attachments';
 import { restoreSnapshot } from './restore';
 import { intelligenceRepository } from '../../ledger/intelligence';
@@ -34,6 +35,7 @@ export function repository(driver: Driver) {
     cancellations: cancellationRepository(driver),
     netWorth:{list:async()=>(await netWorth()).list(),accountPositions:async()=>(await netWorth()).accountPositions(),chooseAccount:async(accountId:string,choice:'include'|'exclude')=>(await netWorth()).chooseAccount(accountId,choice),save:async(value:import('../../ledger/net-worth').Valuation)=>(await netWorth()).save(value),remove:async(id:string)=>(await netWorth()).remove(id)},
     categories: categoryRepository(driver),
+    preferences: preferenceRepository(driver),
     splits: splitRepository(driver),
     foreignCurrency: foreignCurrencyRepository(driver),
     attachments: attachmentRepository(driver),
