@@ -38,6 +38,10 @@ export function intelligenceRepository(driver:Driver){
   const refundById=new Map(refundLinks.map(l=>[l.creditId,l.purchaseId]));
   for(const t of transactions){const purchaseId=refundById.get(t.id);if(purchaseId){t.refundOf=purchaseId;t.kind='refund';t.category='Refund';}}
   const splits=new Map((await driver.query("SELECT key,value FROM app_settings WHERE key LIKE 'split:%'")).map(r=>[String(r.key).slice(6),JSON.parse(String(r.value)) as Split]));
+  // Stored original-currency evidence, attached the same way splits and refunds are. Analysis reads the
+  // snapshot, so evidence the user recorded has to reach it or the FX capability has nothing to report.
+  const foreign=new Map((await driver.query("SELECT key,value FROM app_settings WHERE key LIKE 'foreign-amount:%'")).map(r=>[String(r.key).slice(15),JSON.parse(String(r.value)) as Transaction['foreign']]));
+  for(const t of transactions){const stored=foreign.get(t.id);if(stored)t.foreign=stored;}
   for(const t of transactions){const split=splits.get(t.id);if(split&&split.id===t.id&&t.status==='settled'&&!t.transfer&&validSplit(split,t.minor,t.currency))t.allocations=split.parts;}
   const coverage=(await driver.query("SELECT c.*,b.integrity_tier FROM coverage_ranges c JOIN import_batches b ON b.id=c.import_batch_id WHERE b.status='committed'")).filter(r=>ids.includes(String(r.account_id))).map(r=>({accountId:String(r.account_id),start:String(r.period_start),end:String(r.period_end),tier:(r.integrity_tier==='A'?'A':r.integrity_tier==='B'?'B':'C') as 'A'|'B'|'C'}));
   const pays=(await driver.query('SELECT * FROM payslips ORDER BY pay_date,id')).filter(r=>r.currency===c).map(r=>({id:String(r.id),employer:String(r.employer),date:String(r.pay_date),start:String(r.period_start),end:String(r.period_end),net:String(r.net_minor),gross:String(r.gross_minor),currency:c,transactionId:r.linked_transaction_id===null?null:String(r.linked_transaction_id)}));

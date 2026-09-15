@@ -4,6 +4,9 @@ import {combinedLedger,creditSignRules,periodCashflow,statementReconciliation,tr
 import {salaryPattern} from './metrics/income';
 import {categoryBreakdown,merchantBreakdown} from './metrics/classify';
 import {frequencyVersusSize,periodComparison,rangeAnomalies,repeatedPurchases,smallPayments} from './metrics/shape';
+import {paydayEffect,regularVersusOccasional,spendingClusters,weekdayDistribution} from './metrics/timing';
+import {bnplCommitments,recurrenceDetection,recurringPriceChange} from './metrics/recurrence';
+import {accountBalances,cashEntries,fees,foreignExchange,refundsAndChargebacks,remittances} from './metrics/instruments';
 
 /** Normalized merchant key: the same basis the importer uses for aliasing, lowercased and collapsed. */
 const merchantKey=(t:Transaction)=>t.description.trim().toLowerCase().replace(/\s+/g,' ');
@@ -78,6 +81,12 @@ export const registry:MetricFn[]=[
  salaryPattern,categoryBreakdown,merchantBreakdown,
  // 9-13 shape of spending
  repeatedPurchases,smallPayments,frequencyVersusSize,rangeAnomalies,periodComparison,
+ // 14-17 costs and timing
+ regularVersusOccasional,paydayEffect,weekdayDistribution,spendingClusters,
+ // 18-20 recurrence
+ recurrenceDetection,recurringPriceChange,bnplCommitments,
+ // 21-26 instruments and adjustments
+ remittances,foreignExchange,fees,refundsAndChargebacks,cashEntries,accountBalances,
 ];
 
 /** Every capability's metrics for one window, in registry order. */
