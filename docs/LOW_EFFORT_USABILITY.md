@@ -58,6 +58,22 @@ taps than entering from scratch, and repeating still ends at a Save the user pre
 tap count, because a target before a measurement is the thing this file exists to prevent. The numbers
 themselves are reported once the gate carrying this test reports.
 
-Bulk categorisation's baseline is not measured here: it needs committed imported rows with a merchant the
-user has already filed, which the import instrumentation creates in its own fixture. That measurement is
-still outstanding.
+### Bulk categorisation is measured in the source UI test, deliberately
+
+Bulk categorisation is not measured on the device, and that is a decision rather than a gap. A device
+measurement needs committed imported rows where one merchant has several uncategorised transactions and at
+least one the user already filed. The gate runs its instrumented classes sequentially against a single
+install, so a class cannot rely on that shape existing — the first version of the baseline test assumed a
+pristine app and failed for exactly that reason. Worse, applying a bulk category mutates imported rows that
+the acceptance and post-delete classes run against afterwards, so measuring it there would either
+contaminate their state or require reverting ledger data to take a measurement, which is not a trade worth
+making for a tap count.
+
+It is measured instead in `tests/proposals-ui.test.tsx`, against the real component with a real repository
+call: one click on one proposal calls `categories.set(['u1','u2','u3'],'Groceries')`. One interaction files
+the whole group. The flow it replaces is still present and still reachable — open Change categories, filter,
+select matching rows, choose a category, save — so the comparison is between one interaction and five, with
+nothing removed.
+
+What that test cannot show is how the proposal reads on a real screen at 200% text, which remains part of the
+both-theme visual review that needs a human looking at the artifact.
