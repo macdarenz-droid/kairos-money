@@ -9,10 +9,11 @@ const UNCATEGORISED = 'Uncategorised';
 /**
  * Where the money went, by kind, as areas rather than a ranked list of sentences.
  *
- * Shade repeats what area already says — biggest is darkest — which is redundant on purpose: a small tile
- * in a crowded corner is easier to place on the scale by its colour than by comparing its area with a
- * neighbour's. It is the same blue ramp the spending calendar uses, so blue means spending everywhere in
- * the app rather than meaning something new on each screen.
+ * Shade repeats what area already says — the biggest block is the strongest colour — which is redundant on
+ * purpose: a small tile in a crowded corner is easier to place on the scale by its colour than by comparing
+ * its area with a neighbour's. It is blue, like the spending calendar and the outflow mark, so blue means
+ * spending everywhere in the app rather than meaning something new on each screen. It is the tile ramp
+ * rather than the calendar's heat ramp because these blocks are large: see docs/CHART_PALETTE.md.
  *
  * The honest part is what happens when most of the money has no category. A treemap of one enormous
  * "Uncategorised" rectangle is not a picture of anything; drawing it anyway would dress a gap up as a

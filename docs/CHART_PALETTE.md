@@ -58,6 +58,81 @@ monotonic in OKLab lightness.
 Because the ramp inverts, **no caption may say "darker means more"** — it is true in one theme and false
 in the other. Chroma rises with the step in both, so "stronger colour" is the phrasing that stays true.
 
+## Big areas and small marks are not the same job: `--flow-*-fill`
+
+The owner, on the first version of the flow chart: *"is there a color that will sync to my app silent
+theme, that not hurts my eyes when seeing."*
+
+He is describing a real effect, not a preference. A chroma that reads as precise in an 8px mark reads as
+loud when it fills a third of the screen, and this app's whole surface treatment is quiet. But dropping the
+chroma of `--flow-in` and `--flow-out` themselves would have paid for the large areas by weakening the
+small marks, where saturation is the only thing making an 8px dot findable.
+
+So each flow colour has two steps, and which one you use is decided by **area, not by meaning**:
+
+| Job | Token | Where |
+|---|---|---|
+| a small mark, a legend swatch, a dot on a track | `--flow-in` / `--flow-out` | `.flow-key-*`, `.strip-bar`, `.axis-mark` |
+| a large filled region | `--flow-in-fill` / `--flow-out-fill` | `.flow-fill-*`, `.balance-bar-*` |
+
+Measured chroma in OKLab, mark → fill:
+
+| | Dark | Light |
+|---|---|---|
+| money in | 0.118 → 0.080 | 0.117 → 0.077 |
+| money out | 0.191 → 0.119 | 0.199 → 0.089 |
+
+Desaturating cost nothing that mattered. The pair still separates well past the ΔE 8 identity floor under
+every simulated deficiency:
+
+| Pair | Theme | Normal vision | Worst deficiency |
+|---|---|---|---|
+| `flow-in-fill` / `flow-out-fill` | dark | ΔE 20.3 | ΔE 16.9 (tritanopia) |
+| `flow-in-fill` / `flow-out-fill` | light | ΔE 16.3 | ΔE 12.9 (tritanopia) |
+
+Both fills also stay ΔE 35+ from their own surface, so a large block never dissolves into the page.
+
+**The rule a future change is most likely to break:** never use a `-fill` token for a small mark, and never
+use the full-chroma token for a large area. The two are the same colour doing different jobs, and swapping
+them silently undoes both the legibility of the marks and the calm of the areas.
+
+## `--tile-1` … `--tile-5` and `--tile-ink`: a sequential ramp for large areas
+
+The same problem again, one ramp up. `--heat-1` … `--heat-5` are sized for calendar cells — small, bounded,
+many of them — and the treemap needed a ramp for blocks that can each be a quarter of the screen.
+`--tile-*` is that ramp: the same blue meaning, less chroma and a shorter lightness span.
+
+| Step | Dark | Light | Dark ink contrast | Light ink contrast |
+|---|---|---|---|---|
+| `tile-1` | `#252D46` | `#DCE2F0` | 13.61 | 13.86 |
+| `tile-2` | `#2E3859` | `#C7D0E7` | 11.50 | 11.66 |
+| `tile-3` | `#3A4877` | `#ABB7D8` | 8.85 | 8.99 |
+| `tile-4` | `#485895` | `#8998C3` | 6.76 | 6.29 |
+| `tile-5` | `#5A6DAE` | `#7787AE` | 4.96 | 5.02 |
+
+Unlike the heat ramp, one ink serves every step per theme — `--tile-ink` is `#FFFFFF` on dark and `#14171A`
+on light — because the ramp's lightness span is deliberately short enough that it can. The worst pairing is
+**4.96:1**, clear of AA. Both ramps are monotonic in OKLab lightness: dark climbs L\* 30.2 → 54.9, light
+descends 91.2 → 62.5.
+
+### The readiness grid keeps `--heat-4`, on purpose
+
+One square per measure, twelve to a row — about 27px each at the emulator's width. That is a small mark, so
+by the area rule above it takes the full-chroma token, not a tile step. Both themes were rendered and
+looked at; the grid reads as a filling-in shape rather than as a block of colour, which is what it is for.
+
+### Why adjacent tile steps are allowed to sit under ΔE 8
+
+They measure ΔE 4.8–9.9 between neighbours, which would be a FAIL if these were categorical hues. They are
+not. **ΔE 8 is the floor for a pair that carries identity** — where telling the two apart *is* the
+information. In a sequential ramp, identity is carried by area and by the table underneath, and the colour
+repeats what area already says; steps that were 8 apart would make a five-step ramp span so much lightness
+that the light end would vanish into the surface and the dark end would need its own ink table, which is
+exactly the problem the heat ramp has.
+
+So the check that applies here is monotonicity plus ink contrast, not adjacent-pair separation. Applying
+the categorical rule to a sequential ramp is the specific mistake this section exists to prevent.
+
 ## Rules that hold for any chart added later
 
 - Colour is never the only signal. Every series is named in a legend, in its own mark's label, or both,

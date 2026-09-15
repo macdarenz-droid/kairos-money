@@ -6,9 +6,11 @@ for me to understand what's inside the app."*
 
 That is not a bug report and it is not a preference. It is the product failing at its one job.
 
-## What the Today screen actually says
+## What the Today screen said when this was written
 
-Read from a real device capture, not from the source. Every line a first-time user meets, in order:
+Read from a real device capture on 15 September 2026, not from the source. This table is the diagnosis, not
+the app: it is kept as the record of what was wrong. What the screen says now is further down. Every line a
+first-time user met, in order:
 
 | Line on screen | What it really is |
 |---|---|
@@ -32,7 +34,7 @@ Read from a real device capture, not from the source. Every line a first-time us
 | Statement coverage · 8 covered days | an internal metric, in private vocabulary |
 | You stay in control. Every statement stays in staging until you confirm its review. | process description |
 
-Three of nineteen blocks tell the user about their money or what to do next. The rest is the app talking
+Three of nineteen blocks told the user about their money or what to do next. The rest was the app talking
 about itself.
 
 ## Why it ended up like this
@@ -62,6 +64,64 @@ or lives behind a screen that explains it at the point of use.
 
 **4. A caveat attaches to a number, not to a screen.** "Balance unverified" belongs beside the figure it
 qualifies, ideally behind a "why?", never as a standalone paragraph addressed to nobody.
+
+## What Today says now
+
+Read from `src/ui/App.tsx` and the components it mounts, in render order. Nineteen blocks became six, and
+three of them draw themselves out of existence when they have nothing to say.
+
+| Block | What it is | When it appears |
+|---|---|---|
+| Today · "What you have spent today." | the screen's question | always |
+| Recorded today — repeat tiles, **Spent today** as the one large figure, then Received, then "Spent, waiting on your statement" | the answer | always |
+| "What is counted here" | the caveat, folded into a disclosure under the figures it qualifies | always, closed |
+| Add transaction | the action | always |
+| A seven-day strip, then "Money you can spend" | the picture, then the forecast | the strip always; the forecast only once it can be computed |
+| "Your statements are out of date" | the one "is there anything I need to do?" line | **only when they are** |
+| See where my money goes | navigation | always |
+
+The three rules that had been broken are each enforced by a piece of code rather than by care:
+
+- **Rule 2** is `!r.distress && (f.status === 'ok' || mode === 'insights')` in `Intelligence.tsx`. On Today,
+  a forecast that cannot be computed renders nothing at all — no heading, and above all no list of the
+  things the owner does not have. That list still exists, on Insights, where someone has gone looking for
+  it.
+- **Rule 1** is `if (!stale) return null` in `Freshness`. A status report nobody asked for is what made this
+  screen unreadable, so when there is nothing to do it says nothing.
+- **Rule 4** is the `<details>` in `ManualHistory`. "Transfers are excluded" is attached to the total it
+  qualifies, one press away, instead of addressed to nobody.
+
+Rule 3 is the one that has to be re-won line by line rather than enforced once. Today's version of the
+forecast heading is "Money you can spend"; Insights keeps "Cashflow outlook", because a reader who has
+opened that screen is asking a different question. The same applies to the word *pending*: an approved bank
+notification is a real, unconfirmed amount, and the line for it says "Spent, waiting on your statement"
+rather than naming the database status.
+
+## The third complaint: thirty-six measures, read one at a time
+
+From the owner, on the Insights tab: *"I don't want to see this in my app sitting as text… not one by one
+data. And this is a long scroll which I don't want… what I want was the logic, or maybe visualisation, how
+would the app tell me those features without reading, scrolling too much."*
+
+The 36 capabilities and the 12 signals had each been rendered as a row with a title, a subtitle and a
+value. When the evidence was thin — which is the normal state of a new ledger — every one of those rows
+printed the *same sentence*, twice: once as the subtitle and once as the value. A screen with nothing to
+say said it seventy-two times and took a long scroll to do it.
+
+The measures were never meant to be read. They are the engine; what a person wants from them is *how much
+of this can the app tell me yet*, and *what closes the gap*. So both walls open with `MeasureReadiness`: a
+count, a grid of one square per measure that fills in as statements arrive, and each distinct blocking
+reason said **once** with how many measures are waiting on it. The full roll-call is unchanged, one
+disclosure down, for the case where someone wants a specific number.
+
+The same reasoning produced `AxisPositions`. Four descriptive axes had been four rows of bare numbers, with
+"Unknown" reading as a failure rather than as a gap. They are now marks on a track — deliberately *not*
+bars filled from the left, because a filled bar reads as a score out of a hundred and these describe a
+pattern, which is what the sentence beside them already says. An axis with no value draws its track and no
+dot, so a missing input looks like a gap instead of a zero.
+
+Nothing was removed to achieve any of this, and no number became unreachable. The rule it follows is the
+owner's: *"visuals > info of visuals from data > deep backend, intelligent > not text text text."*
 
 ## What does not change
 
