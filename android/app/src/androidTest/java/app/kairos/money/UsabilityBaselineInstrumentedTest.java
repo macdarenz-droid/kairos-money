@@ -48,8 +48,24 @@ public class UsabilityBaselineInstrumentedTest {
     private static String labelled(String fragment){
         return "Array.from(document.querySelectorAll('button')).find(e=>(e.getAttribute('aria-label')||'').includes("+JSONObject.quote(fragment)+"))";
     }
-    /** One tap by the user, counted. */
-    private void tap(String selector) throws Exception {awaitJs("Boolean("+selector+")");js(selector+".click()");taps++;}
+    /**
+     * One tap by the user, counted — and proven to have landed.
+     *
+     * This used to await the selector and then click it in a second evaluation. Two evaluations race: the
+     * element can be replaced between them, and `undefined.click()` throws inside evaluateJavascript, which
+     * returns null and is discarded. A tap that never happened was still counted, and the run failed later
+     * at whatever the tap was supposed to cause, describing a symptom several steps away from its cause.
+     *
+     * Finding and clicking in one evaluation removes the race, and returning whether it clicked turns a
+     * silent no-op into a named failure. A cleanup that failed silently cost this test two earlier runs;
+     * the same shape was still here in the tap itself.
+     */
+    private void tap(String selector) throws Exception {
+        awaitJs("Boolean("+selector+")");
+        String clicked=js("(()=>{const target="+selector+";if(!target)return false;target.click();return true;})()");
+        assertEquals("Nothing was there to tap: "+selector,"true",clicked);
+        taps++;
+    }
     /** One typing session: the keyboard appears and the user types. */
     private void type(String label,String text) throws Exception {
         String node="Array.from(document.querySelectorAll('label')).find(e=>e.textContent.startsWith("+JSONObject.quote(label)+"))?.querySelector('input')";
