@@ -2,6 +2,8 @@ import {useState} from 'react';
 import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {Notices, noticeAccess, noticesAvailable, installedSources, watchSources} from '../../ingest/notices';
 import {Button, Input, Row} from '../design/primitives';
+import {useSession} from '../session';
+import type {Account} from '../../core/db/repository';
 
 /**
  * Turning on reading bank notifications, and choosing whose.
@@ -13,10 +15,16 @@ import {Button, Input, Row} from '../design/primitives';
  * Two steps, and both are the owner's: Android grants the access in its own settings screen, and the apps
  * to read are chosen here. Until an app is chosen nothing is captured from it, whatever the grant says.
  */
-export function NoticeSettings() {
+export function NoticeSettings({accounts = []}: {accounts?: readonly Account[]} = {}) {
   const client = useQueryClient();
+  const session = useSession();
   const [error, setError] = useState(''), [search, setSearch] = useState(''), [all, setAll] = useState(false);
   const access = useQuery({queryKey: ['notice-access'], queryFn: noticeAccess, enabled: noticesAvailable()});
+  const fallback = useQuery({
+    queryKey: ['notice-default-account'], enabled: session.state === 'ready',
+    queryFn: () => session.run(repo => repo.notices.defaultAccount()),
+  });
+  const live = accounts.filter(a => !a.archived_at);
   const apps = useQuery({queryKey: ['notice-apps'], queryFn: installedSources, enabled: noticesAvailable() && !!access.data?.granted});
 
   if (!noticesAvailable()) return null;
@@ -73,6 +81,27 @@ export function NoticeSettings() {
         {all ? 'Show money apps only' : `Show all ${(apps.data ?? []).length} apps`}
       </Button>}
       {!watched.length && <p className="meta">Nothing is ticked, so nothing is being read yet.</p>}
+
+      {live.length > 1 && <>
+        <h3>Which account these belong to</h3>
+        {/* Most bank notifications never say which account they are about. Without this the app fell back
+            to whichever account happened to be first in the list, which is a silent coin toss on real
+            money once there is more than one. A notice that does name an account still wins over this. */}
+        <p className="meta">When a notification says which account it is about — "ending 189" — Kairos uses
+          that. This is what it falls back on when the message does not say. You can still change it on any
+          purchase before approving it.</p>
+        <label className="input-label">Usual account
+          <select value={fallback.data ?? ''}
+            onChange={e => { void session.run(repo => repo.notices.setDefaultAccount(e.target.value || null))
+              .then(() => client.invalidateQueries({queryKey: ['notice-default-account']}))
+              .catch(() => setError('That account could not be saved. Try again.')); }}>
+            <option value="">No preference — use the first account</option>
+            {live.map(a => <option key={a.id} value={a.id}>{a.name}{a.mask_last4 ? ` · ••${a.mask_last4}` : ''}</option>)}
+          </select>
+        </label>
+        {live.some(a => !a.mask_last4) && <p className="meta">Adding the last four digits to each account
+          lets Kairos read which one a notification means, instead of falling back to this.</p>}
+      </>}
     </>}
     {error && <p role="alert">{error}</p>}
   </section>;

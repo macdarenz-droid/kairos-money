@@ -161,3 +161,40 @@ it('counts what no statement has confirmed, for the home screen to say so honest
  await importStatement(repo, '12.50', '11/02/26');
  expect(await repo.notices.awaiting()).toBe(0);
 });
+
+it('records a transfer between the owner\'s own accounts as one movement, not as spending', async () => {
+ const {driver, repo, notices} = await ready();
+ await repo.addAccount({id:'b',name:'Trial',institution:'CommBank',type:'savings',currency:'AUD',mask_last4:'6522',opening_balance_minor:0n});
+
+ // The pair the owner actually saw: $3 leaving one bank and arriving at the other.
+ await notices.approve(notice({id:'transfer-1', accountId:'a', destinationId:'b', minor:'-300',
+   merchant:'Transfer to Trial', description:"WITHDRAWAL-OSKO PAYMENT · You've been paid $3.00"}));
+
+ const written = await driver.query('SELECT account_id,amount_minor,transfer_group_id FROM transactions ORDER BY amount_minor');
+ expect(written).toHaveLength(2);
+ // Two legs: out of one account and into the other, for the same amount.
+ expect(written.map(r => [String(r.account_id), String(r.amount_minor)])).toEqual([['a','-300'],['b','300']]);
+ // One group across both. This is the flag the rest of the app reads to know money moved rather than left.
+ const groups = new Set(written.map(r => String(r.transfer_group_id)));
+ expect(groups.size).toBe(1);
+ expect([...groups][0]).not.toBe('null');
+});
+
+it('refuses a transfer that is not two real accounts of the same currency', async () => {
+ const {repo, notices} = await ready();
+ await repo.addAccount({id:'usd',name:'Dollars',institution:'X',type:'checking',currency:'USD',mask_last4:null,opening_balance_minor:0n});
+ await expect(notices.approve(notice({id:'t-same', accountId:'a', destinationId:'a', minor:'-300'})))
+   .rejects.toThrow(/two different accounts/i);
+ await expect(notices.approve(notice({id:'t-gone', accountId:'a', destinationId:'missing', minor:'-300'})))
+   .rejects.toThrow(/other side/i);
+ await expect(notices.approve(notice({id:'t-fx', accountId:'a', destinationId:'usd', minor:'-300'})))
+   .rejects.toThrow(/same currency/i);
+});
+
+it('leaves an ordinary notification as the single row it has always been', async () => {
+ const {driver, notices} = await ready();
+ await notices.approve(notice());
+ const written = await driver.query('SELECT account_id,amount_minor,transfer_group_id FROM transactions');
+ expect(written).toHaveLength(1);
+ expect(written[0]!.transfer_group_id).toBeNull();
+});

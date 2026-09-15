@@ -5,6 +5,13 @@ import {dayNumber, hash, isoDay} from '../ingest/normalize';
 export type NoticeRecord = {
   id: string; accountId: string; date: string; minor: string;
   merchant: string; description: string; source: string; capturedAt: string;
+  /**
+   * Set only when two notifications were one transfer between the owner's own accounts. The money leaves
+   * `accountId` and arrives here, and both legs carry one transfer group so the app counts it as moving
+   * money rather than as spending it. Absent on every ordinary purchase, and absent on rows approved
+   * before this existed, which is why it is optional rather than nullable-required.
+   */
+  destinationId?: string | null;
 };
 
 const marker = '__notice__';
@@ -31,27 +38,63 @@ export async function syncNotices(driver: Driver): Promise<void> {
   await driver.execute("DELETE FROM transaction_sources WHERE import_batch_id IN (SELECT id FROM import_batches WHERE parser_version='notice-v1')");
   await driver.execute("DELETE FROM transactions WHERE import_batch_id IN (SELECT id FROM import_batches WHERE parser_version='notice-v1')");
   for (const entry of records) {
-    const account = (await driver.query('SELECT currency FROM accounts WHERE id=?', [entry.accountId]))[0];
-    if (!account) continue;                        // The account was removed; the approval is not a reason to resurrect it.
-    const code = currency(String(account.currency));
-    const value = money(BigInt(entry.minor), code);
-    const settled = await driver.query(
-      "SELECT t.posted_date FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version NOT IN ('manual-entry-v1','notice-v1') AND t.status='settled' AND t.account_id=? AND t.amount_minor=?",
-      [entry.accountId, toDatabase(value)]);
-    if (settled.some(row => Math.abs(dayNumber(String(row.posted_date)) - dayNumber(entry.date)) <= 3)) continue;
-    const id = hash('notice-transaction:' + entry.id);
-    await driver.execute(
-      'INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes,status) VALUES(?,?,?,?,?,?,NULL,?,NULL,0,?,?,5000,1,?,?)',
-      [id, entry.accountId, entry.date, toDatabase(value), code, entry.merchant,
-       value.minor < 0n ? 'debit' : 'credit', id, batchId(entry.id), '', 'pending']);
-    await driver.execute('INSERT INTO transaction_sources VALUES(?,?,?,?)',
-      [id, batchId(entry.id), marker, JSON.stringify({
-        ...entry, origin: 'notification', sourceId: marker, merchant: entry.merchant,
-        fingerprint: hash('notice-fingerprint:' + entry.id), issues: [], reference: '',
-        duplicateOf: null, occurrence: '', createRule: false, mcc: null,
-        pending: true, verified: true, confidence: 5000,
-      })]);
+    // A transfer is two legs sharing one group: out of the account the money left, into the one it
+    // reached. Everything else is a single leg. The group id is what makes the rest of the app read this
+    // as moving money rather than spending it, so it is never left null on a transfer.
+    const group = entry.destinationId ? hash('notice-transfer:' + entry.id) : null;
+    const legs = entry.destinationId
+      ? [{key: 'from', accountId: entry.accountId, minor: -absolute(entry.minor)},
+         {key: 'to', accountId: entry.destinationId, minor: absolute(entry.minor)}]
+      : [{key: 'entry', accountId: entry.accountId, minor: BigInt(entry.minor)}];
+
+    for (const leg of legs) {
+      const account = (await driver.query('SELECT currency FROM accounts WHERE id=?', [leg.accountId]))[0];
+      if (!account) continue;                      // The account was removed; the approval is not a reason to resurrect it.
+      const code = currency(String(account.currency));
+      const value = money(leg.minor, code);
+      const settled = await driver.query(
+        "SELECT t.posted_date FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version NOT IN ('manual-entry-v1','notice-v1') AND t.status='settled' AND t.account_id=? AND t.amount_minor=?",
+        [leg.accountId, toDatabase(value)]);
+      if (settled.some(row => Math.abs(dayNumber(String(row.posted_date)) - dayNumber(entry.date)) <= 3)) continue;
+      // A single notice keeps the id it has always had, so nothing already pointing at one is orphaned by
+      // this change; only the two legs of a transfer need ids of their own.
+      const id = leg.key === 'entry' ? hash('notice-transaction:' + entry.id) : hash(`notice-transaction:${leg.key}:` + entry.id);
+      await driver.execute(
+        'INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes,status) VALUES(?,?,?,?,?,?,NULL,?,?,0,?,?,5000,1,?,?)',
+        [id, leg.accountId, entry.date, toDatabase(value), code, entry.merchant,
+         value.minor < 0n ? 'debit' : 'credit', group, id, batchId(entry.id), '', 'pending']);
+      await driver.execute('INSERT INTO transaction_sources VALUES(?,?,?,?)',
+        [id, batchId(entry.id), marker, JSON.stringify({
+          ...entry, origin: 'notification', sourceId: marker, merchant: entry.merchant,
+          fingerprint: leg.key === 'entry' ? hash('notice-fingerprint:' + entry.id) : hash(`notice-fingerprint:${leg.key}:` + entry.id),
+          issues: [], reference: '',
+          duplicateOf: null, occurrence: '', createRule: false, mcc: null,
+          pending: true, verified: true, confidence: 5000,
+        })]);
+    }
   }
+}
+
+const absolute = (minor: string) => BigInt(minor) < 0n ? -BigInt(minor) : BigInt(minor);
+
+const DEFAULT_KEY = 'notice-default-account';
+
+/**
+ * The account a notification lands on when its own text does not say which one it is about.
+ *
+ * Most bank notifications name no account, so without this every capture defaulted to whichever account
+ * happened to be first in the list — which is a coin toss once there is more than one, made silently, on
+ * real money. The owner names the account their card usually draws on, and anything the notice itself
+ * identifies still overrides it.
+ */
+export async function defaultNoticeAccount(driver: Driver): Promise<string | null> {
+  const row = (await driver.query('SELECT value FROM app_settings WHERE key=?', [DEFAULT_KEY]))[0];
+  if (!row) return null;
+  const saved = JSON.parse(String(row.value)) as {accountId?: unknown};
+  if (typeof saved.accountId !== 'string') return null;
+  // An account that has since been archived or deleted is not offered as a destination for money.
+  const live = await driver.query('SELECT id FROM accounts WHERE id=? AND archived_at IS NULL', [saved.accountId]);
+  return live.length ? saved.accountId : null;
 }
 
 export function noticeRepository(driver: Driver) {
@@ -66,6 +109,14 @@ export function noticeRepository(driver: Driver) {
       const account = (await driver.query('SELECT currency FROM accounts WHERE id=? AND archived_at IS NULL', [entry.accountId]))[0];
       if (!account) throw new Error('Choose an active account for these notifications.');
       money(BigInt(entry.minor), currency(String(account.currency)));
+      if (entry.destinationId) {
+        // Both ends of a transfer have to be real, distinct and in the same currency, for the same reason
+        // a manual transfer does: two legs in different currencies is not one movement of money.
+        if (entry.destinationId === entry.accountId) throw new Error('A transfer needs two different accounts.');
+        const destination = (await driver.query('SELECT currency FROM accounts WHERE id=? AND archived_at IS NULL', [entry.destinationId]))[0];
+        if (!destination) throw new Error('Choose an active account for the other side of this transfer.');
+        if (destination.currency !== account.currency) throw new Error('Both accounts in a transfer must use the same currency.');
+      }
       const record: NoticeRecord = {...entry, merchant, description};
       const prior = (await noticeRecords(driver)).find(r => r.id === entry.id);
       if (prior) return prior;                     // Approving the same notice twice records it once.
@@ -87,11 +138,21 @@ export function noticeRepository(driver: Driver) {
       await driver.execute("DELETE FROM import_batches WHERE id=? AND parser_version='notice-v1'", [batch]);
     });
   }
+  /** Names the account a notification lands on when its own text does not identify one. */
+  async function setDefaultAccount(accountId: string | null) {
+    if (accountId === null) { await driver.execute('DELETE FROM app_settings WHERE key=?', [DEFAULT_KEY]); return; }
+    const account = (await driver.query('SELECT id FROM accounts WHERE id=? AND archived_at IS NULL', [accountId]))[0];
+    if (!account) throw new Error('Choose an active account.');
+    await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',
+      [DEFAULT_KEY, JSON.stringify({accountId})]);
+  }
+  const defaultAccount = () => defaultNoticeAccount(driver);
+
   /** Approved notifications still waiting for a statement to confirm them. */
   async function awaiting() {
     const rows = await driver.query(
       "SELECT COUNT(*) AS count FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version='notice-v1' AND t.status='pending'");
     return Number(rows[0]?.count ?? 0);
   }
-  return {approve, remove, awaiting, records: () => noticeRecords(driver), sync: () => syncNotices(driver)};
+  return {approve, remove, awaiting, defaultAccount, setDefaultAccount, records: () => noticeRecords(driver), sync: () => syncNotices(driver)};
 }

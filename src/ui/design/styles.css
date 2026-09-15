@@ -209,3 +209,8 @@ details[open] > summary::before { transform: rotate(45deg); }
    their state to a screen reader and showed a sighted person nothing at all. Same declarations, applied
    wherever the Button primitive is a toggle. Not .balance-column: that is a raw button, and its selected
    month is marked under the axis instead — an outline there would read as data. */
+
+/* Which account a captured notification will hit, shown on the row itself rather than once for the whole
+   sheet. Tighter than a form field: it is an answer the app has already worked out, offered for
+   correction, not a question the person has to fill in. */
+.notice-account { margin-top: 10px; font-size: 11px; line-height: 16px; color: var(--text-meta); }

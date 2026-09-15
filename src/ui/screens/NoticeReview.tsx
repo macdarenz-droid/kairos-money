@@ -2,6 +2,8 @@ import {useMemo, useState} from 'react';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {currency, format, money} from '../../core/money';
 import {capturedNotices, forgetNotices, readNotices} from '../../ingest/notices';
+import {accountFromNotice} from '../../ingest/notices/route';
+import {pairNotices, type NoticeItem} from '../../ingest/notices/pair';
 import {Button, Sheet} from '../design/primitives';
 import type {ReadableNotice} from '../../ingest/notices';
 import {useSession} from '../session';
@@ -16,36 +18,72 @@ import type {Account} from '../../core/db/repository';
  *
  * Nothing here is recorded by being seen. A row leaves this list only when it is approved or rejected, and
  * closing the sheet leaves every undecided one for next time.
+ *
+ * Which account each one hits is decided per notification, not once for the whole sheet. It used to be one
+ * dropdown governing every row, defaulting to whichever account happened to be first — so on a phone with
+ * two banks, money landed on a coin toss made silently. Now the notice's own text is read first ("ending
+ * 189"), then the account the owner nominated, and the answer is shown on the row so it can be corrected
+ * before anything is recorded.
  */
 export function NoticeReview({accounts, onClose}: {accounts: readonly Account[]; onClose: () => void}) {
   const session = useSession(), client = useQueryClient();
   const active = accounts.filter(a => !a.archived_at);
-  const [accountId, setAccountId] = useState(active[0]?.id ?? '');
+  const [chosen, setChosen] = useState<Record<string, string>>({});
   const [decided, setDecided] = useState<Record<string, 'approved' | 'rejected'>>({});
   const [error, setError] = useState('');
 
   const captured = useQuery({queryKey: ['captured-notices'], queryFn: capturedNotices, enabled: session.state === 'ready'});
-  const account = active.find(a => a.id === accountId);
-  const code = currency(account?.currency ?? 'AUD');
+  const fallback = useQuery({
+    queryKey: ['notice-default-account'], enabled: session.state === 'ready',
+    queryFn: () => session.run(repo => repo.notices.defaultAccount()),
+  });
 
+  // Every account here shares one currency in practice; the first active account's currency is what the
+  // parser is told to expect, exactly as before.
+  const code = currency(active[0]?.currency ?? 'AUD');
   const read = useMemo(() => readNotices(captured.data ?? [], code), [captured.data, code]);
-  const readable = read.readable.filter(item => !decided[item.notice.id]);
   const unreadable = read.unreadable;
 
+  const accountFor = useMemo(() => (item: ReadableNotice) => {
+    const override = chosen[item.notice.id];
+    if (override) return override;
+    const named = accountFromNotice(`${item.notice.title} ${item.notice.text}`, active);
+    return named ?? fallback.data ?? active[0]?.id ?? '';
+  }, [chosen, active, fallback.data]);
+
+  const items = useMemo(
+    () => pairNotices(read.readable.filter(item => !decided[item.notice.id]), accountFor),
+    [read.readable, decided, accountFor]);
+
+  const nameOf = (id: string) => active.find(a => a.id === id)?.name ?? 'an account';
+
   const settle = useMutation({
-    mutationFn: async ({items, approve}: {items: readonly ReadableNotice[]; approve: boolean}) => {
-      for (const item of items) {
-        if (approve && account) {
+    mutationFn: async ({entries, approve}: {entries: readonly NoticeItem[]; approve: boolean}) => {
+      const ids: string[] = [];
+      for (const entry of entries) {
+        if (entry.kind === 'transfer') {
+          ids.push(entry.out.notice.id, entry.in.notice.id);
+          if (!approve) continue;
           await session.run(repo => repo.notices.approve({
-            id: item.notice.id, accountId: account.id, date: item.date, minor: item.minor,
-            merchant: item.merchant, description: item.description,
-            source: item.notice.source, capturedAt: new Date(item.notice.postedAt).toISOString(),
+            id: entry.out.notice.id, accountId: entry.fromId, destinationId: entry.toId,
+            date: entry.out.date, minor: entry.out.minor,
+            merchant: `Transfer to ${nameOf(entry.toId)}`,
+            description: `${entry.out.notice.title} · ${entry.in.notice.title}`,
+            source: entry.out.notice.source, capturedAt: new Date(entry.out.notice.postedAt).toISOString(),
           }));
+          continue;
         }
+        ids.push(entry.item.notice.id);
+        if (!approve) continue;
+        await session.run(repo => repo.notices.approve({
+          id: entry.item.notice.id, accountId: entry.accountId, date: entry.item.date,
+          minor: entry.item.minor, merchant: entry.item.merchant, description: entry.item.description,
+          source: entry.item.notice.source, capturedAt: new Date(entry.item.notice.postedAt).toISOString(),
+        }));
       }
       // Forgotten either way: an answered notification is not kept on the phone waiting to be asked again.
-      await forgetNotices(items.map(item => item.notice.id));
-      return {ids: items.map(item => item.notice.id), approve};
+      await forgetNotices(ids);
+      return {ids, approve};
     },
     onSuccess: async ({ids, approve}) => {
       setDecided(previous => ({...previous, ...Object.fromEntries(ids.map(id => [id, approve ? 'approved' as const : 'rejected' as const]))}));
@@ -54,40 +92,62 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
     onError: e => setError(e instanceof Error ? e.message : 'That could not be saved. Nothing was recorded.'),
   });
 
-  const decide = (items: readonly ReadableNotice[], approve: boolean) => { setError(''); settle.mutate({items, approve}); };
+  const decide = (entries: readonly NoticeItem[], approve: boolean) => { setError(''); settle.mutate({entries, approve}); };
   const busy = settle.isPending;
+
+  const picker = (noticeId: string, value: string, label: string) => active.length > 1 &&
+    <label className="input-label notice-account">{label}
+      <select value={value} disabled={busy} onChange={e => setChosen(p => ({...p, [noticeId]: e.target.value}))}>
+        {active.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+      </select>
+    </label>;
 
   return <Sheet title="Did you spend this?" onClose={() => { if (!busy) onClose(); }}>
     <div className="stack" aria-busy={busy || undefined}>
-      {captured.isPending ? <p>Reading what your bank told you.</p> : !readable.length
+      {captured.isPending ? <p>Reading what your bank told you.</p> : !items.length
         ? <p>Nothing new from your bank to check.</p>
         : <>
           <p>Your bank said these happened. Nothing is recorded until you say so, and each one is recorded
             as unconfirmed until your statement shows it.</p>
-          {active.length > 1 && <label className="input-label">These are from
-            <select value={accountId} disabled={busy} onChange={e => setAccountId(e.target.value)}>
-              {active.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-          </label>}
 
-          {readable.map(item => <div key={item.notice.id} className="notice-card">
-            <div className="notice-head">
-              <strong>{item.merchant}</strong>
-              <span className="amount">{format(money(BigInt(item.minor), code))}</span>
-            </div>
-            <p className="meta">{item.date} · {item.notice.title}</p>
-            <div className="notice-actions">
-              <Button variant="primary" disabled={busy} onClick={() => decide([item], true)}>Approve</Button>
-              <Button disabled={busy} onClick={() => decide([item], false)}>Reject</Button>
-            </div>
-          </div>)}
+          {items.map(entry => entry.kind === 'transfer'
+            ? <div key={entry.out.notice.id} className="notice-card">
+                <div className="notice-head">
+                  <strong>{nameOf(entry.fromId)} → {nameOf(entry.toId)}</strong>
+                  <span className="amount">{format(money(BigInt(entry.out.minor) < 0n ? -BigInt(entry.out.minor) : BigInt(entry.out.minor), code))}</span>
+                </div>
+                {/* Said plainly, because joining two notices into one row is the app making a claim about
+                    the owner's money and they should be able to check it before agreeing. */}
+                <p className="meta">Both banks announced this within half an hour, for the same amount. It
+                  looks like you moved your own money, so it is recorded as a transfer and not as spending.</p>
+                <p className="meta">{entry.out.notice.title} · {entry.in.notice.title}</p>
+                {picker(entry.out.notice.id, entry.fromId, 'Money left')}
+                {picker(entry.in.notice.id, entry.toId, 'Money arrived in')}
+                <div className="notice-actions">
+                  <Button variant="primary" disabled={busy} onClick={() => decide([entry], true)}>Approve</Button>
+                  <Button disabled={busy} onClick={() => decide([entry], false)}>Reject</Button>
+                </div>
+              </div>
+            : <div key={entry.item.notice.id} className="notice-card">
+                <div className="notice-head">
+                  <strong>{entry.item.merchant}</strong>
+                  <span className="amount">{format(money(BigInt(entry.item.minor), code))}</span>
+                </div>
+                <p className="meta">{entry.item.date} · {entry.item.notice.title}</p>
+                {picker(entry.item.notice.id, entry.accountId,
+                  BigInt(entry.item.minor) < 0n ? 'Taken from' : 'Paid into')}
+                <div className="notice-actions">
+                  <Button variant="primary" disabled={busy} onClick={() => decide([entry], true)}>Approve</Button>
+                  <Button disabled={busy} onClick={() => decide([entry], false)}>Reject</Button>
+                </div>
+              </div>)}
 
           {/* Not a quiet button. Sitting under three pairs of chromed ones, a borderless control reads as a
               caption and nobody presses it — and this is the row that matters most when the bank has sent
               five. It stays outlined rather than filled, so the per-purchase Approve is still the louder
               thing on the screen and approving everything at once takes the more deliberate press. */}
-          {readable.length > 1 && <Button disabled={busy} onClick={() => decide(readable, true)}>
-            Approve all {readable.length}
+          {items.length > 1 && <Button disabled={busy} onClick={() => decide(items, true)}>
+            Approve all {items.length}
           </Button>}
         </>}
 
