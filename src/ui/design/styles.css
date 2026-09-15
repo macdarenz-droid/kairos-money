@@ -198,3 +198,7 @@ details[open] > summary::before { transform: rotate(45deg); }
    reads, and what granting the access actually costs — and they ran together as one eight-line wall, on
    the most consequential text in the app. */
 .settings-section p + p { margin-top: 10px; }
+
+/* The number that ties each fingerprint spoke to its row underneath. Set outside the outer ring so it
+   never sits on a drawn edge, and in meta ink so the shape stays the thing being read. */
+.fingerprint-index { font-size: 11px; fill: var(--text-meta); }

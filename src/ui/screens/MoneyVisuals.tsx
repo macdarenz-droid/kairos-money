@@ -43,11 +43,19 @@ export function MoneyVisuals(){
  <svg viewBox="0 0 240 240" className="fingerprint" role="img" aria-label={`Money Fingerprint for ${w.label}${current.provisional?', provisional':''}`}>
  {[30,60,90].map(r=><polygon key={r} points={[0,1,2,3,4].map(i=>point(i,r)).join(' ')} fill="none" stroke="var(--border-default)"/>)}
  {current.axes.map((a,i)=><line key={a.key} x1="120" y1="120" x2={point(i,90).split(',')[0]} y2={point(i,90).split(',')[1]} stroke="var(--border-default)"/>)}
+ {/* The spokes carried no marking at all, so the shape could not be decoded: five points and no way to
+     tell which was which. These names are far too long to set around a 280px plot on a phone, so the
+     chart and the list under it share a number instead. */}
+ {current.axes.map((a,i)=><text key={`n${a.key}`} className="fingerprint-index"
+   x={point(i,107).split(',')[0]} y={point(i,107).split(',')[1]} textAnchor="middle"
+   dominantBaseline="middle" aria-hidden="true">{i+1}</text>)}
  {old&&<polygon points={old} fill="none" stroke="var(--text-secondary)" strokeDasharray="4 4"/>}{shape&&<polygon points={shape} fill="var(--accent)" fillOpacity=".12" stroke="var(--accent)"/>}
  {current.axes.map((a,i)=>a.radius===null?null:<circle key={a.key} cx={point(i,Number(a.radius)*.009).split(',')[0]} cy={point(i,Number(a.radius)*.009).split(',')[1]} r="3" fill="var(--accent)"/>)}
  </svg>
  {!shape&&<p>Missing axes stay unknown. No complete shape is inferred.</p>}
- {current.axes.map(a=><Button key={a.key} variant="quiet" onClick={()=>show(a.label,a.evidence,`${a.reason} ${a.value===null?'Unknown':`Stored signal value: ${a.value}.`} Shape uses a fixed display scale, not a diagnosis or a score of financial worth.`)}>{a.label} · {a.value===null?'Unknown':'View evidence'}</Button>)}
+ {/* The number is the visual tie to the spoke and is hidden from the accessible name: someone who cannot
+     see the chart gains nothing from "1" and would have to hear it before every label. */}
+ {current.axes.map((a,i)=><Button key={a.key} variant="quiet" onClick={()=>show(a.label,a.evidence,`${a.reason} ${a.value===null?'Unknown':`Stored signal value: ${a.value}.`} Shape uses a fixed display scale, not a diagnosis or a score of financial worth.`)}><span aria-hidden="true">{i+1} · </span>{a.label} · {a.value===null?'Unknown':'View evidence'}</Button>)}
  <h2>Daily cashflow</h2><Cashflow snapshot={snapshot} window={w} show={show}/>
  <TimingCharts snapshot={snapshot} window={w} show={show}/>
  <p className="meta">Settled spending on covered days only. Transfers and pending entries are excluded.</p>
