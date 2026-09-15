@@ -6,6 +6,7 @@ import {currency,money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {spendingPatterns} from '../../intelligence/visuals/spending-patterns';
 import {Amount,Button,Row,Sheet,Skeleton} from '../design/primitives';
+import {SourceLine} from '../design/SourceLine';
 import {useSession} from '../session';
 export function SpendingPatterns(){
  const session=useSession(),[selectedCode,setCode]=useState<string|null>(null),[month,setMonth]=useState('all'),[account,setAccount]=useState('all'),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
@@ -39,7 +40,7 @@ export function SpendingPatterns(){
  <h3>Spending by posting day</h3><p className="meta">Totals use bank posting dates, which may differ from purchase dates. They do not reveal the time of day or your motivation.</p><Bars rows={p.weekdays.map(d=>({label:d.name,minor:d.minor,ids:d.ids,note:`${d.count} recorded payments`}))} code={code} show={show}/>
  <details><summary>All identified merchant totals</summary>{p.merchants.map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,'Exact recorded payments grouped by statement merchant label.')}>{amount(m.minor,m.name)}</Button>}>{m.name}<p>{m.count} payments</p></Row>)}</details>
  </>}
- {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{s.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id} className="section-gap"><Row trailing={amount(t.minor,t.description)}>{t.rawDescription??t.description}<p>{t.date} · {t.category}</p></Row>{t.refundOf&&<p className="meta">Confirmed refund; excluded from income classification.</p>}<AllocationBreakdown parts={t.allocations} code={t.currency}/>{t.sources?.map((source,i)=><details key={i}><summary>{source.file} · {source.row}</summary><pre className="raw-excerpt">{source.raw}</pre></details>)}</div>)}{!detail.ids.length&&<p>No matching transactions in this selection.</p>}</Sheet>}
+ {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{s.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id} className="section-gap"><Row trailing={amount(t.minor,t.description)}>{t.rawDescription??t.description}<p>{t.date} · {t.category}</p></Row>{t.refundOf&&<p className="meta">Confirmed refund; excluded from income classification.</p>}<AllocationBreakdown parts={t.allocations} code={t.currency}/>{t.sources?.map((source,i)=><SourceLine key={i} file={source.file} row={source.row} raw={source.raw}/>)}</div>)}{!detail.ids.length&&<p>No matching transactions in this selection.</p>}</Sheet>}
  </section>;
 }
 function Bars({rows,code,show}:{rows:{label:string;minor:string;ids:string[];note:string}[];code:ReturnType<typeof currency>;show:(title:string,ids:string[],text:string)=>void}){

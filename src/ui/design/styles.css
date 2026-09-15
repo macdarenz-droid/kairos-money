@@ -34,3 +34,15 @@ details > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
 textarea{resize:vertical;min-height:88px}.cancellation-records .row>div:first-child{min-width:0;overflow-wrap:anywhere}.cancellation-records .button{overflow-wrap:anywhere;white-space:normal}
 
 .spending-bar{height:10px;background:var(--surface-2);border-radius:4px;overflow:hidden}.spending-bar span{display:block;height:100%;background:var(--accent)}.spending-patterns .row>div:first-child{min-width:0;overflow-wrap:anywhere}.spending-patterns .button{overflow-wrap:anywhere;white-space:normal}
+
+/* Disclosure rows read as a control, not a video player.
+   The native marker is a filled triangle that looks like Play; these are things that open, so they get a
+   chevron and a target big enough to press without aiming. */
+details > summary { list-style: none; cursor: pointer; padding: 12px 0; display: flex; align-items: center; gap: 10px; min-height: 44px; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before {
+  content: ""; width: 9px; height: 9px; flex: none; margin-left: 2px;
+  border-right: 2px solid var(--text-secondary); border-bottom: 2px solid var(--text-secondary);
+  transform: rotate(-45deg); transition: transform 120ms ease;
+}
+details[open] > summary::before { transform: rotate(45deg); }

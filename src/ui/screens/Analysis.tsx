@@ -75,8 +75,16 @@ export function Analysis(){
   </Row>)}
   {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}>
    {detail.text&&<p>{detail.text}</p>}
-   <p className="meta">These transaction records produced this figure.</p>
-   <ul>{detail.ids.slice(0,50).map(id=><li key={id}>{id}</li>)}</ul>
+   {/* These used to be listed as their internal ids, which are hashes. Forty lines of hex answered
+       "which transactions?" with something no person can read. The transactions themselves are in the
+       snapshot this figure was computed from, so show those. */}
+   <p className="meta">The transactions behind this figure.</p>
+   {q.data?.transactions.filter(t=>detail.ids.includes(t.id)).slice(0,50).map(t=>
+    <Row key={t.id} trailing={<Amount value={money(BigInt(t.minor),t.currency)} context={t.description}/>}>
+     {t.description}<p className="meta">{t.date}{t.category?' · '+t.category:' · Uncategorised'}</p></Row>)}
+   {detail.ids.length>50&&<p className="meta">Showing the first 50 of {detail.ids.length}.</p>}
+   {!q.data?.transactions.some(t=>detail.ids.includes(t.id))&&
+    <p className="meta">These records are outside the window shown here, so their lines are not listed.</p>}
   </Sheet>}
  </section>;
 }

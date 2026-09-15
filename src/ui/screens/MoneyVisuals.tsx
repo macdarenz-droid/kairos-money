@@ -8,6 +8,7 @@ import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {useSession} from '../session';
 import {Amount,Button,Row,Sheet,Skeleton} from '../design/primitives';
+import {SourceLine} from '../design/SourceLine';
 import {currency,money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {computeSignals} from '../../intelligence/signals';
@@ -56,7 +57,7 @@ export function MoneyVisuals(){
  <Cancellations code={currency(code)} merchants={activity.recurring.map(r=>r.merchant)} payments={historical(snapshot,{start:'1970-01-01',end:today,label:''}).filter(t=>BigInt(t.minor)<0n).map(t=>({merchant:t.description,date:t.date,id:t.id}))} review={(merchant,ids)=>show(merchant,ids,'Settled payments on dates after your recorded cancellation contact or confirmation. These may be final charges; check the provider confirmation and statement before acting.')}/>
  <h2>Upcoming bills</h2><p className="meta">Next 30 days from observed recurrences. Confirm dates with the provider.</p>{activity.bills.map(b=><Row key={b.merchant+b.date} trailing={<Button variant="quiet" onClick={()=>show(b.merchant,b.ids,'Expected from previous settled payments; not confirmation of an upcoming charge.')}><Amount value={money(BigInt(b.minor),currency(code))} context={`expected ${b.merchant}`}/></Button>}>{b.date} · {b.merchant}</Row>)}
  <h2>Merchant history</h2>{activity.merchants.map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,`${m.count} settled purchases on covered days in ${w.label}.`)}><Amount value={money(BigInt(m.minor),currency(code))} context={m.name}/></Button>}>{m.name}<p className="meta">{m.count} purchases</p></Row>)}
- {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{snapshot.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id}><Row trailing={<Amount value={money(BigInt(t.minor),t.currency)} context={t.description}/>}><h3>{t.description}</h3><p>{t.date} · {t.category}</p></Row><AllocationBreakdown parts={t.allocations} code={t.currency}/>{t.sources?.map((s,i)=><details key={i}><summary>{s.file} · {s.row}</summary><pre className="raw-excerpt">{s.raw}</pre></details>)}</div>)}{!detail.ids.length&&<p>No source transactions are available for this value.</p>}</Sheet>}
+ {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{snapshot.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id}><Row trailing={<Amount value={money(BigInt(t.minor),t.currency)} context={t.description}/>}><h3>{t.description}</h3><p>{t.date} · {t.category}</p></Row><AllocationBreakdown parts={t.allocations} code={t.currency}/>{t.sources?.map((s,i)=><SourceLine key={i} file={s.file} row={s.row} raw={s.raw}/>)}</div>)}{!detail.ids.length&&<p>No source transactions are available for this value.</p>}</Sheet>}
  </section>;
 }
 function Cashflow({snapshot,window,show}:{snapshot:Snapshot;window:Window;show:(title:string,ids:string[],text:string)=>void}){

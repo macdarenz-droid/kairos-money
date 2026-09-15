@@ -42,8 +42,12 @@ it('reaches the evidence behind a figure in two taps',async()=>{
  const buttons=screen.getAllByRole('button',{name:'Show evidence'});
  expect(buttons.length).toBeGreaterThan(0);
  fireEvent.click(buttons[0]!);
- await waitFor(()=>expect(screen.getByText(/These transaction records produced this figure/)).toBeTruthy());
+ await waitFor(()=>expect(screen.getByText(/The transactions behind this figure/)).toBeTruthy());
  expect(screen.getByText(/Covered days/)).toBeTruthy();
+ // The evidence must be readable transactions. It used to list internal ids, which are hashes: forty
+ // lines of hex answering "which transactions?" with nothing a person can check against a statement.
+ const sheet=screen.getByText(/The transactions behind this figure/).closest('dialog')??document.body;
+ expect(sheet.textContent).not.toMatch(/\b[0-9a-f]{32,}\b/);
 });
 
 it('states a measure without enough evidence rather than showing a zero',async()=>{
