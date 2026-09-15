@@ -60,18 +60,6 @@ public class UsabilityBaselineInstrumentedTest {
         awaitJs("Boolean(document.querySelector('nav'))");
         taps=0;typingSessions=0;   // Unlocking is not part of any measured task.
     }
-    /**
-     * The container rendering this test's own entry, found by its text and narrowed to the innermost match.
-     *
-     * Entries render as div.section-gap inside a section that wraps all of them, so matching the outer
-     * element would reach another entry's Delete button. The tightest container holding the probe text is
-     * the probe's own row.
-     */
-    private static String probeSection(){
-        return "Array.from(document.querySelectorAll('div.section-gap')).filter(d=>d.textContent.includes("
-            +JSONObject.quote(PROBE)+")).sort((a,b)=>a.textContent.length-b.textContent.length)[0]";
-    }
-
     @Test public void recordingATransactionAndRepeatingItCostWhatIsMeasuredHere() throws Throwable {
         JSONArray tasks=new JSONArray();
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
@@ -111,17 +99,38 @@ public class UsabilityBaselineInstrumentedTest {
                 .toString(2).getBytes(StandardCharsets.UTF_8));
 
             // Remove exactly what this test created, so later classes see the database as they would have.
-            js("Array.from(document.querySelectorAll('nav button')).find(e=>e.textContent.trim()==='Ledger').click()");
-            for(int removed=0;removed<4;removed++){
-                if(!"true".equals(js("Boolean("+probeSection()+")")))break;
-                String delete="Array.from("+probeSection()+".querySelectorAll('button')).find(e=>e.textContent.trim()==='Delete')";
-                if(!"true".equals(js("Boolean("+delete+")")))break;
-                js(delete+".click()");
-                awaitJs("Boolean("+named("Delete transaction")+")");
-                js(named("Delete transaction")+".click()");
-                awaitJs("!Boolean("+named("Delete transaction")+")");
-            }
-            assertEquals("The baseline must leave none of its own entries behind","false",js("Boolean("+probeSection()+")"));
+            //
+            // This is done in SQL rather than by driving the delete flow. A DOM-driven cleanup broke twice:
+            // it depends on where a row renders and on which button inside it, and when it failed it failed
+            // silently, leaving entries behind for the classes that run next. Manual entries are staging
+            // rows marked __manual__ in a manual-entry-v1 batch, so the batches this test created are
+            // identifiable by the description it typed, and removing them is exact.
+            int remaining=DatabaseDigest.transaction(activity,db->{
+                java.util.List<String> batches=new java.util.ArrayList<>();
+                try(android.database.Cursor cursor=db.query(
+                    "SELECT DISTINCT s.import_batch_id FROM staging_rows s JOIN import_batches b ON b.id=s.import_batch_id"
+                    +" WHERE s.source_row_id='__manual__' AND b.parser_version='manual-entry-v1' AND s.payload LIKE ?",
+                    new Object[]{"%"+PROBE+"%"})) {
+                    while(cursor.moveToNext())batches.add(cursor.getString(0));
+                }
+                for(String batch:batches){
+                    Object[] id=new Object[]{batch};
+                    db.execSQL("DELETE FROM transaction_sources WHERE import_batch_id=?",id);
+                    db.execSQL("DELETE FROM transactions WHERE import_batch_id=?",id);
+                    db.execSQL("DELETE FROM staging_rows WHERE import_batch_id=?",id);
+                    db.execSQL("DELETE FROM coverage_ranges WHERE import_batch_id=?",id);
+                    db.execSQL("DELETE FROM import_batches WHERE id=?",id);
+                }
+                try(android.database.Cursor broken=db.query("PRAGMA foreign_key_check")){
+                    if(broken.moveToFirst())throw new IllegalStateException("Baseline cleanup broke a ledger relationship");
+                }
+                try(android.database.Cursor left=db.query(
+                    "SELECT COUNT(*) FROM staging_rows WHERE source_row_id='__manual__' AND payload LIKE ?",
+                    new Object[]{"%"+PROBE+"%"})) {
+                    return left.moveToFirst()?left.getInt(0):-1;
+                }
+            });
+            assertEquals("The baseline must leave none of its own entries behind",0,remaining);
         }
     }
 }
