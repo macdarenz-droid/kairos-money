@@ -244,7 +244,7 @@ Storage schema 3 adds transaction status and batch integrity/source rank. Docume
 
 ## Intelligence snapshots
 
-Version 1 uses existing tables without changing storage version. Signals use currency-prefixed period IDs; inputs retain complete versioned signal payloads, coverage and provenance. Profiles store monthly axes, covered days and evidence-completeness confidence. Insights retain the five-part contract and conditional calculation in evidence JSON. app_settings keys intelligence:dismissals, intelligence:metadata, intelligence:reflection and intelligence:buffer:<currency> retain dismissal counts, explicitly supplied purchase context, optional non-validated reflections and the chosen reserve. Goals are user earmarks, never additional ledger balances. All are encrypted and included in export/delete.
+Version 1 uses existing tables without changing storage version. Signals use currency-prefixed period IDs; inputs retain the versioned signal, its window, coverage, pays and covered-day count, and cite the transactions they were computed from by id in evidence rather than copying them; the ledger and transaction_sources remain the single copy of provenance. Profiles store monthly axes, covered days and evidence-completeness confidence. Insights retain the five-part contract and conditional calculation in evidence JSON. app_settings keys intelligence:dismissals, intelligence:metadata, intelligence:reflection and intelligence:buffer:<currency> retain dismissal counts, explicitly supplied purchase context, optional non-validated reflections and the chosen reserve. Goals are user earmarks, never additional ledger balances. All are encrypted and included in export/delete.
 
 ## Manual source records
 

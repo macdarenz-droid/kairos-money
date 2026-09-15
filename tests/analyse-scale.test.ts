@@ -67,11 +67,12 @@ it('reports how large a stored signal payload is at 20,000 transactions',async()
   const total=(await driver.query('SELECT SUM(length(inputs)+length(value)) AS bytes, COUNT(*) AS n FROM signals'))[0];
   console.log('largest stored signals:',JSON.stringify(rows));
   console.log('signals table payload total:',JSON.stringify(total));
-  // Every signal serialises Signal.inputs, which embeds the whole windowed corpus including each
-  // transaction's provenance payload, so one analyse() writes tens of megabytes. Recorded here as the
-  // measured cause of the 39,899 ms device write; this becomes a size budget once inputs stores a
-  // citation instead of a copy.
-  expect(rows).toHaveLength(5);
+  // A stored signal cites the transactions it was computed from; it does not copy them. Copying them
+  // wrote 45,721,866 bytes across these 24 rows, whose CHECK(json_valid(inputs)) SQLite must parse and
+  // SQLCipher must encrypt, and that measured 37,403 ms of a 43,789 ms Ledger open on the device.
+  // The budget is deliberately far above the citation size and far below a single copied corpus.
   expect(Number(total!.n)).toBe(24);
+  expect(Number(total!.bytes)).toBeLessThan(4_000_000);
+  expect(Number(rows[0]!.inputs_bytes)).toBeLessThan(500_000);
  }finally{raw.close();}
 },600000);

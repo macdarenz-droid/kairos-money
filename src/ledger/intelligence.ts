@@ -7,7 +7,21 @@ import {computeSignals} from '../intelligence/signals';
 import {profile,distress} from '../intelligence/profile';
 import {insights} from '../intelligence/insights';
 import {forecast,payRise,payCycle,goalFunding,recurrences,scheduledDates} from '../intelligence/forecast';
-import {day,windows,type Snapshot,type Kind,type Transaction} from '../intelligence/model';
+import {day,windows,type Snapshot,type Kind,type Signal,type Transaction} from '../intelligence/model';
+/**
+ * What a stored signal retains.
+ *
+ * Signal.inputs carries the whole windowed corpus so the calculation can be re-derived in memory, and
+ * every transaction in it carries its own provenance payload. Serialising that per signal wrote
+ * 45,721,866 bytes across 24 rows for a 20,000-row ledger, the largest row 5,796,371 bytes, and the
+ * column is CHECK(json_valid(inputs)) so SQLite parses each one before SQLCipher encrypts its pages.
+ * On the device that measured 37,403 ms of a 43,789 ms screen open, across 24 uniformly slow writes.
+ *
+ * The ledger already holds those transactions and `evidence` already cites them by id, so the stored
+ * row keeps the citation and drops the copy. Nothing reads this column back; it exists for audit and
+ * export, and a reference serves that better than 24 duplicates of the same corpus.
+ */
+function stored(v:Signal){const {transactions,...inputs}=v.inputs;return {...v,inputs:{...inputs,transactionCount:transactions.length}};}
 export function intelligenceRepository(driver:Driver){
  async function setting<T>(key:string,fallback:T):Promise<T>{const r=(await driver.query('SELECT value FROM app_settings WHERE key=?',[key]))[0];return r?JSON.parse(String(r.value)) as T:fallback;}
  async function set(key:string,value:unknown){await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',[key,JSON.stringify(value)]);}
@@ -46,7 +60,7 @@ export function intelligenceRepository(driver:Driver){
  async function analyse(asOf:string,code:string,extraBill='0',cutPercent=0){return driver.transaction(async()=>{
   const s=await snapshot(asOf,code),all=windows(asOf).flatMap(w=>computeSignals(s,w)),signal=all.filter(v=>v.period.startsWith('trailing-90:')),period=asOf.slice(0,7);
   const old=(await driver.query('SELECT archetype FROM profiles WHERE period<? AND id LIKE ? ORDER BY period DESC LIMIT 1',[code+':'+period,code+':%']))[0];const p=profile(s,signal,old?.archetype?String(old.archetype):null),dismissed=await setting<Record<string,number>>('intelligence:dismissals',{}),cards=insights(s,signal,dismissed),buffer=await setting<string>('intelligence:buffer:'+code,'0');
-  for(const v of all)await driver.execute('INSERT OR REPLACE INTO signals(id,period,key,value,computed_at,version,status,inputs) VALUES(?,?,?,?,?,?,?,?)',[code+':'+v.period+':'+v.key,code+':'+v.period,v.key,v.value,new Date().toISOString(),1,v.status==='ok'?'ready':'insufficient_data',JSON.stringify(v)]);
+  for(const v of all)await driver.execute('INSERT OR REPLACE INTO signals(id,period,key,value,computed_at,version,status,inputs) VALUES(?,?,?,?,?,?,?,?)',[code+':'+v.period+':'+v.key,code+':'+v.period,v.key,v.value,new Date().toISOString(),1,v.status==='ok'?'ready':'insufficient_data',JSON.stringify(stored(v))]);
   await driver.execute('INSERT OR REPLACE INTO profiles(id,period,archetype,axis_scores,confidence,version,covered_days) VALUES(?,?,?,?,?,?,?)',[code+':'+period,code+':'+period,p.archetype,JSON.stringify(p.axes),p.confidence,1,p.coveredDays]);
   for(const i of cards)await driver.execute('INSERT OR REPLACE INTO insights(id,created_at,kind,severity,title,body,evidence,state,projected_effect_minor,currency,research_id,action,threshold) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',[i.id,new Date().toISOString(),i.kind,i.triage?'triage':'normal',i.title,i.body,JSON.stringify(i),'new',toDatabase(money(BigInt(i.projectedMinor),s.currency)),code,i.researchId,i.action,i.threshold]);
   const goals=await driver.query('SELECT * FROM goals WHERE currency=? ORDER BY target_date,id',[code]);const cycles=payCycle(s);const goalRows=goals.map(g=>{const due=g.target_date?String(g.target_date):asOf;const payDates:string[]=[];for(const c of cycles){payDates.push(...scheduledDates(c,due));}return {id:String(g.id),name:String(g.name),target_minor:String(g.target_minor),funded_minor:String(g.funded_minor),target_date:String(g.target_date),kind:String(g.kind),perPay:due>=asOf?goalFunding(String(g.target_minor),String(g.funded_minor),due,asOf,payDates):null};});
