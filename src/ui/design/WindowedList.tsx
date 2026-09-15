@@ -6,7 +6,17 @@ export function WindowedList<T>({items,id,render,label,onRange}:{items:T[];id:(i
  const measure=useCallback((key:string,height:number)=>{
   pendingHeights.current.set(key,height);
   if(measureFrame.current!==null)return;
-  measureFrame.current=requestAnimationFrame(()=>{measureFrame.current=null;const pending=pendingHeights.current;pendingHeights.current=new Map();setHeights(old=>{let next:Map<string,number>|undefined;for(const [itemKey,itemHeight] of pending)if(old.get(itemKey)!==itemHeight){next??=new Map(old);next.set(itemKey,itemHeight);}return next??old;});});
+  measureFrame.current=requestAnimationFrame(()=>{measureFrame.current=null;const pending=pendingHeights.current;pendingHeights.current=new Map();setHeights(old=>{
+   // A row re-measuring to a materially different height means the basis changed for every row — the
+   // text size, or a font that finished loading — not that one row's content grew. Only the mounted
+   // handful ever re-measures, so the rest of the map would keep heights taken at the old text size and
+   // the list would go on describing itself at a size it is no longer drawn at. Comparing each key
+   // against its own previous value is what makes this safe: rows legitimately differing from each
+   // other never trigger it, because a row is only ever compared with itself.
+   let rebased=false;
+   for(const [itemKey,itemHeight] of pending){const previous=old.get(itemKey);if(previous!==undefined&&Math.abs(previous-itemHeight)>Math.max(2,previous/10)){rebased=true;break;}}
+   if(rebased)return new Map(pending);
+   let next:Map<string,number>|undefined;for(const [itemKey,itemHeight] of pending)if(old.get(itemKey)!==itemHeight){next??=new Map(old);next.set(itemKey,itemHeight);}return next??old;});});
  },[]);
  useEffect(()=>()=>{if(measureFrame.current!==null)cancelAnimationFrame(measureFrame.current);},[]);
  // Unmeasured rows are estimated from the rows that have been measured, not from a constant. Only the
