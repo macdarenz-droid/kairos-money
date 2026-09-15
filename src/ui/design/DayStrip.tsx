@@ -8,8 +8,13 @@ import type {DaySpend} from './SpendingCalendar';
  *
  * "What have I spent today" is a number, and a number on its own says nothing: forty dollars is a quiet
  * day or an alarming one depending on the fortnight around it. The strip supplies that context in the
- * space a sentence would have taken, and answers the screen's question in the first column a person's eye
- * lands on.
+ * space a sentence would have taken, and today is the last column, where the eye finishes.
+ *
+ * It does not print the figure. It used to, as its own hero — and on the only screen it appears on, the
+ * block directly above already shows that same amount as the page's headline, with what came in and what
+ * is still unconfirmed beside it. Two identical heroes saying "spent today" a screen apart is the
+ * duplication this app is supposed to be getting rid of, and when the two are computed from slightly
+ * different filters it is worse than duplication: it is two answers to one question.
  *
  * Bars only, one hue, scaled to the heaviest day in view. No target line, no colour change at a threshold:
  * the app does not know what this person's day should cost, and a chart that implies it does is lying.
@@ -38,7 +43,6 @@ export function DayStrip({days, code, today, span = 7}: {days: DaySpend[]; code:
     })};
   }, [days, today, span]);
 
-  const latest = columns[columns.length - 1]!;
   const show = (value: bigint) => format(money(value, code));
   // Two letters, not one: with a single initial, Tuesday and Thursday are both "T" and Saturday and Sunday
   // are both "S", so half the row cannot be read. Today keeps its own weekday here and is marked by its
@@ -47,10 +51,7 @@ export function DayStrip({days, code, today, span = 7}: {days: DaySpend[]; code:
     .toLocaleDateString('en-AU', {weekday: 'short', timeZone: 'UTC'}).slice(0, 2);
 
   return <figure className="strip">
-    <figcaption>
-      <p className="hero-amount">{show(latest.spent)}</p>
-      <p>spent today</p>
-    </figcaption>
+    <figcaption><h3>The last seven days</h3></figcaption>
 
     <div className="strip-plot" role="img"
       aria-label={`Spending on each of the last ${span} days, ending today. The heaviest was ${show(peak)}. Every day is listed in the table below.`}>

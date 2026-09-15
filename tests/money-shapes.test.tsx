@@ -110,7 +110,11 @@ it('puts today at the end of the week, scaled to the heaviest day in view',()=>{
  expect(bars[5]!.style.height).toBe('25%');    // 2026-08-25
  expect(bars[6]!.style.height).toBe('50%');    // today
  expect(document.querySelectorAll('[data-today]')).toHaveLength(1);
- expect(screen.getByText('spent today')).toBeTruthy();
+ expect(screen.getByText('The last seven days')).toBeTruthy();
+ // Today's figure is the screen's headline, shown once by the block above this one. The strip is the
+ // context around it and must not print it a second time as a hero of its own — but every day, today
+ // included, is still in the table underneath.
+ expect(document.querySelector('.strip .hero-amount')).toBeNull();
  expect(screen.getAllByText('$20.00').length).toBeGreaterThan(0);
 });
 
