@@ -89,10 +89,10 @@ export function SpendingCalendar({days, code, onDay}: {days: DaySpend[]; code: C
 
     <details>
       <summary>Read this month as a list</summary>
-      <table className="calendar-table"><caption className="meta">Every day with spending in {month}.</caption>
+      <div className="table-scroll"><table className="calendar-table"><caption className="meta">Every day with spending in {month}.</caption>
         <thead><tr><th scope="col">Day</th><th scope="col">Spent</th></tr></thead>
         <tbody>{cells.filter(c => c.minor > 0n).map(c => <tr key={c.date}><th scope="row">{c.date}</th><td>{label(c.minor)}</td></tr>)}</tbody>
-      </table>
+      </table></div>
       {!cells.some(c => c.minor > 0n) && <p className="meta">No spending recorded in this month.</p>}
     </details>
   </section>;

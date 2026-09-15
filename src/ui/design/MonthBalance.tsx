@@ -1,6 +1,14 @@
 import {useMemo, useState} from 'react';
 import {format, money, type Currency} from '../../core/money';
 import {displayRatio} from '../../intelligence/visuals';
+import {Button} from './primitives';
+
+/**
+ * Six months to a page. A tappable column needs 44px, and a 411px phone minus the screen's own padding
+ * leaves 371px: six columns fit with room to spare, nine do not — at nine they are 39px and too small to
+ * hit. Paging is also how a person actually reads this; a year of columns at once is a wall again.
+ */
+const PAGE = 6;
 
 export type MonthFlow = {month: string; inMinor: string; outMinor: string};
 
@@ -18,10 +26,13 @@ export type MonthFlow = {month: string; inMinor: string; outMinor: string};
  * replacing it.
  *
  * Above and below share one scale — the same denominator for both signs — so a short month and a heavy
- * one cannot be drawn the same size.
+ * one cannot be drawn the same size. That scale is taken from every month on record, not from the page on
+ * screen, so turning the page never silently rescales the picture.
  */
 export function MonthBalance({months, code}: {months: MonthFlow[]; code: Currency}) {
   const [picked, setPicked] = useState<string | null>(null);
+
+  const [page, setPage] = useState<number | null>(null);
 
   const {columns, zero} = useMemo(() => {
     const ordered = [...months].sort((a, b) => a.month.localeCompare(b.month));
@@ -43,7 +54,10 @@ export function MonthBalance({months, code}: {months: MonthFlow[]; code: Currenc
 
   if (!columns.length) return <p className="meta">No months with activity yet.</p>;
 
-  const selected = columns.find(c => c.month === picked) ?? columns[columns.length - 1]!;
+  const pages = Math.max(1, Math.ceil(columns.length / PAGE));
+  const index = Math.min(page ?? pages - 1, pages - 1);
+  const shown = columns.slice(Math.max(0, columns.length - (pages - index) * PAGE), columns.length - (pages - index - 1) * PAGE);
+  const selected = shown.find(c => c.month === picked) ?? shown[shown.length - 1]!;
   const show = (value: bigint) => format(money(value, code));
   const name = (month: string) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-AU', {month: 'long', year: 'numeric', timeZone: 'UTC'});
 
@@ -59,9 +73,9 @@ export function MonthBalance({months, code}: {months: MonthFlow[]; code: Currenc
     </div>
 
     <div className="balance-plot" role="group"
-      aria-label={`What stayed in each of ${columns.length} months, from ${name(columns[0]!.month)} to ${name(columns[columns.length - 1]!.month)}. The figures are in the table below.`}>
+      aria-label={`What stayed in each month from ${name(shown[0]!.month)} to ${name(shown[shown.length - 1]!.month)}. Every month is in the table below.`}>
       <span className="balance-zero" style={{top: `${zero}%`}} aria-hidden="true"/>
-      {columns.map(column => {
+      {shown.map(column => {
         const kept = column.kept >= 0n;
         return <button key={column.month} type="button" className="balance-column" aria-pressed={column.month === selected.month}
           aria-label={`${name(column.month)}: ${show(column.received)} in, ${show(column.spent)} out, ${kept ? `${show(column.kept)} stayed` : `${show(-column.kept)} more went out`}`}
@@ -73,6 +87,12 @@ export function MonthBalance({months, code}: {months: MonthFlow[]; code: Currenc
       })}
     </div>
 
+    {pages > 1 && <div className="balance-pager">
+      <Button variant="quiet" disabled={index <= 0} onClick={() => { setPage(index - 1); setPicked(null); }} aria-label="Earlier months">‹</Button>
+      <span className="meta">{name(shown[0]!.month)} – {name(shown[shown.length - 1]!.month)}</span>
+      <Button variant="quiet" disabled={index >= pages - 1} onClick={() => { setPage(index + 1); setPicked(null); }} aria-label="Later months">›</Button>
+    </div>}
+
     <div className="balance-readout" role="status">
       <strong>{name(selected.month)}</strong>
       <span><span className="flow-key flow-key-in" aria-hidden="true"/>{show(selected.received)} came in</span>
@@ -82,10 +102,10 @@ export function MonthBalance({months, code}: {months: MonthFlow[]; code: Currenc
 
     <details>
       <summary>Read these months as a table</summary>
-      <table className="calendar-table"><caption className="meta">Recorded money in and out, by month.</caption>
+      <div className="table-scroll"><table className="calendar-table"><caption className="meta">Recorded money in and out, by month.</caption>
         <thead><tr><th scope="col">Month</th><th scope="col">Came in</th><th scope="col">Went out</th><th scope="col">Left</th></tr></thead>
         <tbody>{columns.map(c => <tr key={c.month}><th scope="row">{c.month}</th><td>{show(c.received)}</td><td>{show(c.spent)}</td><td>{show(c.kept)}</td></tr>)}</tbody>
-      </table>
+      </table></div>
     </details>
   </figure>;
 }

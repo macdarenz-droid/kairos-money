@@ -107,15 +107,24 @@ it('puts today at the end of a fortnight, scaled to the heaviest day in view',()
  expect(bars[7]!.style.height).toBe('100%');   // 2026-08-20, the peak in view
  expect(bars[12]!.style.height).toBe('25%');   // 2026-08-25
  expect(bars[13]!.style.height).toBe('50%');   // today
- expect(document.querySelectorAll('[aria-current=date]')).toHaveLength(1);
+ expect(document.querySelectorAll('[data-today]')).toHaveLength(1);
  expect(screen.getByText('spent today')).toBeTruthy();
  expect(screen.getAllByText('$20.00').length).toBeGreaterThan(0);
 });
 
+it('draws the days as marks, never as fourteen tap targets too small to hit',()=>{
+ // Fourteen 44px targets need 616px; the gate device gives the app 371px, so per-day buttons came out
+ // 24px wide and failed the touch-target check on a real phone. The figures stay reachable in the table.
+ render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'}]} code={AUD} today="2026-08-26"/>);
+ expect(document.querySelectorAll('.strip-plot button')).toHaveLength(0);
+ expect(screen.getByRole('img').getAttribute('aria-label')).toMatch(/last 14 days/);
+ expect(screen.getByText('Read these days as a list')).toBeTruthy();
+});
+
 it('shows a day with nothing spent as nothing, not as a gap in the record',()=>{
  render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'}]} code={AUD} today="2026-08-26"/>);
- const quiet=screen.getByRole('button',{name:/25 August: nothing recorded/});
- fireEvent.click(quiet);
+ // Every day of the fortnight is listed, including the ones with nothing on them.
+ expect(screen.getAllByRole('row').length).toBe(15);
  expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
 });
 
@@ -123,4 +132,34 @@ it('ignores money arriving when drawing what was spent',()=>{
  render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'},{date:'2026-08-26',minor:'500000'}]} code={AUD} today="2026-08-26"/>);
  expect(screen.getAllByText('$20.00').length).toBeGreaterThan(0);
  expect(document.body.textContent).not.toContain('$5,000.00');
+});
+
+it('shows six months to a page, so every column stays big enough to press',()=>{
+ // Nine columns across the gate device's 371px come out 39px wide and fail the 44px touch-target check.
+ const months=Array.from({length:9},(_,i)=>({month:`2026-0${i+1}`,inMinor:'600000',outMinor:'400000'}));
+ render(<MonthBalance months={months} code={AUD}/>);
+ expect(document.querySelectorAll('.balance-column')).toHaveLength(6);
+ // The page opens on the most recent months, which is what someone is asking about.
+ expect(screen.getByText('September 2026')).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'Earlier months'}));
+ // The oldest page carries the remainder, so it is short rather than padded with months that do not exist.
+ expect(document.querySelectorAll('.balance-column')).toHaveLength(3);
+ expect(screen.getByText('March 2026')).toBeTruthy();
+ // Every month is still listed, whichever page is showing.
+ expect(screen.getAllByRole('row').length).toBe(10);
+});
+
+it('keeps one scale across every month, so turning the page never rescales the picture',()=>{
+ const months=[
+  {month:'2026-01',inMinor:'600000',outMinor:'200000'},   // the biggest surplus, on the earlier page
+  ...Array.from({length:6},(_,i)=>({month:`2026-0${i+2}`,inMinor:'600000',outMinor:'400000'})),
+ ];
+ render(<MonthBalance months={months} code={AUD}/>);
+ const later=[...document.querySelectorAll<HTMLElement>('.balance-bar')].map(b=>b.style.height);
+ fireEvent.click(screen.getByRole('button',{name:'Earlier months'}));
+ const earlier=[...document.querySelectorAll<HTMLElement>('.balance-bar')].map(b=>b.style.height);
+ // January is $4,000.00 kept against $2,000.00 in the other months: it must draw twice as tall, not the
+ // same height it would have if each page were scaled to itself.
+ expect(earlier[0]).toBe('100%');
+ expect(later[0]).toBe('50%');
 });
