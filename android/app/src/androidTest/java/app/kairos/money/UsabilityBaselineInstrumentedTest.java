@@ -29,6 +29,9 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class UsabilityBaselineInstrumentedTest {
     private static final String PROBE="Synthetic usability probe";
+    /** The manual form's account chooser. Its label reads "Account", or "From account" for a transfer. */
+    private static final String ACCOUNT_SELECT=
+        "Array.from(document.querySelectorAll('label')).find(e=>e.textContent.startsWith('Account'))?.querySelector('select')";
     private MainActivity activity;
     private int taps=0,typingSessions=0;
     /** DOM facts captured the moment the repeat tile is tapped at 200% text, reported either way. */
@@ -107,11 +110,14 @@ public class UsabilityBaselineInstrumentedTest {
             tap(named("Add transaction"));
             // The precondition, checked where it actually matters rather than by reading chrome off the
             // home screen: this baseline needs an account, which the earlier classes create. It used to
-            // look for the words "Accounts set up", which were a count the home screen no longer carries —
-            // that text was one of nineteen blocks competing with the user's own money for attention.
+            // look for the words "Accounts set up", a count the home screen no longer carries.
+            //
+            // The wait matters. Reading the DOM in the same breath as the tap that changes it asks the
+            // question before the answer exists — the sheet had not rendered yet, and the check failed
+            // saying there was no account when there was. Wait for the form, then ask it.
+            awaitJs("Boolean("+ACCOUNT_SELECT+")");
             assertEquals("This baseline needs an account, which the earlier classes create.","true",
-                js("Boolean(Array.from(document.querySelectorAll('label')).find(e=>e.textContent.startsWith('Account'))"
-                    +"?.querySelector('select')?.options.length)"));
+                js("Boolean("+ACCOUNT_SELECT+".options.length)"));
             type("Amount","15.00");type("Description",PROBE);
             tap(named("Save transaction"));
             awaitSaved();
