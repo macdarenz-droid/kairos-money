@@ -78,6 +78,27 @@ and saying otherwise would be reading an improvement into a number that does not
 The taps counted are, from scratch: Add transaction, then Save transaction. Repeating: the repeat tile,
 then Save transaction. Unlocking is excluded deliberately, as it belongs to no task.
 
+### Added and awaiting its first report: the same repeat at 200% text
+
+A shortcut that only works at default text size is not a shortcut for the person who most needs one, and
+200% text is where two real virtualization defects lived. The baseline now repeats the entry again with the
+WebView at 200% text zoom and asserts what this pass claims there too: still no typing, and the same tap
+count as at default text. The zoom is restored afterwards in a `finally`, because the classes that run next
+share the install.
+
+It also records `tile_on_screen_without_scrolling` — whether the repeat tile is inside the viewport at 200%
+text, which is as much of "one-handed reach" as a program can honestly check. That one is **recorded, not
+asserted**. Nobody has measured it yet, and asserting a value before measuring it is the mistake this file
+exists to prevent. Once a run reports it, it can become a claim.
+
+### Categorising at entry is deliberately not measured here
+
+The category chips are built from the user's own filed history. No class before this one files a
+categorised manual entry, so on the gate's device the chip row is absent and the only remaining route is a
+select this harness cannot press as a tap. A number measured down that fallback route would not be the
+number a real user with history sees, so none is reported. This is the same reasoning that keeps bulk
+categorisation in the source UI test.
+
 **What these numbers do not cover.** They are a floor, not a typical entry. The measured path takes every
 default it is offered — the remembered account, today's date, and no category — so a user who sets a
 category at entry, changes the account, or backdates the entry pays more taps than this. It is one

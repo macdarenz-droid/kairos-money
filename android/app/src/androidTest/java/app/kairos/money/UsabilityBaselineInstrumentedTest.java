@@ -92,6 +92,35 @@ public class UsabilityBaselineInstrumentedTest {
             assertTrue("Repeating must not cost more taps than entering from scratch",repeatTaps<=scratchTaps);
             assertTrue("Repeating must still end at a Save the user presses",repeatTaps>=2);
 
+            // Task three: the same repeat, at 200% text.
+            //
+            // A shortcut that only works at default text size is not a shortcut for the person who most
+            // needs one. This is also where two real virtualization defects lived, so the cost of the lazy
+            // path at 200% is measured rather than assumed. The zoom is restored afterwards whatever
+            // happens: the classes that run next share this install.
+            int zoomTaps,zoomTyping;boolean reachable;
+            InstrumentationRegistry.getInstrumentation().runOnMainSync(()->
+                activity.getBridge().getWebView().getSettings().setTextZoom(200));
+            try {
+                taps=0;typingSessions=0;
+                tap(labelled("Record "+PROBE));
+                awaitJs("Boolean("+named("Save transaction")+")");
+                tap(named("Save transaction"));
+                awaitJs("!Boolean("+named("Save transaction")+")");
+                zoomTaps=taps;zoomTyping=typingSessions;
+                // One-handed reach, as much of it as a program can honestly check: is the tile on screen
+                // at 200% text, or does reaching the shortcut cost a scroll the tap count never shows?
+                reachable="true".equals(js("(()=>{const b="+labelled("Record "+PROBE)+";if(!b)return false;"
+                    +"const r=b.getBoundingClientRect();return r.top>=0&&r.bottom<=window.innerHeight;})()"));
+            } finally {
+                InstrumentationRegistry.getInstrumentation().runOnMainSync(()->
+                    activity.getBridge().getWebView().getSettings().setTextZoom(100));
+            }
+            tasks.put(new JSONObject().put("task","record the same expense again at 200% text")
+                .put("taps",zoomTaps).put("typing_sessions",zoomTyping).put("tile_on_screen_without_scrolling",reachable));
+            assertEquals("Repeating at 200% text must still need no typing",0,zoomTyping);
+            assertEquals("Repeating must cost the same at 200% text as at default text",repeatTaps,zoomTaps);
+
             File directory=new File(activity.getExternalFilesDir(null),"evidence");
             assertTrue(directory.exists()||directory.mkdirs());
             // The evidence file only reaches the build artifact, which is not always retrievable, and an
@@ -100,6 +129,7 @@ public class UsabilityBaselineInstrumentedTest {
             JSONObject report=new JSONObject()
                 .put("measurement","Taps and typing sessions performed against the shipped UI on an Android 34 emulator.")
                 .put("note","A baseline, not a target. A tap count that improves while a confirmation disappears is a regression.")
+                .put("not_measured_here","Categorising at entry. The category chips are built from the user's own filed history, and no class before this one files a categorised manual entry, so the chip row is absent on the gate's device and the only route left is a select this harness cannot press as a tap. A number measured down the fallback route would not be the number a real user with history sees.")
                 .put("confirmation_retained",true).put("tasks",tasks);
             Bundle status=new Bundle();
             status.putString("stream","\nusability-baseline: "+report.toString()+"\n");
