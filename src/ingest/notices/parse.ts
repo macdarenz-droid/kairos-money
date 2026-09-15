@@ -23,13 +23,17 @@ export type ParsedNotice =
 // notice reading "You spent $12.50. Available balance $431.20" is not treated as ambiguous — and a notice
 // that is ONLY a balance has no amount left and is skipped.
 const BALANCE = /\b(?:available|remaining|current|new|closing|acct|account)?\s*(?:bal|balance|funds)\b[^\d\n]{0,24}(?:[A-Z]{3}\s*)?[$€£¥]?\s*\d[\d,]*(?:\.\d{1,3})?/gi;
-const OUTWARD = /\b(?:spent|purchase|purchased|debited|debit|withdrawn|withdrawal|paid|payment|charged|sent|transfer(?:red)? to)\b/i;
-const INWARD = /\b(?:received|deposit|deposited|credited|credit|refund(?:ed)?|transfer(?:red)? from)\b/i;
+const INWARD_PHRASE = /\b(?:been paid|paid into|paid to you|received|deposit(?:ed)?|credited|refund(?:ed)?|transfer(?:red)? from|money in)\b/i;
+const OUTWARD_PHRASE = /\b(?:you spent|spent|purchase(?:d)?|debited|withdrawn|withdrawal|paid from|paid to|payment to|charged|sent to|transfer(?:red)? to|money out)\b/i;
+const OUTWARD_WORD = /\b(?:debit|paid|payment|sent)\b/i;
+const INWARD_WORD = /\b(?:credit|pay)\b/i;
 // A run of digits is only an amount when the bank marked it as one: a currency code, a symbol, or cents.
 // Without that rule a card suffix or a store number ("WOOLWORTHS 1234") counts as a second amount and
 // every ordinary notice is thrown away as ambiguous.
 const AMOUNT = /(?:(?<code>AUD|USD|PHP|EUR|GBP|NZD|CAD|SGD|JPY|KWD)\s*)?(?<symbol>[$€£¥])?\s*(?<whole>\d{1,3}(?:,\d{3})+|\d+)(?:\.(?<fraction>\d{1,3}))?/g;
 const MERCHANT = /\b(?:at|to|from)\s+([^.,;\n]{2,60})/i;
+const GENERIC = /^(?:your |my |the )?(?:account|acct|card|balance|you)\b/i;
+const STATEMENT_STYLE = /\b[A-Z][A-Z0-9&'*-]{2,}(?:[ -][A-Z0-9&'*-]{2,}){0,5}\b/;
 
 /**
  * @param expected the currency of the account these notices belong to. A bare "$" means that currency; an
@@ -42,8 +46,17 @@ export function parseNotice(notice: Notice, expected: Currency): ParsedNotice {
   if (/\b(?:one[- ]?time|verification|security|otp|passcode|log ?in|sign ?in)\b/i.test(body))
     return {status: 'skip', reason: 'This looks like a security message, not a purchase.'};
 
-  const outward = OUTWARD.test(body), inward = INWARD.test(body);
-  if (outward === inward) return {status: 'skip', reason: 'The notification does not say whether money went out or came in.'};
+  // An explicit phrase settles it; a bare verb is only asked when no phrase matched, because "paid" alone
+  // means opposite things in "paid from your account" and "you've been paid".
+  const inwardPhrase = INWARD_PHRASE.test(body), outwardPhrase = OUTWARD_PHRASE.test(body);
+  const decided = inwardPhrase !== outwardPhrase
+    ? {inward: inwardPhrase, outward: outwardPhrase}
+    : inwardPhrase && outwardPhrase
+      ? null                                        // Says both; not resolved by preferring either.
+      : {inward: INWARD_WORD.test(body), outward: OUTWARD_WORD.test(body)};
+  if (!decided || decided.inward === decided.outward)
+    return {status: 'skip', reason: 'The notification does not say whether money went out or came in.'};
+  const outward = decided.outward;
 
   const spendable = body.replace(BALANCE, ' ');
   const amounts = [...spendable.matchAll(AMOUNT)]
@@ -61,7 +74,9 @@ export function parseNotice(notice: Notice, expected: Currency): ParsedNotice {
   catch { return {status: 'skip', reason: 'The amount could not be read exactly.'}; }
   if (value.minor === 0n) return {status: 'skip', reason: 'The notification reports no money moving.'};
 
-  const named = MERCHANT.exec(body)?.[1]?.trim();
+  const candidate = MERCHANT.exec(body)?.[1]?.trim();
+  const shouted = STATEMENT_STYLE.exec(body.replace(/^[^ ]+ /, ''))?.[0]?.trim();
+  const named = candidate && !GENERIC.test(candidate) ? candidate : shouted;
   return {
     status: 'ok',
     minor: money(outward ? -value.minor : value.minor, value.currency).minor.toString(),

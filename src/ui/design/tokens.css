@@ -32,6 +32,8 @@
   --heat-ink-5: oklch(13.89505% 0.002948 246.2560);
   --flow-in: oklch(65.96004% 0.118092 63.8113);
   --flow-out: oklch(62.74437% 0.190960 269.2147);
+  --flow-in-fill: oklch(55.60112% 0.079988 70.7735);
+  --flow-out-fill: oklch(50.46581% 0.118736 269.6853);
   --border-subtle: oklch(100% 0 0 / 0.06);
   --border-default: oklch(100% 0 0 / 0.11);
 }
@@ -68,6 +70,8 @@
   --heat-ink-5: oklch(100.00000% 0.000000 89.8756);
   --flow-in: oklch(50.59987% 0.117152 56.1247);
   --flow-out: oklch(52.55568% 0.198793 268.0378);
+  --flow-in-fill: oklch(65.87972% 0.077492 71.1463);
+  --flow-out-fill: oklch(65.10177% 0.088650 272.6074);
   --border-subtle: oklch(0% 0 0 / 0.06);
   --border-default: oklch(0% 0 0 / 0.11);
 }

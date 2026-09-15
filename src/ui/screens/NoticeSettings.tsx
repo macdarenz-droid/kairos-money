@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {Notices, noticeAccess, noticesAvailable, installedSources, watchSources} from '../../ingest/notices';
-import {Button, Row} from '../design/primitives';
+import {Button, Input, Row} from '../design/primitives';
 
 /**
  * Turning on reading bank notifications, and choosing whose.
@@ -15,13 +15,25 @@ import {Button, Row} from '../design/primitives';
  */
 export function NoticeSettings() {
   const client = useQueryClient();
-  const [error, setError] = useState('');
+  const [error, setError] = useState(''), [search, setSearch] = useState(''), [all, setAll] = useState(false);
   const access = useQuery({queryKey: ['notice-access'], queryFn: noticeAccess, enabled: noticesAvailable()});
   const apps = useQuery({queryKey: ['notice-apps'], queryFn: installedSources, enabled: noticesAvailable() && !!access.data?.granted});
 
   if (!noticesAvailable()) return null;
   const granted = access.data?.granted ?? false;
   const watched = access.data?.sources ?? [];
+
+  // Names and package ids of the apps that announce money. Matching is a hint for ordering the list, never
+  // a restriction: "Show all apps" is one press away, and anything already ticked is always listed.
+  const MONEY = /bank|banking|money|pay|wallet|card|credit|super|finance|financial|invest|crypto|afterpay|zip|klarna|humm|paypal|wise|revolut|westpac|commbank|nab\b|anz\b|ubank|bendigo|macquarie|amex|visa|mastercard|beem|osko/i;
+  const every = apps.data ?? [];
+  const likely = every.filter(app => MONEY.test(app.label) || MONEY.test(app.id) || watched.includes(app.id));
+  const hidden = every.length - likely.length;
+  const pool = all ? every : likely;
+  const needle = search.trim().toLowerCase();
+  const listed = needle
+    ? every.filter(app => app.label.toLowerCase().includes(needle) || app.id.toLowerCase().includes(needle))
+    : pool;
 
   async function choose(id: string) {
     setError('');
@@ -47,10 +59,16 @@ export function NoticeSettings() {
       <h3>Which apps to read</h3>
       {apps.isPending && <p className="meta">Reading the apps on this phone.</p>}
       {apps.data?.length === 0 && <p className="meta">No apps to choose from on this phone.</p>}
-      {(apps.data ?? []).map(app => <label key={app.id} className="check-row">
+      {!!apps.data?.length && <Input label="Find an app" placeholder="Name of your bank" value={search}
+        onChange={e => setSearch(e.target.value)}/>}
+      {listed.map(app => <label key={app.id} className="check-row">
         <input type="checkbox" checked={watched.includes(app.id)} onChange={() => void choose(app.id)}/>
         <span>{app.label}<span className="meta"> · {app.id}</span></span>
       </label>)}
+      {!listed.length && <p className="meta">No app here matches that. Try part of your bank's name.</p>}
+      {!search && hidden > 0 && <Button variant="quiet" onClick={() => setAll(shown => !shown)}>
+        {all ? 'Show money apps only' : `Show all ${(apps.data ?? []).length} apps`}
+      </Button>}
       {!watched.length && <p className="meta">Nothing is ticked, so nothing is being read yet.</p>}
     </>}
     {error && <p role="alert">{error}</p>}

@@ -45,7 +45,12 @@ export async function syncNotices(driver: Driver): Promise<void> {
       [id, entry.accountId, entry.date, toDatabase(value), code, entry.merchant,
        value.minor < 0n ? 'debit' : 'credit', id, batchId(entry.id), '', 'pending']);
     await driver.execute('INSERT INTO transaction_sources VALUES(?,?,?,?)',
-      [id, batchId(entry.id), marker, JSON.stringify({...entry, origin: 'notification'})]);
+      [id, batchId(entry.id), marker, JSON.stringify({
+        ...entry, origin: 'notification', sourceId: marker, merchant: entry.merchant,
+        fingerprint: hash('notice-fingerprint:' + entry.id), issues: [], reference: '',
+        duplicateOf: null, occurrence: '', createRule: false, mcc: null,
+        pending: true, verified: true, confidence: 5000,
+      })]);
   }
 }
 

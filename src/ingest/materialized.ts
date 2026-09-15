@@ -46,9 +46,9 @@ function row(record:SqlRow,evidence:Source[]|undefined):LedgerRow {
  return {sourceId:chosen.sourceId,id,accountId:String(record.account_id),date:String(record.posted_date),description:String(record.raw_description),merchant:record.canonical_name===null?chosen.merchant:String(record.canonical_name),minor:String(record.amount_minor),currency:currency(String(record.currency)),reference:chosen.reference,...(chosen.runningBalance===undefined?{}:{runningBalance:chosen.runningBalance}),fingerprint:chosen.fingerprint,issues:chosen.issues,duplicateOf:chosen.duplicateOf,occurrence:chosen.occurrence,createRule:chosen.createRule,...(chosen.categoryFrom===undefined?{}:{categoryFrom:chosen.categoryFrom}),pending:status==='pending',status,confidence:Number(record.confidence),category:record.category===null?null:String(record.category),verified:Number(record.user_verified)===1,mcc:record.mcc===null?chosen.mcc:String(record.mcc),owner:String(record.import_batch_id),transferGroup:record.transfer_group_id===null?null:String(record.transfer_group_id),sources:evidence.map(source=>({batchId:source.batchId,sourceId:source.sourceId})).sort((a,b)=>a.batchId.localeCompare(b.batchId)||a.sourceId.localeCompare(b.sourceId))};
 }
 
-/** The batches the importer materializes: those holding a staged source document. */
+/** The batches this ledger shows: a staged source document, or an approved bank notification. */
 async function scopedBatches(driver:Driver):Promise<Set<string>> {
- return new Set((await driver.query("SELECT import_batch_id FROM staging_rows WHERE source_row_id='__document__'")).map(record=>String(record.import_batch_id)));
+ return new Set((await driver.query("SELECT import_batch_id FROM staging_rows WHERE source_row_id IN ('__document__','__notice__')")).map(record=>String(record.import_batch_id)));
 }
 
 /** Validate one provenance record and file it under its transaction. */

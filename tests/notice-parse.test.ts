@@ -114,3 +114,22 @@ it('dates the row by when the phone showed it, which is all a notification knows
  if (parsed.status !== 'ok') return;
  expect(parsed.date).toBe('2026-01-02');
 });
+
+// The two notifications the owner's phone actually captured, verbatim. The first was recorded as money
+// leaving because the outward word list contained "paid" and "been paid" matched it.
+it('reads "you have been paid" as money arriving, not as spending', () => {
+ const parsed = read("You've been paid $5.00 into your account ending 1898.", AUD);
+ expect(parsed.status).toBe('ok');
+ if (parsed.status !== 'ok') return;
+ expect(parsed.minor).toBe('500');
+});
+
+it('reads "paid from account" as money leaving', () => {
+ const parsed = read('$5.00 paid from account ending...2485. WITHDRAWAL-OSKO PAYMENT 1307861 M MASARATE', AUD);
+ expect(parsed.status).toBe('ok');
+ if (parsed.status !== 'ok') return;
+ expect(parsed.minor).toBe('-500');
+ // "account ending" names nobody. The bank's own words are kept instead of a label that says nothing.
+ expect(parsed.merchant).not.toBe('account ending');
+ expect(parsed.merchant).toContain('OSKO');
+});

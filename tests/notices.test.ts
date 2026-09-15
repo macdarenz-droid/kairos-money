@@ -111,3 +111,28 @@ it('keeps the notification text as the row’s provenance', async () => {
  expect(payload.origin).toBe('notification');
  expect(payload.source).toBe('app.synthetic.bank');
 });
+
+it('shows an approved notification in the ledger a person actually reads', async () => {
+ // It was written to the database and then filtered out of every list that displays it, because the
+ // ledger's scope only admitted batches holding a staged statement document. The money appeared nowhere
+ // but the calendar, which reads the transactions table directly.
+ const {repo, notices} = await ready();
+ await notices.approve(notice());
+ const page = await repo.imports.ledgerPage('', 0, 50);
+ expect(page.total).toBe(1);
+ expect(page.rows[0]!.merchant).toBe('WOOLWORTHS 1234');
+ expect(page.rows[0]!.status).toBe('pending');
+ // And it is findable by name, like any other row.
+ expect((await repo.imports.ledgerPage('WOOLWORTHS', 0, 50)).total).toBe(1);
+});
+
+it('keeps the whole ledger readable when a notification is stored beside statements', async () => {
+ // Provenance is validated strictly: a payload the reader cannot parse makes it refuse the entire ledger
+ // rather than one row. A notice must therefore be stored in the shape the reader expects.
+ const {repo, notices} = await ready();
+ await importStatement(repo, '12.50', '25/02/26');
+ await notices.approve(notice({id: 'notice-2', date: '2026-02-10', minor: '-9900', merchant: 'SYNTHETIC LATE'}));
+ const page = await repo.imports.ledgerPage('', 0, 50);
+ expect(page.total).toBe(2);
+ expect(await repo.imports.ledger()).toHaveLength(2);
+});

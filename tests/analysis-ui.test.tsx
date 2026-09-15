@@ -31,8 +31,9 @@ afterEach(cleanup);
 it.each(['dark','light'])('renders every measure with its coverage in %s',async theme=>{
  document.documentElement.dataset.theme=theme;
  await show();
- // All 36 capabilities are listed, whether or not they had enough evidence.
- expect(screen.getByText(/of 36 with enough evidence/)).toBeTruthy();
+ // All 36 capabilities are still there, one tap down, whether or not they had enough evidence.
+ expect(screen.getByText(/of 36/)).toBeTruthy();
+ expect(screen.getByText('Every measure, one by one')).toBeTruthy();
  expect(screen.getByText('Largest category')).toBeTruthy();
  expect(screen.getByText('Left after essentials')).toBeTruthy();
 });
@@ -54,8 +55,12 @@ it('states a measure without enough evidence rather than showing a zero',async()
  snapshot.current={...build(),coverage:[{accountId:'a',start:today,end:today,tier:'A'}]};
  render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><Analysis/></QueryClientProvider>);
  await screen.findByText('Money analysis');
- expect(screen.getAllByText(/At least 20 covered days/).length).toBeGreaterThan(0);
- expect(screen.getByText('0 of 36 with enough evidence')).toBeTruthy();
+ expect(screen.getByText('0 of 36')).toBeTruthy();
+ const summary=screen.getByText(/measures are waiting:/);
+ expect(summary.textContent).toContain('At least 20 covered days');
+ // Said once with a count, not once per measure. The roll-call is behind a disclosure, not on the screen.
+ expect(screen.getAllByText(/measures are waiting:/)).toHaveLength(1);
+ expect(document.querySelector('details > summary')?.textContent).toBe('Every measure, one by one');
 });
 
 it('keeps a modelled amount visibly separate from what happened, and never calls it saved',async()=>{

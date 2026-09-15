@@ -96,8 +96,8 @@ details[open] > summary::before { transform: rotate(45deg); }
 .flow-name { font-size: 11px; line-height: 16px; color: var(--text-secondary); }
 .flow-bar { position: relative; height: 14px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
 .flow-fill { position: absolute; inset-block: 0; inset-inline-start: 0; border-radius: 4px; min-width: 2px; }
-.flow-fill-in { background: var(--flow-in); }
-.flow-fill-out { background: var(--flow-out); }
+.flow-fill-in { background: var(--flow-in-fill); }
+.flow-fill-out { background: var(--flow-out-fill); }
 .flow-gap-line .flow-bar { background: transparent; }
 .flow-gap { position: absolute; inset-block: 3px; border-radius: 3px; min-width: 2px;
   border: 1px dashed var(--text-tertiary); background: transparent; }
@@ -107,14 +107,14 @@ details[open] > summary::before { transform: rotate(45deg); }
 /* What each month left: one column per month, growing out of a shared zero line. */
 .balance-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 11px; line-height: 16px; color: var(--text-secondary); }
 .balance-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.balance-plot { position: relative; display: flex; gap: 2px; height: 148px; padding-bottom: 20px; }
+.balance-plot { position: relative; display: flex; justify-content: center; gap: 2px; height: 148px; padding-bottom: 20px; }
 .balance-zero { position: absolute; inset-inline: 0; height: 1px; background: var(--border-control); }
-.balance-column { position: relative; flex: 1 1 0; min-width: 0; min-height: 44px; border: 0; background: transparent; padding: 0; border-radius: 6px; overflow: visible; }
+.balance-column { position: relative; flex: 1 1 0; min-width: 0; max-width: 76px; min-height: 44px; border: 0; background: transparent; padding: 0; border-radius: 6px; overflow: visible; }
 .balance-column[aria-pressed=true] { box-shadow: inset 0 0 0 1px var(--border-default); }
 .balance-column:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 .balance-bar { position: absolute; inset-inline: 3px; min-height: 3px; }
-.balance-bar-kept { background: var(--flow-in); border-radius: 4px 4px 0 0; }
-.balance-bar-short { background: var(--flow-out); border-radius: 0 0 4px 4px; }
+.balance-bar-kept { background: var(--flow-in-fill); border-radius: 4px 4px 0 0; }
+.balance-bar-short { background: var(--flow-out-fill); border-radius: 0 0 4px 4px; }
 .balance-tick { position: absolute; inset-inline: 0; bottom: -20px; font-size: 11px; line-height: 16px;
   color: var(--text-meta); font-variant-numeric: tabular-nums; }
 .balance-column[aria-pressed=true] .balance-tick { color: var(--text-primary); }
@@ -165,3 +165,11 @@ details[open] > summary::before { transform: rotate(45deg); }
 .split-name { min-height: 44px; border: 0; background: transparent; padding: 0; color: var(--accent-text);
   font: inherit; text-align: left; overflow-wrap: anywhere; }
 .split-name:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+/* How much the app can answer yet. Marks, not controls: nothing here is tapped. */
+.readiness { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.readiness-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
+.readiness-cell { aspect-ratio: 1; border-radius: 3px; background: var(--surface-2);
+  border: 1px solid var(--border-subtle); }
+.readiness-cell.is-ready { background: var(--heat-4); border-color: var(--heat-4); }
+@media (forced-colors: active) { .readiness-cell { forced-color-adjust: none; } }

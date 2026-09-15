@@ -2,6 +2,7 @@ import {useMemo,useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {useSession} from '../session';
 import {Amount,Button,DataGrid,Row,Sheet,Skeleton,Surface} from '../design/primitives';
+import {MeasureReadiness} from '../design/MeasureReadiness';
 import {currency,format,money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {distress} from '../../intelligence/profile';
@@ -56,7 +57,6 @@ export function Analysis(){
  if(q.isPending)return <Skeleton label="Reading your money analysis"/>;
  if(q.error||!result)return <p role="alert">Your analysis could not be read. Lock and reopen Kairos before continuing.</p>;
  const {metrics,observations}=result;
- const ready=metrics.filter(m=>m.status==='ok');
  return <section className="section-gap">
   <div className="list-heading"><h2>Money analysis</h2><span className="meta">Trailing 90 days</span></div>
   {observations.map(o=><Surface key={o.id}>
@@ -67,12 +67,14 @@ export function Analysis(){
      rows={[[format(money(BigInt(o.progress.actualMinor),currency(code))),format(money(BigInt(o.progress.scenarioMinor),currency(code)))]]}/>}
    {o.evidence.length>0&&<Button onClick={()=>setDetail({title:o.statement,ids:o.evidence,text:''})}>Show the transactions behind this</Button>}
   </Surface>)}
-  <div className="list-heading"><h2>Measures</h2><span className="meta">{ready.length} of {metrics.length} with enough evidence</span></div>
-  {metrics.map(m=><Row key={m.key} trailing={<span className="meta">{reading(m,code)}</span>}>
-   <span>{titles[m.key]??m.key}</span>
-   <p className="meta">{m.status==='ok'?`${m.coverage.coveredDays} covered days${m.unverified?', balance unverified':''}`:m.reason}</p>
-   {m.evidence.length>0&&<Button onClick={()=>setDetail({title:titles[m.key]??m.key,ids:m.evidence,text:`Covered days ${m.coverage.coveredDays}. Gaps ${m.coverage.gaps.length}. Evidence ${m.details.evidenceTotal??m.evidence.length} transactions.`})}>Show evidence</Button>}
-  </Row>)}
+  <MeasureReadiness measures={metrics.map(m=>({key:m.key,title:titles[m.key]??m.key,ready:m.status==='ok',reason:m.reason}))}/>
+  <details><summary>Every measure, one by one</summary>
+   {metrics.map(m=><Row key={m.key} trailing={<span className="meta">{reading(m,code)}</span>}>
+    <span>{titles[m.key]??m.key}</span>
+    <p className="meta">{m.status==='ok'?`${m.coverage.coveredDays} covered days${m.unverified?', balance unverified':''}`:m.reason}</p>
+    {m.evidence.length>0&&<Button onClick={()=>setDetail({title:titles[m.key]??m.key,ids:m.evidence,text:`Covered days ${m.coverage.coveredDays}. Gaps ${m.coverage.gaps.length}. Evidence ${m.details.evidenceTotal??m.evidence.length} transactions.`})}>Show evidence</Button>}
+   </Row>)}
+  </details>
   {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}>
    {detail.text&&<p>{detail.text}</p>}
    {/* These used to be listed as their internal ids, which are hashes. Forty lines of hex answered
