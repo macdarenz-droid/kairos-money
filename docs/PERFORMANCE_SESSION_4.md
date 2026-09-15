@@ -123,3 +123,41 @@ Fixture correction: the first benchmark used numeric merchant suffixes, which no
 Run 34902960960 (7af93cb) measured first_row 46,763 ms of a 47,125 ms load and, for the first time, named where it went. The driver profile reported five statement shapes: `INSERT OR REPLACE INTO signals(...)` 24 calls / 39,899 ms; the ledger page read 80 calls / 2,253 ms; the provenance read 79 calls / 1,365 ms; the per-account health counts 1 call / 296 ms; a balance probe 1 call / 172 ms. The ledger read the four earlier repairs targeted accounts for 3.6 s of 46.8 s. 85% is intelligence recomputation writing its signal cache one row at a time while the Ledger waits: a bridge read returning 256 joined rows costs 28 ms, a single-row bridge write costs 1,662 ms. The cost travels with the number of native write calls, not the amount of data.
 
 Repair: `insertRows` (src/core/db/write-rows.ts) groups rows into one statement per chunk, bounded by SQLite's 999-parameter ceiling, preserving row order and INSERT OR REPLACE semantics; `analyse()` now writes its signals and insights that way, 24-plus native writes becoming two. The profile also records `max` per shape, so the next run distinguishes a shape slow on every call from one that stalled once. Shapes only are recorded, never bound values. No budget was weakened and no test skipped.
+
+## The renderer crash investigation (runs 78-84)
+
+Run 34902960960 produced the first real localisation of the 20,000-row Ledger load. The driver profile
+named five statement shapes: `INSERT OR REPLACE INTO signals(...)` 24 calls / 39,899 ms; the ledger page
+read 80 calls / 2,253 ms; the provenance read 79 calls / 1,365 ms; per-account health counts 1 / 296 ms;
+a balance probe 1 / 172 ms. The ledger read that four earlier repairs targeted accounts for 3.6 s of a
+46.8 s first_row. The rest is the intelligence layer writing its signal cache one row per native call.
+
+Batching those writes (eda4262) has never been measured, because from that commit onward
+LedgerPerformanceInstrumentedTest stopped reaching its assertion. The WebView renderer dies
+(aw_browser_terminator code 5; SIGTRAP/SI_KERNEL with one frame in libwebviewchromium.so) and takes the
+app process with it. No JavaScript error precedes it.
+
+What the diagnostic runs established, each from device evidence rather than reasoning:
+
+| Question | Evidence | Answer |
+|---|---|---|
+| Which phase dies? | progress checkpoint | "ledger load" |
+| Is the test fixture the pressure? | Java heap 172,164,960 to 8,305,584 B after collecting; RSS 418 MB to 272 MB, below the 288 MB of the run that last reached the assertion — and it still crashed | No |
+| Is the renderer's JS heap exhausted? | 10,000,000 used of an 842,000,000 limit | No |
+| Does analyse() retry and re-read the snapshot? | main.tsx sets retry:false | No |
+| Is the batched write itself wrong? | tests/intelligence-storage.test.ts: 24 rows, 48 across two currencies, real schema | No |
+| Does it exceed SQLite's parameter ceiling? | 192 parameters peak against 999 | No |
+| Does the Ledger parse the staged document? | summaries() reads via json_extract, never the payload | No |
+| Do two connections contend for the database? | DatabaseDigest reuses the app's own RW_kairos-money connection with an inTransaction() guard | No |
+
+Every memory explanation is therefore excluded, which is why the next step is a counterfactual rather
+than more instrumentation: 4f0f7b6 reverts only the two insertRows call sites and changes nothing else.
+Reaching the assertion would mean the batching causes the crash; crashing again would exonerate it and
+point at the environment, since 7af93cb reached the assertion at 22:12 UTC and every attempt after 22:38
+has crashed across four different commits. That result is not yet known and nothing here claims it.
+
+Permanent gate improvements from this investigation, independent of the outcome: a failing instrumentation
+class now prints its device phase checkpoints and a tail of the WebView console into the job log, because
+both previously reached only the build artifact; each phase collects and reports the Java heap before and
+after; and the measured window is sampled in named sub-phases so a crash cannot be reported with a reading
+taken before the step that killed it.
