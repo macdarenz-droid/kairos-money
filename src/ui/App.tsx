@@ -1,4 +1,6 @@
 import { ManualHistory, ManualSheet } from './screens/Manual';
+import { capturedNotices, readNotices } from '../ingest/notices';
+import { NoticeReview } from './screens/NoticeReview';
 import {FirstImport} from './screens/FirstImport';
 import {useQuickAddLaunch} from './quick-add';
 import { NotificationSync } from './screens/Notifications';
@@ -26,7 +28,7 @@ import {Settings} from './screens/Settings';
 const useNavigation = create<{ tab: Tab; setTab: (tab: Tab) => void }>(set => ({ tab: 'Today', setTab: tab => set({ tab }) }));
 export default function App() {
   const { tab, setTab } = useNavigation(); const session = useSession();
-  const [sheet, setSheet] = useState<'quick' | 'account' | 'update' | 'manual' | null>(null); const [search, setSearch] = useState(''); const [toast, setToast] = useState('');
+  const [sheet, setSheet] = useState<'quick' | 'account' | 'update' | 'manual' | 'notices' | null>(null); const [search, setSearch] = useState(''); const [toast, setToast] = useState('');
   const [importRequest, setImportRequest] = useState(0);
   const consumeImport = useCallback(() => setImportRequest(0), []);
   const dismissToast = useCallback(() => setToast(''), []);
@@ -37,9 +39,16 @@ export default function App() {
   const accounts = useQuery({ queryKey: ['accounts'], queryFn: () => session.run(repo => repo.accounts()), enabled: session.state === 'ready' });
   const quickAddDisplayed=(sheet==='manual'&&Boolean(accounts.data?.length))||(sheet==='account'&&accounts.data?.length===0);
   const quickAddError=useQuickAddLaunch(session.state==='ready',openManual,quickAddDisplayed?quickAddRequest:null);
+  // What the bank announced while the app was closed. Asked once on opening and not again until there is
+  // something new, because a prompt that reappears after being dismissed stops being read.
+  const noticeQueue = useQuery({ queryKey: ['captured-notices'], queryFn: capturedNotices, enabled: session.state === 'ready' });
+  const [noticesAsked, setNoticesAsked] = useState(false);
   const statementData = useQuery({ queryKey: ['coverage-summary'], queryFn: () => session.run(repo => repo.imports.summaries()), enabled: session.state === 'ready' });
   useEffect(()=>{if(session.state==='ready' && accounts.data && statementData.data)void session.run(repo=>repo.imports.reminderDay()).then(day=>syncReminder(day,accounts.data!.map(a=>a.id),statementData.data!,localDay())).catch(()=>undefined);},[session.state,accounts.data,statementData.data]);
   useEffect(()=>{if(sheet==='manual' && accounts.data?.length===0)setSheet('account');},[sheet,accounts.data]);
+  const firstAccount = accounts.data?.find(a => !a.archived_at);
+  const waitingNotices = firstAccount ? readNotices(noticeQueue.data ?? [], currency(firstAccount.currency)).readable.length : 0;
+  useEffect(()=>{if(!noticesAsked && !sheet && waitingNotices>0){setNoticesAsked(true);setSheet('notices');}},[noticesAsked,sheet,waitingNotices]);
   const days = coveredDays((statementData.data ?? []).filter(b => b.status === 'committed' && !b.payslip).map(b => b.context.period));
   if (session.state !== 'ready' && session.state !== 'preview' && session.state !== 'background') return <LockScreen/>;
   const count = accounts.data?.length ?? 0;
@@ -61,6 +70,7 @@ export default function App() {
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} onClose={()=>setSheet(null)}/>}
     {sheet === 'update' && <UpdateAccounts accounts={accounts.data??[]} batches={statementData.data??[]} today={localDay()} onClose={()=>setSheet(null)} onImport={()=>{setTab('Ledger');setSheet(null);setImportRequest(n=>n+1);}}/>}
+    {sheet === 'notices' && <NoticeReview accounts={accounts.data ?? []} onClose={() => setSheet(null)}/>}
     {sheet === 'account' && <AccountSheet onClose={() => setSheet(null)} onSaved={() => { setTab('Ledger'); setToast('Account saved on this device.'); }}/>}
     {sheet === 'quick' && <Sheet title="Quick" onClose={() => setSheet(null)}><Input label="Find an action" placeholder="Search actions or screens" value={search} onChange={e => setSearch(e.target.value)}/><div className="action-list">{quickActions.map(action => <Button key={action.label} onClick={action.act}><action.icon size={18}/><span style={{ flex: 1, textAlign: 'left' }}>{action.label}</span><ChevronRight size={16}/></Button>)}</div>{!quickActions.length && <p className="section-gap"><Search size={16}/> No matching action. Try “account” or “settings”.</p>}<p className="meta section-gap">Find a transaction in Ledger, or stage statement files for review.</p></Sheet>}
     {toast && <Toast message={toast} onDismiss={dismissToast}/>}

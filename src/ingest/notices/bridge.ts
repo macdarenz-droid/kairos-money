@@ -25,27 +25,22 @@ export const Notices = registerPlugin<{
  */
 export const noticesAvailable = () => Capacitor.isNativePlatform();
 
-export async function noticeAccess(): Promise<NoticeAccess> {
-  if (!noticesAvailable()) return {granted: false, sources: []};
-  return Notices.access();
+/**
+ * An install whose native side predates this feature answers "nothing captured" rather than throwing.
+ * Reading notifications is an extra the ledger does not depend on, so its absence is a quiet no.
+ */
+async function ask<T>(call: () => Promise<T>, whenAbsent: T): Promise<T> {
+  if (!noticesAvailable()) return whenAbsent;
+  try { return await call(); } catch { return whenAbsent; }
 }
 
-export async function capturedNotices(): Promise<Notice[]> {
-  if (!noticesAvailable()) return [];
-  return (await Notices.captured()).notices;
-}
+export const noticeAccess = (): Promise<NoticeAccess> => ask(() => Notices.access(), {granted: false, sources: []});
+export const capturedNotices = (): Promise<Notice[]> => ask(async () => (await Notices.captured()).notices, []);
+export const installedSources = (): Promise<NoticeSource[]> => ask(async () => (await Notices.installed()).apps, []);
+export const watchSources = (sources: string[]): Promise<void> => ask(() => Notices.listen({sources}), undefined);
 
 export async function forgetNotices(ids: string[]): Promise<void> {
-  if (!noticesAvailable() || !ids.length) return;
-  await Notices.forget({ids});
-}
-
-export async function watchSources(sources: string[]): Promise<void> {
-  if (!noticesAvailable()) return;
-  await Notices.listen({sources});
-}
-
-export async function installedSources(): Promise<NoticeSource[]> {
-  if (!noticesAvailable()) return [];
-  return (await Notices.installed()).apps;
+  if (!ids.length) return;
+  // A failure to forget must be loud: silently keeping an answered notice asks the person again.
+  if (noticesAvailable()) await Notices.forget({ids});
 }
