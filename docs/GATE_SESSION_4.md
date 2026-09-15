@@ -385,3 +385,26 @@ Why it survived review: JSON.stringify on a shared reference is invisible in the
 fixture scale, and nothing exercised analyse() at ledger scale in either time or size.
 tests/analyse-scale.test.ts now does, with a size budget, so a stored signal that scales with corpus size
 fails locally in seconds instead of on an emulator half an hour later.
+
+## Run 34930224329 — Session 5 and the usability pass, green
+
+`d52c8c6`. Both jobs pass. 14 instrumented classes, 22 tests, 13 min 41 s on the device. The fourteenth
+class is `UsabilityBaselineInstrumentedTest` (8.34 s), new in this run; the other thirteen are Session 4's,
+re-run unchanged and none regressed. Cold start `process_cold_median_ms` 920 and `fresh_install_ms` 1032
+against 2,000 ms and 2,500 ms limits, `failures: []`. Criterion-by-criterion verdicts are in
+[GATE_SESSION_4_REPORT.md](GATE_SESSION_4_REPORT.md).
+
+The usability baseline reached green on its fourth attempt. Every failure was the test, not the app, and
+both causes generalise to any instrumented class added later: the gate installs once and runs its classes
+in sequence, so a class inherits whatever earlier ones left and must assume no starting state; and a class
+that writes must remove exactly what it wrote, by identity rather than by position, asserting on a count
+so a failure says how many rows remain. `docs/LOW_EFFORT_USABILITY.md` records both rules.
+
+One gap remained after green, and it was a reporting gap rather than a capability gap. The measured taps
+and typing sessions were asserted on the device but written only to `docs/evidence/usability-baseline.json`
+inside the run artifact, which this environment cannot download, and an assertion message prints only when
+the assertion fails — so on a passing run the numbers existed, were enforced, and were unreadable.
+`625f656` sends the same report through instrumentation status, which `am instrument -w` prints in pretty
+mode whatever the result code and the gate runner prints unconditionally. The mechanism is the same one
+that already prints `app.kairos.money.<Class>:` and the JUnit progress dots in every run above. No
+tap-count comparison is stated until that run reports the figures.

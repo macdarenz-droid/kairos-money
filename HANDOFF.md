@@ -394,3 +394,24 @@ Two snapshot additions were required and follow the existing precedent for split
 Local measurements over a 20,000-row ledger: `analyse()` 185-232 ms against a 1,500 ms budget, `observe()` 1 ms, 36 metrics serialising to 21,025 bytes. Local figures are a floor for the device, not a device claim.
 
 Nothing in this layer has device evidence until this gate reports. Session 4's gate is green (run 34912806907) with two criteria still open for human artifact review: the installable APK and the both-theme visual review.
+
+## Session 5 and the usability pass are device-verified — run 34930224329
+
+`d52c8c6`, both jobs green, 14 instrumented classes and 22 tests. Session 5's 36 capabilities, six
+concepts and Analysis screen are device-verified, as are the usability pass's one-tap bulk categorisation,
+repeat-entry tiles, amount-first entry with date and category chips, the remembered account preference and
+the exact-bigint split helpers. No feature was removed to reduce a tap: the full category select, the full
+manual form and the Change-categories flow are all still present, with the shortcuts beside them.
+
+`UsabilityBaselineInstrumentedTest` drives the shipped UI and counts every tap and typing session it
+performs. It asserts only what this pass actually claims — repeating an entry needs no typing, costs no
+more taps than entering from scratch, and still ends at a Save the user presses — and asserts no target
+tap count, because a target invented before a measurement is the thing that file exists to prevent.
+
+The figures themselves are not yet quoted anywhere, and that is deliberate. Until `625f656`'s run reports
+them through instrumentation status, they exist and are enforced but have not been read, so no improvement
+is claimed from them. `docs/LOW_EFFORT_USABILITY.md` is where they land.
+
+Still open, unchanged and not closable from this environment: the installable APK and the both-theme
+visual review, both of which need a human to open the run artifact. Artifact download is refused by the
+egress proxy under organization policy; no bypass was attempted.
