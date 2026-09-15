@@ -284,7 +284,8 @@ public class IntelligenceInstrumentedTest {
             }
         }
     }
-    private void selectCurrency() throws Exception {click("Insights");awaitJs("Boolean(document.querySelector('.intelligence select'))");js("(()=>{const e=document.querySelector('.intelligence select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");}
+    private void openInsightDetail() throws Exception {js("document.querySelectorAll('main > details').forEach(d=>{d.open=true;})");}
+    private void selectCurrency() throws Exception {click("Insights");openInsightDetail();awaitJs("Boolean(document.querySelector('.intelligence select'))");js("(()=>{const e=document.querySelector('.intelligence select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");openInsightDetail();}
     @Test public void a_intelligenceEvidenceAndThemes() throws Exception {
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a->activity=a);unlock();seed(20,false);selectCurrency();awaitJs("document.body.innerText.includes('Still learning') && document.body.innerText.includes('20 covered days')");for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('20 covered days')");captureHeading("Still learning",theme.toLowerCase()+"-intelligence-learning");}
