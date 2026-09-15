@@ -1,5 +1,9 @@
 import {covered,day,type Snapshot,type Transaction,type Window} from '../intelligence/model';
 import type {AnalysisIndex,Metric,MetricFn,RecurrenceGroup} from './model';
+import {combinedLedger,creditSignRules,periodCashflow,statementReconciliation,transferExclusion} from './metrics/ledger';
+import {salaryPattern} from './metrics/income';
+import {categoryBreakdown,merchantBreakdown} from './metrics/classify';
+import {frequencyVersusSize,periodComparison,rangeAnomalies,repeatedPurchases,smallPayments} from './metrics/shape';
 
 /** Normalized merchant key: the same basis the importer uses for aliasing, lowercased and collapsed. */
 const merchantKey=(t:Transaction)=>t.description.trim().toLowerCase().replace(/\s+/g,' ');
@@ -67,7 +71,14 @@ export function buildIndex(snapshot:Snapshot):AnalysisIndex{
  * Capabilities are added here as their families land. `analyse` is already the single entry point, so a
  * new family changes this list and nothing else.
  */
-export const registry:MetricFn[]=[];
+export const registry:MetricFn[]=[
+ // 1-5 ledger and reconciliation
+ combinedLedger,statementReconciliation,periodCashflow,transferExclusion,creditSignRules,
+ // 6-8 income and classification
+ salaryPattern,categoryBreakdown,merchantBreakdown,
+ // 9-13 shape of spending
+ repeatedPurchases,smallPayments,frequencyVersusSize,rangeAnomalies,periodComparison,
+];
 
 /** Every capability's metrics for one window, in registry order. */
 export function analyse(snapshot:Snapshot,window:Window):Metric[]{
