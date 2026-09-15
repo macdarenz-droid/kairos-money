@@ -72,6 +72,20 @@ public class UsabilityBaselineInstrumentedTest {
         assertEquals("Nothing was there to tap: "+selector,"true",clicked);
         taps++;
     }
+    /**
+     * Wait until the entry is saved AND the page can be touched again.
+     *
+     * Waiting only for the Save button to disappear is not the same thing. A dialog opened with
+     * showModal() makes the rest of the document inert, so the next tap can find its target, click it, and
+     * have the event go nowhere, because the page behind the modal is not listening. The captured DOM
+     * showed exactly that: two dialogs still open, the tile present, and the tap silently absorbed.
+     *
+     * So this waits for what the user actually waits for — the sheet gone from the screen — rather than
+     * for one button to leave the DOM. It asserts more than it did before, not less.
+     */
+    private void awaitSaved() throws Exception {
+        awaitJs("!Boolean("+named("Save transaction")+") && !document.querySelector('dialog[open]')");
+    }
     /** One typing session: the keyboard appears and the user types. */
     private void type(String label,String text) throws Exception {
         String node="Array.from(document.querySelectorAll('label')).find(e=>e.textContent.startsWith("+JSONObject.quote(label)+"))?.querySelector('input')";
@@ -100,7 +114,7 @@ public class UsabilityBaselineInstrumentedTest {
                     +"?.querySelector('select')?.options.length)"));
             type("Amount","15.00");type("Description",PROBE);
             tap(named("Save transaction"));
-            awaitJs("!Boolean("+named("Save transaction")+")");
+            awaitSaved();
             int scratchTaps=taps,scratchTyping=typingSessions;
             tasks.put(new JSONObject().put("task","record an expense from scratch").put("taps",scratchTaps).put("typing_sessions",scratchTyping));
             assertTrue("Recording from scratch types the amount and the description",scratchTyping>=2);
@@ -110,7 +124,7 @@ public class UsabilityBaselineInstrumentedTest {
             tap(labelled("Record "+PROBE));
             awaitJs("Boolean("+named("Save transaction")+")");
             tap(named("Save transaction"));
-            awaitJs("!Boolean("+named("Save transaction")+")");
+            awaitSaved();
             int repeatTaps=taps,repeatTyping=typingSessions;
             tasks.put(new JSONObject().put("task","record the same expense again").put("taps",repeatTaps).put("typing_sessions",repeatTyping));
 
@@ -148,7 +162,7 @@ public class UsabilityBaselineInstrumentedTest {
                     +"zoom:Math.round(window.devicePixelRatio*100)/100});})()");
                 awaitJs("Boolean("+named("Save transaction")+")","after tapping the repeat tile at 200% text; DOM at tap time was "+sheetState);
                 tap(named("Save transaction"));
-                awaitJs("!Boolean("+named("Save transaction")+")");
+                awaitSaved();
                 zoomTaps=taps;zoomTyping=typingSessions;
                 // One-handed reach, as much of it as a program can honestly check: is the tile on screen
                 // at 200% text, or does reaching the shortcut cost a scroll the tap count never shows?
