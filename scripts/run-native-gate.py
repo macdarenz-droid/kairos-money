@@ -215,6 +215,7 @@ try:
     instrumentation('IntelligenceInstrumentedTest', 4)
     instrumentation('LedgerPerformanceInstrumentedTest', 1)
     instrumentation('AccessibilityInstrumentedTest', 1)
+    instrumentation('UsabilityBaselineInstrumentedTest', 1)
     instrumentation('AcceptanceInstrumentedTest', 1)
     adb('pull', '/sdcard/Android/data/app.kairos.money/files/evidence', str(SCREENS))
     subprocess.run(['node', '--import', 'tsx', str(ROOT / 'scripts/verify-native-ocr.ts'), str(SCREENS)], cwd=ROOT, check=True)
@@ -230,7 +231,7 @@ try:
         'completed_instrumentation': completed_instrumentation,
         'authentication_bound_key_tests': 1, 'pin_recovery_tests': 3, 'foundation_tests': 2, 'hardening_tests': 1, 'import_tests': 2, 'large_import_tests': 1, 'revision_tests': 2, 'intelligence_tests': 4, 'manual_entry_tests': 1, 'monthly_visual_tests': 1, 'spending_pattern_tests': 1, 'acceptance_tests': 1,
         'forgot_pin_device_tests': 1, 'backup_before_reset_tests': 1, 'backup_after_reset_tests': 1, 'post_delete_tests': 1,
-        'native_encryption_proven': True, 'native_delete_proven': True, 'cold_start_under_2_seconds': True, 'text_zoom_200_percent_tests': 1, 'text_zoom_themes': ['light', 'dark'],
+        'native_encryption_proven': True, 'native_delete_proven': True, 'cold_start_under_2_seconds': True, 'usability_baseline_tests': 1, 'text_zoom_200_percent_tests': 1, 'text_zoom_themes': ['light', 'dark'],
         'native_notification_tests': 1, 'large_ledger_tests': 1,
         'real_document_export_proven': True, 'background_unlock': '1 second retained; 61 seconds locked',
         'runner': 'Android 34 emulator; airplane mode enabled',

@@ -45,3 +45,19 @@ The app-wide input scan, including the interaction cost of each flow read from s
 Create a complete inventory from the final code and accepted roadmap. For each task record starting screen, taps, typed fields, repeated details, completion time, errors/backtracking and one-handed reach. Include first-time and repeat use, ordinary and exceptional cases, both themes, 200% text and screen-reader/keyboard operation.
 
 Compare the existing route with the proposed route using real device walkthroughs and synthetic financial fixtures. Prioritize frequent high-effort tasks. Set measured per-task targets after baselining rather than inventing current tap counts. Verify equal financial results, preserved feature access, editable defaults and successful error recovery. Produce a before/after matrix and evidence-linked report, then run one combined regression/acceptance gate for the completed usability work. Do not create a separate milestone or gate per shortcut.
+
+## Baseline instrumentation — added, not yet reported
+
+`UsabilityBaselineInstrumentedTest` drives the shipped UI on the emulator and counts every tap and typing
+session it performs, writing `docs/evidence/usability-baseline.json`. It measures three things separately:
+setting up the first account, which is one-time setup rather than an everyday task; recording an expense
+from scratch; and recording the same expense again from a repeat tile.
+
+It asserts only the claims this pass actually makes — repeating needs no typing, repeating costs no more
+taps than entering from scratch, and repeating still ends at a Save the user presses — and sets no target
+tap count, because a target before a measurement is the thing this file exists to prevent. The numbers
+themselves are reported once the gate carrying this test reports.
+
+Bulk categorisation's baseline is not measured here: it needs committed imported rows with a merchant the
+user has already filed, which the import instrumentation creates in its own fixture. That measurement is
+still outstanding.
