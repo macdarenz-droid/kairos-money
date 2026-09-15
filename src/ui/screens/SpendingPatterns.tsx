@@ -7,6 +7,9 @@ import {localDay} from '../../ingest/reminders';
 import {spendingPatterns} from '../../intelligence/visuals/spending-patterns';
 import {Amount,Button,Row,Sheet,Skeleton} from '../design/primitives';
 import {SourceLine} from '../design/SourceLine';
+import {SpendingCalendar} from '../design/SpendingCalendar';
+import {FlowBar} from '../design/FlowBar';
+import {MonthBalance} from '../design/MonthBalance';
 import {useSession} from '../session';
 export function SpendingPatterns(){
  const session=useSession(),[selectedCode,setCode]=useState<string|null>(null),[month,setMonth]=useState('all'),[account,setAccount]=useState('all'),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
@@ -19,13 +22,33 @@ export function SpendingPatterns(){
  const s=q.data,p=spendingPatterns(s,month,account),show=(title:string,ids:string[],text:string)=>setDetail({title,ids,text});
  const amount=(minor:string,context:string)=><Amount value={money(BigInt(minor),code)} context={context}/>;
  const top=p.merchants[0];
- return <section className="stack spending-patterns" aria-label="Your spending patterns"><h2>Your spending patterns</h2><p>Facts from your imported transactions. These observations describe money movements, not your personality or reasons for spending.</p>
+ // Daily totals for the calendar. Built from the same settled, non-transfer transactions the rest of this
+ // screen counts, so the shape and the lists below can never disagree.
+ const daily=s.transactions.filter(t=>t.currency===code&&t.status==='settled'&&!t.transfer&&t.kind!=='transfer'
+   &&(account==='all'||t.accountId===account)).map(t=>({date:t.date,minor:t.minor}));
+ // Money in and money out per month, from the same rows the totals below are built from, so the picture
+ // and the figures can never tell different stories.
+ const byMonth=new Map<string,{received:bigint;spent:bigint}>();
+ for(const t of p.rows){
+  if(t.transfer||t.kind==='transfer')continue;
+  const key=t.date.slice(0,7),cell=byMonth.get(key)??{received:0n,spent:0n},value=BigInt(t.minor);
+  if(value>0n)cell.received+=value;else cell.spent-=value;
+  byMonth.set(key,cell);
+ }
+ const monthFlows=[...byMonth.entries()].sort((a,b)=>a[0].localeCompare(b[0]))
+  .map(([m,cell])=>({month:m,inMinor:cell.received.toString(),outMinor:cell.spent.toString()}));
+ const period=month==='all'?(p.start&&p.end?`${p.start} to ${p.end}`:'everything recorded'):month;
+ return <section className="stack spending-patterns" aria-label="Your spending patterns"><h2>Your spending patterns</h2>
  <label className="input-label">Spending currency<select value={code} onChange={e=>{setCode(e.target.value);setMonth('all');setAccount('all');}}>{codes.length?codes.map(c=><option key={c}>{c}</option>):<option>AUD</option>}</select></label>
  <label className="input-label">Spending account<select value={account} onChange={e=>{setAccount(e.target.value);setMonth('all');}}><option value="all">All accounts in {code}</option>{(accounts.data??[]).filter(a=>!a.archived_at&&a.currency===code).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
  <label className="input-label">Spending period<select value={month} onChange={e=>setMonth(e.target.value)}><option value="all">All imported dates</option>{p.months.map(m=><option key={m}>{m}</option>)}</select></label>
  {!p.rows.length?<p>No settled transactions in this selection. Import a statement or choose another account or period.</p>:<>
- <p>{p.rows.length} settled transactions · {p.start} to {p.end}. {p.pending} pending entries excluded.</p>
- <p className="meta">Accounts can cover different dates. These are totals for recorded activity, not a claim that every account or day is complete. Purchases and fees use explicit statement wording or assigned spending categories. Unclear debits stay separate.</p>
+ {/* Picture first, then the one line that says what the picture says, then the depth underneath. Someone
+     opening this screen is asking what their money looks like, and no paragraph answers that as fast. */}
+ <FlowBar flow={{inMinor:p.credits,outMinor:(BigInt(p.total)+BigInt(p.otherDebits)).toString()}} code={code} label={period}/>
+ <MonthBalance months={monthFlows} code={code}/>
+ <SpendingCalendar days={daily} code={code} onDay={date=>show(date,daily.filter(d=>d.date===date).length?s.transactions.filter(t=>t.date===date&&t.currency===code&&BigInt(t.minor)<0n).map(t=>t.id):[],`Everything recorded on ${date}.`)}/>
+ <p className="meta">{p.rows.length} settled transactions · {p.start} to {p.end}. {p.pending} pending entries excluded. Accounts can cover different dates, so these are totals for recorded activity, not a claim that every day is complete.</p>
  <Row trailing={<Button variant="quiet" onClick={()=>show('Recorded spending',p.spending.map(t=>t.id),'Purchases and fees identified from statement text or assigned essential/discretionary categories. Transfers and unclear debits are excluded.')}>{amount(p.total,'recorded purchases and fees')}</Button>}>Recorded purchases and fees</Row>
  {p.refunds.ids.length>0&&<><Row trailing={<Button variant="quiet" onClick={()=>show('Confirmed refunds for selected purchases',p.refunds.ids,`Refunds explicitly linked to these purchases, received through ${today}. This can include later periods or another account in the same currency. They remain credits on their actual posting dates.`)}>{amount(p.refunds.minor,'confirmed refunds for selected purchases')}</Button>}>Refunds linked to these purchases</Row><Row trailing={amount(p.refunds.net,'selected purchases after linked refunds')}>Selected purchases after linked refunds<p className="meta">Refunds through {today}. Merchant and timing charts show original gross payments.</p></Row></>}
  <Row trailing={<Button variant="quiet" onClick={()=>show('Other debits to review',p.review.map(t=>t.id),'Transfers, remittances, cash withdrawals and unclear debits are not automatically called consumption. Confirm their purpose in the ledger.')}>{amount(p.otherDebits,'other debits to review')}</Button>}>Other debits to review</Row>
