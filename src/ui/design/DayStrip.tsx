@@ -4,7 +4,7 @@ import {displayRatio} from '../../intelligence/visuals';
 import type {DaySpend} from './SpendingCalendar';
 
 /**
- * The last fortnight of spending, with today at the end of it.
+ * The last week of spending, with today at the end of it.
  *
  * "What have I spent today" is a number, and a number on its own says nothing: forty dollars is a quiet
  * day or an alarming one depending on the fortnight around it. The strip supplies that context in the
@@ -19,7 +19,7 @@ import type {DaySpend} from './SpendingCalendar';
  * one spoken description and the table underneath carries every figure, which is the accessible route
  * anyway; the hero answers the question the screen asks.
  */
-export function DayStrip({days, code, today, span = 14}: {days: DaySpend[]; code: Currency; today: string; span?: number}) {
+export function DayStrip({days, code, today, span = 7}: {days: DaySpend[]; code: Currency; today: string; span?: number}) {
   const {columns, peak} = useMemo(() => {
     const spent = new Map<string, bigint>();
     for (const entry of days) {

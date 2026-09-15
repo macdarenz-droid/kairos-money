@@ -93,39 +93,40 @@ it('draws a single month rather than refusing to draw anything',()=>{
  expect(screen.getByText('June 2026')).toBeTruthy();
 });
 
-it('puts today at the end of a fortnight, scaled to the heaviest day in view',()=>{
+it('puts today at the end of the week, scaled to the heaviest day in view',()=>{
  const days=[
-  {date:'2026-08-20',minor:'-4000'},   // the peak in view
+  {date:'2026-08-22',minor:'-4000'},   // the peak in view
   {date:'2026-08-25',minor:'-1000'},
   {date:'2026-08-26',minor:'-2000'},
   {date:'2026-08-10',minor:'-9900'},   // outside the window: must not set the scale
  ];
  render(<DayStrip days={days} code={AUD} today="2026-08-26"/>);
  const bars=[...document.querySelectorAll<HTMLElement>('.strip-bar')];
- expect(bars).toHaveLength(14);
- // A day outside the fortnight setting the scale would flatten every bar in view against a figure the
- // reader cannot see.
- expect(bars[7]!.style.height).toBe('100%');   // 2026-08-20, the peak in view
- expect(bars[12]!.style.height).toBe('25%');   // 2026-08-25
- expect(bars[13]!.style.height).toBe('50%');   // today
+ expect(bars).toHaveLength(7);
+ // A day outside the week setting the scale would flatten every bar in view against a figure the reader
+ // cannot see.
+ expect(bars[2]!.style.height).toBe('100%');   // 2026-08-22, the peak in view
+ expect(bars[5]!.style.height).toBe('25%');    // 2026-08-25
+ expect(bars[6]!.style.height).toBe('50%');    // today
  expect(document.querySelectorAll('[data-today]')).toHaveLength(1);
  expect(screen.getByText('spent today')).toBeTruthy();
  expect(screen.getAllByText('$20.00').length).toBeGreaterThan(0);
 });
 
-it('draws the days as marks, never as fourteen tap targets too small to hit',()=>{
- // Fourteen 44px targets need 616px; the gate device gives the app 371px, so per-day buttons came out
- // 24px wide and failed the touch-target check on a real phone. The figures stay reachable in the table.
+it('draws the days as marks, never as tap targets too small to hit',()=>{
+ // Even seven 44px targets need 308px plus gaps where the gate device gives the app 371px, and fourteen
+ // needed 616px. Per-day buttons failed the touch-target check on a real phone; the table still has every
+ // figure.
  render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'}]} code={AUD} today="2026-08-26"/>);
  expect(document.querySelectorAll('.strip-plot button')).toHaveLength(0);
- expect(screen.getByRole('img').getAttribute('aria-label')).toMatch(/last 14 days/);
+ expect(screen.getByRole('img').getAttribute('aria-label')).toMatch(/last 7 days/);
  expect(screen.getByText('Read these days as a list')).toBeTruthy();
 });
 
 it('shows a day with nothing spent as nothing, not as a gap in the record',()=>{
  render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'}]} code={AUD} today="2026-08-26"/>);
- // Every day of the fortnight is listed, including the ones with nothing on them.
- expect(screen.getAllByRole('row').length).toBe(15);
+ // Every day of the week is listed, including the ones with nothing on them.
+ expect(screen.getAllByRole('row').length).toBe(8);
  expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
 });
 

@@ -63,7 +63,7 @@ export function CategorySplit({slices, code, onCategory}: {
             <rect x={tile.x} y={tile.y} width={tile.width} height={tile.height}
               className={`split-tile level-${step(rank)}`}/>
             {tile.width > 170 && tile.height > 80 && <text x={tile.x + 22} y={tile.y + 46}
-              className={`split-label level-${step(rank)}`}>
+              className="split-label">
               {tile.name.length > Math.floor(tile.width / 20) ? `${tile.name.slice(0, Math.max(1, Math.floor(tile.width / 20) - 2))}…` : tile.name}
             </text>}
           </g>)}
