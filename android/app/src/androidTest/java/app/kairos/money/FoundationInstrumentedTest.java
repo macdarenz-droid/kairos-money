@@ -76,7 +76,10 @@ public class FoundationInstrumentedTest {
                 startup.containsKey("androidx.emoji2.text.EmojiCompatInitializer"));
             assertTrue("Lifecycle initialization must remain available",
                 startup.containsKey("androidx.lifecycle.ProcessLifecycleInitializer"));
-            assertTrue((activity.getWindow().getAttributes().flags & WindowManager.LayoutParams.FLAG_SECURE) != 0);
+            // Screenshot blocking is deliberately off so the owner can capture his own screen. Asserted in
+            // the same place it was once asserted on, so nothing re-enables it without this failing.
+            assertEquals("Screenshot blocking must stay off so the user can photograph their own screen",
+                0, activity.getWindow().getAttributes().flags & WindowManager.LayoutParams.FLAG_SECURE);
             input("Choose a PIN", "246810"); input("Confirm PIN", "246810"); click("Create private ledger");
             awaitJs("document.body.innerText.includes('Keep your recovery code')");
             assertEquals("false", evaluate("Boolean(document.querySelector('nav'))"));

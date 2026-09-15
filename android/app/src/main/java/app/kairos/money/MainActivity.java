@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.content.Intent;
 import android.view.View;
 import android.view.ViewTreeObserver;
-import android.view.WindowManager;
 import com.getcapacitor.BridgeActivity;
 import androidx.core.view.WindowInsetsControllerCompat;
 import java.util.UUID;
@@ -43,7 +42,16 @@ public class MainActivity extends BridgeActivity {
         String preference = getSharedPreferences("kairos-appearance", MODE_PRIVATE).getString("theme", "system");
         boolean light = preference.equals("light") || (preference.equals("system") && (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_NO);
         setTheme(light ? R.style.AppTheme_Light : R.style.AppTheme_Dark);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+        // Screenshots and screen recording are deliberately NOT blocked, at the owner's request.
+        //
+        // FLAG_SECURE used to be set here, which stopped him photographing his own screen to show someone
+        // what was wrong with it. A privacy control that prevents the user describing their own problem
+        // costs more than it protects: what it defends against needs physical access to an already
+        // unlocked phone, and anyone in that position can photograph the screen with a second device.
+        //
+        // What this gives up: app content is now visible in the recent-apps switcher and to screen
+        // recorders. What is unchanged: the app lock, the encrypted database, and the key protection. This
+        // affects what someone watching the running screen can capture, not what is stored.
         registerPlugin(KairosVaultPlugin.class);
         registerPlugin(KairosTextPlugin.class);
         registerPlugin(KairosReminderPlugin.class);

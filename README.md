@@ -64,7 +64,7 @@ cd ..
 python scripts/run-native-gate.py
 ```
 
-The separate deletion test intentionally terminates the app using Android's data-clear API; a host verifier checks that app-owned financial files and database have gone. Synthetic screenshots temporarily remove screenshot protection inside the instrumentation harness only; production always sets FLAG_SECURE.
+The separate deletion test intentionally terminates the app using Android's data-clear API; a host verifier checks that app-owned financial files and database have gone. Screenshots and screen recording are not blocked. FLAG_SECURE was removed at the owner's request, because it also stopped him photographing his own screen to report a problem with it; app content is therefore visible in the recent-apps switcher and to screen recorders. The app lock, the encrypted database and the key protection are unaffected.
 
 The independent host encryption proof needs `sqlcipher3-binary==0.6.0`:
 

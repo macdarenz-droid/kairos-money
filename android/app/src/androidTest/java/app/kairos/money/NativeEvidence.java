@@ -2,7 +2,6 @@ package app.kairos.money;
 
 import static org.junit.Assert.*;
 import android.graphics.Bitmap;
-import android.view.WindowManager;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.webkit.WebView;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -22,8 +21,8 @@ final class NativeEvidence {
     }
 
     /**
-     * Runs preparation and assertions after FLAG_SECURE's replacement surface is
-     * committed, so the asserted pixels are the pixels written to evidence.
+     * Runs preparation and assertions after the requested frame is committed, so the asserted pixels are
+     * the pixels written to evidence.
      */
     @android.annotation.TargetApi(29)
     static void capture(MainActivity activity, String name, CheckedAction prepare, CheckedAction verify) throws Exception {
@@ -43,19 +42,15 @@ final class NativeEvidence {
             captureSystem(activity, name + "-obscured");
             fail("Cannot verify Kairos pixels while another window is active: " + observed);
         }
-        // Clearing the secure-window flag can replace its surface. Position and
-        // verify only after that replacement is committed.
-        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE));
-        try {
-            awaitCommittedFrame(activity);
-            prepare.run();
-            awaitCommittedFrame(activity);
-            verify.run();
-            writeScreenshot(activity, name);
-            verify.run();
-        } finally {
-            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE));
-        }
+        // The app no longer sets FLAG_SECURE, so there is nothing to clear here and nothing to restore
+        // afterwards. Restoring it would switch screenshot blocking on at runtime, which is precisely what
+        // removing it was meant to stop.
+        awaitCommittedFrame(activity);
+        prepare.run();
+        awaitCommittedFrame(activity);
+        verify.run();
+        writeScreenshot(activity, name);
+        verify.run();
     }
 
     private static void awaitCommittedFrame(MainActivity activity) throws Exception {
@@ -75,12 +70,7 @@ final class NativeEvidence {
     }
 
     static void captureSystem(MainActivity activity, String name) throws Exception {
-        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE));
-        try {
-            writeScreenshot(activity, name);
-        } finally {
-            InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE));
-        }
+        writeScreenshot(activity, name);
     }
 
     private static void writeScreenshot(MainActivity activity, String name) throws Exception {
