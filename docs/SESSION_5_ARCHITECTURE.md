@@ -1,6 +1,6 @@
 # Session 5 architecture — offline Money Analysis and quiet coaching
 
-Status: plan only. No implementation is claimed by this document. Session 4 must close before this layer is built; see `ROADMAP.md`, "Accepted follow-on: offline Money Analysis".
+Status: phase 5.0 implemented; phases 5.1-5.7 are still plan only. Session 4's gate is green (run 34912806907) and its automated acceptance is complete; two closure criteria remain open pending human artifact review, see `GATE_SESSION_4_REPORT.md`. Phase 5.0 delivers `src/analysis/model.ts`, `src/analysis/index.ts` and `tests/analysis-contract.test.ts`: the 36-key union, the Metric and Observation contracts, `buildIndex`, and nine contract and property tests that pass with zero metrics implemented and bind every capability as it lands. No capability is implemented yet and none is claimed.
 
 Scope is fixed by the roadmap: all 36 Money Analysis capabilities and the six quiet-coaching concepts land together as one milestone, followed by the complete low-effort usability pass in `LOW_EFFORT_USABILITY.md`. Nothing here removes a feature, weakens an acceptance assertion or regenerates accepted fixtures.
 
