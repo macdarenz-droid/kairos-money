@@ -2,6 +2,7 @@ import {foreignCurrencyRepository} from '../../ledger/foreign-currency';
 import {splitRepository} from '../../ledger/splits';
 import {cancellationRepository} from '../../ledger/cancellations';
 import { manualRepository } from '../../ledger/manual';
+import { noticeRepository } from '../../ledger/notices';
 import {notificationRepository} from '../../ledger/notifications';
 import {categoryRepository} from '../../ledger/categories';
 import {preferenceRepository} from '../../ledger/preferences';
@@ -31,6 +32,7 @@ export function repository(driver: Driver) {
     refunds:{read:async(id:string)=>(await refunds()).read(id),save:async(creditId:string,purchaseId:string)=>(await refunds()).save(creditId,purchaseId),remove:async(id:string)=>(await refunds()).remove(id)},
     imports: importService(driver),
     manual: manualRepository(driver),
+    notices: noticeRepository(driver),
     notifications: notificationRepository(driver),
     cancellations: cancellationRepository(driver),
     netWorth:{list:async()=>(await netWorth()).list(),accountPositions:async()=>(await netWorth()).accountPositions(),chooseAccount:async(accountId:string,choice:'include'|'exclude')=>(await netWorth()).chooseAccount(accountId,choice),save:async(value:import('../../ledger/net-worth').Valuation)=>(await netWorth()).save(value),remove:async(id:string)=>(await netWorth()).remove(id)},

@@ -141,3 +141,11 @@ details[open] > summary::before { transform: rotate(45deg); }
 .balance-pager { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; text-align: center; }
 /* A table may be wider than the phone; the page may not. Each one scrolls inside its own box. */
 .table-scroll { overflow-x: auto; }
+
+/* One notification awaiting an answer. Stacked rather than laid out in a row, so the two answers keep a
+   full-width 44px target at any text size instead of being squeezed beside the amount. */
+.notice-card { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
+.notice-card:last-of-type { border-bottom: 0; }
+.notice-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.notice-head strong { font-size: 13px; line-height: 20px; font-weight: 500; overflow-wrap: anywhere; }
+.notice-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
