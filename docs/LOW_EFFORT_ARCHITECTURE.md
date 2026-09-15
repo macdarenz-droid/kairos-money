@@ -1,6 +1,6 @@
 # Low-effort access — the architecture
 
-Status: first implementation landed — the Proposal mechanism, one-tap bulk categorisation, repeat-entry tiles, amount-first entry, category and date chips, and a remembered account preference. The remaining proposal kinds (value_update, match_candidate, split_fill) are still design. Originally written as design only; `ROADMAP.md` permits the scan and the design at this point; implementation
+Status: first implementation landed — the Proposal mechanism, one-tap bulk categorisation, repeat-entry tiles, amount-first entry, category and date chips, and a remembered account preference. All six proposal kinds are now implemented: bulk_category, repeat_entry, date_shortcut, value_update, match_candidate and split_fill. What remains is the measured device usability baseline, and no tap-count target is claimed before it. See ADR/0037. Originally written as design only; `ROADMAP.md` permits the scan and the design at this point; implementation
 follows Session 5 phase 5.7, because most proposals below are produced by the analysis layer and cannot be
 built before it exists. `LAZY_USER_SCAN.md` holds the per-flow source findings; `LOW_EFFORT_USABILITY.md`
 holds the intent and the acceptance method. This document is the mechanism: what gets built, and why it is
