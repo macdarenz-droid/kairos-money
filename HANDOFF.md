@@ -434,3 +434,24 @@ able to work around that, so this was worth the two runs. `ADR/0039`.
 
 Still open and unchanged, still the user's to close: the installable APK and the both-theme visual review.
 Artifact download is refused by the egress proxy under organization policy; no bypass was attempted.
+
+## Run 34941709710 green — the lazy-user pass is implemented in full
+
+`1a89a8e`. All nine flows in `LAZY_USER_SCAN.md` are implemented and device-gated. The last three landed
+here: the original amount a statement line already states is offered as an editable prefill that cites the
+line, cancellation dates have Today/Yesterday chips, and institution is labelled optional.
+
+One candidate from that scan was implemented and then reverted. Defaulting an account's currency from the
+device region broke `FoundationInstrumentedTest`, and the test was right: an account's currency decides how
+every amount in it is read and whether an imported statement reconciles, which makes it a financial fact
+rather than a preference. The rule it produced is recorded in `LAZY_USER_SCAN.md` — a shortcut may default
+anything the user can see and correct, but never a value that changes how money is interpreted.
+
+What is **not** done, and is not a code task: the per-task usability inventory `LOW_EFFORT_USABILITY.md`
+requires — taps, typed fields, backtracking and one-handed reach for every task, in both themes, at 200%
+text, under screen reader and keyboard, with a before/after matrix. Two tasks are device-measured. The
+flows are implemented and tested; they are not usability-accepted, and nothing here should be read as
+claiming they are.
+
+Also still open for the user: the installable APK and the both-theme visual review, both needing the run
+artifact, which this environment cannot download.

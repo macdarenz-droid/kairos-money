@@ -427,3 +427,22 @@ The measured usability baseline is now readable on a passing run, which is what 
 recording an expense from scratch costs 2 taps and 2 typing sessions, recording it again from its repeat
 tile costs 2 taps and 0 typing sessions, confirmation retained in both. Repeating removes the typing, not
 the taps. `docs/LOW_EFFORT_USABILITY.md` holds the figures and what they do not cover.
+
+## Run 34941709710 — green, all nine lazy-user flows device-gated
+
+`1a89a8e`. Both jobs pass; 14 classes, 22 tests, 13 min 56 s on the device. Cold start
+`process_cold_median_ms` 1,011 and `fresh_install_ms` 1,145 against the 2,000 ms and 2,500 ms limits,
+`failures: []`. `LedgerPerformanceInstrumentedTest` 77.8 s, passing both zoom phases.
+
+This is the first run that exercised the foreign-amount evidence prefix and the cancellation date chips on
+a device: the run before it, 34940983240, failed in `FoundationInstrumentedTest`, which runs second, so
+nothing after it executed.
+
+That failure was mine and the fix was to undo the change, not to adjust the test. `FoundationInstrumentedTest`
+creates an account without choosing a currency and expects `$123.45`; a device-region currency default
+created it in USD on an `en-US` emulator, which the app renders as `USD 123.45` because `format()` always
+uses `en-AU`. An account's currency is a financial fact rather than a preference, so guessing it from the
+device region was wrong independently of the test — the rule and the reasoning are in `LAZY_USER_SCAN.md`.
+
+The usability baseline reports the same figures as run 34934836916, which is the point of a baseline:
+2 taps and 2 typing sessions from scratch, 2 taps and none repeating, confirmation retained.
