@@ -7,7 +7,14 @@ import { ReminderSettings } from './reminders';
 export function Freshness({accounts,batches,today,onUpdate}:{accounts:Account[];batches:BatchSummary[];today:string;onUpdate:()=>void}) {
  if(!accounts.length)return null;
  const stale=newestIsStale(accounts.map(a=>a.id),batches,today);
- return <Surface className={stale?'surface-muted':''}><h2>{stale?'Your data needs an update':'Account freshness'}</h2>{accounts.map(a=>{const f=accountFreshness(a.id,batches,today);return <Row key={a.id}><h3>{a.name}</h3><p>{f.asOf?`As of ${f.asOf} · ${f.staleDays} days old`:'No imported coverage yet'}</p></Row>;})}{stale && <p>Amounts from these imports do not describe today’s available money.</p>}<Button onClick={onUpdate}>Update accounts</Button></Surface>;
+ // On the home screen this is the one "anything I need to do?" line, so when there is nothing to do it
+ // says nothing at all. A list of accounts and their ages is a status report, and a status report nobody
+ // asked for is what made this screen unreadable.
+ if(!stale)return null;
+ return <Surface className="surface-muted"><h2>Your statements are out of date</h2>
+  <p>Kairos only knows about money up to the last statement you imported, so the figures here are older than today.</p>
+  {accounts.map(a=>{const f=accountFreshness(a.id,batches,today);return <Row key={a.id}><h3>{a.name}</h3><p>{f.asOf?`Last statement ${f.asOf}, ${f.staleDays} days ago`:'No statement imported yet'}</p></Row>;})}
+  <Button onClick={onUpdate}>Bring my statements up to date</Button></Surface>;
 }
 export function UpdateAccounts({accounts,batches,today,onClose,onImport}:{accounts:Account[];batches:BatchSummary[];today:string;onClose:()=>void;onImport:()=>void}) {
  const [copied,setCopied]=useState('');

@@ -7,7 +7,7 @@ import {computeSignals} from '../intelligence/signals';
 import {profile,distress} from '../intelligence/profile';
 import {insights} from '../intelligence/insights';
 import {forecast,payRise,payCycle,goalFunding,recurrences,scheduledDates} from '../intelligence/forecast';
-import {day,windows,type Snapshot,type Kind,type Signal,type Transaction} from '../intelligence/model';
+import {day,describeWindows,type Snapshot,type Kind,type Signal,type Transaction} from '../intelligence/model';
 /**
  * What a stored signal retains.
  *
@@ -67,7 +67,11 @@ export function intelligenceRepository(driver:Driver){
   return s;
  }
  async function analyse(asOf:string,code:string,extraBill='0',cutPercent=0){return driver.transaction(async()=>{
-  const s=await snapshot(asOf,code),all=windows(asOf).flatMap(w=>computeSignals(s,w)),signal=all.filter(v=>v.period.startsWith('trailing-90:')),period=asOf.slice(0,7);
+  // Signals describe how someone spends, so they run over the data's own window rather than one measured
+  // back from today. Three months of statements ending in March describe March perfectly well; anchoring
+  // to today turned them into "not enough data" while the transactions sat in the ledger. The forecast
+  // below still uses asOf, because what is safe to spend *now* really does need data from now.
+  const s=await snapshot(asOf,code),all=describeWindows(s,asOf).flatMap(w=>computeSignals(s,w)),signal=all.filter(v=>v.period.startsWith('trailing-90:')),period=asOf.slice(0,7);
   const old=(await driver.query('SELECT archetype FROM profiles WHERE period<? AND id LIKE ? ORDER BY period DESC LIMIT 1',[code+':'+period,code+':%']))[0];const p=profile(s,signal,old?.archetype?String(old.archetype):null),dismissed=await setting<Record<string,number>>('intelligence:dismissals',{}),cards=insights(s,signal,dismissed),buffer=await setting<string>('intelligence:buffer:'+code,'0');
   for(const v of all)await driver.execute('INSERT OR REPLACE INTO signals(id,period,key,value,computed_at,version,status,inputs) VALUES(?,?,?,?,?,?,?,?)',[code+':'+v.period+':'+v.key,code+':'+v.period,v.key,v.value,new Date().toISOString(),1,v.status==='ok'?'ready':'insufficient_data',JSON.stringify(stored(v))]);
   await driver.execute('INSERT OR REPLACE INTO profiles(id,period,archetype,axis_scores,confidence,version,covered_days) VALUES(?,?,?,?,?,?,?)',[code+':'+period,code+':'+period,p.archetype,JSON.stringify(p.axes),p.confidence,1,p.coveredDays]);

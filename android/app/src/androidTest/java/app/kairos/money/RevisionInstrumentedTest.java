@@ -126,7 +126,7 @@ public class RevisionInstrumentedTest {
                     awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Added 1 new transaction')");
                     NativeEvidence.capture(activity,prefix+"-revision-result");click("Today");
                     awaitJs("document.body.innerText.includes('9 days old') && Boolean(document.querySelector('.surface-muted'))");
-                    NativeEvidence.capture(activity,prefix+"-revision-stale");click("Update accounts");
+                    NativeEvidence.capture(activity,prefix+"-revision-stale");click("Bring my statements up to date");
                     awaitJs("Boolean(document.querySelector('dialog')) && document.body.innerText.includes('Export ')");
                     String range=js("document.querySelector('.export-range').textContent");
                     assertTrue(range.contains(String.valueOf(end.minusDays(6).getDayOfMonth())));

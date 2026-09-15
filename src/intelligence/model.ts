@@ -17,6 +17,38 @@ export const iso=(d:number)=>new Date(d*86400000).toISOString().slice(0,10);
 export const shift=(s:string,n:number)=>iso(day(s)+n);
 export function dates(w:Window):string[]{const n=day(w.end)-day(w.start)+1;if(n<1||n>3660)throw new Error('Unsupported date window.');return Array.from({length:n},(_,i)=>shift(w.start,i));}
 export function windows(asOf:string):Window[]{const start=asOf.slice(0,7)+'-01';return [{start,end:asOf,label:asOf.slice(0,7)},{start:shift(asOf,-89),end:asOf,label:'trailing-90:'+asOf}];}
+
+/**
+ * The last day the ledger actually knows about.
+ *
+ * Not today. Today is when the user opened the app, which says nothing about when their statements end.
+ */
+export function lastCoveredDay(s:Snapshot):string|null{
+ const ends=s.coverage.filter(c=>s.accountIds.includes(c.accountId)).map(c=>c.end);
+ return ends.length?ends.reduce((a,b)=>a>b?a:b):null;
+}
+
+/**
+ * Windows for describing how someone spends, anchored to their data rather than to the calendar.
+ *
+ * "How do I spend money" and "what can I spend today" are different questions, and only the second one
+ * needs recent data. Anchoring both to today meant that importing three months of real statements ending
+ * three months ago produced a trailing-90 window containing none of them, and the app answered "not enough
+ * data" while holding every transaction it needed. Someone's spending pattern from March is still their
+ * spending pattern; it is the forecast of today's balance that goes stale, not the pattern.
+ *
+ * So these windows end on the last day the ledger covers. The label carries that date, because a period
+ * the user cannot see is a number they cannot check — a reader must always be able to tell whether they
+ * are looking at March or at last week.
+ *
+ * Forecasting still uses windows(asOf): a claim about money available *now* genuinely requires data now,
+ * and stretching old data to cover today would be the dishonest fix for this same complaint.
+ */
+export function describeWindows(s:Snapshot,asOf:string):Window[]{
+ const anchor=lastCoveredDay(s)??asOf;
+ const end=anchor<asOf?anchor:asOf;
+ return [{start:end.slice(0,7)+'-01',end,label:end.slice(0,7)},{start:shift(end,-89),end,label:'trailing-90:'+end}];
+}
 export function covered(s:Snapshot,date:string){return s.accountIds.length>0&&s.accountIds.every(id=>s.coverage.some(c=>c.accountId===id&&c.start<=date&&c.end>=date));}
 export function historical(s:Snapshot,w:Window){return s.transactions.filter(t=>t.currency===s.currency&&s.accountIds.includes(t.accountId)&&t.status==='settled'&&!t.transfer&&t.kind!=='transfer'&&t.date>=w.start&&t.date<=w.end&&covered(s,t.date));}
 export function sqrt(n:bigint):bigint{if(n<0n)throw new Error('Negative variance.');if(n<2n)return n;let x=n,y=(x+1n)/2n;while(y<x){x=y;y=(x+n/x)/2n;}return x;}

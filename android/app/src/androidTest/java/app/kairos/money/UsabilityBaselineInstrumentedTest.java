@@ -88,11 +88,16 @@ public class UsabilityBaselineInstrumentedTest {
         JSONArray tasks=new JSONArray();
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a->activity=a);unlock();
-            assertEquals("This baseline needs an account, which the earlier classes create.","true",
-                js("document.body.innerText.includes('Accounts set up')"));
 
             // Task one: record an expense from scratch.
             tap(named("Add transaction"));
+            // The precondition, checked where it actually matters rather than by reading chrome off the
+            // home screen: this baseline needs an account, which the earlier classes create. It used to
+            // look for the words "Accounts set up", which were a count the home screen no longer carries —
+            // that text was one of nineteen blocks competing with the user's own money for attention.
+            assertEquals("This baseline needs an account, which the earlier classes create.","true",
+                js("Boolean(Array.from(document.querySelectorAll('label')).find(e=>e.textContent.startsWith('Account'))"
+                    +"?.querySelector('select')?.options.length)"));
             type("Amount","15.00");type("Description",PROBE);
             tap(named("Save transaction"));
             awaitJs("!Boolean("+named("Save transaction")+")");

@@ -28,7 +28,7 @@ it.each(['dark','light'])('renders muted nine-day freshness and overlapping date
  document.documentElement.dataset.theme=theme;const accounts=await state.repo!.accounts();
  const batches=[{status:'committed',payslip:null,context:{accountId:'a',period:{start:'2026-03-01',end:'2026-03-22'}}}] as Batch[];
  const open=vi.fn();const view=render(<Freshness accounts={accounts} batches={batches} today="2026-03-31" onUpdate={open}/>);
- expect(view.container.querySelector('.surface-muted')).toBeTruthy();expect(screen.getByText(/9 days old/)).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Update accounts'}));expect(open).toHaveBeenCalledOnce();cleanup();
+ expect(view.container.querySelector('.surface-muted')).toBeTruthy();expect(screen.getByText(/9 days ago/)).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Bring my statements up to date'}));expect(open).toHaveBeenCalledOnce();cleanup();
  render(<QueryClientProvider client={new QueryClient()}><UpdateAccounts accounts={accounts} batches={batches} today="2026-03-31" onClose={()=>undefined} onImport={()=>undefined}/></QueryClientProvider>);
  expect(screen.getAllByRole('dialog')).toHaveLength(1);expect(screen.getByText('Export 16 March 2026 to 31 March 2026')).toBeTruthy();
 });

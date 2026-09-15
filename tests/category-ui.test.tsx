@@ -17,4 +17,28 @@ it.each(['dark','light'])('selects only eligible rows and submits a category in 
  const close=vi.fn(),query=new QueryClient();render(<QueryClientProvider client={query}><BulkCategories onClose={close}/></QueryClientProvider>);
  expect(await screen.findAllByRole('checkbox')).toHaveLength(1);fireEvent.click(screen.getByRole('button',{name:'Select matching rows'}));fireEvent.change(screen.getByLabelText('Apply category'),{target:{value:'Groceries'}});fireEvent.click(screen.getByRole('button',{name:'Save categories'}));await waitFor(()=>expect(close).toHaveBeenCalled());expect(state.save).toHaveBeenCalledWith(['one'],'Groceries');
 });
-it('keeps first import disabled while accounts load and routes to the appropriate real action',()=>{const account=vi.fn(),read=vi.fn();const view=render(<FirstImport hasAccount={false} loading onAccount={account} onRead={read}/>);expect((screen.getByRole('button') as HTMLButtonElement).disabled).toBe(true);view.rerender(<FirstImport hasAccount={false} loading={false} onAccount={account} onRead={read}/>);fireEvent.click(screen.getByRole('button'));expect(account).toHaveBeenCalledOnce();view.rerender(<FirstImport hasAccount loading={false} onAccount={account} onRead={read}/>);fireEvent.click(screen.getByRole('button'));expect(read).toHaveBeenCalledOnce();expect(screen.getAllByRole('listitem')).toHaveLength(4);});
+it('offers both starting points, routes each to its real action, and waits on accounts for the import one',()=>{
+ const account=vi.fn(),read=vi.fn(),record=vi.fn();
+ const props={hasAccount:false,onAccount:account,onRead:read,onRecord:record};
+ const view=render(<FirstImport {...props} loading/>);
+
+ // Recording a purchase needs nothing set up, so it is never blocked by accounts still loading.
+ const recordButton=screen.getByRole('button',{name:'Record a purchase'});
+ expect((recordButton as HTMLButtonElement).disabled).toBe(false);
+ fireEvent.click(recordButton);
+ expect(record).toHaveBeenCalledOnce();
+
+ // The import path does need an account, so it waits, saying so, then routes to setting one up.
+ expect((screen.getByRole('button',{name:'Reading accounts…'}) as HTMLButtonElement).disabled).toBe(true);
+ view.rerender(<FirstImport {...props} loading={false}/>);
+ fireEvent.click(screen.getByRole('button',{name:'Set up the account first'}));
+ expect(account).toHaveBeenCalledOnce();
+
+ // With an account, the same path goes straight to choosing the file.
+ view.rerender(<FirstImport {...props} hasAccount loading={false}/>);
+ fireEvent.click(screen.getByRole('button',{name:'Choose a statement file'}));
+ expect(read).toHaveBeenCalledOnce();
+
+ // The four-step explanation is still available, behind a disclosure rather than in the way.
+ expect(screen.getAllByRole('listitem')).toHaveLength(4);
+});

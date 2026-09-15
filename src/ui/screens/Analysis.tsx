@@ -5,7 +5,7 @@ import {Amount,Button,DataGrid,Row,Sheet,Skeleton,Surface} from '../design/primi
 import {currency,format,money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {distress} from '../../intelligence/profile';
-import {windows} from '../../intelligence/model';
+import {describeWindows,windows} from '../../intelligence/model';
 import {analyse,buildIndex} from '../../analysis/index';
 import {observe} from '../../analysis/observations/index';
 import type {Metric} from '../../analysis/model';
@@ -37,10 +37,12 @@ export function Analysis(){
  const [code]=useState('AUD'),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
  const today=localDay();
  const q=useQuery({queryKey:['analysis',today,code],queryFn:()=>session.run(r=>r.intelligence.snapshot(today,code)),enabled:session.state==='ready'});
- // Trailing 90 days, not the calendar month. A month-to-date window is below the 20-covered-day threshold
- // for the first three weeks of every month, so the screen would read as "not enough evidence" most of the
- // time. windows() is the same pair Session 3 uses, and its second entry is the trailing window.
- const window=useMemo(()=>windows(today)[1]!,[today]);
+ // Trailing 90 days ending on the last day the ledger covers, not on today. A month-to-date window is
+ // below the 20-covered-day threshold for the first three weeks of every month; anchoring to today was
+ // worse still, because someone who imports three months of statements ending three months ago has every
+ // transaction this screen needs and none of them inside a window measured back from today. Their pattern
+ // is not missing, it is just not recent, and those are different things.
+ const window=useMemo(()=>q.data?describeWindows(q.data,today)[1]!:windows(today)[1]!,[q.data,today]);
  const result=useMemo(()=>{
   if(!q.data)return null;
   const index=buildIndex(q.data),metrics=analyse(q.data,window);
