@@ -377,3 +377,20 @@ Why it survived review: JSON.stringify on a shared reference is invisible in the
 fixture scale, and nothing exercised analyse() at ledger scale in either time or size.
 tests/analyse-scale.test.ts now does, with a size budget, so a stored signal that scales with corpus size
 fails locally in seconds instead of on an emulator half an hour later.
+
+## Session 5 candidate — Money Analysis and quiet coaching
+
+Phases 5.0-5.6 are implemented and locally green; this is the consolidated candidate for the native gate.
+
+- `src/analysis/model.ts` — 36 capability keys, the Metric contract, the Observation contract. Observation has no action, prompt, question or acceptance field, so no surface can render an action affordance.
+- `src/analysis/index.ts` — `buildIndex` makes one ordered pass and every capability reads it; `registry` and `analyse` are the single entry point.
+- `src/analysis/metric.ts` — the shared invariants in one place: below 20 covered days or 80% coverage a metric is `insufficient_data` with a reason rather than a zero; Tier C halves confidence and sets `unverified`; evidence is capped at 50 ids with the true count in `details.evidenceTotal`.
+- `src/analysis/metrics/` — all 36 capabilities across seven families.
+- `src/analysis/observations/` — the six concepts, guarded mechanically against questions, imperatives, motive verbs and shaming tone.
+- `src/ui/screens/Analysis.tsx` — reachable from Insights, existing primitives only, trailing-90 window, evidence in two taps. Opening it performs no write.
+
+Two snapshot additions were required and follow the existing precedent for splits and refund links: stored original-currency evidence (`foreign-amount:<id>`) and recorded goals, both of which the analysis layer needs and neither of which reached the snapshot before.
+
+Local measurements over a 20,000-row ledger: `analyse()` 185-232 ms against a 1,500 ms budget, `observe()` 1 ms, 36 metrics serialising to 21,025 bytes. Local figures are a floor for the device, not a device claim.
+
+Nothing in this layer has device evidence until this gate reports. Session 4's gate is green (run 34912806907) with two criteria still open for human artifact review: the installable APK and the both-theme visual review.
