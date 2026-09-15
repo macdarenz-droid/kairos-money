@@ -1,8 +1,8 @@
 {
   "contract": "Autonomous continuation; scheduled loop re-enabled by explicit user request 2026-09-14",
-  "phase": "Session 5 — Money Analysis; phases 5.0-5.4 implemented (36 capabilities, six observation concepts)",
-  "latest_continuation": "All 36 capabilities and the six quiet-coaching concepts are implemented, with a mechanical guard asserting no observation asks, instructs, assigns motive or shames.",
-  "latest_source_evidence": "353/353 tests across 73 files, lint, strict TypeScript, build, schema diff, release configuration, money lint and native-gate unit tests PASS.",
+  "phase": "Session 5 — Money Analysis; phases 5.0-5.5 implemented (36 capabilities, six concepts, Analysis screen)",
+  "latest_continuation": "The Analysis screen is reachable from Insights and reads the trailing-90 window, because a month-to-date window is below the evidence threshold for most of every month.",
+  "latest_source_evidence": "359/359 tests across 74 files, lint, strict TypeScript, build, schema diff, release configuration, money lint and native-gate unit tests PASS.",
   "lease": null,
   "automation_enabled": true,
   "automation_id": "trig_012YZ9183BjCCPyuc3towZDU",
@@ -18,7 +18,7 @@
   "local_checkpoint": "6c1c215",
   "last_result": "Device: 24 signal writes at 37,403 ms of a 43,789 ms first row, max 1,663 ms, uniformly slow. Local after the fix: signals payload 45,721,866 to 475,050 bytes, writes 3,239 ms to 15 ms, analyse() 7,221 ms to 2,020 ms.",
   "local_validation": "288/288 tests across 68 files including the new analyse() scale benchmark and its signal size budget; the 256-row native response budget and the 10,000 ms Ledger budget unchanged.",
-  "next_action": "Phase 5.5: src/ui/screens/Analysis.tsx reachable from Insights, existing primitives only, both themes at 200% text with 44px targets. Then 5.6 analyse() under 1,500 ms locally, then 5.7 one consolidated native gate.",
+  "next_action": "Phase 5.6: assert analyse() under 1,500 ms locally against the 20,000-row fixture in tests/performance.test.ts. Then 5.7, the one consolidated candidate to the native gate, which is where this layer first gets device evidence.",
   "candidate_role": "3c446b0 is the first green candidate; it supersedes 00d17faf. src/core/db/write-rows.ts and its tests remain unused by analyse() on purpose — batching that payload is what crashed the renderer.",
   "automation_note": "One hourly Routine 'Kairos gate → task loop' (trig_012YZ9183BjCCPyuc3towZDU) bound to session_014yKrn1AcvHWWwNHhiECEMD is the durable safety net; short one-shot check-ins are the fast path while a gate is mid-flight. Each tick checks the gate, fixes red, records green, advances the task queue, and leaves the next check-in scheduled. Delete the Routine when the queue is complete."
 }
