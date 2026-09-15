@@ -78,7 +78,7 @@ and saying otherwise would be reading an improvement into a number that does not
 The taps counted are, from scratch: Add transaction, then Save transaction. Repeating: the repeat tile,
 then Save transaction. Unlocking is excluded deliberately, as it belongs to no task.
 
-### Added and awaiting its first report: the same repeat at 200% text
+### Measured: the same repeat at 200% text, run 34956035910
 
 A shortcut that only works at default text size is not a shortcut for the person who most needs one, and
 200% text is where two real virtualization defects lived. The baseline now repeats the entry again with the
@@ -87,9 +87,22 @@ count as at default text. The zoom is restored afterwards in a `finally`, becaus
 share the install.
 
 It also records `tile_on_screen_without_scrolling` — whether the repeat tile is inside the viewport at 200%
-text, which is as much of "one-handed reach" as a program can honestly check. That one is **recorded, not
-asserted**. Nobody has measured it yet, and asserting a value before measuring it is the mistake this file
-exists to prevent. Once a run reports it, it can become a claim.
+text, which is as much of "one-handed reach" as a program can honestly check.
+
+| Task | Taps | Typing sessions | Tile on screen without scrolling |
+|---|---|---|---|
+| Record the same expense again, at 200% text | 2 | 0 | yes |
+
+So the lazy path costs exactly the same at 200% text as at default: two taps, no typing, and the tile is
+reachable without scrolling. That last figure was recorded rather than asserted until a run produced it,
+because asserting a value before measuring it is the mistake this file exists to prevent. It has now been
+measured once, on one emulator, at one screen size — enough to report, not yet enough to promise.
+
+Getting this measurement cost four red runs, none of them the app's fault and none of them the text zoom I
+first blamed. Two were real defects the measurement exposed (a repeat tile rebuilt out from under a tap, and
+a list that misjudged its own height at large text); two were my own test reading the DOM without waiting
+for it. The DOM capture at the tap now reads `{"dialogs":1,"open":[true],"tile":true,"save":true}` — one
+sheet, open because the tap opened it — against `{"dialogs":2,...,"save":false}` on the runs that failed.
 
 ### Categorising at entry is deliberately not measured here
 

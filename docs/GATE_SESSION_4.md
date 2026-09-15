@@ -446,3 +446,20 @@ device region was wrong independently of the test — the rule and the reasoning
 
 The usability baseline reports the same figures as run 34934836916, which is the point of a baseline:
 2 taps and 2 typing sessions from scratch, 2 taps and none repeating, confirmation retained.
+
+## Run 34956035910 — green, with the plain-language rework and the 200% measurement
+
+`df6d927`. Both jobs; 14 classes, 22 tests. The usability baseline reports all three tasks for the first
+time: 2 taps and 2 typing sessions from scratch, 2 taps and none repeating, and 2 taps and none repeating
+at 200% text with the tile on screen without scrolling.
+
+This run also carries the readability rework the owner asked for after using the app — Today reduced to
+what he spent plus one next step, private vocabulary removed from the surface, features that cannot work
+yet no longer advertising their requirements — and the fix for statements that end before today, which
+previously made every analysis window empty and every capability report insufficient data.
+
+Four runs went red on the way to this one. Two were real defects the new measurement exposed: the repeat
+tile was rebuilt out from under a tap when saving created a duplicate, and the windowed list misjudged its
+own height at large text. Two were the test reading the DOM without waiting for it — a tap that found and
+clicked in separate evaluations, and a precondition that asked the form a question before the form existed.
+None was the text zoom that the first three failures were attributed to.

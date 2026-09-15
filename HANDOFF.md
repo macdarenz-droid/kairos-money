@@ -455,3 +455,24 @@ claiming they are.
 
 Also still open for the user: the installable APK and the both-theme visual review, both needing the run
 artifact, which this environment cannot download.
+
+## Run 34956035910 green — the app now reads plainly, and old statements count
+
+`df6d927`. The owner's two complaints after using the app drove this: he could not tell what to do on the
+home screen, and a statement ending three months ago produced no insights at all.
+
+Today now answers one question — what did I spend, and is there anything to do. Private vocabulary is gone
+from the surface, features that cannot work yet stay silent instead of listing their requirements, and the
+two opaque buttons say what they do. `docs/PLAIN_APP.md` records the four rules and the nineteen-block
+count that motivated them.
+
+The second complaint was a real defect: analysis windows were anchored to today, so statements ending
+earlier fell outside them and every capability reported insufficient data over a ledger that held the
+answer. `describeWindows()` anchors to the last covered day and names the period. Forecasting still anchors
+to today, deliberately — a claim about money available now needs data from now.
+
+The usability baseline now measures the lazy path at 200% text as well: 2 taps, no typing, tile on screen
+without scrolling — the same cost as at default text.
+
+Still open and still the owner's: the installable APK and the both-theme visual review. Still missing and
+not a code task: the per-task usability inventory.
