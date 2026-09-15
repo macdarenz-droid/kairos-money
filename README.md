@@ -92,6 +92,17 @@ Ingest writes staging only until confirmation. Intelligence consumes a read-only
 
 No account, analytics, financial-data network calls or internet permission. A native PIN protects opening the database; optional strong biometrics can be enabled after setup. On background, financial UI and query caches are cleared. A 60-second background interval requires re-authentication on resume.
 
+Reading bank notifications is off until it is switched on, and it is the one capability here with a cost
+worth stating plainly. Android has no permission for a single app's notifications: granting notification
+access lets Kairos see every notification on the phone, messages included. Two things bound that. The
+listener drops anything from an app the owner has not ticked before it is stored, and nothing is ticked by
+default, so a grant on its own captures nothing. Captured notices are held in app-private storage rather
+than in the encrypted ledger, deliberately: the ledger's key exists only while Kairos is unlocked, and a
+notification arriving on a locked phone could not be written there at all. They are a question — "did you
+spend this?" — erased once answered, and a purchase becomes a ledger row only after the owner approves it,
+as a pending row the statement later supersedes. The question posted to the notification shade is hidden
+while the phone is locked. The access is revoked in Android's settings, not here.
+
 Exports contain readable JSON and per-table CSV inside a ZIP and are written to the Android document location explicitly chosen by the user. Keep those files private. Delete all data clears the app's database, files, preferences and keys, then Android closes it. User-created exports outside the app must be deleted separately.
 
 There is no account-based PIN recovery. Kairos displays a recovery code during setup and can export and restore an authenticated encrypted backup. iOS configuration is prepared, but a Keychain/LocalAuthentication vault implementation is still required; there is no insecure fallback.
