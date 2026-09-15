@@ -52,7 +52,7 @@ like a plan.
 | Bulk categorise | `BulkProposals` surfaces "N uncategorised from MERCHANT — set all to CATEGORY" where the work appears, from a category the user already applied to that merchant. |
 | Category split | Split evenly and Fill remainder, exact in bigint for either sign, extracted to `src/ui/proposals/allocate.ts` and tested at their boundaries. |
 | Net worth value | `value_update` proposals beside each holding, stalest first, carrying everything except the amount. |
-| Account setup | Currency defaults to the device region where Kairos supports it; institution is labelled optional and says why it is safe to leave blank. |
+| Account setup | Institution is labelled optional and says why it is safe to leave blank. **The region-derived currency default was implemented and then reverted** — see below. |
 | Foreign amount | The original amount the statement line already states is offered as an editable prefill that cites the line; the chosen original currency is remembered as a preference. |
 | Cancellations | Today/Yesterday chips beside the date field, which stays. |
 | Refunds | Candidates ranked by evidence — same merchant and amount, then amount, then merchant, then recency — each showing why. |
@@ -66,3 +66,23 @@ What remains is not implementation. `LOW_EFFORT_USABILITY.md` asks for a full ta
 typed fields, backtracking and one-handed reach recorded per task, in both themes, at 200% text, under
 screen reader and keyboard. Two tasks are measured on the device; the rest of that inventory is not, and no
 before/after matrix exists for the flows above. They are implemented and tested, not usability-accepted.
+
+### One candidate in this scan was wrong, and is not coming back
+
+"Default currency from device locale" was implemented and reverted the same day. Run 34940983240 caught it
+— `FoundationInstrumentedTest` creates an account without choosing a currency and expects `$123.45`, and on
+an `en-US` emulator the account was created in USD, which the app renders as `USD 123.45`.
+
+The failing test was the symptom. The reason not to do it is that an account's currency is a financial
+fact, not a preference: it decides how every amount in that account is read and whether an imported
+statement reconciles at all. That puts it under this scan's own constraint — prefill is not invention, and
+preferences are never financial facts — which the candidate was written without weighing.
+
+A region guess is also wrong for exactly the people it fails quietly: anyone who travels, has moved, or
+holds an account abroad, all of whom Kairos supports multi-currency accounts for. A fixed default is
+visibly wrong to everyone it is wrong for, and that visibility is what prompts a deliberate choice. Saving
+one tap is not worth mis-denominating an account.
+
+The general rule this produced: a shortcut may default anything the user can see and correct, but it must
+not guess a value that changes how money is interpreted. Category, date and account are preferences that a
+wrong guess costs a tap. Currency is not one of them.

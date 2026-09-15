@@ -4,30 +4,24 @@ import { currency, currencyDigits, parseDecimal } from '../../core/money';
 import type { AccountKind } from '../../core/db/repository';
 import { Button, Input, Sheet } from '../design/primitives';
 import { useSession } from '../session';
-/**
- * The currency this device is set up for, when Kairos supports it.
+/*
+ * The currency deliberately does NOT default to the device's region.
  *
- * A default the user has to change on every account is a default in name only, and AUD was one for anybody
- * outside Australia. The device's own region is the only offline signal available, it is a starting value
- * rather than a financial fact, and the select is right there — so a wrong guess costs one tap, the same
- * tap a wrong constant cost everyone. Falls back to AUD when the region is unknown or unsupported.
+ * LAZY_USER_SCAN proposed it and it was implemented, and it was wrong. An account's currency is a
+ * financial fact, not a preference: it decides how every amount in that account is read and whether an
+ * imported statement reconciles at all. A region-derived guess is plausible enough to be accepted without
+ * looking — and the device region often is not the account's currency, for anyone who travels, has moved,
+ * or holds an account abroad, all of which Kairos supports multi-currency accounts for.
+ *
+ * A fixed default is visibly wrong to everyone it is wrong for, which prompts a deliberate choice; a
+ * region guess is invisibly wrong to exactly the people it fails. Saving one tap is not worth
+ * mis-denominating an account, so this keeps the tap.
  */
-function deviceCurrency(): string {
-  try {
-    const resolved = new Intl.NumberFormat().resolvedOptions();
-    const region = resolved.locale.split('-').find(part => /^[A-Z]{2}$/.test(part));
-    const byRegion: Record<string, string> = { AU: 'AUD', US: 'USD', PH: 'PHP', NZ: 'NZD', CA: 'CAD', SG: 'SGD', JP: 'JPY', KW: 'KWD', GB: 'GBP',
-      DE: 'EUR', FR: 'EUR', ES: 'EUR', IT: 'EUR', IE: 'EUR', NL: 'EUR', PT: 'EUR', AT: 'EUR', BE: 'EUR', FI: 'EUR', GR: 'EUR' };
-    const guess = region ? byRegion[region] : undefined;
-    return guess && Object.hasOwn(currencyDigits, guess) ? guess : 'AUD';
-  } catch { return 'AUD'; }
-}
-const localCurrency = deviceCurrency();
 
 export function AccountSheet({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const session = useSession(); const query = useQueryClient();
   const [name, setName] = useState(''); const [institution, setInstitution] = useState(''); const [kind, setKind] = useState<AccountKind>('checking');
-  const [code, setCode] = useState(localCurrency); const [mask, setMask] = useState(''); const [balance, setBalance] = useState('0');
+  const [code, setCode] = useState('AUD'); const [mask, setMask] = useState(''); const [balance, setBalance] = useState('0');
   const mutation = useMutation({ mutationFn: async () => {
     const value = parseDecimal(balance, currency(code));
     await session.run(repo => repo.addAccount({ id: crypto.randomUUID(), name, institution, type: kind, currency: currency(code), mask_last4: mask || null, opening_balance_minor: value.minor }));
