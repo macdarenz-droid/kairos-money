@@ -3,6 +3,7 @@ import {afterEach,expect,it} from 'vitest';
 import {cleanup,fireEvent,render,screen} from '@testing-library/react';
 import {FlowBar} from '../src/ui/design/FlowBar';
 import {MonthBalance} from '../src/ui/design/MonthBalance';
+import {DayStrip} from '../src/ui/design/DayStrip';
 import {currency} from '../src/core/money';
 
 const AUD=currency('AUD');
@@ -89,4 +90,37 @@ it('draws a single month rather than refusing to draw anything',()=>{
  render(<MonthBalance months={[{month:'2026-06',inMinor:'500000',outMinor:'200000'}]} code={AUD}/>);
  expect(document.querySelectorAll('.balance-bar')).toHaveLength(1);
  expect(screen.getByText('June 2026')).toBeTruthy();
+});
+
+it('puts today at the end of a fortnight, scaled to the heaviest day in view',()=>{
+ const days=[
+  {date:'2026-08-20',minor:'-4000'},   // the peak in view
+  {date:'2026-08-25',minor:'-1000'},
+  {date:'2026-08-26',minor:'-2000'},
+  {date:'2026-08-10',minor:'-9900'},   // outside the window: must not set the scale
+ ];
+ render(<DayStrip days={days} code={AUD} today="2026-08-26"/>);
+ const bars=[...document.querySelectorAll<HTMLElement>('.strip-bar')];
+ expect(bars).toHaveLength(14);
+ // A day outside the fortnight setting the scale would flatten every bar in view against a figure the
+ // reader cannot see.
+ expect(bars[7]!.style.height).toBe('100%');   // 2026-08-20, the peak in view
+ expect(bars[12]!.style.height).toBe('25%');   // 2026-08-25
+ expect(bars[13]!.style.height).toBe('50%');   // today
+ expect(document.querySelectorAll('[aria-current=date]')).toHaveLength(1);
+ expect(screen.getByText('spent today')).toBeTruthy();
+ expect(screen.getAllByText('$20.00').length).toBeGreaterThan(0);
+});
+
+it('shows a day with nothing spent as nothing, not as a gap in the record',()=>{
+ render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'}]} code={AUD} today="2026-08-26"/>);
+ const quiet=screen.getByRole('button',{name:/25 August: nothing recorded/});
+ fireEvent.click(quiet);
+ expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
+});
+
+it('ignores money arriving when drawing what was spent',()=>{
+ render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'},{date:'2026-08-26',minor:'500000'}]} code={AUD} today="2026-08-26"/>);
+ expect(screen.getAllByText('$20.00').length).toBeGreaterThan(0);
+ expect(document.body.textContent).not.toContain('$5,000.00');
 });

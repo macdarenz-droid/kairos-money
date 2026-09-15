@@ -129,3 +129,15 @@ details[open] > summary::before { transform: rotate(45deg); }
   .flow-line { grid-template-columns: 10px 1fr auto; }
   .flow-line .flow-bar { grid-column: 1 / -1; }
 }
+
+/* The last fortnight, so today's figure has something to be big or small against. */
+.strip { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.strip-plot { display: flex; gap: 2px; align-items: flex-end; height: 108px; padding-bottom: 18px; }
+.strip-column { position: relative; flex: 1 1 0; min-width: 0; height: 100%; min-height: 44px;
+  border: 0; background: transparent; padding: 0; border-radius: 6px; display: flex; align-items: flex-end; }
+.strip-column[aria-pressed=true] { background: var(--surface-2); }
+.strip-column[aria-current=date] .strip-bar { background: var(--flow-out); }
+.strip-column:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.strip-bar { flex: 1 1 auto; margin: 0 1px; min-height: 3px; border-radius: 4px 4px 0 0; background: var(--heat-3); }
+.strip-tick { position: absolute; inset-inline: 0; bottom: -18px; font-size: 11px; line-height: 16px; color: var(--text-meta); }
+.strip-column[aria-current=date] .strip-tick { color: var(--text-primary); font-weight: 600; }
