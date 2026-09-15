@@ -1,0 +1,91 @@
+package app.kairos.money;
+
+import static org.junit.Assert.*;
+import android.content.Context;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import java.util.Arrays;
+import java.util.Collections;
+
+/**
+ * What the notification reader keeps, and what it refuses to keep.
+ *
+ * The rules that matter here cannot be checked in jsdom: they are about an Android store that a listener
+ * writes to from outside the app, while the ledger is locked and unreachable.
+ */
+@RunWith(AndroidJUnit4.class)
+public class NoticeCaptureInstrumentedTest {
+    private final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+
+    @Before public void clearStore() {
+        context.getSharedPreferences(NoticeStore.PREFS, Context.MODE_PRIVATE).edit().clear().commit();
+    }
+
+    @Test public void readsOnlyTheAppsTheOwnerChose() throws Exception {
+        // The grant covers every notification on the phone. This is the line that makes that irrelevant:
+        // anything from an app that was not chosen is dropped before it is written anywhere.
+        NoticeStore.setSources(context, new JSONArray(Collections.singletonList("app.synthetic.bank")));
+        assertNull("A notification from an unchosen app must not be stored",
+            NoticeStore.capture(context, "app.synthetic.chat", "Someone", "See you at six", 1000L));
+        assertEquals(0, NoticeStore.captured(context).length());
+
+        String id = NoticeStore.capture(context, "app.synthetic.bank", "Bank", "You spent $12.50 at SHOP", 1000L);
+        assertNotNull(id);
+        JSONArray held = NoticeStore.captured(context);
+        assertEquals(1, held.length());
+        assertEquals("You spent $12.50 at SHOP", held.getJSONObject(0).getString("text"));
+        assertTrue("An unanswered notice carries no decision", held.getJSONObject(0).isNull("decision"));
+    }
+
+    @Test public void keepsOneCopyOfARepostedNotification() throws Exception {
+        // Banking apps update and repost their own notifications; the same purchase must not pile up.
+        NoticeStore.setSources(context, new JSONArray(Collections.singletonList("app.synthetic.bank")));
+        String first = NoticeStore.capture(context, "app.synthetic.bank", "Bank", "You spent $12.50 at SHOP", 1000L);
+        String again = NoticeStore.capture(context, "app.synthetic.bank", "Bank", "You spent $12.50 at SHOP", 1000L);
+        assertNotNull(first);
+        assertNull("A repost of the same notification must not be stored twice", again);
+        assertEquals(1, NoticeStore.captured(context).length());
+
+        // A genuine second purchase arrives in a different second and is its own question.
+        assertNotNull(NoticeStore.capture(context, "app.synthetic.bank", "Bank", "You spent $12.50 at SHOP", 9000L));
+        assertEquals(2, NoticeStore.captured(context).length());
+    }
+
+    @Test public void recordsAnAnswerGivenInTheShadeWithoutTouchingTheLedger() throws Exception {
+        NoticeStore.setSources(context, new JSONArray(Collections.singletonList("app.synthetic.bank")));
+        String id = NoticeStore.capture(context, "app.synthetic.bank", "Bank", "You spent $12.50 at SHOP", 1000L);
+
+        // Exactly what the notification's Approve button does, and all it can do: the ledger's key does
+        // not exist while Kairos is locked, so the answer waits here until it does.
+        NoticeActionReceiver receiver = new NoticeActionReceiver();
+        receiver.onReceive(context, new android.content.Intent(NoticeActionReceiver.APPROVE)
+            .putExtra(NoticeActionReceiver.EXTRA_ID, id));
+
+        JSONObject stored = NoticeStore.captured(context).getJSONObject(0);
+        assertEquals("approved", stored.getString("decision"));
+        // Still held, not consumed: the answer is a note to act on at the next unlock, and losing it here
+        // would lose the purchase entirely.
+        assertEquals(1, NoticeStore.captured(context).length());
+        assertEquals(id, stored.getString("id"));
+    }
+
+    @Test public void forgetsOnlyWhatItWasTold() throws Exception {
+        NoticeStore.setSources(context, new JSONArray(Collections.singletonList("app.synthetic.bank")));
+        String kept = NoticeStore.capture(context, "app.synthetic.bank", "Bank", "You spent $1.00 at ONE", 1000L);
+        String gone = NoticeStore.capture(context, "app.synthetic.bank", "Bank", "You spent $2.00 at TWO", 2000L);
+        NoticeStore.forget(context, Arrays.asList(gone));
+        assertEquals(Collections.singletonList(kept), NoticeStore.ids(context));
+    }
+
+    @Test public void storesNoNotificationTextBeforeAnyAppIsChosen() {
+        // The state a fresh install is in: access may be granted, nothing is ticked, nothing is captured.
+        assertEquals(0, NoticeStore.sources(context).length());
+        assertNull(NoticeStore.capture(context, "app.synthetic.bank", "Bank", "You spent $12.50 at SHOP", 1000L));
+        assertEquals(0, NoticeStore.captured(context).length());
+    }
+}

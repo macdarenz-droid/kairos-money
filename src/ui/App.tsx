@@ -1,5 +1,6 @@
 import { ManualHistory, ManualSheet } from './screens/Manual';
-import { capturedNotices, readNotices } from '../ingest/notices';
+import { capturedNotices, forgetNotices, readNotices } from '../ingest/notices';
+import { applyShadeDecisions } from './notices';
 import { NoticeReview } from './screens/NoticeReview';
 import {FirstImport} from './screens/FirstImport';
 import {useQuickAddLaunch} from './quick-add';
@@ -7,7 +8,7 @@ import { NotificationSync } from './screens/Notifications';
 import { Intelligence } from './screens/Intelligence';
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { create } from 'zustand';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, ChevronRight, FileText, Layers3, LockKeyhole, Plus, Search, ShieldCheck, WalletCards } from 'lucide-react';
 import { currency, fromDatabase } from '../core/money';
 import { Amount, Button, EmptyState, Input, Row, Sheet, Skeleton, Tabs, Toast, type Tab } from './design/primitives';
@@ -27,7 +28,7 @@ const NetWorth=lazy(()=>import('./screens/NetWorth').then(module=>({default:modu
 import {Settings} from './screens/Settings';
 const useNavigation = create<{ tab: Tab; setTab: (tab: Tab) => void }>(set => ({ tab: 'Today', setTab: tab => set({ tab }) }));
 export default function App() {
-  const { tab, setTab } = useNavigation(); const session = useSession();
+  const { tab, setTab } = useNavigation(); const session = useSession(); const queryClient = useQueryClient();
   const [sheet, setSheet] = useState<'quick' | 'account' | 'update' | 'manual' | 'notices' | null>(null); const [search, setSearch] = useState(''); const [toast, setToast] = useState('');
   const [importRequest, setImportRequest] = useState(0);
   const consumeImport = useCallback(() => setImportRequest(0), []);
@@ -47,7 +48,19 @@ export default function App() {
   useEffect(()=>{if(session.state==='ready' && accounts.data && statementData.data)void session.run(repo=>repo.imports.reminderDay()).then(day=>syncReminder(day,accounts.data!.map(a=>a.id),statementData.data!,localDay())).catch(()=>undefined);},[session.state,accounts.data,statementData.data]);
   useEffect(()=>{if(sheet==='manual' && accounts.data?.length===0)setSheet('account');},[sheet,accounts.data]);
   const firstAccount = accounts.data?.find(a => !a.archived_at);
-  const waitingNotices = firstAccount ? readNotices(noticeQueue.data ?? [], currency(firstAccount.currency)).readable.length : 0;
+  const undecided = (noticeQueue.data ?? []).filter(n => !n.decision);
+  const waitingNotices = firstAccount ? readNotices(undecided, currency(firstAccount.currency)).readable.length : 0;
+  // Answers given in the shade are carried out here, on the first unlock after they were given: this is
+  // the earliest moment the encrypted ledger can receive them. Only the unanswered ones are asked about.
+  const [settled, setSettled] = useState(false);
+  useEffect(()=>{
+    if(settled || !firstAccount || !noticeQueue.data?.some(n=>n.decision))return;
+    setSettled(true);
+    void applyShadeDecisions(noticeQueue.data, currency(firstAccount.currency), firstAccount.id,
+      record => session.run(repo => repo.notices.approve(record)), forgetNotices)
+      .then(async result => { if(result.approved)await queryClient.invalidateQueries(); })
+      .catch(()=>setSettled(false));
+  },[settled,firstAccount,noticeQueue.data,session,queryClient]);
   useEffect(()=>{if(!noticesAsked && !sheet && waitingNotices>0){setNoticesAsked(true);setSheet('notices');}},[noticesAsked,sheet,waitingNotices]);
   const days = coveredDays((statementData.data ?? []).filter(b => b.status === 'committed' && !b.payslip).map(b => b.context.period));
   if (session.state !== 'ready' && session.state !== 'preview' && session.state !== 'background') return <LockScreen/>;

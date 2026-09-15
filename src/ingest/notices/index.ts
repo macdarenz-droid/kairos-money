@@ -2,7 +2,7 @@ import {parseNotice, type Notice, type ParsedNotice} from './parse';
 import type {Currency} from '../../core/money';
 
 export type {Notice, ParsedNotice} from './parse';
-export {capturedNotices, forgetNotices, noticeAccess, noticesAvailable, watchSources, installedSources} from './bridge';
+export {Notices, capturedNotices, forgetNotices, noticeAccess, noticesAvailable, watchSources, installedSources} from './bridge';
 export type {NoticeAccess, NoticeSource} from './bridge';
 
 export type ReadableNotice = {notice: Notice} & Extract<ParsedNotice, {status: 'ok'}>;

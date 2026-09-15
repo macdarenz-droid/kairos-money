@@ -1,6 +1,7 @@
 import {currency, money, parseDecimal, type Currency} from '../../core/money';
 
-export type Notice = {id: string; source: string; title: string; text: string; postedAt: number};
+/** `decision` carries an answer already given in the notification shade, before the app was opened. */
+export type Notice = {id: string; source: string; title: string; text: string; postedAt: number; decision?: 'approved' | 'rejected' | null};
 export type ParsedNotice =
   | {status: 'ok'; minor: string; currency: Currency; merchant: string; date: string; description: string}
   | {status: 'skip'; reason: string};
