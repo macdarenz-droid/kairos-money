@@ -2,7 +2,7 @@ import {AllocationBreakdown} from './AllocationBreakdown';
 import {categoryAmounts} from '../../intelligence/allocations';
 import {Cancellations} from './Cancellations';
 import {activityHistory} from '../../intelligence/visuals/activity';
-import {categoryTiles} from '../../intelligence/visuals/treemap';
+import {CategorySplit} from '../design/CategorySplit';
 import {TimingCharts} from './TimingCharts';
 import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
@@ -35,7 +35,7 @@ export function MoneyVisuals(){
  const activity=activityHistory(snapshot,w,previous);
  const tx=historical(snapshot,w);const categories=new Map<string,{minor:bigint;ids:string[]}>();
  for(const t of tx){if(BigInt(t.minor)>=0n)continue;for(const p of categoryAmounts(t)){const row=categories.get(p.category)??{minor:0n,ids:[]};row.minor+=BigInt(p.minor);if(!row.ids.includes(t.id))row.ids.push(t.id);categories.set(p.category,row);}}
- const sorted=[...categories].sort((a,b)=>a[1].minor>b[1].minor?-1:1),total=sorted.reduce((n,[,r])=>n+r.minor,0n);
+ const sorted=[...categories].sort((a,b)=>a[1].minor>b[1].minor?-1:1);
  return <section className="stack money-visuals" aria-label="Monthly money history">
  <h2>Money Fingerprint</h2><label className="input-label">History currency<select value={code} onChange={e=>setCode(e.target.value)}>{['AUD','USD','PHP','EUR','GBP','NZD','CAD','SGD','JPY','KWD'].map(c=><option key={c}>{c}</option>)}</select></label>
  <label className="input-label">Compare month · {w.label}<input type="range" min="0" max="11" value={offset} aria-valuetext={`${w.label}, compared with ${previous.label}`} onChange={e=>setOffset(Number(e.target.value))}/></label>
@@ -50,8 +50,9 @@ export function MoneyVisuals(){
  {current.axes.map(a=><Button key={a.key} variant="quiet" onClick={()=>show(a.label,a.evidence,`${a.reason} ${a.value===null?'Unknown':`Stored signal value: ${a.value}.`} Shape uses a fixed display scale, not a diagnosis or a score of financial worth.`)}>{a.label} · {a.value===null?'Unknown':'View evidence'}</Button>)}
  <h2>Daily cashflow</h2><Cashflow snapshot={snapshot} window={w} show={show}/>
  <TimingCharts snapshot={snapshot} window={w} show={show}/>
- <h2>Spending by category</h2><p className="meta">Settled spending on covered days only. Transfers and pending entries are excluded.</p>
- {total===0n?<p>No covered spending for this month.</p>:<><svg viewBox="0 0 1000 600" role="img" aria-label="Category treemap. Rectangle area represents settled spending; exact amounts and sources follow below.">{categoryTiles(sorted.map(([name,row])=>({name,minor:row.minor.toString()}))).map((tile,i)=><g key={tile.name}><title>{tile.name}</title><rect x={tile.x} y={tile.y} width={tile.width} height={tile.height} fill={`var(--surface-${i%2+2})`} stroke="var(--border-default)"/>{tile.width>150&&tile.height>70&&<text x={tile.x+20} y={tile.y+40} fill="var(--text-primary)" fontSize="32">{tile.name.length>Math.floor(tile.width/20)?tile.name.slice(0,Math.max(1,Math.floor(tile.width/20)-2))+'…':tile.name}</text>}</g>)}</svg>{sorted.map(([name,row])=><Row key={name} trailing={<Button variant="quiet" onClick={()=>show(name,row.ids,'Sum of settled spending in this category on covered days.')}><Amount value={money(row.minor,currency(code))} context={name}/></Button>}>{name}</Row>)}</>}
+ <p className="meta">Settled spending on covered days only. Transfers and pending entries are excluded.</p>
+ <CategorySplit code={currency(code)} slices={sorted.map(([name,row])=>({name,minor:row.minor.toString(),ids:row.ids}))}
+  onCategory={name=>{const row=sorted.find(([other])=>other===name)?.[1];show(name,row?.ids??[],'Sum of settled spending in this category on covered days.');}}/>
  <h2>What changed</h2>{!activity.comparable?<p>Two fully covered months are needed for a fair monthly comparison.</p>:activity.changes.map(c=><Row key={c.category} trailing={<Button variant="quiet" onClick={()=>show(c.category,c.ids,`Previous month ${c.previous}; selected month ${c.current} minor units. Difference is observed spending, not an inferred cause.`)}><Amount value={money(BigInt(c.difference),currency(code))} context={`change in ${c.category}`}/></Button>}>{c.category}</Row>)}
  <h2>Recurring costs</h2><p className="meta">Detected patterns, not confirmed contracts. Yearly figures assume the current amount repeats.</p>{!activity.recurring.length&&<p>No supported recurring pattern yet.</p>}{activity.recurring.map(r=><Row key={r.merchant} trailing={<Button variant="quiet" onClick={()=>show(r.merchant,r.evidence,`Estimated yearly cost ${r.annual} minor units; current payment ${r.minor}; repeats ${r.monthly?'monthly':`every ${r.interval} days`}. Before cancelling: check the provider and renewal date, save confirmation, then verify the next statement. Removing an expected bill does not cancel a contract.`)}><Amount value={money(BigInt(r.annual),currency(code))} context={`estimated yearly ${r.merchant}`}/></Button>}>{r.merchant}<p className="meta">Estimated yearly · next {r.next}</p></Row>)}
  <Cancellations code={currency(code)} merchants={activity.recurring.map(r=>r.merchant)} payments={historical(snapshot,{start:'1970-01-01',end:today,label:''}).filter(t=>BigInt(t.minor)<0n).map(t=>({merchant:t.description,date:t.date,id:t.id}))} review={(merchant,ids)=>show(merchant,ids,'Settled payments on dates after your recorded cancellation contact or confirmation. These may be final charges; check the provider confirmation and statement before acting.')}/>
