@@ -1,8 +1,8 @@
 {
   "contract": "Autonomous continuation; scheduled loop re-enabled by explicit user request 2026-09-14",
-  "phase": "Session 5 — Money Analysis; phases 5.0-5.2 implemented (capabilities 1-26 of 36)",
-  "latest_continuation": "Session 5 phases 5.0-5.2: analysis contracts, the single-pass index, and capabilities 1-26 with their invariants enforced centrally. Low-effort access now has an architecture (docs/LOW_EFFORT_ARCHITECTURE.md) built on those capabilities.",
-  "latest_source_evidence": "328/328 tests across 71 files, lint, strict TypeScript, build, schema diff, release configuration, money lint and native-gate unit tests PASS.",
+  "phase": "Session 5 — Money Analysis; phases 5.0-5.3 implemented (all 36 capabilities)",
+  "latest_continuation": "All 36 Money Analysis capabilities compute from one snapshot through the single-pass index. Remaining: 5.4 observations, 5.5 the Analysis screen, 5.6 the performance pass, 5.7 the consolidated native gate.",
+  "latest_source_evidence": "341/341 tests across 72 files, lint, strict TypeScript, build, schema diff, release configuration, money lint and native-gate unit tests PASS.",
   "lease": null,
   "automation_enabled": true,
   "automation_id": "trig_012YZ9183BjCCPyuc3towZDU",
@@ -18,7 +18,7 @@
   "local_checkpoint": "6c1c215",
   "last_result": "Device: 24 signal writes at 37,403 ms of a 43,789 ms first row, max 1,663 ms, uniformly slow. Local after the fix: signals payload 45,721,866 to 475,050 bytes, writes 3,239 ms to 15 ms, analyse() 7,221 ms to 2,020 ms.",
   "local_validation": "288/288 tests across 68 files including the new analyse() scale benchmark and its signal size budget; the 256-row native response budget and the 10,000 ms Ledger budget unchanged.",
-  "next_action": "Phase 5.3: capabilities 27-36 (position, reporting, planning, exports, import diff), then 5.4 observations, 5.5 Analysis.tsx, 5.6 performance under 1,500 ms locally, 5.7 one consolidated native gate.",
+  "next_action": "Phase 5.4: the six quiet-coaching observation concepts and the declarative-template guard test (no question mark, no imperative, no motive verb), then 5.5-5.7.",
   "candidate_role": "3c446b0 is the first green candidate; it supersedes 00d17faf. src/core/db/write-rows.ts and its tests remain unused by analyse() on purpose — batching that payload is what crashed the renderer.",
   "automation_note": "One hourly Routine 'Kairos gate → task loop' (trig_012YZ9183BjCCPyuc3towZDU) bound to session_014yKrn1AcvHWWwNHhiECEMD is the durable safety net; short one-shot check-ins are the fast path while a gate is mid-flight. Each tick checks the gate, fixes red, records green, advances the task queue, and leaves the next check-in scheduled. Delete the Routine when the queue is complete."
 }

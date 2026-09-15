@@ -57,6 +57,11 @@ export function intelligenceRepository(driver:Driver){
    if(intervals.some(v=>v.tier==='C'&&v.end>date))valid=false;
   }
   if(Object.keys(await manualRepository(driver).unresolved()).length)valid=false;
+  // Recorded earmarks reach the snapshot so the analysis layer can report a budget against what the user
+  // actually set. They are user-entered plans, never an additional ledger balance.
+  s.goals=(await driver.query('SELECT id,name,target_minor,funded_minor,target_date,kind FROM goals WHERE currency=? ORDER BY target_date,id',[c]))
+   .map(g=>({id:String(g.id),name:String(g.name),targetMinor:String(g.target_minor),fundedMinor:String(g.funded_minor),
+    targetDate:g.target_date===null?'':String(g.target_date),kind:String(g.kind) as NonNullable<Snapshot['goals']>[number]['kind']}));
   s.commitmentsKnown=!accounts.some(a=>a.type==='loan');if(valid)s.committedLiability={minor:liability.toString(),evidence};
   if(valid)s.liquid={minor:balance.toString(),asOf,verified:true,evidence};
   return s;

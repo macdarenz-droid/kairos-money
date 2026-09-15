@@ -7,6 +7,9 @@ import {frequencyVersusSize,periodComparison,rangeAnomalies,repeatedPurchases,sm
 import {paydayEffect,regularVersusOccasional,spendingClusters,weekdayDistribution} from './metrics/timing';
 import {bnplCommitments,recurrenceDetection,recurringPriceChange} from './metrics/recurrence';
 import {accountBalances,cashEntries,fees,foreignExchange,refundsAndChargebacks,remittances} from './metrics/instruments';
+import {accountUse,balanceTrajectory,lowBalanceEpisodes,surplus} from './metrics/position';
+import {contextQuestions,evidenceReports} from './metrics/reports';
+import {budgets,conditionalForecasts,exportsAndRecompute,whatIfs} from './metrics/planning';
 
 /** Normalized merchant key: the same basis the importer uses for aliasing, lowercased and collapsed. */
 const merchantKey=(t:Transaction)=>t.description.trim().toLowerCase().replace(/\s+/g,' ');
@@ -87,6 +90,10 @@ export const registry:MetricFn[]=[
  recurrenceDetection,recurringPriceChange,bnplCommitments,
  // 21-26 instruments and adjustments
  remittances,foreignExchange,fees,refundsAndChargebacks,cashEntries,accountBalances,
+ // 27-30 position
+ lowBalanceEpisodes,accountUse,surplus,balanceTrajectory,
+ // 31-36 reporting and planning
+ evidenceReports,contextQuestions,budgets,whatIfs,conditionalForecasts,exportsAndRecompute,
 ];
 
 /** Every capability's metrics for one window, in registry order. */
