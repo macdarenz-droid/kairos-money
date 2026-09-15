@@ -19,8 +19,8 @@ const UNCATEGORISED = 'Uncategorised';
  * finding. So when that block would dominate, the gap is stated first, with what closes it, and the chart
  * shows what is actually known underneath.
  */
-export function CategorySplit({slices, code, onCategory}: {
-  slices: readonly CategorySlice[]; code: Currency; onCategory?: (name: string) => void;
+export function CategorySplit({slices, code, onCategory, heading = 'What the money went on'}: {
+  slices: readonly CategorySlice[]; code: Currency; onCategory?: (name: string) => void; heading?: string;
 }) {
   const {known, blank, total, tiles} = useMemo(() => {
     const positive = slices.filter(slice => BigInt(slice.minor) > 0n);
@@ -44,7 +44,7 @@ export function CategorySplit({slices, code, onCategory}: {
 
   return <figure className="split">
     <figcaption>
-      <h3>What the money went on</h3>
+      <h3>{heading}</h3>
       {mostlyBlank
         ? <p>Most of this — {show(blankMinor)} of {show(total)} — has no category yet, so the picture below
             is only the part that does. Accepting the categories offered when you import, or setting them

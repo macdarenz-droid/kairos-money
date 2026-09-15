@@ -205,3 +205,10 @@ it('says there is nothing to draw rather than drawing an empty box',()=>{
  // The amount is still reported: it is a gap, not an absence.
  expect(screen.getByText('$1,000.00')).toBeTruthy();
 });
+
+it('takes the heading its screen gives it',()=>{
+ // The You tab names each of its sections and a device check captures them by name. When this chart
+ // replaced that screen's own treemap it brought its own title, and "Spending by category" vanished.
+ render(<CategorySplit code={AUD} heading="Spending by category" slices={[slice('Groceries','500000')]}/>);
+ expect(screen.getByRole('heading',{name:'Spending by category'})).toBeTruthy();
+});
