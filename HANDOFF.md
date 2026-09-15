@@ -476,3 +476,15 @@ without scrolling — the same cost as at default text.
 
 Still open and still the owner's: the installable APK and the both-theme visual review. Still missing and
 not a code task: the per-task usability inventory.
+
+## Run 34958400240 green — screenshots allowed
+
+`59f65ca`. The owner could not screenshot or record the app, so he could not show anyone what was wrong
+with it. FLAG_SECURE is removed. The gate's own screenshot path changed with it — `NativeEvidence` no
+longer clears and restores the flag, which would have re-enabled blocking at runtime — and green confirms
+the evidence captures still work.
+
+Trade recorded in the code, the README and the gate log: app content is now visible in the recent-apps
+switcher and to screen recorders; the app lock, encrypted database and key protection are unchanged. If it
+is ever wanted back, a setting defaulting to protected with a one-tap allow is the shape to use, not the
+blanket flag.

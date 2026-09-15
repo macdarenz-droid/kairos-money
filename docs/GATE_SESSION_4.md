@@ -463,3 +463,19 @@ tile was rebuilt out from under a tap when saving created a duplicate, and the w
 own height at large text. Two were the test reading the DOM without waiting for it — a tap that found and
 clicked in separate evaluations, and a precondition that asked the form a question before the form existed.
 None was the text zoom that the first three failures were attributed to.
+
+## Run 34958400240 — green with screenshots allowed
+
+`59f65ca`. FLAG_SECURE is gone from the app, so the owner can photograph his own screen to report a
+problem with it. The run matters beyond the usual pass because this change touched the gate's own
+screenshot machinery: `NativeEvidence` used to clear the flag before each capture and re-add it afterwards,
+and with the app no longer setting it that restore would have switched blocking on at runtime. Green
+confirms both halves — the app does not block capture, and the evidence screenshots still hold real pixels
+without the clear-and-restore.
+
+`FoundationInstrumentedTest` now asserts the flag is absent, in the same place it once asserted it was
+present, so nothing reintroduces it silently.
+
+What this gives up, recorded so it is not rediscovered as a surprise: app content is visible in the
+recent-apps switcher and to screen recorders. The app lock, the encrypted database and the key protection
+are unchanged.
