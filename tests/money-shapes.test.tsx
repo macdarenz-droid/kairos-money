@@ -5,6 +5,7 @@ import {FlowBar} from '../src/ui/design/FlowBar';
 import {MonthBalance} from '../src/ui/design/MonthBalance';
 import {DayStrip} from '../src/ui/design/DayStrip';
 import {CategorySplit} from '../src/ui/design/CategorySplit';
+import {AxisPositions} from '../src/ui/design/AxisPositions';
 import {currency} from '../src/core/money';
 
 const AUD=currency('AUD');
@@ -211,4 +212,24 @@ it('takes the heading its screen gives it',()=>{
  // replaced that screen's own treemap it brought its own title, and "Spending by category" vanished.
  render(<CategorySplit code={AUD} heading="Spending by category" slices={[slice('Groceries','500000')]}/>);
  expect(screen.getByRole('heading',{name:'Spending by category'})).toBeTruthy();
+});
+
+it('places each axis rather than filling a bar, because these are not scores',()=>{
+ // A bar that fills from the left reads as "how well am I doing out of a hundred". These describe a
+ // pattern the ledger shows, and the app says so explicitly elsewhere; the drawing must not contradict it.
+ render(<AxisPositions axes={[{name:'Control',at:72},{name:'Impulse',at:31},{name:'Friction',at:null},{name:'Volatility',at:5}]}/>);
+ const marks=[...document.querySelectorAll<HTMLElement>('.axis-mark')];
+ // Three placed, one unknown: the gap draws its track and no mark, so it reads as a gap and not a zero.
+ expect(marks).toHaveLength(3);
+ expect(marks[0]!.style.insetInlineStart).toBe('72%');
+ expect(document.querySelectorAll('.axis-track')).toHaveLength(4);
+ expect(screen.getByText('Unknown')).toBeTruthy();
+ expect(screen.getByText(/3 of 4 of these can be placed/)).toBeTruthy();
+ expect(screen.getByRole('img').getAttribute('aria-label')).toMatch(/Friction: unknown/);
+});
+
+it('keeps a mark inside its track however the value arrives',()=>{
+ render(<AxisPositions axes={[{name:'Control',at:140},{name:'Impulse',at:-20}]}/>);
+ const marks=[...document.querySelectorAll<HTMLElement>('.axis-mark')];
+ expect(marks.map(m=>m.style.insetInlineStart)).toEqual(['100%','0%']);
 });

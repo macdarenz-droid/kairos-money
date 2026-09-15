@@ -170,3 +170,17 @@ details[open] > summary::before { transform: rotate(45deg); }
   border: 1px solid var(--border-subtle); }
 .readiness-cell.is-ready { background: var(--heat-4); border-color: var(--heat-4); }
 @media (forced-colors: active) { .readiness-cell { forced-color-adjust: none; } }
+
+/* Four descriptive axes, as positions on a track. Never filled from the left: a filled bar reads as a
+   score out of a hundred, and these describe a pattern rather than rank anybody. */
+.axes { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.axes-grid { display: flex; flex-direction: column; gap: 10px; }
+.axis-row { display: grid; grid-template-columns: 80px 1fr 56px; align-items: center; gap: 10px; }
+.axis-name { font-size: 12px; line-height: 18px; color: var(--text-secondary); }
+.axis-track { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2);
+  border: 1px solid var(--border-subtle); }
+.axis-mark { position: absolute; top: 50%; width: 10px; height: 10px; margin-inline-start: -5px;
+  transform: translateY(-50%); border-radius: 50%; background: var(--flow-out);
+  box-shadow: 0 0 0 2px var(--surface-1); }
+.axis-value { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 340px) { .axis-row { grid-template-columns: 68px 1fr 48px; } }
