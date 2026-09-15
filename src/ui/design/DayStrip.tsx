@@ -40,7 +40,11 @@ export function DayStrip({days, code, today, span = 7}: {days: DaySpend[]; code:
 
   const latest = columns[columns.length - 1]!;
   const show = (value: bigint) => format(money(value, code));
-  const weekday = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-AU', {weekday: 'short', timeZone: 'UTC'});
+  // Two letters, not one: with a single initial, Tuesday and Thursday are both "T" and Saturday and Sunday
+  // are both "S", so half the row cannot be read. Today keeps its own weekday here and is marked by its
+  // colour and the rule under it, rather than by replacing the day with a dot nobody can see.
+  const weekday = (date: string) => new Date(`${date}T00:00:00Z`)
+    .toLocaleDateString('en-AU', {weekday: 'short', timeZone: 'UTC'}).slice(0, 2);
 
   return <figure className="strip">
     <figcaption>
@@ -52,7 +56,7 @@ export function DayStrip({days, code, today, span = 7}: {days: DaySpend[]; code:
       aria-label={`Spending on each of the last ${span} days, ending today. The heaviest was ${show(peak)}. Every day is listed in the table below.`}>
       {columns.map(column => <span key={column.date} className="strip-column" data-today={column.date === today || undefined}>
         <span className="strip-bar" style={{height: `${column.height}%`}}/>
-        <span className="strip-tick" aria-hidden="true">{column.date === today ? '·' : weekday(column.date).slice(0, 1)}</span>
+        <span className="strip-tick" aria-hidden="true">{weekday(column.date)}</span>
       </span>)}
     </div>
 

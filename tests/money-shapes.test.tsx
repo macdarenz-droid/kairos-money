@@ -131,6 +131,19 @@ it('shows a day with nothing spent as nothing, not as a gap in the record',()=>{
  expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
 });
 
+it('labels every day distinctly, and never trades today\'s name for a dot',()=>{
+ render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'}]} code={AUD} today="2026-08-26"/>);
+ const ticks=[...document.querySelectorAll('.strip-tick')].map(t=>t.textContent);
+ // One initial makes Tuesday and Thursday both "T" and Saturday and Sunday both "S", so four of seven
+ // columns cannot be told apart. Two letters are still narrow enough at doubled text.
+ expect(ticks).toEqual(['Th','Fr','Sa','Su','Mo','Tu','We']);
+ expect(new Set(ticks).size).toBe(7);
+ // Today is marked by its colour and the rule under its tick, not by replacing the day with a character
+ // too small to see.
+ expect(ticks).not.toContain('\u00b7');
+ expect(document.querySelector('[data-today] .strip-tick')?.textContent).toBe('We');
+});
+
 it('ignores money arriving when drawing what was spent',()=>{
  render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'},{date:'2026-08-26',minor:'500000'}]} code={AUD} today="2026-08-26"/>);
  expect(screen.getAllByText('$20.00').length).toBeGreaterThan(0);
