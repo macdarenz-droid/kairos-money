@@ -9,7 +9,16 @@ export function WindowedList<T>({items,id,render,label,onRange}:{items:T[];id:(i
   measureFrame.current=requestAnimationFrame(()=>{measureFrame.current=null;const pending=pendingHeights.current;pendingHeights.current=new Map();setHeights(old=>{let next:Map<string,number>|undefined;for(const [itemKey,itemHeight] of pending)if(old.get(itemKey)!==itemHeight){next??=new Map(old);next.set(itemKey,itemHeight);}return next??old;});});
  },[]);
  useEffect(()=>()=>{if(measureFrame.current!==null)cancelAnimationFrame(measureFrame.current);},[]);
- const offsets=useMemo(()=>{const result=[0];for(const item of items)result.push(result.at(-1)!+(heights.get(id(item))??80));return result;},[items,heights,id]);
+ // Unmeasured rows are estimated from the rows that have been measured, not from a constant. Only the
+ // mounted handful of a long list is ever measured, so a constant estimate decides the list's whole
+ // reported height: at 200% text zoom a row is far taller than the 80px this used to assume, the list
+ // under-reported its own height by about 43%, and a jump to the bottom landed short of the end. Worse,
+ // measuring the tail then grew the total underneath a viewport that was already as far down as it could
+ // go, leaving the final row unmounted with nothing to trigger another pass. Estimating from the mean
+ // converges after the first measured row, so the reported height, the scrollbar and a jump to the end
+ // are all right at any text size.
+ const estimate=useMemo(()=>{let count=0,sum=0;for(const value of heights.values()){count++;sum+=value;}return count?Math.round(sum/count):80;},[heights]);
+ const offsets=useMemo(()=>{const result=[0];for(const item of items)result.push(result.at(-1)!+(heights.get(id(item))??estimate));return result;},[items,heights,id,estimate]);
  let lower=0,upper=items.length;while(lower<upper){const mid=(lower+upper)>>>1;if(offsets[mid+1]!<top)lower=mid+1;else upper=mid;}
  const start=Math.max(0,lower-3);let end=lower;while(end<items.length&&offsets[end]!<top+560)end++;end=Math.min(items.length,end+3);
  // Report the visible window so a caller reading the ledger in pages can load the rows in view.
