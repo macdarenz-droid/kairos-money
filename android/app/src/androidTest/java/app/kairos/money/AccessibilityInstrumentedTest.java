@@ -28,7 +28,7 @@ public class AccessibilityInstrumentedTest {
             case "Today": content="Boolean(document.querySelector('.intelligence'))"; break;
             case "Ledger": content="document.querySelector('main').innerText.includes('Search transactions')"; break;
             case "Insights":
-                js("document.querySelectorAll('main > details').forEach(d=>{d.open=true;})");
+                js("document.querySelectorAll('main details').forEach(d=>{d.open=true;})");
                 content="Boolean(document.querySelector('.spending-patterns select')) && Boolean(document.querySelector('.intelligence select'))"; break;
             case "You": content="Boolean(document.querySelector('.money-visuals select')) && document.querySelector('main').innerText.includes('Combined position')"; break;
             default: content="Boolean(document.querySelector('dialog[open] h2')?.textContent.trim()==='Quick')";

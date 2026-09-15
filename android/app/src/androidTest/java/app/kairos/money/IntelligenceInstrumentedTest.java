@@ -284,7 +284,7 @@ public class IntelligenceInstrumentedTest {
             }
         }
     }
-    private void openInsightDetail() throws Exception {js("document.querySelectorAll('main > details').forEach(d=>{d.open=true;})");}
+    private void openInsightDetail() throws Exception {js("document.querySelectorAll('main details').forEach(d=>{d.open=true;})");}
     private void selectCurrency() throws Exception {click("Insights");openInsightDetail();awaitJs("Boolean(document.querySelector('.intelligence select'))");js("(()=>{const e=document.querySelector('.intelligence select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");openInsightDetail();}
     @Test public void a_intelligenceEvidenceAndThemes() throws Exception {
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
