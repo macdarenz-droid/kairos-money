@@ -36,6 +36,28 @@ the colour carries one meaning across the whole app.
 error, a warning. They are never used as chart series. Status colours that double as identity stop being
 readable as status.
 
+## Ink on a heat tile: `--heat-ink-1` … `--heat-ink-5`
+
+The ramp climbs toward light in the dark theme and toward dark in the light one. A single rule for which
+text colour sits on which step therefore cannot serve both, and the first version of it did not: white on
+dark-theme `heat-5` measured **2.67:1**, well under AA, because that step is the lightest one there.
+
+Each step now carries its own ink, per theme. Measured contrast of every pairing:
+
+| Step | Dark | Light |
+|---|---|---|
+| `heat-1` | 13.15 | 13.15 |
+| `heat-2` | 11.27 | 11.27 |
+| `heat-3` | 7.28 | 7.41 |
+| `heat-4` | 4.80 | 4.79 |
+| `heat-5` | 7.45 | 7.94 |
+
+Light `heat-4` was re-stepped from `#5372DA` to `#4C6BD6` to clear 4.5:1 against white; both ramps remain
+monotonic in OKLab lightness.
+
+Because the ramp inverts, **no caption may say "darker means more"** — it is true in one theme and false
+in the other. Chroma rises with the step in both, so "stronger colour" is the phrasing that stays true.
+
 ## Rules that hold for any chart added later
 
 - Colour is never the only signal. Every series is named in a legend, in its own mark's label, or both,

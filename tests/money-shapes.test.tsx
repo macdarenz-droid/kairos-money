@@ -4,6 +4,7 @@ import {cleanup,fireEvent,render,screen} from '@testing-library/react';
 import {FlowBar} from '../src/ui/design/FlowBar';
 import {MonthBalance} from '../src/ui/design/MonthBalance';
 import {DayStrip} from '../src/ui/design/DayStrip';
+import {CategorySplit} from '../src/ui/design/CategorySplit';
 import {currency} from '../src/core/money';
 
 const AUD=currency('AUD');
@@ -162,4 +163,44 @@ it('keeps one scale across every month, so turning the page never rescales the p
  // same height it would have if each page were scaled to itself.
  expect(earlier[0]).toBe('100%');
  expect(later[0]).toBe('50%');
+});
+
+const slice=(name:string,minor:string)=>({name,minor,ids:[name]});
+
+it('leads with the gap when most spending has no category, instead of drawing it as a finding',()=>{
+ // The screenshot complaint: a treemap of one enormous "Uncategorised" rectangle is a picture of nothing,
+ // and drawing it anyway dresses a gap up as an answer.
+ render(<CategorySplit code={AUD} slices={[slice('Uncategorised','800000'),slice('Groceries','200000')]}/>);
+ expect(screen.getByText(/has no category yet/)).toBeTruthy();
+ expect(screen.getByText(/\$8,000\.00 of \$10,000\.00/)).toBeTruthy();
+ // What is known is still drawn, and the blank block is not.
+ expect(document.querySelectorAll('.split-tile')).toHaveLength(1);
+});
+
+it('draws the kinds of spending once there are kinds',()=>{
+ render(<CategorySplit code={AUD} slices={[
+  slice('Groceries','500000'),slice('Transport','300000'),slice('Eating out','200000')]}/>);
+ expect(document.querySelectorAll('.split-tile')).toHaveLength(3);
+ expect(screen.getByText(/3 kinds of spending/)).toBeTruthy();
+ // Largest first, and the ramp runs darkest to lightest with it.
+ const levels=[...document.querySelectorAll('.split-tile')].map(t=>t.getAttribute('class')!.match(/level-(\d)/)![1]);
+ expect(Number(levels[0])).toBeGreaterThan(Number(levels[2]));
+});
+
+it('never leaves a category unnamed or unreachable',()=>{
+ const picked:string[]=[];
+ render(<CategorySplit code={AUD} slices={[slice('Groceries','500000'),slice('Uncategorised','100000')]} onCategory={n=>picked.push(n)}/>);
+ // Colour alone never carries identity: every category is a row in the table, uncategorised included.
+ expect(screen.getByRole('img').getAttribute('aria-label')).toMatch(/Largest is Groceries/);
+ expect(screen.getAllByRole('row')).toHaveLength(3);
+ fireEvent.click(screen.getByRole('button',{name:'Uncategorised'}));
+ expect(picked).toEqual(['Uncategorised']);
+});
+
+it('says there is nothing to draw rather than drawing an empty box',()=>{
+ render(<CategorySplit code={AUD} slices={[slice('Uncategorised','100000')]}/>);
+ expect(screen.getByText(/nothing to draw/)).toBeTruthy();
+ expect(document.querySelector('.split-plot')).toBeNull();
+ // The amount is still reported: it is a gap, not an absence.
+ expect(screen.getByText('$1,000.00')).toBeTruthy();
 });

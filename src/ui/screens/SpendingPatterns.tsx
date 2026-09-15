@@ -10,6 +10,7 @@ import {SourceLine} from '../design/SourceLine';
 import {SpendingCalendar} from '../design/SpendingCalendar';
 import {FlowBar} from '../design/FlowBar';
 import {MonthBalance} from '../design/MonthBalance';
+import {CategorySplit} from '../design/CategorySplit';
 import {useSession} from '../session';
 export function SpendingPatterns(){
  const session=useSession(),[selectedCode,setCode]=useState<string|null>(null),[month,setMonth]=useState('all'),[account,setAccount]=useState('all'),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
@@ -47,6 +48,15 @@ export function SpendingPatterns(){
      opening this screen is asking what their money looks like, and no paragraph answers that as fast. */}
  <FlowBar flow={{inMinor:p.credits,outMinor:(BigInt(p.total)+BigInt(p.otherDebits)).toString()}} code={code} label={period}/>
  <MonthBalance months={monthFlows} code={code}/>
+ {/* Kinds of spending, once there are kinds. Recorded purchases and fees only: transfers and debits
+     awaiting review are not consumption and would distort every block. */}
+ <CategorySplit code={code} slices={[...p.spending.reduce((map,t)=>{
+   const name=t.category&&t.category!=='Uncategorised'?t.category:'Uncategorised';
+   const cell=map.get(name)??{name,minor:0n,ids:[] as string[]};
+   cell.minor+=BigInt(t.minor)<0n?-BigInt(t.minor):BigInt(t.minor);cell.ids.push(t.id);map.set(name,cell);return map;
+  },new Map<string,{name:string;minor:bigint;ids:string[]}>()).values()].map(c=>({name:c.name,minor:c.minor.toString(),ids:c.ids}))}
+  onCategory={name=>{const slice=p.spending.filter(t=>(t.category&&t.category!=='Uncategorised'?t.category:'Uncategorised')===name);
+   show(name,slice.map(t=>t.id),`Recorded purchases and fees filed under ${name}.`);}}/>
  <SpendingCalendar days={daily} code={code} onDay={date=>show(date,daily.filter(d=>d.date===date).length?s.transactions.filter(t=>t.date===date&&t.currency===code&&BigInt(t.minor)<0n).map(t=>t.id):[],`Everything recorded on ${date}.`)}/>
  <p className="meta">{p.rows.length} settled transactions · {p.start} to {p.end}. {p.pending} pending entries excluded. Accounts can cover different dates, so these are totals for recorded activity, not a claim that every day is complete.</p>
  <Row trailing={<Button variant="quiet" onClick={()=>show('Recorded spending',p.spending.map(t=>t.id),'Purchases and fees identified from statement text or assigned essential/discretionary categories. Transfers and unclear debits are excluded.')}>{amount(p.total,'recorded purchases and fees')}</Button>}>Recorded purchases and fees</Row>

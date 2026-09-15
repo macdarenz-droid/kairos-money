@@ -67,7 +67,7 @@ export function SpendingCalendar({days, code, onDay}: {days: DaySpend[]; code: C
       <p className="meta">spent this month</p>
     </div>
 
-    <div className="calendar-grid" role="grid" aria-label={`Daily spending for ${month}. Darker means more spent.`}>
+    <div className="calendar-grid" role="grid" aria-label={`Daily spending for ${month}. Stronger colour means more spent.`}>
       {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => <span key={i} className="calendar-weekday" aria-hidden="true">{d}</span>)}
       {Array.from({length: lead}, (_, i) => <span key={`lead${i}`} className="calendar-pad" aria-hidden="true"/>)}
       {cells.map(cell => {
@@ -85,7 +85,7 @@ export function SpendingCalendar({days, code, onDay}: {days: DaySpend[]; code: C
       {[1, 2, 3, 4, 5].map(n => <span key={n} className={`calendar-key level-${n}`}/>)}
       <span className="meta">More</span>
     </div>
-    <p className="meta">Each square is a day. Darker means more spent. The heaviest day this month is {label(peak)}.</p>
+    <p className="meta">Each square is a day. Stronger colour means more spent. The heaviest day this month is {label(peak)}.</p>
 
     <details>
       <summary>Read this month as a list</summary>
