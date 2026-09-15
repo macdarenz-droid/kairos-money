@@ -63,7 +63,14 @@ export function repeatEntryProposals(entries:readonly ManualEntry[],today:string
   if(seen.has(key))continue;
   seen.add(key);
   proposals.push({
-   id:'repeat_entry:'+entry.id,
+   // Identified by what makes it distinct, not by whichever entry happens to represent the group.
+   //
+   // These proposals are deduplicated by description, amount and account, so several entries can share
+   // one tile. Keying the tile on entry.id meant the identity changed whenever a newer entry joined the
+   // group — which is exactly what recording the same expense again does. The tile is keyed on this id in
+   // React, so saving from a tile destroyed and rebuilt the very button that had just been pressed, and a
+   // tap landing in that window went nowhere. The evidence below still names the specific entry.
+   id:'repeat_entry:'+key,
    kind:'repeat_entry',
    label:entry.description,
    detail:`Last recorded ${entry.date}.`,

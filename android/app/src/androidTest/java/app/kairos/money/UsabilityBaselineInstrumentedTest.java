@@ -126,11 +126,15 @@ public class UsabilityBaselineInstrumentedTest {
             try {
                 taps=0;typingSessions=0;
                 tap(labelled("Record "+PROBE));
-                // Two runs have failed here waiting for the sheet the tile opens, and the page text alone
-                // could not say why: a closed <dialog> and an unrendered one look identical in innerText.
-                // The tap is now proven to land, so what is left to distinguish is whether the sheet was
-                // rendered at all. These are the facts that separate the remaining explanations, reported
-                // whether or not the wait succeeds.
+                // Three runs failed here, and the cause was not the text zoom this task changes — it was
+                // that saving from the tile replaced the tile. The proposal was identified by whichever
+                // entry represented its group, so recording the same expense again moved that identity to
+                // the new entry, React rebuilt the button, and the next tap reached a node it had already
+                // discarded. Reproduced in jsdom with no zoom at all; the fix is in the proposal's
+                // identity, and tests/repeat-tile-identity.test.tsx holds it.
+                //
+                // The capture stays, because it is what finally told a closed <dialog> apart from one that
+                // was never rendered, and that distinction is what ended three runs of guessing.
                 sheetState=js("(()=>{const dialogs=Array.from(document.querySelectorAll('dialog'));return JSON.stringify({"
                     +"dialogs:dialogs.length,open:dialogs.map(d=>d.open),"
                     +"tile:Boolean("+labelled("Record "+PROBE)+"),"
