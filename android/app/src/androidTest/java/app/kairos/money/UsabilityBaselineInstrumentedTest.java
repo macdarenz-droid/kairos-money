@@ -1,7 +1,9 @@
 package app.kairos.money;
 
 import static org.junit.Assert.*;
+import android.os.Bundle;
 import androidx.test.core.app.ActivityScenario;
+import androidx.test.platform.app.InstrumentationRegistry;
 import android.os.SystemClock;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -92,11 +94,19 @@ public class UsabilityBaselineInstrumentedTest {
 
             File directory=new File(activity.getExternalFilesDir(null),"evidence");
             assertTrue(directory.exists()||directory.mkdirs());
-            Files.write(new File(directory,"usability-baseline.json").toPath(),new JSONObject()
+            // The evidence file only reaches the build artifact, which is not always retrievable, and an
+            // assertion message prints only on failure. Instrumentation status is written by `am instrument`
+            // on success too, so the measured figures reach the gate log where they can actually be read.
+            JSONObject report=new JSONObject()
                 .put("measurement","Taps and typing sessions performed against the shipped UI on an Android 34 emulator.")
                 .put("note","A baseline, not a target. A tap count that improves while a confirmation disappears is a regression.")
-                .put("confirmation_retained",true).put("tasks",tasks)
-                .toString(2).getBytes(StandardCharsets.UTF_8));
+                .put("confirmation_retained",true).put("tasks",tasks);
+            Bundle status=new Bundle();
+            status.putString("stream","\nusability-baseline: "+report.toString()+"\n");
+            InstrumentationRegistry.getInstrumentation().sendStatus(0,status);
+
+            Files.write(new File(directory,"usability-baseline.json").toPath(),
+                report.toString(2).getBytes(StandardCharsets.UTF_8));
 
             // Remove exactly what this test created, so later classes see the database as they would have.
             //
