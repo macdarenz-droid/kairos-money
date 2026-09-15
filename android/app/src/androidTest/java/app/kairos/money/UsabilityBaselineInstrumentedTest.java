@@ -2,7 +2,6 @@ package app.kairos.money;
 
 import static org.junit.Assert.*;
 import androidx.test.core.app.ActivityScenario;
-import androidx.test.platform.app.InstrumentationRegistry;
 import android.os.SystemClock;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -17,13 +16,17 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * What entering data actually costs, measured on the device.
  *
- * LOW_EFFORT_USABILITY.md requires a recorded baseline before any tap-count target is set, because the
- * interaction counts in LAZY_USER_SCAN.md were read from source rather than measured. This drives the
- * shipped UI through real tasks and counts every tap and typing session it performs, writing the result as
- * evidence. It asserts only the invariants already claimed — the repeat path needs no typing, and every
- * path still ends at a Save the user presses — and deliberately sets no target number.
+ * LOW_EFFORT_USABILITY.md requires a recorded baseline before any tap-count target, because the counts in
+ * LAZY_USER_SCAN.md were read from source rather than measured. This drives the shipped UI and counts every
+ * tap and typing session it performs.
+ *
+ * It runs after other instrumented classes against the same install, so it assumes no particular starting
+ * state: it uses whatever account already exists, creates its own uniquely named entry, and removes exactly
+ * what it created so later classes see the database as they would have. It asserts only the claims this pass
+ * makes and sets no target tap count.
  */
 public class UsabilityBaselineInstrumentedTest {
+    private static final String PROBE="Synthetic usability probe";
     private MainActivity activity;
     private int taps=0,typingSessions=0;
 
@@ -37,16 +40,14 @@ public class UsabilityBaselineInstrumentedTest {
         while(SystemClock.elapsedRealtime()<deadline){if("true".equals(js(condition)))return;Thread.sleep(150);}
         fail("Condition never held: "+condition+"; page: "+js("document.body.innerText"));
     }
+    private static String named(String name){
+        return "Array.from(document.querySelectorAll('button')).find(e=>e.textContent.trim()==="+JSONObject.quote(name)+")";
+    }
+    private static String labelled(String fragment){
+        return "Array.from(document.querySelectorAll('button')).find(e=>(e.getAttribute('aria-label')||'').includes("+JSONObject.quote(fragment)+"))";
+    }
     /** One tap by the user, counted. */
-    private void tap(String name) throws Exception {
-        String button="Array.from(document.querySelectorAll('button')).find(e=>e.textContent.trim()==="+JSONObject.quote(name)+")";
-        awaitJs("Boolean("+button+")");js(button+".click()");taps++;
-    }
-    /** One tap on a control matched by its accessible label, counted. */
-    private void tapLabelled(String fragment) throws Exception {
-        String button="Array.from(document.querySelectorAll('button')).find(e=>(e.getAttribute('aria-label')||'').includes("+JSONObject.quote(fragment)+"))";
-        awaitJs("Boolean("+button+")");js(button+".click()");taps++;
-    }
+    private void tap(String selector) throws Exception {awaitJs("Boolean("+selector+")");js(selector+".click()");taps++;}
     /** One typing session: the keyboard appears and the user types. */
     private void type(String label,String text) throws Exception {
         String node="Array.from(document.querySelectorAll('label')).find(e=>e.textContent.startsWith("+JSONObject.quote(label)+"))?.querySelector('input')";
@@ -55,45 +56,48 @@ public class UsabilityBaselineInstrumentedTest {
         typingSessions++;
     }
     private void unlock() throws Exception {
-        awaitJs("document.body.innerText.includes('Welcome back')");type("PIN","246810");tap("Unlock");
+        awaitJs("document.body.innerText.includes('Welcome back')");type("PIN","246810");tap(named("Unlock"));
         awaitJs("Boolean(document.querySelector('nav'))");
-        // Setup is not part of any measured task.
-        taps=0;typingSessions=0;
+        taps=0;typingSessions=0;   // Unlocking is not part of any measured task.
+    }
+    /**
+     * The container rendering this test's own entry, found by its text and narrowed to the innermost match.
+     *
+     * Entries render as div.section-gap inside a section that wraps all of them, so matching the outer
+     * element would reach another entry's Delete button. The tightest container holding the probe text is
+     * the probe's own row.
+     */
+    private static String probeSection(){
+        return "Array.from(document.querySelectorAll('div.section-gap')).filter(d=>d.textContent.includes("
+            +JSONObject.quote(PROBE)+")).sort((a,b)=>a.textContent.length-b.textContent.length)[0]";
     }
 
     @Test public void recordingATransactionAndRepeatingItCostWhatIsMeasuredHere() throws Throwable {
         JSONArray tasks=new JSONArray();
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a->activity=a);unlock();
-
-            // An account is required before a transaction can be recorded; its cost is recorded separately
-            // because it is a one-time setup rather than an everyday task.
-            tap("Set up an account");
-            type("Account name","Everyday");type("Institution","Synthetic Bank");
-            tap("Save account");
-            awaitJs("!document.body.innerText.includes('Save account')");
-            tasks.put(new JSONObject().put("task","set up the first account").put("taps",taps).put("typing_sessions",typingSessions).put("everyday",false));
-            taps=0;typingSessions=0;
+            assertEquals("This baseline needs an account, which the earlier classes create.","true",
+                js("document.body.innerText.includes('Accounts set up')"));
 
             // Task one: record an expense from scratch.
-            tap("Add transaction");
-            type("Amount","15.00");type("Description","Cafe Mika");
-            tap("Save transaction");
-            awaitJs("!document.body.innerText.includes('Save transaction')");
+            tap(named("Add transaction"));
+            type("Amount","15.00");type("Description",PROBE);
+            tap(named("Save transaction"));
+            awaitJs("!Boolean("+named("Save transaction")+")");
             int scratchTaps=taps,scratchTyping=typingSessions;
-            tasks.put(new JSONObject().put("task","record an expense from scratch").put("taps",scratchTaps).put("typing_sessions",scratchTyping).put("everyday",true));
-            assertTrue("Recording from scratch should require typing the amount and description",scratchTyping>=2);
+            tasks.put(new JSONObject().put("task","record an expense from scratch").put("taps",scratchTaps).put("typing_sessions",scratchTyping));
+            assertTrue("Recording from scratch types the amount and the description",scratchTyping>=2);
             taps=0;typingSessions=0;
 
-            // Task two: record the same expense again from the repeat tile.
-            tapLabelled("Record Cafe Mika");
-            awaitJs("Boolean(Array.from(document.querySelectorAll('button')).find(e=>e.textContent.trim()==='Save transaction'))");
-            tap("Save transaction");
-            awaitJs("!document.body.innerText.includes('Save transaction')");
+            // Task two: record the same expense again from its repeat tile.
+            tap(labelled("Record "+PROBE));
+            awaitJs("Boolean("+named("Save transaction")+")");
+            tap(named("Save transaction"));
+            awaitJs("!Boolean("+named("Save transaction")+")");
             int repeatTaps=taps,repeatTyping=typingSessions;
-            tasks.put(new JSONObject().put("task","record the same expense again").put("taps",repeatTaps).put("typing_sessions",repeatTyping).put("everyday",true));
+            tasks.put(new JSONObject().put("task","record the same expense again").put("taps",repeatTaps).put("typing_sessions",repeatTyping));
 
-            // The claims this pass actually makes, asserted; no target tap count is asserted anywhere.
+            // The claims this pass makes, asserted. No target tap count is asserted anywhere.
             assertEquals("Repeating an entry must need no typing",0,repeatTyping);
             assertTrue("Repeating must not cost more taps than entering from scratch",repeatTaps<=scratchTaps);
             assertTrue("Repeating must still end at a Save the user presses",repeatTaps>=2);
@@ -103,9 +107,21 @@ public class UsabilityBaselineInstrumentedTest {
             Files.write(new File(directory,"usability-baseline.json").toPath(),new JSONObject()
                 .put("measurement","Taps and typing sessions performed against the shipped UI on an Android 34 emulator.")
                 .put("note","A baseline, not a target. A tap count that improves while a confirmation disappears is a regression.")
-                .put("confirmation_retained",true)
-                .put("tasks",tasks).toString(2).getBytes(StandardCharsets.UTF_8));
-            InstrumentationRegistry.getInstrumentation().getTargetContext();
+                .put("confirmation_retained",true).put("tasks",tasks)
+                .toString(2).getBytes(StandardCharsets.UTF_8));
+
+            // Remove exactly what this test created, so later classes see the database as they would have.
+            js("Array.from(document.querySelectorAll('nav button')).find(e=>e.textContent.trim()==='Ledger').click()");
+            for(int removed=0;removed<4;removed++){
+                if(!"true".equals(js("Boolean("+probeSection()+")")))break;
+                String delete="Array.from("+probeSection()+".querySelectorAll('button')).find(e=>e.textContent.trim()==='Delete')";
+                if(!"true".equals(js("Boolean("+delete+")")))break;
+                js(delete+".click()");
+                awaitJs("Boolean("+named("Delete transaction")+")");
+                js(named("Delete transaction")+".click()");
+                awaitJs("!Boolean("+named("Delete transaction")+")");
+            }
+            assertEquals("The baseline must leave none of its own entries behind","false",js("Boolean("+probeSection()+")"));
         }
     }
 }
