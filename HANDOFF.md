@@ -415,3 +415,22 @@ is claimed from them. `docs/LOW_EFFORT_USABILITY.md` is where they land.
 Still open, unchanged and not closable from this environment: the installable APK and the both-theme
 visual review, both of which need a human to open the run artifact. Artifact download is refused by the
 egress proxy under organization policy; no bypass was attempted.
+
+## Run 34934836916 green — the usability baseline is measured, and two virtualization defects are fixed
+
+`f1ce686`, both jobs, 14 classes, 22 tests. This run carries everything: Session 4, Session 5, the
+usability pass, the two remaining proposal kinds, and the `WindowedList` fixes.
+
+The baseline figures exist now instead of being asserted-but-unreadable. From scratch: 2 taps, 2 typing
+sessions. Repeating from the tile: 2 taps, 0 typing sessions. Confirmation retained in both. **Repeating
+removes the typing, not the taps** — the tap counts are identical, so there is no tap-count improvement to
+claim, and the numbers are a floor rather than a typical entry because the measured path takes every
+default it is offered and sets no category.
+
+Getting there cost two red gates, both genuine app defects at 200% text zoom, both in the virtualized
+ledger: a constant row-height estimate, and a height cache that survived the text-size change. Either one
+alone left the last transaction unreachable by scrolling. Someone reading at 200% text is the person least
+able to work around that, so this was worth the two runs. `ADR/0039`.
+
+Still open and unchanged, still the user's to close: the installable APK and the both-theme visual review.
+Artifact download is refused by the egress proxy under organization policy; no bypass was attempted.

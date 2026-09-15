@@ -46,7 +46,7 @@ Create a complete inventory from the final code and accepted roadmap. For each t
 
 Compare the existing route with the proposed route using real device walkthroughs and synthetic financial fixtures. Prioritize frequent high-effort tasks. Set measured per-task targets after baselining rather than inventing current tap counts. Verify equal financial results, preserved feature access, editable defaults and successful error recovery. Produce a before/after matrix and evidence-linked report, then run one combined regression/acceptance gate for the completed usability work. Do not create a separate milestone or gate per shortcut.
 
-## Baseline instrumentation — added, not yet reported
+## Baseline instrumentation — measured on the device, run 34934836916
 
 `UsabilityBaselineInstrumentedTest` drives the shipped UI on the emulator and counts every tap and typing
 session it performs, writing `docs/evidence/usability-baseline.json`. It measures three things separately:
@@ -55,8 +55,34 @@ from scratch; and recording the same expense again from a repeat tile.
 
 It asserts only the claims this pass actually makes — repeating needs no typing, repeating costs no more
 taps than entering from scratch, and repeating still ends at a Save the user presses — and sets no target
-tap count, because a target before a measurement is the thing this file exists to prevent. The numbers
-themselves are reported once the gate carrying this test reports.
+tap count, because a target before a measurement is the thing this file exists to prevent.
+
+### The measured figures
+
+Run [34934836916](https://github.com/macdarenz-droid/kairos-money/actions/runs/34934836916), Android 34
+emulator, reported through instrumentation status so the numbers are readable on a passing run rather than
+only inside an artifact:
+
+| Task | Taps | Typing sessions |
+|---|---|---|
+| Record an expense from scratch | 2 | 2 |
+| Record the same expense again, from its repeat tile | 2 | 0 |
+
+`confirmation_retained: true`. Both paths still end at a Save the user presses.
+
+**What this shows, stated exactly.** Repeating an entry removes the typing, not the taps. Both tasks cost
+two taps; the difference is two typing sessions against none. The honest claim for this pass is therefore
+"repeating an entry needs no typing", and not any claim about fewer taps — the tap counts are identical,
+and saying otherwise would be reading an improvement into a number that does not show one.
+
+The taps counted are, from scratch: Add transaction, then Save transaction. Repeating: the repeat tile,
+then Save transaction. Unlocking is excluded deliberately, as it belongs to no task.
+
+**What these numbers do not cover.** They are a floor, not a typical entry. The measured path takes every
+default it is offered — the remembered account, today's date, and no category — so a user who sets a
+category at entry, changes the account, or backdates the entry pays more taps than this. It is one
+synthetic task on an emulator, at default text size, performed by a program that always knows exactly which
+control to press. None of that is what a person does, and no target is derived from it.
 
 ### Bulk categorisation is measured in the source UI test, deliberately
 

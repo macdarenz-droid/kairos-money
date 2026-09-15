@@ -408,3 +408,22 @@ the assertion fails — so on a passing run the numbers existed, were enforced, 
 mode whatever the result code and the gate runner prints unconditionally. The mechanism is the same one
 that already prints `app.kairos.money.<Class>:` and the JUnit progress dots in every run above. No
 tap-count comparison is stated until that run reports the figures.
+
+## Run 34934836916 — green, and the two red runs that preceded it
+
+`f1ce686`. Both jobs pass; 14 instrumented classes, 22 tests, 13 min 44 s on the device. Cold start
+`process_cold_median_ms` 903 and `fresh_install_ms` 823 against the 2,000 ms and 2,500 ms limits,
+`failures: []`. `LedgerPerformanceInstrumentedTest` 80.6 s, `UsabilityBaselineInstrumentedTest` 10.2 s.
+
+Two runs went red first, both in `LedgerPerformanceInstrumentedTest` at 200% text zoom, and both were real
+app defects rather than test problems. `WindowedList` estimated every unmeasured row at a constant 80px, so
+at 200% zoom it under-reported a 20,000-row list by 43% and a jump to the bottom landed short of the end;
+and it kept heights measured before a text-size change, so fixing the estimate alone changed nothing. The
+second red run proved that by failing byte-identically to the first, `scroll_top: 22577.904296875` included
+— an identical failure was the evidence that the first fix was inert, not evidence of variance.
+`ADR/0039` records the decision; `tests/windowed-tail.test.tsx` covers both halves.
+
+The measured usability baseline is now readable on a passing run, which is what `625f656` was for:
+recording an expense from scratch costs 2 taps and 2 typing sessions, recording it again from its repeat
+tile costs 2 taps and 0 typing sessions, confirmation retained in both. Repeating removes the typing, not
+the taps. `docs/LOW_EFFORT_USABILITY.md` holds the figures and what they do not cover.
