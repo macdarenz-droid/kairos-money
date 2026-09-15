@@ -346,3 +346,42 @@ class now prints its device phase checkpoints and a tail of the WebView console 
 both previously reached only the build artifact; each phase collects and reports the Java heap before and
 after; and the measured window is sampled in named sub-phases so a crash cannot be reported with a reading
 taken before the step that killed it.
+
+## Gate PASS — run 34912806907 (3c446b0)
+
+Both jobs green: source-gate and android-gate, every step including the full native instrumentation run
+(encryption, app flow, both themes, accessibility, acceptance, backup/restore, delete, post-delete).
+LedgerPerformanceInstrumentedTest passed, so `assertTrue(loadMs < 10000)` was evaluated and held: the
+20,000-row Ledger load is now under the 10,000 ms budget, from 44,012 ms on the immediately preceding
+commit. The exact phase timings are in that run's artifact (docs/evidence/ledger-20000.json) and are not
+quoted here, because artifact download is blocked from this environment; the passing assertion is the
+bound.
+
+Root cause, for the record. Signal.inputs embedded `transactions: Transaction[]` — the whole windowed
+corpus, every transaction carrying its own provenance payload — and analyse() serialised that once per
+signal. One screen open wrote 45,721,866 bytes across 24 rows, largest 5,796,371, into a column declared
+CHECK(json_valid(inputs)), so SQLite parsed each string before SQLCipher encrypted the pages. Device
+measurement: 24 writes, 37,403 ms, max 1,663 ms, of a 43,789 ms first row, against 3,382 ms for every
+ledger read combined.
+
+The fix stores the citation rather than the copy: window, coverage, pays, covered days, a transaction
+count, and the `evidence` list of transaction ids that was already there. The ledger and
+transaction_sources remain the single copy of provenance. In-memory Signal.inputs is unchanged, so
+computation and its tests are unaffected.
+
+| measure (20,000 transactions, local) | before | after |
+|---|---|---|
+| signals table payload | 45,721,866 B | 475,050 B |
+| largest stored signal | 5,796,371 B | 140,519 B |
+| 26 writes | 3,239 ms | 15 ms |
+| analyse() total | 7,221 ms | 2,020 ms |
+
+Two failures shared this one cause. The renderer crash on five consecutive runs was the same payload
+batched into a single ~45 MB bridge message; reverting the batching restored the assertion, and with the
+payload fixed there is nothing worth batching, so it stays reverted. And four earlier read-side repairs
+moved the load only ~20% between them because the cost was never a read.
+
+Why it survived review: JSON.stringify on a shared reference is invisible in the source and free at
+fixture scale, and nothing exercised analyse() at ledger scale in either time or size.
+tests/analyse-scale.test.ts now does, with a size budget, so a stored signal that scales with corpus size
+fails locally in seconds instead of on an emulator half an hour later.
