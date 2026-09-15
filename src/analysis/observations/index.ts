@@ -20,13 +20,18 @@ const amount=(minor:string,currency:Currency)=>({minor,currency});
 
 /** 1 — explain what accumulated, at what frequency and price. */
 function understand(metrics:Metric[],options:ObserveOptions):Observation[]{
- const category=found(metrics,'category_breakdown'),repeats=found(metrics,'repeated_purchases');
+ const category=found(metrics,'category_breakdown');
  if(!category)return [];
  const name=category.details.largest??'that category';
- const statement=repeats
-  ? `${name} came to this much, across ${repeats.details.evidenceTotal??repeats.value} purchases at ${repeats.details.merchant??'one merchant'}.`
-  : `${name} was the largest category in this period.`;
- return [{id:'understand:'+category.period,metric:'category_breakdown',concept:'understand',statement,
+ // This used to read "Uncategorised came to this much, across 23 purchases at transfer to … payid …",
+ // gluing two unrelated metrics with a comma: the biggest category, and the merchant label paid most
+ // often. Joined that way it states that those purchases belong to that category, which is usually
+ // false. The repeat count is a measure of its own and is listed as one, with its own evidence, and
+ // named merchants already have their own section in spending patterns.
+ return [{id:'understand:'+category.period,metric:'category_breakdown',concept:'understand',
+  statement:name==='Uncategorised'
+   ? 'Most spending in this period has no category yet, so the largest kind of spending cannot be named. Giving these transactions categories is what makes that answerable.'
+   : `${name} was the largest category in this period.`,
   figure:amount(category.value!,options.currency),visual:'bar',evidence:category.evidence,conditional:null,progress:null}];
 }
 

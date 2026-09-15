@@ -111,3 +111,22 @@ describe('the six concepts',()=>{
   }
  });
 });
+
+describe('the sentence about the largest category',()=>{
+ it('never presents repeated purchases as belonging to that category',()=>{
+  // It read: "Uncategorised came to this much, across 23 purchases at transfer to marc masarate payid
+  // phone from commbank app g." Two unrelated metrics joined by a comma, asserting that those purchases
+  // were in that category, which they usually are not — and the "merchant" was a transfer description.
+  const understand=run().find(o=>o.concept==='understand')!;
+  expect(understand.statement).not.toContain('came to this much');
+  expect(understand.statement).not.toMatch(/purchases at /);
+ });
+
+ it('says the largest kind of spending cannot be named when nothing is categorised',()=>{
+  const bare=snap(rows.map(r=>({...r,category:'Uncategorised',kind:'discretionary' as const})));
+  const understand=observe(buildIndex(bare),analyse(bare,month),month,{currency:AUD}).find(o=>o.concept==='understand')!;
+  expect(understand.statement).toContain('cannot be named');
+  // And it does not name "Uncategorised" as though it were a kind of spending.
+  expect(understand.statement).not.toMatch(/^Uncategorised was/);
+ });
+});
