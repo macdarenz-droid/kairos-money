@@ -2,7 +2,6 @@ import {validSplit,type Split} from './splits';
 import {manualRepository} from './manual';
 import type {Driver} from '../core/db/driver';
 import {queryPages} from '../core/db/query-pages';
-import {insertRows} from '../core/db/write-rows';
 import {currency,money,toDatabase} from '../core/money';
 import {computeSignals} from '../intelligence/signals';
 import {profile,distress} from '../intelligence/profile';
@@ -47,12 +46,9 @@ export function intelligenceRepository(driver:Driver){
  async function analyse(asOf:string,code:string,extraBill='0',cutPercent=0){return driver.transaction(async()=>{
   const s=await snapshot(asOf,code),all=windows(asOf).flatMap(w=>computeSignals(s,w)),signal=all.filter(v=>v.period.startsWith('trailing-90:')),period=asOf.slice(0,7);
   const old=(await driver.query('SELECT archetype FROM profiles WHERE period<? AND id LIKE ? ORDER BY period DESC LIMIT 1',[code+':'+period,code+':%']))[0];const p=profile(s,signal,old?.archetype?String(old.archetype):null),dismissed=await setting<Record<string,number>>('intelligence:dismissals',{}),cards=insights(s,signal,dismissed),buffer=await setting<string>('intelligence:buffer:'+code,'0');
-  // One native write per table, not one per row: on the device each single-row write cost far more
-  // than a 256-row read, and every signal in this pass shares the one computation time.
-  const computedAt=new Date().toISOString();
-  await insertRows(driver,'INSERT OR REPLACE INTO signals(id,period,key,value,computed_at,version,status,inputs)',all.map(v=>[code+':'+v.period+':'+v.key,code+':'+v.period,v.key,v.value,computedAt,1,v.status==='ok'?'ready':'insufficient_data',JSON.stringify(v)]));
+  for(const v of all)await driver.execute('INSERT OR REPLACE INTO signals(id,period,key,value,computed_at,version,status,inputs) VALUES(?,?,?,?,?,?,?,?)',[code+':'+v.period+':'+v.key,code+':'+v.period,v.key,v.value,new Date().toISOString(),1,v.status==='ok'?'ready':'insufficient_data',JSON.stringify(v)]);
   await driver.execute('INSERT OR REPLACE INTO profiles(id,period,archetype,axis_scores,confidence,version,covered_days) VALUES(?,?,?,?,?,?,?)',[code+':'+period,code+':'+period,p.archetype,JSON.stringify(p.axes),p.confidence,1,p.coveredDays]);
-  await insertRows(driver,'INSERT OR REPLACE INTO insights(id,created_at,kind,severity,title,body,evidence,state,projected_effect_minor,currency,research_id,action,threshold)',cards.map(i=>[i.id,computedAt,i.kind,i.triage?'triage':'normal',i.title,i.body,JSON.stringify(i),'new',toDatabase(money(BigInt(i.projectedMinor),s.currency)),code,i.researchId,i.action,i.threshold]));
+  for(const i of cards)await driver.execute('INSERT OR REPLACE INTO insights(id,created_at,kind,severity,title,body,evidence,state,projected_effect_minor,currency,research_id,action,threshold) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',[i.id,new Date().toISOString(),i.kind,i.triage?'triage':'normal',i.title,i.body,JSON.stringify(i),'new',toDatabase(money(BigInt(i.projectedMinor),s.currency)),code,i.researchId,i.action,i.threshold]);
   const goals=await driver.query('SELECT * FROM goals WHERE currency=? ORDER BY target_date,id',[code]);const cycles=payCycle(s);const goalRows=goals.map(g=>{const due=g.target_date?String(g.target_date):asOf;const payDates:string[]=[];for(const c of cycles){payDates.push(...scheduledDates(c,due));}return {id:String(g.id),name:String(g.name),target_minor:String(g.target_minor),funded_minor:String(g.funded_minor),target_date:String(g.target_date),kind:String(g.kind),perPay:due>=asOf?goalFunding(String(g.target_minor),String(g.funded_minor),due,asOf,payDates):null};});
   return {snapshot:s,signals:all,profile:p,insights:cards,forecast:forecast(s,buffer,{extraBill,cutPercent}),distress:distress(s,signal),payRise:payRise(s),goals:goalRows,buffer};
  });}
