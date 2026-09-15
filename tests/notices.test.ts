@@ -136,3 +136,15 @@ it('keeps the whole ledger readable when a notification is stored beside stateme
  expect(page.total).toBe(2);
  expect(await repo.imports.ledger()).toHaveLength(2);
 });
+
+it('counts an approved notification on today, without calling it confirmed', async () => {
+ // It was absent from the day's spending entirely: today's totals only counted settled rows, and an
+ // approved notification is pending until a statement confirms it. Counting it as settled would overstate
+ // the day; leaving it out meant the owner saw nothing where he had just approved money.
+ const {repo, notices} = await ready();
+ await notices.approve(notice({date: '2026-02-10', minor: '-1250'}));
+ await notices.approve(notice({id: 'notice-in', date: '2026-02-10', minor: '500'}));
+ const [totals] = await repo.manual.today('2026-02-10');
+ expect(totals).toMatchObject({currency: 'AUD', spending: '0', income: '0',
+   awaitingSpending: '1250', awaitingIncome: '500'});
+});

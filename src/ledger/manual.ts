@@ -70,7 +70,18 @@ export function manualRepository(driver:Driver){
   const entry=entries.find(e=>e.id===id)!;entry.links[leg]={batchId:candidate.batchId,sourceId:candidate.sourceId,transactionId};await write(entry);await syncManual(driver);
  });}
  async function unmatch(id:string){return driver.transaction(async()=>{const e=(await manualRecords(driver)).find(r=>r.id===id);if(!e)throw new Error('Manual entry not found.');e.links={};await write(e);await syncManual(driver);});}
- async function today(date:string){isoDay(date);const rows=await driver.query('SELECT amount_minor,currency FROM transactions WHERE posted_date=? AND transfer_group_id IS NULL AND status=?',[date,'settled']);const totals=new Map<string,{income:bigint;spending:bigint}>();for(const r of rows){const c=String(r.currency),t=totals.get(c)??{income:0n,spending:0n};const v=BigInt(String(r.amount_minor));if(v>0n)t.income+=v;else t.spending-=v;totals.set(c,t);}return [...totals].map(([currency,t])=>({currency,income:t.income.toString(),spending:t.spending.toString()}));}
+ async function today(date:string){isoDay(date);
+  const rows=await driver.query('SELECT amount_minor,currency,status FROM transactions WHERE posted_date=? AND transfer_group_id IS NULL AND status IN (?,?)',[date,'settled','pending']);
+  const totals=new Map<string,{income:bigint;spending:bigint;awaitingIncome:bigint;awaitingSpending:bigint}>();
+  for(const r of rows){
+   const c=String(r.currency),t=totals.get(c)??{income:0n,spending:0n,awaitingIncome:0n,awaitingSpending:0n};
+   const v=BigInt(String(r.amount_minor)),settled=String(r.status)==='settled';
+   if(v>0n){if(settled)t.income+=v;else t.awaitingIncome+=v;}
+   else{if(settled)t.spending-=v;else t.awaitingSpending-=v;}
+   totals.set(c,t);
+  }
+  return [...totals].map(([currency,t])=>({currency,income:t.income.toString(),spending:t.spending.toString(),
+   awaitingIncome:t.awaitingIncome.toString(),awaitingSpending:t.awaitingSpending.toString()}));}
  async function unresolved(){const result:Record<string,number>={};for(const entry of await manualRecords(driver)){const found=new Set<string>();for(const c of await candidates(entry.id)){if((await driver.query('SELECT id FROM transactions WHERE id=?',[hash('manual-transaction:'+entry.id+':'+c.leg)])).length)found.add(c.leg+':'+c.transactionId);}if(found.size)result[entry.id]=found.size;}return result;}
  return {list:()=>manualRecords(driver),save,remove,candidates,match,unmatch,today,unresolved};
 }
