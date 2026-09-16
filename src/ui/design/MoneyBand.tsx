@@ -51,6 +51,10 @@ export function MoneyBand() {
   if (session.state !== 'ready') return null;
   if (accounts.error || snapshot.error) return <p role="alert">Your money summary could not be read.</p>;
   if (snapshot.isPending || accounts.isPending) return <Skeleton label="Reading your money"/>;
+  // Absent rather than empty. With no accounts every tile is a zero, and four zeros above the first-run
+  // prompt is the app reporting on its own emptiness — the same thing the thirty-six roll-call was doing.
+  // The screen that asks for an account should be the only thing on it.
+  if (!live.length) return null;
 
   const band = moneyBand(snapshot.data, today);
   const held = live.filter(account => account.currency === code)
