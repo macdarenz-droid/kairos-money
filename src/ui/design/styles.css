@@ -171,14 +171,6 @@ details[open] > summary::before { transform: rotate(45deg); }
   font: inherit; text-align: left; overflow-wrap: anywhere; }
 .split-name:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 
-/* How much the app can answer yet. Marks, not controls: nothing here is tapped. */
-.readiness { margin: 0; display: flex; flex-direction: column; gap: 12px; }
-.readiness-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; }
-.readiness-cell { aspect-ratio: 1; border-radius: 3px; background: var(--surface-2);
-  border: 1px solid var(--border-subtle); }
-.readiness-cell.is-ready { background: var(--heat-4); border-color: var(--heat-4); }
-@media (forced-colors: active) { .readiness-cell { forced-color-adjust: none; } }
-
 /* Four descriptive axes, as positions on a track. Never filled from the left: a filled bar reads as a
    score out of a hundred, and these describe a pattern rather than rank anybody. */
 .axes { margin: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -259,3 +251,29 @@ details[open] > summary::before { transform: rotate(45deg); }
 .answer-value { font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -.3px;
   overflow-wrap: anywhere; }
 @media (max-width: 340px) { .answers { grid-template-columns: 1fr; } }
+
+/* The four figures the home screen leads with. Same tile language as the answer cards on Analysis — one
+   surface, one hairline, one radius — because they are siblings rather than two separate design ideas. */
+.money-band { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.band-tile { display: flex; flex-direction: column; gap: 3px; min-height: 104px; padding: 12px;
+  border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-1); }
+.band-label { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+.band-figure { font-size: 19px; line-height: 26px; font-weight: 600; letter-spacing: -.4px;
+  color: var(--text-primary); overflow-wrap: anywhere; }
+/* The change and the account count sit in the same slot and read the same: a quiet second line, never a
+   verdict. No colour on either — the arrow says the direction, and whether that direction is good depends
+   on which tile it is under. */
+.band-note { display: flex; align-items: center; gap: 3px; font-size: 11px; line-height: 16px;
+  color: var(--text-secondary); overflow-wrap: anywhere; }
+.band-note svg { flex-shrink: 0; }
+/* Pushed to the floor of the tile so every shape shares a baseline across the row. */
+.band-spark { margin-top: auto; width: 100%; height: 26px; display: block; overflow: visible; }
+/* A line and nothing else. The usual version washes the area under it in the series colour, and here that
+   broke the one thing the palette is for: copper sits lighter than blue at the same opacity, so an
+   identical fill made money arriving look louder than money leaving. The stroke is the data; the wash was
+   only ever decoration, and decoration that says something false is worse than none. */
+.band-spark-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.band-spark-in { stroke: var(--flow-in); }
+.band-spark-out { stroke: var(--flow-out); }
+@media (forced-colors: active) { .band-spark-line { stroke: CanvasText; } }
+@media (max-width: 340px) { .money-band { grid-template-columns: 1fr; } }
