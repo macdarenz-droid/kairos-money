@@ -339,3 +339,9 @@ details[open] > summary::before { transform: rotate(45deg); }
 .sheet-actions { position: sticky; bottom: 0; z-index: 2; margin-top: 16px;
   padding: 12px 0 calc(4px + env(safe-area-inset-bottom));
   background: var(--surface-1); border-top: 1px solid var(--border-subtle); }
+
+/* One chart, a lane per recurring merchant, sharing one axis and one scale. The lane numbers are drawn in
+   the plot because these labels are bank strings sixty characters long; the list underneath ties each
+   number to its merchant. */
+.timeline { width: 100%; height: auto; display: block; }
+.timeline-index { fill: var(--text-meta); font-size: 30px; text-anchor: middle; }

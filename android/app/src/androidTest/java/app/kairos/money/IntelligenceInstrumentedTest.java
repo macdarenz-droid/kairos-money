@@ -206,7 +206,7 @@ public class IntelligenceInstrumentedTest {
                 awaitJs("Boolean(document.querySelector('.fingerprint'))");
                 for(String heading:new String[]{"Money Fingerprint","Daily cashflow","Spending after payday","Recurring payment timeline","Spending by category","What changed","Recurring costs","Upcoming bills","Merchant history","Recorded net worth"}) {
                     if (heading.equals("Recurring payment timeline")) {
-                        awaitJs("Array.from(document.querySelectorAll('svg[aria-label]')).some(e=>e.getAttribute('aria-label').startsWith('synthetic fortnightly membership:') && e.querySelectorAll('circle').length>0)");
+                        awaitJs("Array.from(document.querySelectorAll('[aria-label]')).some(e=>e.getAttribute('aria-label').startsWith('synthetic fortnightly membership:') && e.querySelectorAll('circle').length>0)");
                     }
                     captureHeading(heading,theme.toLowerCase()+"-monthly-"+heading.toLowerCase().replace(' ','-'));
                 }
