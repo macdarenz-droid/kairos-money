@@ -80,12 +80,19 @@ const absolute = (minor: string) => BigInt(minor) < 0n ? -BigInt(minor) : BigInt
 const DEFAULT_KEY = 'notice-default-account';
 
 /**
- * The account a notification lands on when its own text does not say which one it is about.
+ * The account money is assumed to move through unless something says otherwise.
  *
- * Most bank notifications name no account, so without this every capture defaulted to whichever account
- * happened to be first in the list — which is a coin toss once there is more than one, made silently, on
- * real money. The owner names the account their card usually draws on, and anything the notice itself
- * identifies still overrides it.
+ * It began as a notification-only fallback, because most bank notifications name no account and every
+ * capture was otherwise landing on whichever account happened to sort first — a coin toss, made silently,
+ * on real money. It is the same question the rest of the app kept asking: which account is this person's
+ * main one. So it is one setting now, not two that can disagree, used as the fallback for a notification
+ * AND as the account a hand-entered transaction starts on.
+ *
+ * Anything more specific still wins: a notice that names its own account, or a different account picked
+ * on the form.
+ *
+ * The stored key still reads "notice-default-account" because that is what is already saved on the
+ * owner's phone, and renaming it would silently discard the choice he has already made.
  */
 export async function defaultNoticeAccount(driver: Driver): Promise<string | null> {
   const row = (await driver.query('SELECT value FROM app_settings WHERE key=?', [DEFAULT_KEY]))[0];

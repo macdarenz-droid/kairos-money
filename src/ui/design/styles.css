@@ -345,3 +345,13 @@ details[open] > summary::before { transform: rotate(45deg); }
    number to its merchant. */
 .timeline { width: 100%; height: auto; display: block; }
 .timeline-index { fill: var(--text-meta); font-size: 30px; text-anchor: middle; }
+
+/* An account row opens. It was a caption with an amount beside it, which is the one thing on the Ledger
+   a person most expects to press. */
+.account-open { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-height: 44px; padding: 0; border: 0; background: transparent; color: inherit;
+  text-align: left; }
+.account-open .account-summary { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.account-open h3 { overflow-wrap: anywhere; }
+.account-open svg:last-child { color: var(--text-meta); flex-shrink: 0; }
+.account-open:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; border-radius: 6px; }

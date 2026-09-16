@@ -71,6 +71,33 @@ export function repository(driver: Driver) {
         minor: (BigInt(String(row.opening ?? 0)) + BigInt(String(row.moved ?? 0))).toString(),
       }));
     },
+    /**
+     * An account was write-once: created, then permanently whatever it was typed as.
+     *
+     * A name with a typo stayed wrong, an opening balance entered before the first statement arrived
+     * could never be corrected, and an account closed at the bank had no way to stop appearing. All of it
+     * is ordinary bookkeeping, and none of it was reachable.
+     *
+     * Currency is deliberately NOT editable. Every transaction already recorded against this account is
+     * stored in its minor units; changing the code would silently reinterpret cents as sen and rewrite
+     * the account's whole history. Closing it and opening another is the honest path.
+     */
+    async updateAccount(id: string, changes: { name?: string; institution?: string; type?: AccountKind; mask_last4?: string | null; opening_balance_minor?: bigint; archived?: boolean }) {
+      const [existing] = await db.select().from(accounts).where(eq(accounts.id, id));
+      if (!existing) throw new Error('That account no longer exists.');
+      const name = changes.name === undefined ? existing.name : changes.name.trim();
+      if (!name || name.length > 80) throw new Error('Give the account a name between 1 and 80 characters.');
+      if (changes.mask_last4 !== undefined && changes.mask_last4 !== null && !/^\d{4}$/.test(changes.mask_last4)) throw new Error('Use only the last four digits.');
+      const code = currency(String(existing.currency));
+      await db.update(accounts).set({
+        name,
+        institution: changes.institution === undefined ? existing.institution : changes.institution.trim(),
+        type: changes.type ?? existing.type,
+        mask_last4: changes.mask_last4 === undefined ? existing.mask_last4 : changes.mask_last4,
+        opening_balance_minor: changes.opening_balance_minor === undefined ? existing.opening_balance_minor : toDatabase(money(changes.opening_balance_minor, code)),
+        archived_at: changes.archived === undefined ? existing.archived_at : changes.archived ? new Date().toISOString() : null,
+      }).where(eq(accounts.id, id));
+    },
     async addAccount(input: NewAccount) {
       const name = input.name.trim();
       if (!name || name.length > 80) throw new Error('Give the account a name between 1 and 80 characters.');
