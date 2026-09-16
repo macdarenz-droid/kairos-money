@@ -44,6 +44,33 @@ export function repository(driver: Driver) {
     restoreBackup: (snapshot: unknown) => restoreSnapshot(driver, snapshot),
     intelligence: intelligenceRepository(driver),
     async accounts() { return db.select().from(accounts).orderBy(asc(accounts.name), asc(accounts.id)); },
+    /**
+     * What each account actually holds now: the balance it opened with, plus every transaction recorded
+     * against it.
+     *
+     * The Ledger used to print `opening_balance_minor` — the figure typed in when the account was created —
+     * under a heading that said "Opening balances". That is literally true and practically useless: the
+     * number never moves, so recording a purchase, importing a statement or approving a bank notification
+     * all leave it unchanged, and the one screen meant to say how much money there is says how much there
+     * used to be.
+     *
+     * Approved notifications count here. They are still marked unconfirmed until a statement carries the
+     * same purchase, because that is honest about the evidence, but a balance that waits weeks for a
+     * statement before it moves is a balance nobody can use — banks do not publish statements in real time.
+     * Confirmation changes how much the app trusts a row, not whether the money left.
+     *
+     * Summed in SQL as exact integer minor units; the caller turns it into money.
+     */
+    async accountBalances(): Promise<{accountId: string; minor: string}[]> {
+      const rows = await driver.query(
+        `SELECT a.id AS id, a.opening_balance_minor AS opening,
+                COALESCE((SELECT SUM(t.amount_minor) FROM transactions t WHERE t.account_id = a.id), 0) AS moved
+         FROM accounts a ORDER BY a.name, a.id`);
+      return rows.map(row => ({
+        accountId: String(row.id),
+        minor: (BigInt(String(row.opening ?? 0)) + BigInt(String(row.moved ?? 0))).toString(),
+      }));
+    },
     async addAccount(input: NewAccount) {
       const name = input.name.trim();
       if (!name || name.length > 80) throw new Error('Give the account a name between 1 and 80 characters.');

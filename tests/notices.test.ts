@@ -198,3 +198,21 @@ it('leaves an ordinary notification as the single row it has always been', async
  expect(written).toHaveLength(1);
  expect(written[0]!.transfer_group_id).toBeNull();
 });
+
+it('an account balance is what it holds now, not what it opened with', async () => {
+ const {driver, repo, notices} = await ready();
+ // Exactly the owner's setup: one account opened at $1,000.
+ await driver.execute("UPDATE accounts SET opening_balance_minor=100000 WHERE id='a'");
+
+ expect((await repo.accountBalances()).find(b => b.accountId === 'a')?.minor).toBe('100000');
+
+ // A purchase he recorded by hand. Settled, nothing to do with notifications.
+ await repo.manual.save({id:'m1', kind:'expense', accountId:'a', destinationId:null, date:'2026-02-10',
+   minor:'5000', description:'G', category:null, notes:''});
+ expect((await repo.accountBalances()).find(b => b.accountId === 'a')?.minor).toBe('95000');
+
+ // A bank notification he approved. It counts too — waiting for a statement would leave the balance
+ // weeks stale, and banks do not publish statements in real time.
+ await notices.approve(notice({id:'n1', accountId:'a', minor:'-1250'}));
+ expect((await repo.accountBalances()).find(b => b.accountId === 'a')?.minor).toBe('93750');
+});

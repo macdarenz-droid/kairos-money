@@ -10,7 +10,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { create } from 'zustand';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, ChevronRight, FileText, Layers3, LockKeyhole, Plus, Search, ShieldCheck, WalletCards } from 'lucide-react';
-import { currency, fromDatabase } from '../core/money';
+import { currency, fromDatabase, money } from '../core/money';
 import { Amount, Button, EmptyState, Input, Row, Sheet, Skeleton, Tabs, Toast, type Tab } from './design/primitives';
 import { followSystem } from './design/theme';
 import { useSession } from './session';
@@ -38,6 +38,8 @@ export default function App() {
   useEffect(followSystem, []);
   useEffect(() => { if (session.state !== 'ready' && session.state !== 'preview') { setSheet(null); setQuickAddRequest(null); setSearch(''); setToast(''); } }, [session.state]);
   const accounts = useQuery({ queryKey: ['accounts'], queryFn: () => session.run(repo => repo.accounts()), enabled: session.state === 'ready' });
+  // What each account holds now, not what it opened with. Invalidated by every write, like the rest.
+  const balances = useQuery({ queryKey: ['account-balances'], queryFn: () => session.run(repo => repo.accountBalances()), enabled: session.state === 'ready' });
   const quickAddDisplayed=(sheet==='manual'&&Boolean(accounts.data?.length))||(sheet==='account'&&accounts.data?.length===0);
   const quickAddError=useQuickAddLaunch(session.state==='ready',openManual,quickAddDisplayed?quickAddRequest:null);
   // What the bank announced while the app was closed. Asked once on opening and not again until there is
@@ -79,7 +81,7 @@ export default function App() {
     {accounts.error && <p className="error" role="alert">Accounts could not be read. Lock and reopen Kairos before continuing.</p>}
     {quickAddError && <p className="error" role="alert">{quickAddError}</p>}
     {tab === 'Today' && <>{session.state==='ready'&&days===0&&<FirstImport hasAccount={count>0} loading={accounts.isPending} onAccount={()=>setSheet('account')} onRecord={()=>setSheet('manual')} onRead={()=>{setTab('Ledger');setImportRequest(n=>n+1);}}/>}<ManualHistory accounts={accounts.data??[]} today/><Button variant="primary" onClick={()=>setSheet('manual')}>Add transaction</Button><Intelligence mode="today"/><Freshness accounts={accounts.data??[]} batches={statementData.data??[]} today={localDay()} onUpdate={()=>setSheet('update')} awaiting={awaitingStatement.data??0}/><Button onClick={()=>setTab('Insights')}>See where my money goes</Button></>}
-    {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Skeleton label="Reading accounts"/> : count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Opening balances</span></div>{accounts.data?.map(account => <Row key={account.id} trailing={<Amount value={fromDatabase(account.opening_balance_minor, currency(account.currency))} context={`${account.name} opening balance`}/>}><div className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><div><h3>{account.name}</h3><p>{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}</p></div></div></Row>)}</> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}{!(session.state==='ready' && accounts.isPending)&&<Suspense fallback={<Skeleton label="Opening imports"/>}><ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport}/></Suspense>}</>}
+    {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Skeleton label="Reading accounts"/> : count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Balance now</span></div>{accounts.data?.map(account => { const held = balances.data?.find(b => b.accountId === account.id); return <Row key={account.id} trailing={<Amount value={money(BigInt(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor), currency(account.currency))} context={`${account.name} balance`}/>}><div className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><div><h3>{account.name}</h3><p>{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}</p></div></div></Row>; })}</> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}{!(session.state==='ready' && accounts.isPending)&&<Suspense fallback={<Skeleton label="Opening imports"/>}><ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport}/></Suspense>}</>}
     {tab === 'Ledger' && count>0 && <><Suspense fallback={null}><BulkProposals/></Suspense><Button onClick={()=>setSheet('manual')}>Add transaction</Button><ManualHistory accounts={accounts.data??[]}/></>}
     {tab === 'Insights' && <><Suspense fallback={<Skeleton label="Opening spending patterns"/>}><SpendingPatterns/></Suspense>
       <details className="section-gap"><summary>What my spending says about my habits</summary><Intelligence/></details>
