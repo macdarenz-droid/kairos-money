@@ -156,3 +156,34 @@ describe('rates in the ledger', () => {
     expect(convert(money(10000n, AUD), PHP, march.rateE8).minor).toBe(380000n);
   });
 });
+
+describe('the display currency', () => {
+  it('is remembered, and refuses one the app cannot denominate', async () => {
+    const {driver} = memoryDriver(); await migrate(driver); const repo = repository(driver);
+    expect(await repo.displayCurrency()).toBeNull();
+    await repo.setDisplayCurrency('PHP');
+    expect(await repo.displayCurrency()).toBe('PHP');
+    await expect(repo.setDisplayCurrency('XYZ')).rejects.toThrow();
+  });
+});
+
+describe('a balance and a transaction take different rates, for the same reason', () => {
+  const rates: Rate[] = [
+    {asOf: '2026-09-11', base: AUD, quote: PHP, rateE8: 3800000000n, source: 't'},
+    {asOf: '2026-09-16', base: AUD, quote: PHP, rateE8: 4000000000n, source: 't'},
+  ];
+
+  it('values what is held now at the newest rate', () => {
+    // A balance is a present-tense fact. What $100 is worth today is today's rate.
+    const now = rateAsAt(rates, AUD, PHP, '2026-09-16')!;
+    expect(now.asOf).toBe('2026-09-16');
+    expect(convert(money(10000n, AUD), PHP, now.rateE8).minor).toBe(400000n);
+  });
+
+  it('values what happened on a day at that day\'s rate, forever', () => {
+    // A transaction is a thing that happened. Repricing it later rewrites the past.
+    const then = rateAsAt(rates, AUD, PHP, '2026-09-12')!;
+    expect(then.asOf).toBe('2026-09-11');
+    expect(convert(money(10000n, AUD), PHP, then.rateE8).minor).toBe(380000n);
+  });
+});

@@ -361,3 +361,7 @@ details[open] > summary::before { transform: rotate(45deg); }
 .account-open h3 { overflow-wrap: anywhere; }
 .account-open svg:last-child { color: var(--text-meta); flex-shrink: 0; }
 .account-open:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; border-radius: 6px; }
+
+/* What every account comes to, once they are not all in one currency. */
+.combined-total { align-items: flex-start; padding-top: 14px; border-top: 1px solid var(--border-default); }
+.combined-total .amount { font-size: 17px; line-height: 24px; }

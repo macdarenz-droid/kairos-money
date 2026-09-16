@@ -9,6 +9,7 @@ import { deleteDatabase } from '../../core/db/native';
 import { base64, exportArchive } from '../../core/db/export';
 import { useTheme, type ThemePreference } from '../design/theme';
 import { Button, Row, Sheet } from '../design/primitives';
+import { Rates } from './Rates';
 import { useSession } from '../session';
 export function Settings({ onAccount, notify, accounts = [] }: { onAccount: () => void; notify: (text: string) => void; accounts?: readonly import('../../core/db/repository').Account[] }) {
   const session = useSession(); const { preference, set } = useTheme(); const [dialog, setDialog] = useState<'export' | 'delete' | 'privacy' | 'backup' | null>(null); const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [checked, setChecked] = useState(false);
@@ -38,6 +39,7 @@ export function Settings({ onAccount, notify, accounts = [] }: { onAccount: () =
     <section className="settings-section"><h2>Your ledger</h2><div className="action-list"><Button onClick={onAccount}><Plus size={18}/>Add an account</Button><Button disabled={session.state === 'preview'} onClick={() => setDialog('export')}><Download size={18}/>Export all data</Button><Button disabled={session.state === 'preview'} onClick={() => setDialog('backup')}>Encrypted backup</Button></div></section>
     <NotificationSettings/>
     <NoticeSettings accounts={accounts}/>
+    <Rates accounts={accounts} notify={notify}/>
     <section className="settings-section"><h2>Privacy and security</h2><Row trailing={<ShieldCheck size={18}/>}>On-device storage<p>No financial data is sent to a server.</p></Row>
       {session.state === 'ready' && <><Row trailing={<Button aria-pressed={session.biometricEnabled} disabled={!session.biometric} onClick={() => { void Vault.setBiometric({ enabled: !session.biometricEnabled }).then(session.refreshBiometric).catch(() => setError('Biometrics could not be enabled. Check your Android security settings.')); }}>{session.biometricEnabled ? 'On' : 'Off'}</Button>}><Fingerprint size={16}/> Biometric unlock<p>{session.biometric ? 'Optional. Your PIN remains available.' : 'Set up biometrics in Android settings.'}</p></Row><div className="action-list"><Button onClick={() => void session.lock().catch(() => setError('Kairos locked. Restart the app to close storage safely.'))}><LockKeyhole size={18}/>Lock now</Button></div></>}
       <div className="action-list"><Button onClick={() => setDialog('privacy')}><ShieldCheck size={18}/>Privacy log</Button><Button variant="danger" disabled={session.state === 'preview'} onClick={() => setDialog('delete')}><Trash2 size={18}/>Delete all data</Button></div>

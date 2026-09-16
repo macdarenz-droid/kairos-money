@@ -68,6 +68,18 @@ export function repository(driver: Driver) {
      * a purchase from March, and an app that needs the network to show a total is an app that shows
      * nothing on a train.
      */
+    /** The currency totals are shown in. Stored, because it is a preference, not a fact about an account. */
+    async displayCurrency(): Promise<string | null> {
+      const row = (await driver.query("SELECT value FROM app_settings WHERE key='display-currency'"))[0];
+      if (!row) return null;
+      const saved = JSON.parse(String(row.value)) as {code?: unknown};
+      return typeof saved.code === 'string' ? saved.code : null;
+    },
+    async setDisplayCurrency(code: string) {
+      currency(code);
+      await driver.execute("INSERT INTO app_settings(key,value) VALUES('display-currency',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        [JSON.stringify({ code })]);
+    },
     async saveRates(rows: readonly {asOf: string; base: string; quote: string; rateE8: bigint; source: string}[]) {
       const now = new Date().toISOString();
       for (const row of rows) {
