@@ -79,7 +79,23 @@ details[open] > summary::before { transform: rotate(45deg); }
 
 /* A single in-flight action gets a spinner sized to the text beside it, centred over the region it blocks.
    Respects reduced motion by holding still rather than spinning. */
-.busy-overlay { display: grid; place-items: center; gap: 12px; padding: 32px; }
+/* Named "overlay" and positioned like a paragraph: it had no position at all, so it rendered inline at
+   the bottom of whatever it was inside. Fixed to the viewport, not absolute inside the sheet — the sheet
+   scrolls, and an absolute child would centre itself in the middle of the scrolled content. */
+.busy-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  padding: 32px; background: oklch(0% 0 0 / .65); }
+.busy-card { display: grid; justify-items: center; gap: 14px; padding: 28px 32px; text-align: center;
+  border: 1px solid var(--border-default); border-radius: 14px; background: var(--surface-1);
+  color: var(--text-primary); max-width: 300px; }
+.busy-card p { color: var(--text-primary); }
+.kairos-mark { display: block; color: var(--accent-text); }
+.kairos-mark path { fill: currentColor; }
+/* The step sweeps; the disc never breaks. Both halves ride the same transform, so what changes is where
+   the staircase between them sits, not how much disc there is. */
+@keyframes kairos-step { 0%, 100% { transform: translateX(-9px); } 50% { transform: translateX(9px); } }
+.kairos-halves-moving { animation: kairos-step 1800ms ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .kairos-halves-moving { animation: none; } }
+@media (forced-colors: active) { .kairos-mark path { fill: CanvasText; } }
 .spinner { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border-default);
   border-top-color: var(--accent); animation: spin 700ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -287,3 +303,39 @@ details[open] > summary::before { transform: rotate(45deg); }
 .fact-line strong { color: var(--text-primary); font-weight: 600; }
 .fact-value { font-size: 15px; line-height: 22px; font-weight: 600; white-space: nowrap;
   font-variant-numeric: tabular-nums; }
+
+/* Where the month went, as one thin ring. Slices are steps of the single blue ramp, largest first, so
+   ordering carries magnitude and the legend carries identity — colour never has to do both. */
+.ring { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.ring-body { display: flex; align-items: center; gap: 16px; }
+.ring-plot { width: 124px; height: 124px; flex-shrink: 0; transform: rotate(-90deg); }
+/* Thin, because the ring is not the subject — the proportion is. A fat donut invites comparing areas,
+   which nobody does accurately; a hairline reads as share. */
+.ring-arc { fill: none; stroke-width: 5; stroke-linecap: butt; }
+/* The heat ramp rather than the tile ramp: same single hue, but it spans 31%–71% lightness instead of
+   30%–55%, and the first version lost its three smallest slices into the background. This ramp already
+   means magnitude everywhere else in the app, which is exactly what a slice size is. */
+.ring-arc[data-slice="0"], .ring-key[data-slice="0"] { stroke: var(--heat-5); background: var(--heat-5); }
+.ring-arc[data-slice="1"], .ring-key[data-slice="1"] { stroke: var(--heat-4); background: var(--heat-4); }
+.ring-arc[data-slice="2"], .ring-key[data-slice="2"] { stroke: var(--heat-3); background: var(--heat-3); }
+.ring-arc[data-slice="3"], .ring-key[data-slice="3"] { stroke: var(--heat-2); background: var(--heat-2); }
+.ring-arc[data-slice="4"], .ring-key[data-slice="4"] { stroke: var(--heat-1); background: var(--heat-1); }
+.ring-arc[data-slice="5"], .ring-key[data-slice="5"] { stroke: var(--border-control); background: var(--border-control); }
+.ring-legend { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 6px; }
+.ring-legend li { display: flex; align-items: baseline; gap: 8px; font-size: 12px; line-height: 18px; }
+.ring-key { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.ring-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text-secondary); }
+.ring-legend .amount { font-size: 12px; line-height: 18px; }
+@media (forced-colors: active) { .ring-arc { stroke: CanvasText; } }
+@media (max-width: 340px) { .ring-body { flex-direction: column; align-items: stretch; }
+  .ring-plot { align-self: center; } }
+
+/* Confirm was the last thing in a sheet holding forty rows, so reaching it meant scrolling past all of
+   them. The sheet is its own scroll container, so sticky pins to its visible bottom edge with no
+   JavaScript — and this bar takes over the safe-area padding the content used to carry, or it floats
+   over the gesture bar. */
+.sheet-actions { position: sticky; bottom: 0; z-index: 2; margin-top: 16px;
+  padding: 12px 0 calc(4px + env(safe-area-inset-bottom));
+  background: var(--surface-1); border-top: 1px solid var(--border-subtle); }

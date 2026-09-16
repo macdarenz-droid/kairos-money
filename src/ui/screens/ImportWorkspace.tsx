@@ -7,6 +7,7 @@ import {TransactionAttachments} from './TransactionAttachments';
 import {BulkCategories} from './BulkCategories';
 import {WindowedList} from '../design/WindowedList';
 import { ImportProgress } from '../design/ImportProgress';
+import { BusyOverlay } from '../design/KairosMark';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileUp, FileCheck2 } from 'lucide-react';
@@ -26,6 +27,8 @@ import { ImportFailure } from '../../ingest/types';
 import { payMetrics } from '../../ledger/payslips';
 import { Amount, Button, EmptyState, Input, Row, Sheet } from '../design/primitives';
 import { useSession } from '../session';
+/** Rows shown before the first press, then how many each press adds. */
+const FIRST = 5, MORE = 10;
 const categoryNames = ['Groceries', 'Housing', 'Utilities', 'Transport', 'Health', 'Eating out', 'Shopping', 'Entertainment', 'Income', 'Transfer', 'Savings', 'Debt'];
 function decimalString(minor: string, code: string): string { const value = BigInt(minor), digits = currencyDigits[currency(code)], unit = 10n ** BigInt(digits), absolute = value < 0n ? -value : value; return `${value < 0n ? '-' : ''}${absolute / unit}${digits ? '.' + (absolute % unit).toString().padStart(digits, '0') : ''}`; }
 type Review = Awaited<ReturnType<Repository['imports']['review']>>;
@@ -119,13 +122,19 @@ function FileReview({ id, accounts, onClose, onStaged }: { id: string; accounts:
     {mutation.error && <Failure error={mutation.error}/>} {discard.error && <Failure error={discard.error}/>} <div className="form-actions"><Button disabled={mutation.isPending || discard.isPending} onClick={() => discard.mutate()}>Discard file</Button><Button type="submit" variant="primary" disabled={mutation.isPending || discard.isPending}>Extract for review</Button></div></form></Sheet>;
 }
 function BatchReview({ id, onClose, onResult }: { id: string; onClose: () => void; onResult:(message:string, added:number)=>void }) {
-  const session = useSession(), query = useQueryClient(); const [selected, setSelected] = useState<Review['items'][number] | null>(null), [page, setPage] = useState(0);
+  const session = useSession(), query = useQueryClient(); const [selected, setSelected] = useState<Review['items'][number] | null>(null), [shown, setShown] = useState(FIRST);
   const review = useQuery({ queryKey: ['import-review', id], queryFn: () => session.run(repo => repo.imports.review(id)) });
   const commit = useMutation({ mutationFn: () => session.run(repo => repo.imports.commit(id)), onSuccess: async result => { onResult(importResultSentence([result]), result.added + result.superseded); await query.invalidateQueries(); onClose(); } });
   const discard = useMutation({ mutationFn: () => session.run(repo => repo.imports.rollback(id)), onSuccess: async () => { await query.invalidateQueries(); onClose(); } });
   const leaveCategories = useMutation({ mutationFn: () => session.run(repo => repo.imports.leaveCategoriesUnassigned(id)), onSuccess: () => query.invalidateQueries({ queryKey: ['import-review', id] }) });
   const useSuggested = useMutation({ mutationFn: () => session.run(repo => repo.imports.useSuggestedCategories(id)), onSuccess: () => query.invalidateQueries({ queryKey: ['import-review', id] }) });
   const value = review.data;
+  // Five rows are only enough if they are the right five. Source order put four identical fuel purchases
+  // at the top of a 733-row import while the rows that actually block Confirm — the ones needing review —
+  // sat at position four hundred, with the button greyed out and nothing on screen saying why. Ordering by
+  // what needs a decision costs nothing and makes the short list the useful one.
+  const ordered = value ? [...value.items].sort((a, b) =>
+    (a.blocked ? 0 : a.duplicate ? 1 : 2) - (b.blocked ? 0 : b.duplicate ? 1 : 2)) : [];
   return <Sheet title="Review import" onClose={() => { if (!commit.isPending && !discard.isPending) onClose(); }}><div className="stack" aria-busy={commit.isPending || undefined}>{review.error && <Failure error={review.error}/>} {value && <><p>{value.doc.fileName}</p>{value.doc.status === 'committed' ? <p>This file is already imported. No transactions were added a second time.</p> : <><div className="review-counts"><span>{value.newCount} new</span><span>{value.duplicateCount} duplicates skipped</span><span>{value.uncertainCount} uncertain</span>{value.supersededCount>0 && <span>{value.supersededCount} pending updated</span>}</div><p>{value.doc.integrityTier==='C' ? `Tier C · Continuity-checked · balance unverified. ${value.continuity==='gap'?'There is a coverage gap before this export.':value.continuity==='first-import'?'This is the first covered period.':'This range overlaps or continues existing coverage.'}` : value.doc.integrityTier==='B' && value.balance.valid ? 'Tier B · Running-balance-verified' : value.balance.valid ? '✓ Balance check passed' : `Balance mismatch: ${format(money(value.balance.difference, value.doc.context.currency))}. This import is quarantined.`}</p><p>{coveredDays(value.coverageAdded)} new covered days. Coverage: {value.doc.context.period.start}–{value.doc.context.period.end}{value.doc.payslip ? ' · Payslips do not add statement coverage' : ''}</p>{!value.doc.payslip && (!value.doc.integrityTier || value.doc.integrityTier==='A') && <BalanceCorrection review={value}/>}{value.doc.payslip && <div className="stack"><h3>{value.doc.payslip.employer}</h3><p>Pay date {value.doc.payslip.payDate}</p>{(['gross', 'net', 'tax', 'super'] as const).map(key => <Row key={key} trailing={<Amount value={money(BigInt(value.doc.payslip![key]), value.doc.context.currency)} context={`Payslip ${key}`}/>}>{key === 'gross' ? 'Gross pay' : key === 'net' ? 'Net pay' : key === 'tax' ? 'Tax withheld' : 'Super / pension'}</Row>)}<PayslipCorrection review={value}/><p className="meta">Gross includes allowances. Deductions reduce net pay; employer super does not. Check these values against your source.</p></div>}
     {value.items.some(item => item.categoryOnly) && <div className="stack">
       <p>{value.items.filter(item => item.categoryOnly).length} {value.items.filter(item => item.categoryOnly).length === 1 ? 'purchase has a category' : 'purchases have categories'} worked out from the statement wording, with less than full certainty. Accepting them takes one press, and any of them can be changed afterwards in the ledger.</p>
@@ -133,13 +142,13 @@ function BatchReview({ id, onClose, onResult }: { id: string; onClose: () => voi
       <Button variant="quiet" disabled={useSuggested.isPending || leaveCategories.isPending || commit.isPending} onClick={() => leaveCategories.mutate()}>Leave them uncategorised</Button>
       {useSuggested.error && <Failure error={useSuggested.error}/>}{leaveCategories.error && <Failure error={leaveCategories.error}/>}
     </div>}
-    {value.items.slice(page * 40, (page + 1) * 40).map(item => <button key={item.row.sourceId} type="button" className="transaction-row" onClick={() => setSelected(item)}><span><strong>{item.row.merchant}</strong><span className="meta">{item.row.date} · {item.blocked ? 'Review needed' : item.duplicate ? 'Duplicate' : item.row.category ?? 'Uncategorised'}</span></span><Amount value={money(BigInt(item.row.minor), item.row.currency)} context={item.row.merchant}/></button>)}{value.items.length > 40 && <div className="form-actions"><Button disabled={!page} onClick={() => setPage(p => p - 1)}>Previous rows</Button><Button disabled={(page + 1) * 40 >= value.items.length} onClick={() => setPage(p => p + 1)}>Next rows</Button></div>}
+    {ordered.slice(0, shown).map(item => <button key={item.row.sourceId} type="button" className="transaction-row" onClick={() => setSelected(item)}><span><strong>{item.row.merchant}</strong><span className="meta">{item.row.date} · {item.blocked ? 'Review needed' : item.duplicate ? 'Duplicate' : item.row.category ?? 'Uncategorised'}</span></span><Amount value={money(BigInt(item.row.minor), item.row.currency)} context={item.row.merchant}/></button>)}{shown < ordered.length && <Button onClick={() => setShown(n => n + MORE)}>Show more · {ordered.length - shown} left</Button>}
     {commit.error && <Failure error={commit.error}/>} {discard.error && <Failure error={discard.error}/>}
     {/* Committing hundreds of rows takes long enough that a button reading "Committing…" at the bottom of a
         long list leaves the screen looking stuck. The wait belongs where the eye is, and it says what it is
         waiting for. */}
-    {commit.isPending && <div className="busy-overlay" role="status" aria-live="polite"><span className="spinner" aria-hidden="true"/><p>Adding these transactions to your ledger…</p></div>}
-    <div className="form-actions"><Button disabled={commit.isPending || discard.isPending} onClick={() => discard.mutate()}>Discard import</Button><Button variant="primary" disabled={!value.balance.valid || value.uncertainCount > 0 || commit.isPending || discard.isPending} onClick={() => commit.mutate()}>{commit.isPending ? 'Committing…' : 'Confirm import'}</Button></div></>}</>}{selected && <RowCorrection id={id} item={selected} onClose={() => setSelected(null)}/>}</div></Sheet>;
+    {commit.isPending && <BusyOverlay message="Adding these transactions to your ledger…"/>}
+    <div className="form-actions sheet-actions"><Button disabled={commit.isPending || discard.isPending} onClick={() => discard.mutate()}>Discard import</Button><Button variant="primary" disabled={!value.balance.valid || value.uncertainCount > 0 || commit.isPending || discard.isPending} onClick={() => commit.mutate()}>{commit.isPending ? 'Committing…' : 'Confirm import'}</Button></div></>}</>}{selected && <RowCorrection id={id} item={selected} onClose={() => setSelected(null)}/>}</div></Sheet>;
 }
 function BalanceCorrection({ review }: { review: Review }) {
   const session = useSession(), query = useQueryClient(); const code = review.doc.context.currency;

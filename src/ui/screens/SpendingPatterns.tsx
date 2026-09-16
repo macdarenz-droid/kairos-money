@@ -1,5 +1,4 @@
 import {AllocationBreakdown} from './AllocationBreakdown';
-import {displayRatio} from '../../intelligence/visuals';
 import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {currency,money} from '../../core/money';
@@ -73,7 +72,6 @@ export function SpendingPatterns(){
  <Button variant="quiet" onClick={()=>show('Transfers',p.transfers.map(t=>t.id),'Both sides are kept out of spending and income.')}>{p.transfers.length} transfers excluded</Button>
  <Button variant="quiet" onClick={()=>show('Small purchases',p.small.ids,'Payments at or below this threshold.')}>
  {p.small.ids.length} payments under {amount(p.small.limit,'small payment threshold')} · {amount(p.small.minor,'small payment total')}</Button>
- <h3>Monthly spending</h3><Bars rows={p.monthly.map(m=>({label:m.month,minor:m.minor,ids:m.ids,...(m.complete?{}:{note:'Partial coverage'})}))} code={code} show={show}/>
  <h3>Merchants</h3>{p.merchants.filter(m=>m.count>=2).length?p.merchants.filter(m=>m.count>=2).slice(0,10).map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,`${m.count} payments under this merchant label.`)}>{amount(m.minor,m.name)}</Button>}>{m.name}<p>{m.count} payments</p></Row>):<p>No repeated merchants here.</p>}
  {(()=>{const heaviest=[...p.weekdays].filter(d=>BigInt(d.minor)>0n).sort((a,b)=>BigInt(a.minor)>BigInt(b.minor)?-1:1)[0];
   if(!heaviest)return null;
@@ -84,8 +82,4 @@ export function SpendingPatterns(){
  </>}
  {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{s.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id} className="section-gap"><Row trailing={amount(t.minor,t.description)}>{t.rawDescription??t.description}<p>{t.date} · {t.category}</p></Row>{t.refundOf&&<p className="meta">Confirmed refund; excluded from income classification.</p>}<AllocationBreakdown parts={t.allocations} code={t.currency}/>{t.sources?.map((source,i)=><SourceLine key={i} file={source.file} row={source.row} raw={source.raw}/>)}</div>)}{!detail.ids.length&&<p>No matching transactions in this selection.</p>}</Sheet>}
  </section>;
-}
-function Bars({rows,code,show}:{rows:{label:string;minor:string;ids:string[];note?:string}[];code:ReturnType<typeof currency>;show:(title:string,ids:string[],text:string)=>void}){
- const max=rows.reduce((m,r)=>BigInt(r.minor)>m?BigInt(r.minor):m,1n);
- return <div className="stack">{rows.map(row=>{const proportion=Number(displayRatio(row.minor,max.toString()));return <div key={row.label}><Row trailing={<Button variant="quiet" onClick={()=>show(row.label,row.ids,row.note??'')}><Amount value={money(BigInt(row.minor),code)} context={row.label}/></Button>}>{row.label}{row.note&&<p>{row.note}</p>}</Row><div className="spending-bar" aria-hidden="true"><span style={{width:`${proportion/10000}%`}}/></div></div>;})}</div>;
 }

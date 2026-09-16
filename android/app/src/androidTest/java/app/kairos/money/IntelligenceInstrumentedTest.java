@@ -252,9 +252,9 @@ public class IntelligenceInstrumentedTest {
                 click("You");click(theme);click("Insights");
                 awaitJs("Boolean(document.querySelector('.spending-patterns select'))");
                 js("(()=>{const e=document.querySelector('.spending-patterns select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
-                awaitJs("document.querySelector('.spending-patterns').innerText.includes('settled transactions')");
+                awaitJs("document.querySelector('.spending-patterns').innerText.includes('Purchases')");
                 captureHeading("Your spending patterns",theme.toLowerCase()+"-spending-patterns");
-                js("Array.from(document.querySelectorAll('.spending-patterns h3')).find(e=>e.textContent==='Monthly recorded spending').scrollIntoView({behavior:'instant'})");
+                js("Array.from(document.querySelectorAll('.spending-patterns h3')).find(e=>e.textContent==='Monthly balance').scrollIntoView({behavior:'instant'})");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-spending-months");
                 js("document.querySelector('.spending-patterns .row button').click()");awaitJs("Boolean(document.querySelector('dialog'))");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-spending-evidence");js("document.querySelector('dialog .icon-button').click()");
