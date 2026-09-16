@@ -61,6 +61,37 @@ export function repository(driver: Driver) {
      *
      * Summed in SQL as exact integer minor units; the caller turns it into money.
      */
+    /**
+     * Published rates, kept by the day they belong to.
+     *
+     * Stored rather than fetched on demand, for two reasons. A rate that is only ever "now" cannot value
+     * a purchase from March, and an app that needs the network to show a total is an app that shows
+     * nothing on a train.
+     */
+    async saveRates(rows: readonly {asOf: string; base: string; quote: string; rateE8: bigint; source: string}[]) {
+      const now = new Date().toISOString();
+      for (const row of rows) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(row.asOf)) throw new Error('A rate must be dated.');
+        if (row.rateE8 <= 0n) throw new Error('An exchange rate must be greater than zero.');
+        currency(row.base); currency(row.quote);
+        // Re-fetching a day it already holds overwrites it, so a correction at the source lands, but a
+        // day is never duplicated and the ledger never sees two rates for one date.
+        await driver.execute(
+          'INSERT INTO fx_rates(as_of,base,quote,rate_e8,source,fetched_at) VALUES(?,?,?,?,?,?) ' +
+          'ON CONFLICT(as_of,base,quote) DO UPDATE SET rate_e8=excluded.rate_e8, source=excluded.source, fetched_at=excluded.fetched_at',
+          [row.asOf, row.base, row.quote, toDatabase(money(row.rateE8, currency(row.base))), row.source, now]);
+      }
+    },
+    async rates(): Promise<{asOf: string; base: string; quote: string; rateE8: string; source: string}[]> {
+      const rows = await driver.query('SELECT as_of, base, quote, rate_e8, source FROM fx_rates ORDER BY as_of DESC');
+      return rows.map(row => ({ asOf: String(row.as_of), base: String(row.base), quote: String(row.quote),
+        rateE8: String(row.rate_e8), source: String(row.source) }));
+    },
+    /** When the newest stored rate is from, so the app can say how fresh its figures are. */
+    async ratesAsOf(): Promise<string | null> {
+      const row = (await driver.query('SELECT MAX(as_of) AS latest FROM fx_rates'))[0];
+      return row?.latest ? String(row.latest) : null;
+    },
     async accountBalances(): Promise<{accountId: string; minor: string}[]> {
       const rows = await driver.query(
         `SELECT a.id AS id, a.opening_balance_minor AS opening,

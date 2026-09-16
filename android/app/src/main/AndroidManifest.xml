@@ -6,8 +6,21 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <!-- The owner asked for live exchange rates and decided this app is no longer strictly offline:
+         "live rate every real time / core rule, dont consider the project fully offline / there are
+         features i want online."
+
+         What that buys and what it costs. INTERNET was previously stripped with tools:node="remove", so
+         "nothing leaves this device" was a property of the build rather than a claim anyone had to be
+         trusted on. Granting it gives that up, and the guarantee is narrowed rather than abandoned:
+         src/core/net/rates.ts is the only module permitted to reach the network, tests/no-network.test.ts
+         fails the build if a second one tries, and that module cannot read the database at all — it takes
+         currency codes and returns rates.
+
+         So what leaves the phone is a currency code and a date. No amount, balance, merchant, account or
+         transaction ever does. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- So the owner can pick their banking app from a list. Android 11 hides other installed apps
          unless visibility is declared; this asks only for apps with a launcher icon, which is exactly
