@@ -9,17 +9,36 @@ export function isoDay(input: string): string {
 }
 export function dayNumber(day: string): number { return Date.parse(isoDay(day)) / 86400000; }
 export function shiftDay(day: string, days: number): string { return new Date((dayNumber(day) + days) * 86400000).toISOString().slice(0, 10); }
+const MONTH_NAMES = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 export function normalizeDate(value: string, period: Period, order: 'DMY' | 'MDY'): string {
   isoDay(period.start); isoDay(period.end);
   if (period.start > period.end) throw new Error('Statement end precedes its start.');
   const cleaned = value.trim(); let candidates: string[] = [];
+  const years = (given: string | undefined) => given
+    ? [Number(given.length === 2 ? `20${given}` : given)]
+    : Array.from({ length: Number(period.end.slice(0, 4)) - Number(period.start.slice(0, 4)) + 1 }, (_, i) => Number(period.start.slice(0, 4)) + i);
+  const build = (day: number, month: number, given: string | undefined) => years(given).flatMap(year => {
+    const s = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    try { return [isoDay(s)]; } catch { return []; }
+  });
+  // A written month is the one date format that carries no ambiguity: "15 Sep 2026" and "Sep 15, 2026"
+  // both mean the same day whichever way round the reader expects, so neither needs the DMY/MDY setting.
+  // Accepting them here is what lets a statement printed with month names be read at all.
+  const dayFirst = /^(\d{1,2})[\s.-]+([A-Za-z]{3,})\.?[\s.-]+(\d{2}|\d{4})$/.exec(cleaned);
+  const monthFirst = /^([A-Za-z]{3,})\.?[\s.-]+(\d{1,2}),?[\s.-]+(\d{2}|\d{4})$/.exec(cleaned);
+  const named = dayFirst ? { day: Number(dayFirst[1]), name: dayFirst[2]!, year: dayFirst[3] }
+    : monthFirst ? { day: Number(monthFirst[2]), name: monthFirst[1]!, year: monthFirst[3] } : null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) candidates = [isoDay(cleaned)];
+  else if (named) {
+    const month = MONTH_NAMES.indexOf(named.name.slice(0, 3).toLowerCase());
+    if (month < 0) throw new ImportFailure('Statement period is known.', 'The transaction date names a month that could not be read.', value, 'Use day/month/year or confirm the column mapping.');
+    candidates = build(named.day, month + 1, named.year);
+  }
   else {
     const m = /^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?$/.exec(cleaned);
     if (!m) throw new ImportFailure('Statement period is known.', 'The transaction date could not be read.', value, 'Use day/month/year or confirm the column mapping.');
     const month = Number(m[order === 'DMY' ? 2 : 1]), day = Number(m[order === 'DMY' ? 1 : 2]);
-    const years = m[3] ? [Number(m[3].length === 2 ? `20${m[3]}` : m[3])] : Array.from({ length: Number(period.end.slice(0, 4)) - Number(period.start.slice(0, 4)) + 1 }, (_, i) => Number(period.start.slice(0, 4)) + i);
-    candidates = years.flatMap(year => { const s = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`; try { return [isoDay(s)]; } catch { return []; } });
+    candidates = build(day, month, m[3]);
   }
   candidates = candidates.filter(s => s >= period.start && s <= period.end);
   if (candidates.length !== 1) throw new ImportFailure('The date format was read.', 'The date is ambiguous or outside the statement period.', value, 'Confirm the statement dates and date format.');
