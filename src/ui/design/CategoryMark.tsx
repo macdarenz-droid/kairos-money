@@ -1,28 +1,38 @@
+import {
+  ArrowLeftRight, Banknote, Bus, CircleDashed, Clapperboard, Coffee, CreditCard, Dumbbell, Fuel,
+  GraduationCap, Home, Music, PawPrint, Pill, Plane, ShieldCheck, ShoppingBag, ShoppingCart,
+  Stethoscope, Utensils, Wallet, Wifi, Zap,
+} from 'lucide-react';
+import {purchaseKind, type PurchaseKind} from './purchase-kind';
+
+const GLYPH: Readonly<Record<PurchaseKind, typeof Home>> = {
+  groceries: ShoppingCart, dining: Utensils, coffee: Coffee, transport: Bus, fuel: Fuel,
+  shopping: ShoppingBag, entertainment: Clapperboard, music: Music, pharmacy: Pill,
+  medical: Stethoscope, fitness: Dumbbell, utilities: Zap, telecom: Wifi, housing: Home,
+  insurance: ShieldCheck, education: GraduationCap, pets: PawPrint, travel: Plane, cash: Banknote,
+  transfer: ArrowLeftRight, income: Wallet, subscription: CreditCard, unknown: CircleDashed,
+};
+
 /**
- * A row's category, as a mark rather than another word in a line of words.
+ * What a row was, as a picture at the head of it.
  *
- * Every comparable money app puts a coloured symbol at the head of each transaction row, and it is the
- * single thing that makes a list scannable instead of readable: the eye finds "the groceries ones" by
- * colour long before it reads six labels. Kairos rows were text all the way across.
+ * Every comparable money app marks each transaction this way, and it is the single thing that makes a
+ * list scannable rather than readable: the eye finds the groceries by their shape long before it reads six
+ * labels. Kairos rows were text all the way across.
  *
- * The letter is the category's initial rather than a drawn icon, because categories here are the owner's
- * own — a fixed icon set would have nothing to show for "Vet" or "Band gear" and would quietly fall back
- * to a generic blob on exactly the rows that matter to them.
+ * Monochrome, on one neutral chip, in the ink the rest of the screen uses. An earlier version tinted the
+ * chip per category from the treemap ramp; with a real glyph that colour said the same thing twice and
+ * made a quiet list busy. Colour in this app means an amount — copper in, blue out — and spending it on
+ * decoration would weaken the one place it carries meaning.
  *
- * Colour is picked from the tile ramp the treemap already uses, so no new colour enters the app and every
- * step is one whose contrast against `--tile-ink` has already been measured. Same category, same colour,
- * every time and on every screen, because the mapping is a hash of the name and nothing else.
+ * Unknown draws a dashed circle rather than a guess. A merchant the app has never seen is a real state,
+ * and a confident wrong icon teaches the eye something false about a row.
  */
-export function CategoryMark({name}: {name: string}) {
-  const label = name.trim() || 'Uncategorised';
-  let sum = 0;
-  for (let i = 0; i < label.length; i++) sum = (sum * 31 + label.charCodeAt(i)) % 100003;
-  const step = (sum % 5) + 1;
-  // Uncategorised is deliberately the flattest step: a row the app knows nothing about should not be the
-  // brightest thing in the list.
-  const level = label === 'Uncategorised' ? 1 : step;
-  return <span className={`category-mark level-${level}`} aria-hidden="true">
-    {[...label][0]!.toUpperCase()}
+export function CategoryMark({description, category}: {description: string; category?: string | null}) {
+  const kind = purchaseKind(description, category);
+  const Glyph = GLYPH[kind];
+  return <span className="category-mark" data-kind={kind} aria-hidden="true">
+    <Glyph size={17} strokeWidth={1.6}/>
   </span>;
 }
 

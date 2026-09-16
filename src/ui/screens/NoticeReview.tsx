@@ -5,6 +5,7 @@ import {capturedNotices, forgetNotices, readNotices} from '../../ingest/notices'
 import {accountFromNotice} from '../../ingest/notices/route';
 import {pairNotices, type NoticeItem} from '../../ingest/notices/pair';
 import {Button, Explain, Sheet} from '../design/primitives';
+import {CategoryMark} from '../design/CategoryMark';
 import type {ReadableNotice} from '../../ingest/notices';
 import {useSession} from '../session';
 import type {Account} from '../../core/db/repository';
@@ -110,7 +111,10 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
           {items.map(entry => entry.kind === 'transfer'
             ? <div key={entry.out.notice.id} className="notice-card">
                 <div className="notice-head">
-                  <strong>{nameOf(entry.fromId)} → {nameOf(entry.toId)}</strong>
+                  <span className="row-lead">
+                    <CategoryMark description="transfer"/>
+                    <strong>{nameOf(entry.fromId)} → {nameOf(entry.toId)}</strong>
+                  </span>
                   <span className="amount">{format(money(BigInt(entry.out.minor) < 0n ? -BigInt(entry.out.minor) : BigInt(entry.out.minor), code))}</span>
                 </div>
                 {/* The claim is a tag, and the reasoning behind it is one press away. Joining two notices
@@ -135,7 +139,10 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
               </div>
             : <div key={entry.item.notice.id} className="notice-card">
                 <div className="notice-head">
-                  <strong>{entry.item.merchant}</strong>
+                  <span className="row-lead">
+                    <CategoryMark description={`${entry.item.merchant} ${entry.item.notice.title}`}/>
+                    <strong>{entry.item.merchant}</strong>
+                  </span>
                   <span className="amount">{format(money(BigInt(entry.item.minor), code))}</span>
                 </div>
                 <p className="meta">{entry.item.date} · {entry.item.notice.title}</p>

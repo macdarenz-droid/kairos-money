@@ -230,14 +230,20 @@ details[open] > summary::before { transform: rotate(45deg); }
 .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--surface-3);
   color: var(--text-secondary); font-size: 11px; line-height: 16px; font-weight: 500; }
 
-/* The category mark at the head of a transaction row. Steps and ink come from the treemap's tile ramp,
-   already measured against --tile-ink, so no new colour enters the app. */
+/* The category mark at the head of a transaction row. One neutral chip, one line glyph, in the ink the
+   rest of the screen already uses — the icon carries the identity, so no colour is spent on it. Colour in
+   this app means an amount, and a list of tinted chips would compete with the one place it means something.
+   The unknown mark is dimmer again: a row the app cannot read should not be the loudest thing in the list. */
 .category-mark { flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; display: grid;
-  place-items: center; font-size: 13px; font-weight: 600; color: var(--tile-ink); }
-.category-mark.level-1 { background: var(--tile-1); } .category-mark.level-2 { background: var(--tile-2); }
-.category-mark.level-3 { background: var(--tile-3); } .category-mark.level-4 { background: var(--tile-4); }
-.category-mark.level-5 { background: var(--tile-5); }
+  place-items: center; background: var(--surface-2); border: 1px solid var(--border-subtle);
+  color: var(--text-secondary); }
+.category-mark[data-kind="unknown"] { color: var(--text-tertiary); }
 /* The mark sits beside the row's text, so the row becomes icon + text + amount. */
 .transaction-row { gap: 12px; }
 .transaction-row > .row-lead { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
 .transaction-row > .row-lead > span { min-width: 0; overflow-wrap: anywhere; }
+
+/* The notice card's head carries the same mark as a ledger row, so a purchase looks the same wherever
+   it is being read. Baseline alignment is wrong here: the mark is a block, not a word. */
+.notice-head .row-lead { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.notice-head .row-lead strong { min-width: 0; overflow-wrap: anywhere; }
