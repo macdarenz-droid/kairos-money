@@ -25,9 +25,17 @@ export function KairosMark({size = 44, still = false}: {size?: number; still?: b
         opened the vertical runs of the stair and left the horizontal ones welded shut, which drew a disc
         with slits in it rather than two interlocking pieces. They also extend well past the disc so the
         clip stays covered at either end of the sweep. */}
-    <g clipPath="url(#kairos-disc)" className={still ? 'kairos-halves' : 'kairos-halves kairos-halves-moving'}>
-      <path d="M-60 -20 H66 V38 H50 V62 H34 V120 H-60 Z" transform="translate(-4 -4)"/>
-      <path d="M160 -20 H66 V38 H50 V62 H34 V120 H160 Z" transform="translate(4 4)"/>
+    {/* The clip and the movement MUST sit on different elements.
+        With both on one group, the clip-path resolves in that group's own coordinate system — which the
+        animation is moving — so the disc travelled along with its contents instead of holding still. What
+        you saw was a circle sliding inside the SVG's rectangle, squaring off against the viewBox at each
+        end of the sweep: "it moves like inside a box", and broken across the middle.
+        Clipping outside, moving inside: the disc is now fixed and only the staircase behind it travels. */}
+    <g clipPath="url(#kairos-disc)">
+      <g className={still ? 'kairos-halves' : 'kairos-halves kairos-halves-moving'}>
+        <path d="M-60 -20 H66 V38 H50 V62 H34 V120 H-60 Z" transform="translate(-4 -4)"/>
+        <path d="M160 -20 H66 V38 H50 V62 H34 V120 H160 Z" transform="translate(4 4)"/>
+      </g>
     </g>
   </svg>;
 }
