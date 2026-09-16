@@ -16,9 +16,9 @@ beforeEach(async()=>{({driver}=memoryDriver());await migrate(driver);state.repo=
 afterEach(cleanup);
 it.each(['dark','light'])('shows spending without categories/payslips/complete coverage and drills into evidence in %s',async theme=>{
  document.documentElement.dataset.theme=theme;render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><SpendingPatterns/></QueryClientProvider>);
- await screen.findByText(/2 settled transactions/);expect(screen.getByRole('combobox',{name:'Spending period'})).toHaveProperty('value','all');
- fireEvent.click(screen.getByRole('button',{name:/35.00 AUD, recorded purchases and fees/}));expect(await screen.findByRole('dialog')).toBeTruthy();expect(within(screen.getByRole('dialog')).getAllByText('Debit Card Purchase Synthetic Cafe')).toHaveLength(2);
- fireEvent.click(screen.getByRole('button',{name:'Close Recorded spending'}));
- fireEvent.change(screen.getByLabelText('Spending period'),{target:{value:'2026-07'}});await screen.findByText(/1 settled transactions/);expect(screen.getByRole('button',{name:/23.00 AUD, recorded purchases and fees/})).toBeTruthy();
- fireEvent.change(screen.getByLabelText('Spending account'),{target:{value:'a'}});await waitFor(()=>expect(screen.getByLabelText('Spending period')).toHaveProperty('value','all'));expect(screen.getByRole('button',{name:/12.00 AUD, recorded purchases and fees/})).toBeTruthy();
+ await screen.findByText(/Purchases/);expect(screen.getByRole('combobox',{name:'Spending period'})).toHaveProperty('value','all');
+ fireEvent.click(screen.getByRole('button',{name:/35.00 AUD, purchases/}));expect(await screen.findByRole('dialog')).toBeTruthy();expect(within(screen.getByRole('dialog')).getAllByText('Debit Card Purchase Synthetic Cafe')).toHaveLength(2);
+ fireEvent.click(screen.getByRole('button',{name:'Close Purchases'}));
+ fireEvent.change(screen.getByLabelText('Spending period'),{target:{value:'2026-07'}});await screen.findByRole('button',{name:/23\.00 AUD, purchases/});expect(screen.getByRole('button',{name:/23.00 AUD, purchases/})).toBeTruthy();
+ fireEvent.change(screen.getByLabelText('Spending account'),{target:{value:'a'}});await waitFor(()=>expect(screen.getByLabelText('Spending period')).toHaveProperty('value','all'));expect(screen.getByRole('button',{name:/12.00 AUD, purchases/})).toBeTruthy();
 });

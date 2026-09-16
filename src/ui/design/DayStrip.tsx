@@ -22,7 +22,7 @@ import type {DaySpend} from './SpendingCalendar';
  *
  * The bars are marks, not controls. Fourteen tappable days would need 616px of touch target on a 411px
  * phone, so they would be 24px wide — below the 44px minimum, and genuinely hard to hit. The plot carries
- * one spoken description and the table underneath carries every figure, which is the accessible route
+ * one spoken description that carries every figure, which is the accessible route
  * anyway; the hero answers the question the screen asks.
  */
 export function DayStrip({days, code, today, span = 7}: {days: DaySpend[]; code: Currency; today: string; span?: number}) {
@@ -55,24 +55,17 @@ export function DayStrip({days, code, today, span = 7}: {days: DaySpend[]; code:
     <figcaption className="heading-row"><h3>The last seven days</h3>
       <Explain title="The last seven days">
         <p>Each bar is a day and the tallest is the heaviest. Today is the last one.</p>
-        <p>Only money out is drawn. A day with nothing on it is drawn as nothing, not left out.</p>
+        <p>Only money out is drawn. A day with nothing on it is drawn as nothing.</p>
       </Explain>
     </figcaption>
 
     <div className="strip-plot" role="img"
-      aria-label={`Spending on each of the last ${span} days, ending today. The heaviest was ${show(peak)}. Every day is listed in the table below.`}>
+      aria-label={`Spending on each of the last ${span} days, ending today. ${columns.map(c => `${weekday(c.date)} ${show(c.spent)}`).join(', ')}. The heaviest was ${show(peak)}.`}>
       {columns.map(column => <span key={column.date} className="strip-column" data-today={column.date === today || undefined}>
         <span className="strip-bar" style={{height: `${column.height}%`}}/>
         <span className="strip-tick" aria-hidden="true">{weekday(column.date)}</span>
       </span>)}
     </div>
 
-    <details>
-      <summary>Read these days as a list</summary>
-      <div className="table-scroll"><table className="calendar-table"><caption className="meta">Recorded spending for each of the last {span} days.</caption>
-        <thead><tr><th scope="col">Day</th><th scope="col">Spent</th></tr></thead>
-        <tbody>{columns.map(c => <tr key={c.date}><th scope="row">{c.date === today ? `${c.date} (today)` : c.date}</th><td>{show(c.spent)}</td></tr>)}</tbody>
-      </table></div>
-    </details>
   </figure>;
 }

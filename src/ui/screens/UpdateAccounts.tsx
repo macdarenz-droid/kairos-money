@@ -11,11 +11,12 @@ export function Freshness({accounts,batches,today,onUpdate,awaiting=0}:{accounts
  // says nothing at all. A list of accounts and their ages is a status report, and a status report nobody
  // asked for is what made this screen unreadable.
  if(!stale)return null;
- return <Surface className="surface-muted"><h2>Your statements are out of date</h2>
-  {awaiting>0
-   ? <p>Since your last statement, Kairos only knows what your bank announced and you approved — {awaiting} {awaiting===1?'purchase':'purchases'} no statement has confirmed yet. Anything your bank did not announce is still missing.</p>
-   : <p>Kairos only knows about money up to the last statement you imported, so the figures here are older than today.</p>}
-  {accounts.map(a=>{const f=accountFreshness(a.id,batches,today);return <Row key={a.id}><h3>{a.name}</h3><p>{f.asOf?`Last statement ${f.asOf}, ${f.staleDays} days ago`:'No statement imported yet'}</p></Row>;})}
+ // Two paragraphs explaining what a statement is and what the app can therefore know. The state is the
+ // message: an age per account, and the one control that fixes it. The button's label is unchanged
+ // because the device gate taps it by name.
+ return <Surface className="surface-muted"><h2>Statements out of date</h2>
+  {awaiting>0&&<p className="meta"><span className="tag">{awaiting} not on a statement yet</span></p>}
+  {accounts.map(a=>{const f=accountFreshness(a.id,batches,today);return <Row key={a.id} trailing={<span className="meta">{f.asOf?`${f.staleDays}d`:'None'}</span>}>{a.name}</Row>;})}
   <Button onClick={onUpdate}>Bring my statements up to date</Button></Surface>;
 }
 export function UpdateAccounts({accounts,batches,today,onClose,onImport}:{accounts:Account[];batches:BatchSummary[];today:string;onClose:()=>void;onImport:()=>void}) {

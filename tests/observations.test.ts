@@ -90,11 +90,13 @@ describe('the six concepts',()=>{
   expect(progress.statement).not.toMatch(/\bsaved\b/i);
  });
 
- it('states coverage limits plainly rather than reading a gap as no spending',()=>{
+ it('counts the days it cannot see rather than explaining what it does with them',()=>{
   const gapped=snap(rows,{coverage:[{accountId:'a',start:'2026-03-01',end:'2026-03-25',tier:'A'}]});
   const observation=observe(buildIndex(gapped),analyse(gapped,month),month,{currency:AUD}).find(o=>o.concept==='dignity')!;
-  expect(observation.statement).toContain('no statement coverage');
-  expect(observation.statement).toContain('rather than counting them as nothing');
+  // The gap is stated as a number of days. The sentence explaining that excluded days are not counted as
+  // zero was the app describing its own arithmetic, which the owner reads as being taught.
+  expect(observation.statement).toMatch(/^\d+ days? without statement coverage$/);
+  expect(observation.statement).not.toMatch(/rather than|counting them|excludes?/i);
  });
 
  it('reduces to orientation under distress, withholding conditional arithmetic and goals',()=>{
@@ -122,10 +124,13 @@ describe('the sentence about the largest category',()=>{
   expect(understand.statement).not.toMatch(/purchases at /);
  });
 
- it('says the largest kind of spending cannot be named when nothing is categorised',()=>{
+ it('says only that nothing is categorised, without explaining what categorising would do',()=>{
   const bare=snap(rows.map(r=>({...r,category:'Uncategorised',kind:'discretionary' as const})));
   const understand=observe(buildIndex(bare),analyse(bare,month),month,{currency:AUD}).find(o=>o.concept==='understand')!;
-  expect(understand.statement).toContain('cannot be named');
+  expect(understand.statement).toBe('Not categorised yet.');
+  // The instruction that used to follow it — "giving these transactions categories is what makes that
+  // answerable" — is the app telling its owner how to operate it. The state is the whole message.
+  expect(understand.statement).not.toMatch(/giving these|what makes|you (can|should)/i);
   // And it does not name "Uncategorised" as though it were a kind of spending.
   expect(understand.statement).not.toMatch(/^Uncategorised was/);
  });

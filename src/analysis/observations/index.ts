@@ -30,8 +30,8 @@ function understand(metrics:Metric[],options:ObserveOptions):Observation[]{
  // named merchants already have their own section in spending patterns.
  return [{id:'understand:'+category.period,metric:'category_breakdown',concept:'understand',
   statement:name==='Uncategorised'
-   ? 'Most spending in this period has no category yet, so the largest kind of spending cannot be named. Giving these transactions categories is what makes that answerable.'
-   : `${name} was the largest category in this period.`,
+   ? 'Not categorised yet.'
+   : `Largest category · ${name}`,
   figure:amount(category.value!,options.currency),visual:'bar',evidence:category.evidence,conditional:null,progress:null}];
 }
 
@@ -57,7 +57,7 @@ function alternatives(metrics:Metric[],options:ObserveOptions):Observation[]{
  const small=found(metrics,'small_payments');
  if(!small)return [];
  return [{id:'alternatives:'+small.period,metric:'small_payments',concept:'alternatives',
-  statement:`Payments below half the usual size came to this much together. Larger single purchases appear elsewhere in the same period.`,
+  statement:`Small payments, together`,
   figure:amount(small.value!,options.currency),visual:'bar',evidence:small.evidence,conditional:null,progress:null}];
 }
 
@@ -94,8 +94,8 @@ function dignity(metrics:Metric[]):Observation[]{
  if(!any)return [];
  const gaps=any.coverage.gaps.length;
  const statement=gaps>0
-  ? `Some days in this period have no statement coverage. Figures exclude those days rather than counting them as nothing.`
-  : `Every day in this period has statement coverage.`;
+  ? `${gaps} ${gaps===1?'day':'days'} without statement coverage`
+  : `Full statement coverage`;
  return [{id:'dignity:'+any.period,metric:any.key,concept:'dignity',statement,figure:{count:gaps},
   visual:'none',evidence:[],conditional:null,progress:null}];
 }

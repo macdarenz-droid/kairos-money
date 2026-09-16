@@ -20,7 +20,7 @@ it('retains Add transaction intent while accounts are loading instead of opening
  expect(await screen.findByRole('button',{name:'Save transaction'})).toBeTruthy();expect(screen.queryByLabelText('Account name')).toBeNull();
 });
 it.each(['dark','light'])('shows unknown/provisional monthly views and month comparison in %s',async theme=>{
- document.documentElement.dataset.theme=theme;mount(<MoneyVisuals/>);await screen.findByRole('heading',{name:'Money Fingerprint'});expect(screen.getByText('Missing axes stay unknown. No complete shape is inferred.')).toBeTruthy();
+ document.documentElement.dataset.theme=theme;mount(<MoneyVisuals/>);await screen.findByRole('heading',{name:'Money Fingerprint'});expect(screen.getAllByRole('button').find(b=>/Spending variability/.test(b.textContent??''))).toBeTruthy();
  fireEvent.change(screen.getByRole('slider'),{target:{value:'1'}});await waitFor(()=>expect(screen.getByRole('slider').getAttribute('aria-valuetext')).toContain('compared with'));
  fireEvent.click(screen.getByRole('button',{name:'Buffer days · Unknown'}));expect(await screen.findByRole('dialog')).toBeTruthy();expect(screen.getByText('No source transactions are available for this value.')).toBeTruthy();
 });

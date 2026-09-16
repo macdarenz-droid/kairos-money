@@ -22,14 +22,14 @@ it('draws both flows on one shared scale, so the two lengths can be compared',()
  expect(gap.style.insetInlineStart).toBe('75%');   // begins where the shorter bar ends
  expect(gap.style.width).toBe('25%');              // and spans exactly the difference
  expect(screen.getAllByText('$1,250.00').length).toBeGreaterThan(0);
- expect(screen.getByText(/stayed with you/)).toBeTruthy();
+ expect(screen.getByText(/^Left ·/)).toBeTruthy();
 });
 
 it('says money ran out rather than drawing a negative length',()=>{
  render(<FlowBar flow={{inMinor:'300000',outMinor:'450000'}} code={AUD} label="2026-08"/>);
  expect(widths()).toEqual(['66.6666%','100%']);
- expect(screen.getByText(/more went out than came in/)).toBeTruthy();
- expect(screen.getByText('Short by')).toBeTruthy();
+ expect(screen.getByText(/^Overspent ·/)).toBeTruthy();
+ expect(screen.getByText('Over')).toBeTruthy();
  expect(document.querySelector('.flow-gap-short')).toBeTruthy();
  for(const width of widths())expect(Number.parseFloat(width)).toBeGreaterThanOrEqual(0);
 });
@@ -68,11 +68,14 @@ it('never leaves identity to colour alone',()=>{
   {month:'2026-06',inMinor:'500000',outMinor:'200000'},
   {month:'2026-07',inMinor:'400000',outMinor:'300000'},
  ]} code={AUD}/>);
- // A legend for both directions, a spoken label per column, and the same figures reachable as a table.
- expect(screen.getAllByText('Money stayed').length).toBeGreaterThan(0);
- expect(screen.getAllByText('More went out').length).toBeGreaterThan(0);
- expect(screen.getByText('Read these months as a table')).toBeTruthy();
- expect(screen.getAllByRole('row').length).toBe(3);
+ // A legend for both directions, and every column a button carrying its own full reading. The table
+ // that used to sit under this was a second copy of that same route, not the only one — identity is
+ // still never left to colour alone.
+ expect(screen.getAllByText('Stayed').length).toBeGreaterThan(0);
+ expect(screen.getAllByText('Overspent').length).toBeGreaterThan(0);
+ expect(screen.queryByText('Read these months as a table')).toBeNull();
+ const spoken=screen.getAllByRole('button').map(b=>b.getAttribute('aria-label')??'');
+ expect(spoken.some(l=>/June 2026: .*in, .*out, .*stayed/.test(l))).toBe(true);
 });
 
 it('reads out the month a person picks',()=>{
@@ -82,10 +85,10 @@ it('reads out the month a person picks',()=>{
  ]} code={AUD}/>);
  // Latest month first, because that is the one being asked about.
  expect(screen.getByText('July 2026')).toBeTruthy();
- expect(screen.getByText(/\$1,500\.00 more went out than came in/)).toBeTruthy();
+ expect(screen.getByText(/^Over \$1,500\.00$/)).toBeTruthy();
  fireEvent.click(screen.getByRole('button',{name:'June 2026: $5,000.00 in, $2,000.00 out, $3,000.00 stayed'}));
  expect(screen.getByText('June 2026')).toBeTruthy();
- expect(screen.getByText(/\$3,000\.00 stayed/)).toBeTruthy();
+ expect(screen.getByText(/^Left \$3,000\.00$/)).toBeTruthy();
 });
 
 it('draws a single month rather than refusing to draw anything',()=>{
@@ -115,7 +118,9 @@ it('puts today at the end of the week, scaled to the heaviest day in view',()=>{
  // context around it and must not print it a second time as a hero of its own — but every day, today
  // included, is still in the table underneath.
  expect(document.querySelector('.strip .hero-amount')).toBeNull();
- expect(screen.getAllByText('$20.00').length).toBeGreaterThan(0);
+ // The figures are not printed beside the bars, but they are not lost: the plot's spoken description
+ // reads every day out, which is what the table under it used to be for.
+ expect(screen.getByRole('img').getAttribute('aria-label')).toContain('$20.00');
 });
 
 it('draws the days as marks, never as tap targets too small to hit',()=>{
@@ -125,14 +130,15 @@ it('draws the days as marks, never as tap targets too small to hit',()=>{
  render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'}]} code={AUD} today="2026-08-26"/>);
  expect(document.querySelectorAll('.strip-plot button')).toHaveLength(0);
  expect(screen.getByRole('img').getAttribute('aria-label')).toMatch(/last 7 days/);
- expect(screen.getByText('Read these days as a list')).toBeTruthy();
+ expect(screen.queryByText('Read these days as a list')).toBeNull();
 });
 
 it('shows a day with nothing spent as nothing, not as a gap in the record',()=>{
  render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'}]} code={AUD} today="2026-08-26"/>);
- // Every day of the week is listed, including the ones with nothing on them.
- expect(screen.getAllByRole('row').length).toBe(8);
- expect(screen.getAllByText('$0.00').length).toBeGreaterThan(0);
+ // Every day of the week is spoken, including the ones with nothing on them.
+ const spoken=screen.getByRole('img').getAttribute('aria-label')??'';
+ expect(spoken.match(/\$0\.00/g)?.length).toBe(6);
+ expect(document.querySelectorAll('.strip-column')).toHaveLength(7);
 });
 
 it('labels every day distinctly, and never trades today\'s name for a dot',()=>{
@@ -150,7 +156,9 @@ it('labels every day distinctly, and never trades today\'s name for a dot',()=>{
 
 it('ignores money arriving when drawing what was spent',()=>{
  render(<DayStrip days={[{date:'2026-08-26',minor:'-2000'},{date:'2026-08-26',minor:'500000'}]} code={AUD} today="2026-08-26"/>);
- expect(screen.getAllByText('$20.00').length).toBeGreaterThan(0);
+ const spoken=screen.getByRole('img').getAttribute('aria-label')??'';
+ expect(spoken).toContain('$20.00');
+ expect(spoken).not.toContain('$5,000.00');
  expect(document.body.textContent).not.toContain('$5,000.00');
 });
 
@@ -165,8 +173,8 @@ it('shows six months to a page, so every column stays big enough to press',()=>{
  // The oldest page carries the remainder, so it is short rather than padded with months that do not exist.
  expect(document.querySelectorAll('.balance-column')).toHaveLength(3);
  expect(screen.getByText('March 2026')).toBeTruthy();
- // Every month is still listed, whichever page is showing.
- expect(screen.getAllByRole('row').length).toBe(10);
+ // Paging never hides a month: the pager reaches every one of them.
+ expect(screen.getByText('March 2026')).toBeTruthy();
 });
 
 it('keeps one scale across every month, so turning the page never rescales the picture',()=>{

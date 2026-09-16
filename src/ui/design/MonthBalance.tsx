@@ -63,8 +63,8 @@ export function MonthBalance({months, code}: {months: MonthFlow[]; code: Currenc
 
   return <figure className="balance">
     <figcaption className="heading-row">
-      <h3>What each month left you</h3>
-      <Explain title="What each month left you">
+      <h3>Monthly balance</h3>
+      <Explain title="Monthly balance">
         <p>Everything that came in, less everything that went out.</p>
         <p>Above the line is what stayed. Below it is how much more went out than came in. Both directions
           share one scale, taken from every month on record, so turning the page never rescales the picture.</p>
@@ -72,12 +72,12 @@ export function MonthBalance({months, code}: {months: MonthFlow[]; code: Currenc
     </figcaption>
 
     <div className="balance-legend">
-      <span><span className="flow-key flow-key-in" aria-hidden="true"/>Money stayed</span>
-      <span><span className="flow-key flow-key-out" aria-hidden="true"/>More went out</span>
+      <span><span className="flow-key flow-key-in" aria-hidden="true"/>Stayed</span>
+      <span><span className="flow-key flow-key-out" aria-hidden="true"/>Overspent</span>
     </div>
 
     <div className="balance-plot" role="group"
-      aria-label={`What stayed in each month from ${name(shown[0]!.month)} to ${name(shown[shown.length - 1]!.month)}. Every month is in the table below.`}>
+      aria-label={`What stayed in each month from ${name(shown[0]!.month)} to ${name(shown[shown.length - 1]!.month)}.`}>
       <span className="balance-zero" style={{top: `${zero}%`}} aria-hidden="true"/>
       {shown.map(column => {
         const kept = column.kept >= 0n;
@@ -99,17 +99,10 @@ export function MonthBalance({months, code}: {months: MonthFlow[]; code: Currenc
 
     <div className="balance-readout" role="status">
       <strong>{name(selected.month)}</strong>
-      <span><span className="flow-key flow-key-in" aria-hidden="true"/>{show(selected.received)} came in</span>
-      <span><span className="flow-key flow-key-out" aria-hidden="true"/>{show(selected.spent)} went out</span>
-      <span>{selected.kept >= 0n ? `${show(selected.kept)} stayed` : `${show(-selected.kept)} more went out than came in`}</span>
+      <span><span className="flow-key flow-key-in" aria-hidden="true"/>In {show(selected.received)}</span>
+      <span><span className="flow-key flow-key-out" aria-hidden="true"/>Out {show(selected.spent)}</span>
+      <span>{selected.kept >= 0n ? `Left ${show(selected.kept)}` : `Over ${show(-selected.kept)}`}</span>
     </div>
 
-    <details>
-      <summary>Read these months as a table</summary>
-      <div className="table-scroll"><table className="calendar-table"><caption className="meta">Recorded money in and out, by month.</caption>
-        <thead><tr><th scope="col">Month</th><th scope="col">Came in</th><th scope="col">Went out</th><th scope="col">Left</th></tr></thead>
-        <tbody>{columns.map(c => <tr key={c.month}><th scope="row">{c.month}</th><td>{show(c.received)}</td><td>{show(c.spent)}</td><td>{show(c.kept)}</td></tr>)}</tbody>
-      </table></div>
-    </details>
   </figure>;
 }

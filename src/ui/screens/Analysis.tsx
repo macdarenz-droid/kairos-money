@@ -16,7 +16,7 @@ import type {Metric} from '../../analysis/model';
 function reading(metric:Metric,code:string){
  if(metric.status!=='ok'||metric.value===null)return metric.reason||'Not enough evidence';
  if(metric.unit==='minor units')return format(money(BigInt(metric.value),currency(code)));
- return `${metric.value} ${metric.unit}`;
+ return metric.unit==='count'?metric.value:`${metric.value} ${metric.unit}`;
 }
 
 export function Analysis(){
@@ -46,10 +46,10 @@ export function Analysis(){
  // The four questions the thirty-six measures are FOR. Each takes one measure's finding and states it as
  // an answer; a measure with nothing to say contributes nothing rather than a row explaining itself.
  const answers:MoneyAnswer[]=([
-  ['category_breakdown','Where most of it goes'],
-  ['recurrence_detection','What repeats'],
-  ['weekday_distribution','When it leaves'],
-  ['surplus','Left after essentials'],
+  ['category_breakdown','Top category'],
+  ['recurrence_detection','Repeats'],
+  ['weekday_distribution','Busiest day'],
+  ['surplus','Left over'],
  ] as const).flatMap(([key,question])=>{
   const m=metrics.find(x=>x.key===key);
   if(!m||m.status!=='ok'||m.value===null)return [];
@@ -64,7 +64,7 @@ export function Analysis(){
    {o.conditional&&<p className="meta">{o.conditional.premise} A modelled amount, not an amount saved.</p>}
    {o.progress&&<DataGrid headings={['What happened','Modelled']} numeric={[0,1]}
      rows={[[format(money(BigInt(o.progress.actualMinor),currency(code))),format(money(BigInt(o.progress.scenarioMinor),currency(code)))]]}/>}
-   {o.evidence.length>0&&<Button onClick={()=>setDetail({title:o.statement,ids:o.evidence,text:''})}>Show the transactions behind this</Button>}
+   {o.evidence.length>0&&<Button onClick={()=>setDetail({title:o.statement,ids:o.evidence,text:''})}>Transactions</Button>}
   </Surface>)}
   <MoneyAnswers answers={answers} onEvidence={a=>setDetail({title:a.question,ids:a.evidence,text:''})}/>
   {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}>
@@ -72,7 +72,7 @@ export function Analysis(){
    {/* These used to be listed as their internal ids, which are hashes. Forty lines of hex answered
        "which transactions?" with something no person can read. The transactions themselves are in the
        snapshot this figure was computed from, so show those. */}
-   <p className="meta">The transactions behind this figure.</p>
+
    {q.data?.transactions.filter(t=>detail.ids.includes(t.id)).slice(0,50).map(t=>
     <Row key={t.id} trailing={<Amount value={money(BigInt(t.minor),t.currency)} context={t.description}/>}>
      {t.description}<p className="meta">{t.date}{t.category?' · '+t.category:' · Uncategorised'}</p></Row>)}

@@ -99,17 +99,6 @@ export function MoneyBand() {
 
     {/* The shapes are the fast read; these are the numbers behind them, for anyone who wants them or
         cannot see a line. Closed, so it costs nothing on a screen meant to be glanced at. */}
-    <details>
-      <summary>Read these blocks as a table</summary>
-      <div className="table-scroll"><table className="calendar-table">
-        <caption className="meta">Recorded money in and out, in thirty-day blocks.</caption>
-        <thead><tr><th scope="col">Ended</th><th scope="col">In</th><th scope="col">Out</th><th scope="col">Left</th></tr></thead>
-        <tbody>{band.blocks.map(block => <tr key={block.end}>
-          <th scope="row">{stamp(block.end)}</th><td>{show(block.inMinor)}</td>
-          <td>{show(block.outMinor)}</td><td>{show(block.netMinor)}</td>
-        </tr>)}</tbody>
-      </table></div>
-    </details>
   </section>;
 }
 

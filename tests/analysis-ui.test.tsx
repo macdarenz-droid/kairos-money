@@ -38,20 +38,20 @@ it.each(['dark','light'])('answers what the measures are for, and never counts t
  expect(screen.queryByText(/measures are waiting/)).toBeNull();
  // What replaces them is the questions they exist to answer, stated as answers.
  expect(screen.getByLabelText('What your money does')).toBeTruthy();
- expect(screen.getByText('Where most of it goes')).toBeTruthy();
- expect(screen.getByText('Left after essentials')).toBeTruthy();
+ expect(screen.getByText('Top category')).toBeTruthy();
+ expect(screen.getByText('Left over')).toBeTruthy();
 });
 
 it('reaches the evidence behind a figure in two taps',async()=>{
  await show();
  // The roll-call is gone, but the route it provided is not: every answer opens the rows behind it.
- const buttons=screen.getAllByRole('button',{name:/Show the transactions behind this|Where most of it goes|Left after essentials/});
+ const buttons=screen.getAllByRole('button',{name:/Transactions|Top category|Left over/});
  expect(buttons.length).toBeGreaterThan(0);
  fireEvent.click(buttons[0]!);
- await waitFor(()=>expect(screen.getByText(/The transactions behind this figure/)).toBeTruthy());
+ await waitFor(()=>expect(document.querySelector('dialog[open]')).toBeTruthy());
  // The evidence must be readable transactions. It used to list internal ids, which are hashes: forty
  // lines of hex answering "which transactions?" with nothing a person can check against a statement.
- const sheet=screen.getByText(/The transactions behind this figure/).closest('dialog')??document.body;
+ const sheet=document.querySelector('dialog[open]')??document.body;
  expect(sheet.textContent).not.toMatch(/\b[0-9a-f]{32,}\b/);
 });
 
@@ -62,7 +62,7 @@ it('says one short thing when it cannot answer, not a list of what it cannot ans
  // A thin ledger used to produce thirty-six rows of "not enough evidence", then "0 of 36". Both were the
  // app reporting on itself. An unanswerable question is now absent rather than present and empty.
  expect(document.body.textContent).not.toMatch(/of 36/);
- expect(screen.queryByText('Where most of it goes')).toBeNull();
+ expect(screen.queryByText('Top category')).toBeNull();
  expect(screen.getByText(/Not enough imported history yet/)).toBeTruthy();
  expect(screen.getAllByText(/Not enough imported history yet/)).toHaveLength(1);
 });

@@ -5,7 +5,7 @@ import {useQuery} from '@tanstack/react-query';
 import {currency,money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {spendingPatterns,countsAsMovement} from '../../intelligence/visuals/spending-patterns';
-import {Amount,Button,Row,Sheet,Skeleton,Explain} from '../design/primitives';
+import {Amount,Button,Row,Sheet,Skeleton} from '../design/primitives';
 import {SourceLine} from '../design/SourceLine';
 import {SpendingCalendar} from '../design/SpendingCalendar';
 import {FlowBar} from '../design/FlowBar';
@@ -22,7 +22,6 @@ export function SpendingPatterns(){
  if(q.isPending)return <Skeleton label="Reading spending patterns"/>;
  const s=q.data,p=spendingPatterns(s,month,account),show=(title:string,ids:string[],text:string)=>setDetail({title,ids,text});
  const amount=(minor:string,context:string)=><Amount value={money(BigInt(minor),code)} context={context}/>;
- const top=p.merchants[0];
  // Whether a transfer counts depends on what is being looked at, and this is the whole difference between
  // the two views. Across ALL accounts, moving your own money is not spending and never was — counting it
  // would invent an expense that never happened. Looking at ONE account, the same movement genuinely left
@@ -66,25 +65,27 @@ export function SpendingPatterns(){
   onCategory={name=>{const slice=p.spending.filter(t=>(t.category&&t.category!=='Uncategorised'?t.category:'Uncategorised')===name);
    show(name,slice.map(t=>t.id),`Recorded purchases and fees filed under ${name}.`);}}/>
  <SpendingCalendar days={daily} code={code} onDay={date=>show(date,daily.filter(d=>d.date===date).length?s.transactions.filter(t=>t.date===date&&t.currency===code&&BigInt(t.minor)<0n).map(t=>t.id):[],`Everything recorded on ${date}.`)}/>
- <p className="meta">{p.rows.length} settled transactions · {p.start} to {p.end}. {p.pending} pending entries excluded. Accounts can cover different dates, so these are totals for recorded activity, not a claim that every day is complete.</p>
- <Row trailing={<Button variant="quiet" onClick={()=>show('Recorded spending',p.spending.map(t=>t.id),'Purchases and fees identified from statement text or assigned essential/discretionary categories. Transfers and unclear debits are excluded.')}>{amount(p.total,'recorded purchases and fees')}</Button>}>Recorded purchases and fees</Row>
+ <Row trailing={<Button variant="quiet" onClick={()=>show('Purchases',p.spending.map(t=>t.id),'Purchases and fees. Transfers and unclear debits are excluded.')}>{amount(p.total,'purchases')}</Button>}>Purchases</Row>
  {p.refunds.ids.length>0&&<><Row trailing={<Button variant="quiet" onClick={()=>show('Confirmed refunds for selected purchases',p.refunds.ids,`Refunds explicitly linked to these purchases, received through ${today}. This can include later periods or another account in the same currency. They remain credits on their actual posting dates.`)}>{amount(p.refunds.minor,'confirmed refunds for selected purchases')}</Button>}>Refunds linked to these purchases</Row><Row trailing={amount(p.refunds.net,'selected purchases after linked refunds')}>Selected purchases after linked refunds<p className="meta">Refunds through {today}. Merchant and timing charts show original gross payments.</p></Row></>}
- <Row trailing={<Button variant="quiet" onClick={()=>show('Other debits to review',p.review.map(t=>t.id),'Transfers, remittances, cash withdrawals and unclear debits are not automatically called consumption. Confirm their purpose in the ledger.')}>{amount(p.otherDebits,'other debits to review')}</Button>}>Other debits to review</Row>
- {p.repayments.ids.length>0&&<Row trailing={<Button variant="quiet" onClick={()=>show('Repayment-service debits',p.repayments.ids,'Payments labelled Afterpay, ZipPay, Klarna or Humm. These are included in other debits to review, not added again to purchases. Statement payments do not reveal the original purchase date or remaining debt.')}>{amount(p.repayments.minor,'repayment-service debits included in other debits')}</Button>}>Of other debits: repayment services<p>{p.repayments.ids.length} payments; review before classifying</p></Row>}
- <Row trailing={<Button variant="quiet" onClick={()=>show('Recorded credits',p.rows.filter(t=>BigInt(t.minor)>0n&&!t.transfer&&t.kind!=='transfer').map(t=>t.id),'Recorded credits can include salary, refunds and money moved between accounts. This is not a verified income or savings total.')}>{amount(p.credits,'recorded credits excluding matched transfers')}</Button>}>Recorded credits · not all income</Row>
- <Button variant="quiet" onClick={()=>show('Matched transfers',p.transfers.map(t=>t.id),'Both sides of matched transfers are kept outside spending and income summaries.')}>{p.transfers.length} matched transfer entries excluded</Button>
- {top&&<p>Your largest identified merchant total is <strong>{top.name}</strong>: {amount(top.minor,'largest merchant total')} across {top.count} {top.count===1?'payment':'payments'}.</p>}
- <Button variant="quiet" onClick={()=>show('Small recorded purchases',p.small.ids,'Payments at or below this threshold add up. Size alone does not show whether a purchase was impulsive, necessary or planned.')}>
- {p.small.ids.length} payments of {amount(p.small.limit,'small payment threshold')} or less total {amount(p.small.minor,'small payment total')}</Button>
- <h3>Monthly recorded spending</h3><Bars rows={p.monthly.map(m=>({label:m.month,minor:m.minor,ids:m.ids,note:m.complete?'Full month covered for selected accounts':'Partial account coverage or month'}))} code={code} show={show}/>
- <h3>Repeated merchants</h3>{p.merchants.filter(m=>m.count>=2).length?p.merchants.filter(m=>m.count>=2).slice(0,10).map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,`${m.count} recorded purchases/fees under this statement merchant label.`)}>{amount(m.minor,m.name)}</Button>}>{m.name}<p>{m.count} payments</p></Row>):<p>No repeated merchant labels in this selection.</p>}
- <span className="heading-row"><h3>Spending by posting day</h3><Explain title="Spending by posting day"><p>Totals use the date your bank posted each payment, which can differ from the day you actually spent.</p><p>This says nothing about the time of day or why you spent — only when the money moved.</p></Explain></span><Bars rows={p.weekdays.map(d=>({label:d.name,minor:d.minor,ids:d.ids,note:`${d.count} recorded payments`}))} code={code} show={show}/>
- <details><summary>All identified merchant totals</summary>{p.merchants.map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,'Exact recorded payments grouped by statement merchant label.')}>{amount(m.minor,m.name)}</Button>}>{m.name}<p>{m.count} payments</p></Row>)}</details>
+ <Row trailing={<Button variant="quiet" onClick={()=>show('Unclassified',p.review.map(t=>t.id),'Transfers, remittances, cash withdrawals and unclear debits. Confirm their purpose in the ledger.')}>{amount(p.otherDebits,'unclassified debits')}</Button>}>Unclassified</Row>
+ {p.repayments.ids.length>0&&<Row trailing={<Button variant="quiet" onClick={()=>show('Repayments',p.repayments.ids,'Afterpay, ZipPay, Klarna and Humm. Counted inside Unclassified, not added again to Purchases.')}>{amount(p.repayments.minor,'repayments')}</Button>}>Repayments<p>{p.repayments.ids.length} payments</p></Row>}
+ <Row trailing={<Button variant="quiet" onClick={()=>show('Credits',p.rows.filter(t=>BigInt(t.minor)>0n&&!t.transfer&&t.kind!=='transfer').map(t=>t.id),'Salary, refunds and money in. Not a verified income total.')}>{amount(p.credits,'credits')}</Button>}>Credits</Row>
+ <Button variant="quiet" onClick={()=>show('Transfers',p.transfers.map(t=>t.id),'Both sides are kept out of spending and income.')}>{p.transfers.length} transfers excluded</Button>
+ <Button variant="quiet" onClick={()=>show('Small purchases',p.small.ids,'Payments at or below this threshold.')}>
+ {p.small.ids.length} payments under {amount(p.small.limit,'small payment threshold')} · {amount(p.small.minor,'small payment total')}</Button>
+ <h3>Monthly spending</h3><Bars rows={p.monthly.map(m=>({label:m.month,minor:m.minor,ids:m.ids,...(m.complete?{}:{note:'Partial coverage'})}))} code={code} show={show}/>
+ <h3>Merchants</h3>{p.merchants.filter(m=>m.count>=2).length?p.merchants.filter(m=>m.count>=2).slice(0,10).map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,`${m.count} payments under this merchant label.`)}>{amount(m.minor,m.name)}</Button>}>{m.name}<p>{m.count} payments</p></Row>):<p>No repeated merchants here.</p>}
+ {(()=>{const heaviest=[...p.weekdays].filter(d=>BigInt(d.minor)>0n).sort((a,b)=>BigInt(a.minor)>BigInt(b.minor)?-1:1)[0];
+  if(!heaviest)return null;
+  return <button type="button" className="fact" onClick={()=>show(heaviest.name,heaviest.ids,`${heaviest.count} payments, by the date your bank posted them.`)}>
+   <span className="fact-line"><strong>{heaviest.name}s</strong> cost you most</span>
+   <span className="fact-value">{amount(heaviest.minor,`${heaviest.name} total`)}</span></button>;})()}
+ <details><summary>All merchants</summary>{p.merchants.map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,'Payments grouped by merchant label.')}>{amount(m.minor,m.name)}</Button>}>{m.name}<p>{m.count} payments</p></Row>)}</details>
  </>}
  {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{s.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id} className="section-gap"><Row trailing={amount(t.minor,t.description)}>{t.rawDescription??t.description}<p>{t.date} · {t.category}</p></Row>{t.refundOf&&<p className="meta">Confirmed refund; excluded from income classification.</p>}<AllocationBreakdown parts={t.allocations} code={t.currency}/>{t.sources?.map((source,i)=><SourceLine key={i} file={source.file} row={source.row} raw={source.raw}/>)}</div>)}{!detail.ids.length&&<p>No matching transactions in this selection.</p>}</Sheet>}
  </section>;
 }
-function Bars({rows,code,show}:{rows:{label:string;minor:string;ids:string[];note:string}[];code:ReturnType<typeof currency>;show:(title:string,ids:string[],text:string)=>void}){
+function Bars({rows,code,show}:{rows:{label:string;minor:string;ids:string[];note?:string}[];code:ReturnType<typeof currency>;show:(title:string,ids:string[],text:string)=>void}){
  const max=rows.reduce((m,r)=>BigInt(r.minor)>m?BigInt(r.minor):m,1n);
- return <div className="stack">{rows.map(row=>{const proportion=Number(displayRatio(row.minor,max.toString()));return <div key={row.label}><Row trailing={<Button variant="quiet" onClick={()=>show(row.label,row.ids,row.note)}><Amount value={money(BigInt(row.minor),code)} context={row.label}/></Button>}>{row.label}<p>{row.note}</p></Row><div className="spending-bar" aria-hidden="true"><span style={{width:`${proportion/10000}%`}}/></div></div>;})}</div>;
+ return <div className="stack">{rows.map(row=>{const proportion=Number(displayRatio(row.minor,max.toString()));return <div key={row.label}><Row trailing={<Button variant="quiet" onClick={()=>show(row.label,row.ids,row.note??'')}><Amount value={money(BigInt(row.minor),code)} context={row.label}/></Button>}>{row.label}{row.note&&<p>{row.note}</p>}</Row><div className="spending-bar" aria-hidden="true"><span style={{width:`${proportion/10000}%`}}/></div></div>;})}</div>;
 }

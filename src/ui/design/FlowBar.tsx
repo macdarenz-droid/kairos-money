@@ -37,26 +37,26 @@ export function FlowBar({flow, code, label}: {flow: Flow; code: Currency; label:
         </Explain>
       </span>
       <p className="hero-amount">{show(kept < 0n ? -kept : kept)}</p>
-      <p>{shortfall ? 'more went out than came in' : 'stayed with you'} · {label}</p>
+      <p>{shortfall ? 'Overspent' : 'Left'} · {label}</p>
     </figcaption>
 
     <div className="flow-track">
       <div className="flow-line">
         <span className="flow-key flow-key-in" aria-hidden="true"/>
-        <span className="flow-name">Came in</span>
+        <span className="flow-name">In</span>
         <span className="flow-bar"><span className="flow-fill flow-fill-in" style={{width: `${span(received)}%`}}/></span>
         <span className="amount">{show(received)}</span>
       </div>
       <div className="flow-line">
         <span className="flow-key flow-key-out" aria-hidden="true"/>
-        <span className="flow-name">Went out</span>
+        <span className="flow-name">Out</span>
         <span className="flow-bar"><span className="flow-fill flow-fill-out" style={{width: `${span(spent)}%`}}/></span>
         <span className="amount">{show(spent)}</span>
       </div>
       {/* The gap between the two bar ends, drawn where the eye already is. */}
       <div className="flow-line flow-gap-line">
         <span className="flow-key" aria-hidden="true"/>
-        <span className="flow-name">{shortfall ? 'Short by' : 'Left over'}</span>
+        <span className="flow-name">{shortfall ? 'Over' : 'Left'}</span>
         <span className="flow-bar">
           <span className={`flow-gap ${shortfall ? 'flow-gap-short' : ''}`}
             style={{insetInlineStart: `${span(received < spent ? received : spent)}%`, width: `${span(kept < 0n ? -kept : kept)}%`}}/>

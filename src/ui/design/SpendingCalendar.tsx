@@ -65,7 +65,6 @@ export function SpendingCalendar({days, code, onDay}: {days: DaySpend[]; code: C
         <Explain title="Spending calendar">
           <p>Each square is a day, and stronger colour means more was spent on it. Days with nothing on them
             stay empty rather than being left out.</p>
-          <p>Every day is listed with its amount in the table below this.</p>
         </Explain>
       </div>
       <p className="hero-amount">{label(monthTotal)}</p>
@@ -90,15 +89,7 @@ export function SpendingCalendar({days, code, onDay}: {days: DaySpend[]; code: C
       {[1, 2, 3, 4, 5].map(n => <span key={n} className={`calendar-key level-${n}`}/>)}
       <span className="meta">More</span>
     </div>
-    <p className="meta">Heaviest day this month: {label(peak)}.</p>
+    <p className="meta">Heaviest day · {label(peak)}</p>
 
-    <details>
-      <summary>Read this month as a list</summary>
-      <div className="table-scroll"><table className="calendar-table"><caption className="meta">Every day with spending in {month}.</caption>
-        <thead><tr><th scope="col">Day</th><th scope="col">Spent</th></tr></thead>
-        <tbody>{cells.filter(c => c.minor > 0n).map(c => <tr key={c.date}><th scope="row">{c.date}</th><td>{label(c.minor)}</td></tr>)}</tbody>
-      </table></div>
-      {!cells.some(c => c.minor > 0n) && <p className="meta">No spending recorded in this month.</p>}
-    </details>
   </section>;
 }
