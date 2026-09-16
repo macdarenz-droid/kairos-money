@@ -10,6 +10,23 @@ export function spendingKind(t:Transaction):'transfer'|'review'|'spending'{
  if(['essential','discretionary'].includes(t.kind)||/\b(?:CARD|EFTPOS|POS|PURCHASE|FEE)\b/i.test(text))return 'spending';
  return 'review';
 }
+/**
+ * Whether a transfer leg belongs in a picture of spending, which depends entirely on what is being looked
+ * at.
+ *
+ * Across ALL accounts, moving your own money is not spending and never was: counting it would invent an
+ * expense that never happened, and the two legs would cancel to nothing anyway.
+ *
+ * Looking at ONE account, the same movement genuinely left it. Money went out of this account and into
+ * another, and a picture of this account that hides that is wrong about what the account did. The very
+ * same leg is negative on the account it left and positive on the one it reached — one row, read from two
+ * sides — which is why this takes the selection rather than the transaction alone.
+ */
+export function countsAsMovement(row: {transfer: boolean; kind: string}, account: string): boolean {
+  if (account !== 'all') return true;
+  return !(row.transfer || row.kind === 'transfer');
+}
+
 export function spendingPatterns(snapshot:Snapshot,month='all',account='all'){
  const eligible=snapshot.transactions.filter(t=>t.currency===snapshot.currency&&snapshot.accountIds.includes(t.accountId)&&t.date<=snapshot.asOf&&(account==='all'||t.accountId===account));
  const months=[...new Set(eligible.map(t=>t.date.slice(0,7)))].sort().reverse();

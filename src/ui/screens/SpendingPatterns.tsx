@@ -4,7 +4,7 @@ import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {currency,money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
-import {spendingPatterns} from '../../intelligence/visuals/spending-patterns';
+import {spendingPatterns,countsAsMovement} from '../../intelligence/visuals/spending-patterns';
 import {Amount,Button,Row,Sheet,Skeleton,Explain} from '../design/primitives';
 import {SourceLine} from '../design/SourceLine';
 import {SpendingCalendar} from '../design/SpendingCalendar';
@@ -23,15 +23,23 @@ export function SpendingPatterns(){
  const s=q.data,p=spendingPatterns(s,month,account),show=(title:string,ids:string[],text:string)=>setDetail({title,ids,text});
  const amount=(minor:string,context:string)=><Amount value={money(BigInt(minor),code)} context={context}/>;
  const top=p.merchants[0];
- // Daily totals for the calendar. Built from the same settled, non-transfer transactions the rest of this
- // screen counts, so the shape and the lists below can never disagree.
- const daily=s.transactions.filter(t=>t.currency===code&&t.status==='settled'&&!t.transfer&&t.kind!=='transfer'
+ // Whether a transfer counts depends on what is being looked at, and this is the whole difference between
+ // the two views. Across ALL accounts, moving your own money is not spending and never was — counting it
+ // would invent an expense that never happened. Looking at ONE account, the same movement genuinely left
+ // it: money went out of this account and into another, and a picture of this account that hides that is
+ // wrong about how much it holds. So a transfer leg is excluded in the pooled view and included in the
+ // single-account view, where it appears negative on the account it left and positive on the one it
+ // reached — which is the same leg, read from two sides.
+ const counts=(t:{transfer:boolean;kind:string})=>countsAsMovement(t,account);
+ // Daily totals for the calendar, from the same rows the rest of this screen counts, so the shape and the
+ // lists below can never disagree.
+ const daily=s.transactions.filter(t=>t.currency===code&&t.status==='settled'&&counts(t)
    &&(account==='all'||t.accountId===account)).map(t=>({date:t.date,minor:t.minor}));
  // Money in and money out per month, from the same rows the totals below are built from, so the picture
  // and the figures can never tell different stories.
  const byMonth=new Map<string,{received:bigint;spent:bigint}>();
  for(const t of p.rows){
-  if(t.transfer||t.kind==='transfer')continue;
+  if(!counts(t))continue;
   const key=t.date.slice(0,7),cell=byMonth.get(key)??{received:0n,spent:0n},value=BigInt(t.minor);
   if(value>0n)cell.received+=value;else cell.spent-=value;
   byMonth.set(key,cell);
