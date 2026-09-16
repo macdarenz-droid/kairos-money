@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react';
 import {format, money, type Currency} from '../../core/money';
-import {Button} from './primitives';
+import {Button, Explain} from './primitives';
 
 export type DaySpend = {date: string; minor: string};
 
@@ -62,6 +62,11 @@ export function SpendingCalendar({days, code, onDay}: {days: DaySpend[]; code: C
         <Button variant="quiet" disabled={index <= 0} onClick={() => setIndex(i => i - 1)} aria-label="Previous month">‹</Button>
         <h3>{first.toLocaleDateString('en-AU', {month: 'long', year: 'numeric', timeZone: 'UTC'})}</h3>
         <Button variant="quiet" disabled={index >= months.length - 1} onClick={() => setIndex(i => i + 1)} aria-label="Next month">›</Button>
+        <Explain title="Spending calendar">
+          <p>Each square is a day, and stronger colour means more was spent on it. Days with nothing on them
+            stay empty rather than being left out.</p>
+          <p>Every day is listed with its amount in the table below this.</p>
+        </Explain>
       </div>
       <p className="hero-amount">{label(monthTotal)}</p>
       <p className="meta">spent this month</p>
@@ -85,7 +90,7 @@ export function SpendingCalendar({days, code, onDay}: {days: DaySpend[]; code: C
       {[1, 2, 3, 4, 5].map(n => <span key={n} className={`calendar-key level-${n}`}/>)}
       <span className="meta">More</span>
     </div>
-    <p className="meta">Each square is a day. Stronger colour means more spent. The heaviest day this month is {label(peak)}.</p>
+    <p className="meta">Heaviest day this month: {label(peak)}.</p>
 
     <details>
       <summary>Read this month as a list</summary>

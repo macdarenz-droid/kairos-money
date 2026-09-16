@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {Notices, noticeAccess, noticesAvailable, installedSources, watchSources} from '../../ingest/notices';
-import {Button, Input, Row} from '../design/primitives';
+import {Button, Explain, Input, Row} from '../design/primitives';
 import {useSession} from '../session';
 import type {Account} from '../../core/db/repository';
 
@@ -51,12 +51,20 @@ export function NoticeSettings({accounts = []}: {accounts?: readonly Account[]} 
   }
 
   return <section className="settings-section">
-    <h2>Read my bank's notifications</h2>
-    <p>Kairos can read the purchase alerts your banking app puts on your screen and ask whether to record
-      each one, so your spending is current between statements.</p>
-    <p>Android has no way to share only one app's notifications. Granting this lets Kairos see every
-      notification on this phone, including your messages. It reads only the apps you tick below and keeps
-      everything on this device, and you can withdraw it in Android's settings whenever you like.</p>
+    <span className="heading-row"><h2>Read my bank's notifications</h2>
+      <Explain title="Read my bank's notifications">
+        <p>Kairos reads the purchase alerts your banking app puts on your screen and asks whether to record
+          each one, so your spending stays current between statements.</p>
+        <p>Android has no way to share only one app's notifications, which is why the grant is all or
+          nothing. Kairos reads only the apps you tick, keeps everything on this device, and sends none of
+          it anywhere. You can withdraw the access in Android's settings whenever you like.</p>
+      </Explain>
+    </span>
+    {/* This sentence stays in front of the button that grants the access. It is what the person is being
+        asked to weigh, and moving it behind a mark they have to go looking for would be asking for consent
+        while hiding the cost. Everything else about the feature is one press away above. */}
+    <p>Granting this lets Kairos see every notification on this phone, including your messages. It reads
+      only the apps you tick below.</p>
 
     <Row trailing={<Button onClick={() => { void Notices.openSettings(); }}>{granted ? 'Change in Android' : 'Grant in Android'}</Button>}>
       Notification access
@@ -83,13 +91,13 @@ export function NoticeSettings({accounts = []}: {accounts?: readonly Account[]} 
       {!watched.length && <p className="meta">Nothing is ticked, so nothing is being read yet.</p>}
 
       {live.length > 1 && <>
-        <h3>Which account these belong to</h3>
-        {/* Most bank notifications never say which account they are about. Without this the app fell back
-            to whichever account happened to be first in the list, which is a silent coin toss on real
-            money once there is more than one. A notice that does name an account still wins over this. */}
-        <p className="meta">When a notification says which account it is about — "ending 189" — Kairos uses
-          that. This is what it falls back on when the message does not say. You can still change it on any
-          purchase before approving it.</p>
+        <span className="heading-row"><h3>Which account these belong to</h3>
+          <Explain title="Which account these belong to">
+            <p>When a notification says which account it is about — "ending 189" — Kairos uses that.</p>
+            <p>This is what it falls back on when the message does not say, and you can still change it on
+              any purchase before approving it.</p>
+          </Explain>
+        </span>
         <label className="input-label">Usual account
           <select value={fallback.data ?? ''}
             onChange={e => { void session.run(repo => repo.notices.setDefaultAccount(e.target.value || null))

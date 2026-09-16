@@ -4,7 +4,7 @@ import {currency, format, money} from '../../core/money';
 import {capturedNotices, forgetNotices, readNotices} from '../../ingest/notices';
 import {accountFromNotice} from '../../ingest/notices/route';
 import {pairNotices, type NoticeItem} from '../../ingest/notices/pair';
-import {Button, Sheet} from '../design/primitives';
+import {Button, Explain, Sheet} from '../design/primitives';
 import type {ReadableNotice} from '../../ingest/notices';
 import {useSession} from '../session';
 import type {Account} from '../../core/db/repository';
@@ -107,20 +107,25 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
       {captured.isPending ? <p>Reading what your bank told you.</p> : !items.length
         ? <p>Nothing new from your bank to check.</p>
         : <>
-          <p>Your bank said these happened. Nothing is recorded until you say so, and each one is recorded
-            as unconfirmed until your statement shows it.</p>
-
           {items.map(entry => entry.kind === 'transfer'
             ? <div key={entry.out.notice.id} className="notice-card">
                 <div className="notice-head">
                   <strong>{nameOf(entry.fromId)} → {nameOf(entry.toId)}</strong>
                   <span className="amount">{format(money(BigInt(entry.out.minor) < 0n ? -BigInt(entry.out.minor) : BigInt(entry.out.minor), code))}</span>
                 </div>
-                {/* Said plainly, because joining two notices into one row is the app making a claim about
-                    the owner's money and they should be able to check it before agreeing. */}
-                <p className="meta">Both banks announced this within half an hour, for the same amount. It
-                  looks like you moved your own money, so it is recorded as a transfer and not as spending.</p>
-                <p className="meta">{entry.out.notice.title} · {entry.in.notice.title}</p>
+                {/* The claim is a tag, and the reasoning behind it is one press away. Joining two notices
+                    into one row IS the app making a claim about the owner's money, so it stays checkable —
+                    but it does not need a paragraph on the row to be checkable. */}
+                <p className="meta"><span className="tag">Transfer</span>
+                  <Explain title="Why these two are one transfer">
+                    <p>Both banks announced this within half an hour, for the same amount, and the money left
+                      one of your accounts and arrived in another.</p>
+                    <p>That means you moved your own money, so it is recorded as a transfer rather than as
+                      spending. Change either account below if this is wrong.</p>
+                    <p className="meta">{entry.out.notice.title}</p>
+                    <p className="meta">{entry.in.notice.title}</p>
+                  </Explain>
+                </p>
                 {picker(entry.out.notice.id, entry.fromId, 'Money left')}
                 {picker(entry.in.notice.id, entry.toId, 'Money arrived in')}
                 <div className="notice-actions">

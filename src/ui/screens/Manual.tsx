@@ -41,7 +41,7 @@ export function ManualSheet({accounts,entry,prefill,onClose}:{accounts:Account[]
    <Button key={c} type="button" aria-pressed={category===c} onClick={()=>setCategory(c)}>{c}</Button>)}</div>}
   <label className="input-label">Category<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">Uncategorised</option>{categories.map(c=><option key={c}>{c}</option>)}</select></label>
  </>}
- <Input label="Note (optional)" maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/><p className="meta">Saved on this device. Manual entries do not establish statement coverage or a verified balance.</p>{error&&<p role="alert">{error}</p>}<Button type="submit" variant="primary" disabled={busy||!accounts.length}>{busy?'Saving…':'Save transaction'}</Button></form></Sheet>;
+ <Input label="Note (optional)" maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/>{error&&<p role="alert">{error}</p>}<Button type="submit" variant="primary" disabled={busy||!accounts.length}>{busy?'Saving…':'Save transaction'}</Button></form></Sheet>;
 }
 export function ManualHistory({accounts,today=false}:{accounts:Account[];today?:boolean}){
  const session=useSession(),query=useQueryClient(),[edit,setEdit]=useState<ManualEntry>(),[remove,setRemove]=useState<ManualEntry>(),[match,setMatch]=useState<ManualEntry>(),[error,setError]=useState(''),[busy,setBusy]=useState(false);

@@ -34,7 +34,7 @@ export function Settings({ onAccount, notify, accounts = [] }: { onAccount: () =
     catch (e) { setError(e instanceof Error ? e.message : 'Android could not delete your data. Try again.'); setBusy(false); }
   }
   return <>
-    <section className="settings-section"><h2>Appearance</h2><p>Choose a theme, or follow your device.</p><div className="theme-choices">{(['system', 'dark', 'light'] as const).map(value => <Button key={value} aria-pressed={preference === value} onClick={() => void theme(value)}>{value === 'system' ? 'System' : value === 'dark' ? 'Dark' : 'Light'}</Button>)}</div></section>
+    <section className="settings-section"><h2>Appearance</h2><div className="theme-choices">{(['system', 'dark', 'light'] as const).map(value => <Button key={value} aria-pressed={preference === value} onClick={() => void theme(value)}>{value === 'system' ? 'System' : value === 'dark' ? 'Dark' : 'Light'}</Button>)}</div></section>
     <section className="settings-section"><h2>Your ledger</h2><div className="action-list"><Button onClick={onAccount}><Plus size={18}/>Add an account</Button><Button disabled={session.state === 'preview'} onClick={() => setDialog('export')}><Download size={18}/>Export all data</Button><Button disabled={session.state === 'preview'} onClick={() => setDialog('backup')}>Encrypted backup</Button></div></section>
     <NotificationSettings/>
     <NoticeSettings accounts={accounts}/>

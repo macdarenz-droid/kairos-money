@@ -1,5 +1,6 @@
 import {format, money, type Currency} from '../../core/money';
 import {displayRatio} from '../../intelligence/visuals';
+import {Explain} from './primitives';
 
 export type Flow = {inMinor: string; outMinor: string};
 
@@ -29,7 +30,12 @@ export function FlowBar({flow, code, label}: {flow: Flow; code: Currency; label:
 
   return <figure className="flow">
     <figcaption>
-      <h3>Money movement</h3>
+      <span className="heading-row"><h3>Money movement</h3>
+        <Explain title="Money movement">
+          <p>Both bars use the same scale, so their lengths can be compared directly. The marked span is the
+            difference between them — what stayed, or what had to come from somewhere else.</p>
+        </Explain>
+      </span>
       <p className="hero-amount">{show(kept < 0n ? -kept : kept)}</p>
       <p>{shortfall ? 'more went out than came in' : 'stayed with you'} · {label}</p>
     </figcaption>
@@ -58,8 +64,5 @@ export function FlowBar({flow, code, label}: {flow: Flow; code: Currency; label:
         <span className="amount">{show(kept < 0n ? -kept : kept)}</span>
       </div>
     </div>
-
-    <p className="meta">Both bars use the same scale, so their lengths can be compared directly. The marked
-      span is the difference between them.</p>
   </figure>;
 }

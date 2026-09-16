@@ -1,6 +1,7 @@
 import {useMemo} from 'react';
 import {format, money, type Currency} from '../../core/money';
 import {categoryTiles} from '../../intelligence/visuals/treemap';
+import {Explain} from './primitives';
 
 export type CategorySlice = {name: string; minor: string; ids: string[]};
 
@@ -45,7 +46,13 @@ export function CategorySplit({slices, code, onCategory, heading = 'What the mon
 
   return <figure className="split">
     <figcaption>
-      <h3>{heading}</h3>
+      <span className="heading-row"><h3>{heading}</h3>
+        <Explain title={heading}>
+          <p>Each block is a kind of spending and its size is how much. Stronger colour says the same again,
+            so a small block in a crowded corner can still be placed on the scale.</p>
+          <p>Anything without a category is not drawn, and every category is listed in the table underneath.</p>
+        </Explain>
+      </span>
       {mostlyBlank
         ? <p>Most of this — {show(blankMinor)} of {show(total)} — has no category yet, so the picture below
             is only the part that does. Accepting the categories offered when you import, or setting them
@@ -69,7 +76,6 @@ export function CategorySplit({slices, code, onCategory, heading = 'What the mon
             </text>}
           </g>)}
         </svg>
-        <p className="meta">Each block is a kind of spending; its size is how much, and stronger colour says the same again.</p>
       </>}
 
     <div className="table-scroll">

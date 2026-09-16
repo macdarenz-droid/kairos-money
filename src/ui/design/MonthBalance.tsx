@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import {format, money, type Currency} from '../../core/money';
 import {displayRatio} from '../../intelligence/visuals';
-import {Button} from './primitives';
+import {Button, Explain} from './primitives';
 
 /**
  * Six months to a page. A tappable column needs 44px, and a 411px phone minus the screen's own padding
@@ -62,9 +62,13 @@ export function MonthBalance({months, code}: {months: MonthFlow[]; code: Currenc
   const name = (month: string) => new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-AU', {month: 'long', year: 'numeric', timeZone: 'UTC'});
 
   return <figure className="balance">
-    <figcaption>
+    <figcaption className="heading-row">
       <h3>What each month left you</h3>
-      <p>Everything that came in, less everything that went out.</p>
+      <Explain title="What each month left you">
+        <p>Everything that came in, less everything that went out.</p>
+        <p>Above the line is what stayed. Below it is how much more went out than came in. Both directions
+          share one scale, taken from every month on record, so turning the page never rescales the picture.</p>
+      </Explain>
     </figcaption>
 
     <div className="balance-legend">

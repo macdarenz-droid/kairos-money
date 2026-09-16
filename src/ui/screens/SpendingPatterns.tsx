@@ -5,7 +5,7 @@ import {useQuery} from '@tanstack/react-query';
 import {currency,money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {spendingPatterns} from '../../intelligence/visuals/spending-patterns';
-import {Amount,Button,Row,Sheet,Skeleton} from '../design/primitives';
+import {Amount,Button,Row,Sheet,Skeleton,Explain} from '../design/primitives';
 import {SourceLine} from '../design/SourceLine';
 import {SpendingCalendar} from '../design/SpendingCalendar';
 import {FlowBar} from '../design/FlowBar';
@@ -69,8 +69,8 @@ export function SpendingPatterns(){
  <Button variant="quiet" onClick={()=>show('Small recorded purchases',p.small.ids,'Payments at or below this threshold add up. Size alone does not show whether a purchase was impulsive, necessary or planned.')}>
  {p.small.ids.length} payments of {amount(p.small.limit,'small payment threshold')} or less total {amount(p.small.minor,'small payment total')}</Button>
  <h3>Monthly recorded spending</h3><Bars rows={p.monthly.map(m=>({label:m.month,minor:m.minor,ids:m.ids,note:m.complete?'Full month covered for selected accounts':'Partial account coverage or month'}))} code={code} show={show}/>
- <h3>Repeated merchants</h3><p className="meta">Repeated payments are not automatically subscriptions. Bank wording can split one merchant into several labels.</p>{p.merchants.filter(m=>m.count>=2).length?p.merchants.filter(m=>m.count>=2).slice(0,10).map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,`${m.count} recorded purchases/fees under this statement merchant label.`)}>{amount(m.minor,m.name)}</Button>}>{m.name}<p>{m.count} payments</p></Row>):<p>No repeated merchant labels in this selection.</p>}
- <h3>Spending by posting day</h3><p className="meta">Totals use bank posting dates, which may differ from purchase dates. They do not reveal the time of day or your motivation.</p><Bars rows={p.weekdays.map(d=>({label:d.name,minor:d.minor,ids:d.ids,note:`${d.count} recorded payments`}))} code={code} show={show}/>
+ <h3>Repeated merchants</h3>{p.merchants.filter(m=>m.count>=2).length?p.merchants.filter(m=>m.count>=2).slice(0,10).map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,`${m.count} recorded purchases/fees under this statement merchant label.`)}>{amount(m.minor,m.name)}</Button>}>{m.name}<p>{m.count} payments</p></Row>):<p>No repeated merchant labels in this selection.</p>}
+ <span className="heading-row"><h3>Spending by posting day</h3><Explain title="Spending by posting day"><p>Totals use the date your bank posted each payment, which can differ from the day you actually spent.</p><p>This says nothing about the time of day or why you spent — only when the money moved.</p></Explain></span><Bars rows={p.weekdays.map(d=>({label:d.name,minor:d.minor,ids:d.ids,note:`${d.count} recorded payments`}))} code={code} show={show}/>
  <details><summary>All identified merchant totals</summary>{p.merchants.map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,'Exact recorded payments grouped by statement merchant label.')}>{amount(m.minor,m.name)}</Button>}>{m.name}<p>{m.count} payments</p></Row>)}</details>
  </>}
  {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{s.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id} className="section-gap"><Row trailing={amount(t.minor,t.description)}>{t.rawDescription??t.description}<p>{t.date} · {t.category}</p></Row>{t.refundOf&&<p className="meta">Confirmed refund; excluded from income classification.</p>}<AllocationBreakdown parts={t.allocations} code={t.currency}/>{t.sources?.map((source,i)=><SourceLine key={i} file={source.file} row={source.row} raw={source.raw}/>)}</div>)}{!detail.ids.length&&<p>No matching transactions in this selection.</p>}</Sheet>}

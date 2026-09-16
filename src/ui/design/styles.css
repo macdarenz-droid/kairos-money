@@ -214,3 +214,30 @@ details[open] > summary::before { transform: rotate(45deg); }
    sheet. Tighter than a form field: it is an answer the app has already worked out, offered for
    correction, not a question the person has to fill in. */
 .notice-account { margin-top: 10px; font-size: 11px; line-height: 16px; color: var(--text-meta); }
+
+/* The (i) beside a heading. A 44px target as every control must be, drawn as a small mark so a screen
+   carrying several of them still reads as money rather than as a form. Sits on the text baseline of the
+   heading it belongs to, and never takes the heading's own space: headings that hold one become a flex
+   row so the rule is the heading, not the button. */
+.explain { width: 44px; height: 44px; margin: -14px -12px; padding: 0; flex-shrink: 0;
+  display: inline-grid; place-items: center; border: 0; background: transparent;
+  color: var(--text-meta); border-radius: 50%; vertical-align: middle; }
+.explain:active { color: var(--text-primary); }
+.heading-row { display: flex; align-items: center; gap: 2px; }
+.heading-row h2, .heading-row h3 { flex: 0 1 auto; }
+
+/* A one-word claim the app is making about a row, where a sentence used to sit. */
+.tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--surface-3);
+  color: var(--text-secondary); font-size: 11px; line-height: 16px; font-weight: 500; }
+
+/* The category mark at the head of a transaction row. Steps and ink come from the treemap's tile ramp,
+   already measured against --tile-ink, so no new colour enters the app. */
+.category-mark { flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; display: grid;
+  place-items: center; font-size: 13px; font-weight: 600; color: var(--tile-ink); }
+.category-mark.level-1 { background: var(--tile-1); } .category-mark.level-2 { background: var(--tile-2); }
+.category-mark.level-3 { background: var(--tile-3); } .category-mark.level-4 { background: var(--tile-4); }
+.category-mark.level-5 { background: var(--tile-5); }
+/* The mark sits beside the row's text, so the row becomes icon + text + amount. */
+.transaction-row { gap: 12px; }
+.transaction-row > .row-lead { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.transaction-row > .row-lead > span { min-width: 0; overflow-wrap: anywhere; }

@@ -1,5 +1,6 @@
 import {useMemo} from 'react';
 import {format, money, type Currency} from '../../core/money';
+import {Explain} from './primitives';
 import {displayRatio} from '../../intelligence/visuals';
 import type {DaySpend} from './SpendingCalendar';
 
@@ -51,7 +52,12 @@ export function DayStrip({days, code, today, span = 7}: {days: DaySpend[]; code:
     .toLocaleDateString('en-AU', {weekday: 'short', timeZone: 'UTC'}).slice(0, 2);
 
   return <figure className="strip">
-    <figcaption><h3>The last seven days</h3></figcaption>
+    <figcaption className="heading-row"><h3>The last seven days</h3>
+      <Explain title="The last seven days">
+        <p>Each bar is a day and the tallest is the heaviest. Today is the last one.</p>
+        <p>Only money out is drawn. A day with nothing on it is drawn as nothing, not left out.</p>
+      </Explain>
+    </figcaption>
 
     <div className="strip-plot" role="img"
       aria-label={`Spending on each of the last ${span} days, ending today. The heaviest was ${show(peak)}. Every day is listed in the table below.`}>
@@ -60,8 +66,6 @@ export function DayStrip({days, code, today, span = 7}: {days: DaySpend[]; code:
         <span className="strip-tick" aria-hidden="true">{weekday(column.date)}</span>
       </span>)}
     </div>
-
-    <p className="meta">Each bar is a day, tallest is the heaviest. Today is the last one.</p>
 
     <details>
       <summary>Read these days as a list</summary>
