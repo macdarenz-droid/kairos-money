@@ -247,3 +247,15 @@ details[open] > summary::before { transform: rotate(45deg); }
    it is being read. Baseline alignment is wrong here: the mark is a block, not a word. */
 .notice-head .row-lead { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .notice-head .row-lead strong { min-width: 0; overflow-wrap: anywhere; }
+
+/* The four answers the thirty-six measures add up to. Cards rather than rows, because each one is a
+   finding to be looked at rather than a line to be read down; two to a row on a phone so the block reads
+   as a shape. Pressable ones carry the evidence behind them and are 44px by construction. */
+.answers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.answer-card { display: flex; flex-direction: column; gap: 4px; min-height: 84px; padding: 12px;
+  text-align: left; border: 1px solid var(--border-subtle); border-radius: 10px;
+  background: var(--surface-1); color: var(--text-primary); }
+.answer-question { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+.answer-value { font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -.3px;
+  overflow-wrap: anywhere; }
+@media (max-width: 340px) { .answers { grid-template-columns: 1fr; } }

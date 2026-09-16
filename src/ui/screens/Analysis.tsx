@@ -2,7 +2,7 @@ import {useMemo,useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {useSession} from '../session';
 import {Amount,Button,DataGrid,Row,Sheet,Skeleton,Surface} from '../design/primitives';
-import {MeasureReadiness} from '../design/MeasureReadiness';
+import {MoneyAnswers, type MoneyAnswer} from '../design/MoneyAnswers';
 import {currency,format,money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {distress} from '../../intelligence/profile';
@@ -11,20 +11,6 @@ import {analyse,buildIndex} from '../../analysis/index';
 import {observe} from '../../analysis/observations/index';
 import type {Metric} from '../../analysis/model';
 
-const titles:Record<string,string>={
- combined_ledger:'Across your accounts',statement_reconciliation:'Against your statement',period_cashflow:'In and out',
- transfer_exclusion:'Moved between your accounts',credit_sign_rules:'Debits and credits',salary_pattern:'Pay',
- category_breakdown:'Largest category',merchant_breakdown:'Largest merchant',repeated_purchases:'Repeat purchases',
- small_payments:'Small payments together',frequency_versus_size:'Typical purchase',range_anomalies:'Outside the usual range',
- period_comparison:'Against last period',regular_versus_occasional:'Regular costs',payday_effect:'Around payday',
- weekday_distribution:'Busiest day',spending_clusters:'Heavy days',recurrence_detection:'Recurring commitments',
- recurring_price_change:'A recurring price changed',bnpl_commitments:'Buy now, pay later',remittances:'Sent in another currency',
- foreign_exchange:'Foreign amounts',fees:'Fees',refunds_and_chargebacks:'Refunds',cash_entries:'Cash',
- account_balances:'Balance',low_balance_episodes:'Days at or below zero',account_use:'Accounts used',surplus:'Left after essentials',
- balance_trajectory:'Balance direction',evidence_reports:'Rows a report can evidence',context_questions:'Needs context at import',
- budgets:'Against your budget',what_ifs:'A modelled change',conditional_forecasts:'If the pattern continues',
- exports_and_recompute:'What an export carries',
-};
 
 /** Money metrics render as amounts; counts render as plain integers with their unit. */
 function reading(metric:Metric,code:string){
@@ -57,6 +43,19 @@ export function Analysis(){
  if(q.isPending)return <Skeleton label="Reading your money analysis"/>;
  if(q.error||!result)return <p role="alert">Your analysis could not be read. Lock and reopen Kairos before continuing.</p>;
  const {metrics,observations}=result;
+ // The four questions the thirty-six measures are FOR. Each takes one measure's finding and states it as
+ // an answer; a measure with nothing to say contributes nothing rather than a row explaining itself.
+ const answers:MoneyAnswer[]=([
+  ['category_breakdown','Where most of it goes'],
+  ['recurrence_detection','What repeats'],
+  ['weekday_distribution','When it leaves'],
+  ['surplus','Left after essentials'],
+ ] as const).flatMap(([key,question])=>{
+  const m=metrics.find(x=>x.key===key);
+  if(!m||m.status!=='ok'||m.value===null)return [];
+  return [{key,question,answer:reading(m,code),evidence:m.evidence,
+   ...(m.unverified?{detail:'Balance unverified'}:{})}];
+ });
  return <section className="section-gap">
   <div className="list-heading"><h2>Money analysis</h2><span className="meta">Trailing 90 days</span></div>
   {observations.map(o=><Surface key={o.id}>
@@ -67,14 +66,7 @@ export function Analysis(){
      rows={[[format(money(BigInt(o.progress.actualMinor),currency(code))),format(money(BigInt(o.progress.scenarioMinor),currency(code)))]]}/>}
    {o.evidence.length>0&&<Button onClick={()=>setDetail({title:o.statement,ids:o.evidence,text:''})}>Show the transactions behind this</Button>}
   </Surface>)}
-  <MeasureReadiness measures={metrics.map(m=>({key:m.key,title:titles[m.key]??m.key,ready:m.status==='ok',reason:m.reason}))}/>
-  <details><summary>Every measure, one by one</summary>
-   {metrics.map(m=><Row key={m.key} trailing={<span className="meta">{reading(m,code)}</span>}>
-    <span>{titles[m.key]??m.key}</span>
-    <p className="meta">{m.status==='ok'?`${m.coverage.coveredDays} covered days${m.unverified?', balance unverified':''}`:m.reason}</p>
-    {m.evidence.length>0&&<Button onClick={()=>setDetail({title:titles[m.key]??m.key,ids:m.evidence,text:`Covered days ${m.coverage.coveredDays}. Gaps ${m.coverage.gaps.length}. Evidence ${m.details.evidenceTotal??m.evidence.length} transactions.`})}>Show evidence</Button>}
-   </Row>)}
-  </details>
+  <MoneyAnswers answers={answers} onEvidence={a=>setDetail({title:a.question,ids:a.evidence,text:''})}/>
   {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}>
    {detail.text&&<p>{detail.text}</p>}
    {/* These used to be listed as their internal ids, which are hashes. Forty lines of hex answered

@@ -28,39 +28,43 @@ const show=async(over:Partial<Snapshot>={})=>{
 };
 afterEach(cleanup);
 
-it.each(['dark','light'])('renders every measure with its coverage in %s',async theme=>{
+it.each(['dark','light'])('answers what the measures are for, and never counts them in %s',async theme=>{
  document.documentElement.dataset.theme=theme;
  await show();
- // All 36 capabilities are still there, one tap down, whether or not they had enough evidence.
- expect(screen.getByText(/of 36/)).toBeTruthy();
- expect(screen.getByText('Every measure, one by one')).toBeTruthy();
- expect(screen.getByText('Largest category')).toBeTruthy();
+ // The thirty-six are the engine, not the subject. Nothing on this screen reports the app's own
+ // inventory: no "12 of 36", no grid of squares, no roll-call to scroll.
+ expect(document.body.textContent).not.toMatch(/of 36/);
+ expect(screen.queryByText('Every measure, one by one')).toBeNull();
+ expect(screen.queryByText(/measures are waiting/)).toBeNull();
+ // What replaces them is the questions they exist to answer, stated as answers.
+ expect(screen.getByLabelText('What your money does')).toBeTruthy();
+ expect(screen.getByText('Where most of it goes')).toBeTruthy();
  expect(screen.getByText('Left after essentials')).toBeTruthy();
 });
 
 it('reaches the evidence behind a figure in two taps',async()=>{
  await show();
- const buttons=screen.getAllByRole('button',{name:'Show evidence'});
+ // The roll-call is gone, but the route it provided is not: every answer opens the rows behind it.
+ const buttons=screen.getAllByRole('button',{name:/Show the transactions behind this|Where most of it goes|Left after essentials/});
  expect(buttons.length).toBeGreaterThan(0);
  fireEvent.click(buttons[0]!);
  await waitFor(()=>expect(screen.getByText(/The transactions behind this figure/)).toBeTruthy());
- expect(screen.getByText(/Covered days/)).toBeTruthy();
  // The evidence must be readable transactions. It used to list internal ids, which are hashes: forty
  // lines of hex answering "which transactions?" with nothing a person can check against a statement.
  const sheet=screen.getByText(/The transactions behind this figure/).closest('dialog')??document.body;
  expect(sheet.textContent).not.toMatch(/\b[0-9a-f]{32,}\b/);
 });
 
-it('states a measure without enough evidence rather than showing a zero',async()=>{
+it('says one short thing when it cannot answer, not a list of what it cannot answer',async()=>{
  snapshot.current={...build(),coverage:[{accountId:'a',start:today,end:today,tier:'A'}]};
  render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><Analysis/></QueryClientProvider>);
  await screen.findByText('Money analysis');
- expect(screen.getByText('0 of 36')).toBeTruthy();
- const summary=screen.getByText(/measures are waiting:/);
- expect(summary.textContent).toContain('At least 20 covered days');
- // Said once with a count, not once per measure. The roll-call is behind a disclosure, not on the screen.
- expect(screen.getAllByText(/measures are waiting:/)).toHaveLength(1);
- expect(document.querySelector('details > summary')?.textContent).toBe('Every measure, one by one');
+ // A thin ledger used to produce thirty-six rows of "not enough evidence", then "0 of 36". Both were the
+ // app reporting on itself. An unanswerable question is now absent rather than present and empty.
+ expect(document.body.textContent).not.toMatch(/of 36/);
+ expect(screen.queryByText('Where most of it goes')).toBeNull();
+ expect(screen.getByText(/Not enough imported history yet/)).toBeTruthy();
+ expect(screen.getAllByText(/Not enough imported history yet/)).toHaveLength(1);
 });
 
 it('keeps a modelled amount visibly separate from what happened, and never calls it saved',async()=>{
