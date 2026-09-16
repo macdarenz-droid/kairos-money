@@ -69,7 +69,7 @@ export function AccountSheet({ account, onClose, onSaved }: { account?: Account;
     {mutation.error && <p className="error" role="alert">{mutation.error.message}</p>}
     {editing && <div className="stack section-gap">
       {primary.data === account.id
-        ? <p className="meta"><span className="tag">Primary account</span></p>
+        ? <p className="meta"><span className="tag tag-primary">Primary account</span></p>
         : <Button disabled={setPrimary.isPending || !!account.archived_at} onClick={() => setPrimary.mutate()}>Make this my primary account</Button>}
       {/* Closing an account keeps every transaction already recorded against it — the history stays true,
           the account simply stops being offered for new money. */}

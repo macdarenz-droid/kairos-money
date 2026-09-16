@@ -237,6 +237,12 @@ details[open] > summary::before { transform: rotate(45deg); }
 /* A one-word claim the app is making about a row, where a sentence used to sit. */
 .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--surface-3);
   color: var(--text-secondary); font-size: 11px; line-height: 16px; font-weight: 500; }
+/* The one account money defaults to. Same pill, same surface — only the ink changes, to the accent the
+   theme already validates for text, so it reads as a live status rather than as another note. No new
+   colour enters the app for it. */
+.tag-primary { color: var(--accent-text); }
+/* Currency, mask and status on one line, so a tag never crowds the text beside it. */
+.account-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 
 /* The category mark at the head of a transaction row. One neutral chip, one line glyph, in the ink the
    rest of the screen already uses — the icon carries the identity, so no colour is spent on it. Colour in
