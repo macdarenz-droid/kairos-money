@@ -217,13 +217,14 @@ public class IntelligenceInstrumentedTest {
                 return null;
             });
             for(String theme:new String[]{"Light","Dark"}) {
-                click("You");click(theme);awaitJs("Boolean(document.querySelector('.money-visuals select'))");
-                js("(()=>{const e=document.querySelector('.money-visuals select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
-                // Net worth has its own currency filter; the reconciled fixture is USD.
-                js("(()=>{const e=Array.from(document.querySelectorAll('label')).find(l=>l.textContent.startsWith('Net worth currency')).querySelector('select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
-                awaitJs("Array.from(document.querySelectorAll('label')).find(l=>l.textContent.startsWith('Net worth currency')).querySelector('select').value==='USD'");
-                awaitJs("Boolean(document.querySelector('.fingerprint'))");
-                for(String heading:new String[]{"Money Fingerprint","Daily cashflow","Spending after payday","Recurring payment timeline","Spending by category","What changed","Recurring costs","Upcoming bills","Merchant history","Recorded net worth"}) {
+                // ONE currency for the whole app, set at the top of You, where the per-section pickers used
+                // to be. The reconciled fixture is USD, so everything below is read in USD.
+                click("You");click(theme);awaitJs("Boolean(document.querySelector('#settings-currency select'))");
+                js("(()=>{const e=document.querySelector('#settings-currency select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+                awaitJs("document.querySelector('#settings-currency select').value==='USD'");
+                // The monthly views live on Insights now: derived money sits with the other derived money.
+                click("Insights");awaitJs("Boolean(document.querySelector('.fingerprint'))");
+                for(String heading:new String[]{"Money Fingerprint","Daily cashflow","Spending after payday","Recurring payment timeline","Spending by category","What changed","Recurring costs","Upcoming bills","Merchant history"}) {
                     if (heading.equals("Recurring payment timeline")) {
                         awaitJs("Array.from(document.querySelectorAll('[aria-label]')).some(e=>e.getAttribute('aria-label').startsWith('synthetic fortnightly membership:') && e.querySelectorAll('circle').length>0)");
                     }
@@ -239,6 +240,9 @@ public class IntelligenceInstrumentedTest {
                 js("(()=>{const e=document.querySelector('.money-visuals input[type=range]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'1');e.dispatchEvent(new Event('input',{bubbles:true}));})()");
                 awaitJs("document.querySelector('.money-visuals input[type=range]').value==='1'");
                 js("document.querySelector('.money-visuals').scrollIntoView()");NativeEvidence.capture(activity,theme.toLowerCase()+"-monthly-comparison");
+                // Nothing is counted yet, so there is no total to print: the three zero rows only appear
+                // once a holding is recorded or an account balance is included.
+                awaitJs("!document.body.innerText.includes('Combined position')");
                 click("Record a value");input("Item name","Synthetic valuation "+theme);input("Valuation date","2026-01-01");input("Positive value or amount owed","12000.00");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-valuation-entry");click("Save value");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Latest manual total')");
                 awaitJs("document.body.innerText.includes('One valuation date recorded')");
@@ -248,8 +252,6 @@ public class IntelligenceInstrumentedTest {
                 input("Valuation date","2026-02-01");input("Positive value or amount owed","12500.00");click("Save value");
                 awaitJs("!document.querySelector('dialog') && Boolean(document.querySelector('svg[aria-label^=\"Recorded net worth\"]')) && !document.body.innerText.includes('One valuation date recorded')");
                 captureHeading("Recorded net worth",theme.toLowerCase()+"-valuation-two-dates");
-                js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Manage recorded values').click()");click("Remove");click("Remove value");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('One valuation date recorded')");
-                js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Manage recorded values').parentElement.open=true");click("Remove");click("Remove value");awaitJs("!document.querySelector('dialog') && !document.body.innerText.includes('Synthetic valuation "+theme+"')");
                 js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Imported account ownership').parentElement.open=true");
                 awaitJs("document.body.innerText.includes('Latest reconciled statement closing balance')");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-net-worth-account-ownership");
@@ -257,6 +259,10 @@ public class IntelligenceInstrumentedTest {
                 awaitJs("Array.from(document.querySelectorAll('details')).find(e=>e.querySelector('summary')?.textContent==='Imported account ownership').innerText.includes(' · included')");captureHeading("Combined position",theme.toLowerCase()+"-net-worth-combined");
                 js("(()=>{const d=Array.from(document.querySelectorAll('details')).find(e=>e.querySelector('summary')?.textContent==='Imported account ownership');Array.from(d.querySelectorAll('button')).find(e=>e.textContent==='Exclude balance').click();})()");
                 awaitJs("Array.from(document.querySelectorAll('details')).find(e=>e.querySelector('summary')?.textContent==='Imported account ownership').innerText.includes(' · excluded')");
+                // The ownership block is read while holdings exist: with nothing recorded and no account
+                // included, this section is one button, and there is no list to open.
+                js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Manage recorded values').click()");click("Remove");click("Remove value");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('One valuation date recorded')");
+                js("Array.from(document.querySelectorAll('summary')).find(e=>e.textContent==='Manage recorded values').parentElement.open=true");click("Remove");click("Remove value");awaitJs("!document.querySelector('dialog') && !document.body.innerText.includes('Synthetic valuation "+theme+"')");
                 click("Ledger");click("Change categories");awaitJs("Boolean(document.querySelector('dialog input[type=checkbox]'))");
                 js("document.querySelector('dialog input[type=checkbox]').click()");NativeEvidence.capture(activity,theme.toLowerCase()+"-bulk-categories");
                 js("document.querySelector('dialog .icon-button').click()");

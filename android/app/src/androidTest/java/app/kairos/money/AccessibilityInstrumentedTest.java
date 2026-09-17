@@ -29,8 +29,9 @@ public class AccessibilityInstrumentedTest {
             case "Ledger": content="document.querySelector('main').innerText.includes('Search history')"; break;
             case "Insights":
                 js("document.querySelectorAll('main details').forEach(d=>{d.open=true;})");
-                content="Boolean(document.querySelector('.spending-patterns select')) && Boolean(document.querySelector('.intelligence select'))"; break;
-            case "You": content="Boolean(document.querySelector('.money-visuals select')) && document.querySelector('main').innerText.includes('Combined position')"; break;
+                content="Boolean(document.querySelector('.spending-patterns select')) && Boolean(document.querySelector('.intelligence select')) && Boolean(document.querySelector('.money-visuals'))"; break;
+            // You is the currency everything is shown in, what is set up, and the settings behind them.
+            case "You": content="Boolean(document.querySelector('#settings-currency select')) && document.querySelector('main').innerText.includes('Accounts set up')"; break;
             default: content="Boolean(document.querySelector('dialog[open] h2')?.textContent.trim()==='Quick')";
         }
         // Navigation changes synchronously; lazy modules and encrypted queries do not.

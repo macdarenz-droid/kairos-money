@@ -115,9 +115,13 @@ export default function App() {
     {tab === 'Insights' && <><Unconverted onFix={() => openSettings('currency')}/><DoubleCounted onReview={() => setTab('Ledger')}/><Suspense fallback={<Skeleton label="Opening spending patterns"/>}><SpendingPatterns/></Suspense>
       {/* Both render nothing at all when there is nothing to draw: an empty chart is a chart about nothing. */}
       <Suspense fallback={null}><MoneyFlowCard/><CurrencyExposureCard/><DebtShape/></Suspense>
+      {/* Everything derived from the ledger reads here, whatever screen it used to live on: "all money is
+          the same insight whatever pattern of a user". Each part draws nothing until it has something to
+          draw, so an empty ledger is a short screen rather than a list of its own absences. */}
+      <Suspense fallback={<Skeleton label="Opening your money views"/>}><MoneyVisuals/><NetWorth/></Suspense>
       <details className="section-gap"><summary>Habits</summary><Intelligence/></details>
       <details><summary>Every measure</summary><Suspense fallback={<Skeleton label="Opening money analysis"/>}><Analysis/></Suspense></details></>}
-    {tab === 'You' && <>{/* "put at the very top of the you section": every figure in the app is shown in this currency, so the control that sets it comes before the figures rather than after them. */}<Rates accounts={accounts.data ?? []} notify={setToast}/><Suspense fallback={<Skeleton label="Opening your money views"/>}><MoneyVisuals/><NetWorth/></Suspense><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []} focus={settingsFocus} onFocused={clearFocus}/></>}
+    {tab === 'You' && <>{/* "put at the very top of the you section": every figure in the app is shown in this currency, so the control that sets it comes before the figures rather than after them. */}<Rates accounts={accounts.data ?? []} notify={setToast}/><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []} focus={settingsFocus} onFocused={clearFocus}/></>}
     </div>
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} kind={manualKind} onClose={()=>setSheet(null)}/>}

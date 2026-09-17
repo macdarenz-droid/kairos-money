@@ -29,5 +29,9 @@ it.each(['dark','light'])('records provider confirmation and retains it when the
  fireEvent.click(screen.getByRole('button',{name:'Edit record'}));fireEvent.change(screen.getByLabelText('Progress'),{target:{value:'requested'}});fireEvent.click(screen.getByRole('button',{name:'Save cancellation record'}));
  await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());expect((await state.repo!.cancellations.list())[0]!.status).toBe('requested');
  fireEvent.click(screen.getByRole('button',{name:'Remove record'}));expect(await state.repo!.cancellations.list()).toHaveLength(1);
- fireEvent.click(screen.getByRole('button',{name:'Remove cancellation record'}));await screen.findByText('No cancellation records in AUD.');expect(await state.repo!.cancellations.list()).toEqual([]);
+ fireEvent.click(screen.getByRole('button',{name:'Remove cancellation record'}));
+ // With no repeating payment to cancel and nothing recorded, the section has no subject left and leaves
+ // the screen, rather than staying to report that it is empty.
+ await waitFor(()=>expect(document.querySelector('.cancellation-records')).toBeNull());
+ expect(await state.repo!.cancellations.list()).toEqual([]);
 });
