@@ -134,3 +134,44 @@ it('offers neither on a row that came from a statement', async () => {
   expect(screen.queryByRole('button', {name: 'Edit'})).toBeNull();
   expect(screen.queryByRole('button', {name: 'Delete'})).toBeNull();
 });
+
+/** Swap what the app reads back for the entry list, leaving the row in History exactly as it is. */
+function withManualList(entries: Awaited<ReturnType<Repository['manual']['list']>>) {
+  const real = state.repo!;
+  state.repo = {...real, manual: {...real.manual, list: async () => entries}} as Repository;
+}
+
+/**
+ * "when i click confirm, nothing happens" was about a different button, and it is the same fault.
+ * Edit, Match and Delete read the entry behind the open row and, finding none, returned — so all three
+ * looked pressable and did nothing at all. Either the thing happens or the screen says why it did not.
+ */
+it('says so when the entry behind a hand-recorded row cannot be read', async () => {
+  await state.repo!.manual.save({id: 'by-hand', kind: 'expense', accountId: 'a', destinationId: null,
+    date: '2026-01-20', minor: '1250', description: 'Synthetic lunch', category: 'Eating out', notes: ''});
+  withManualList([]);
+  await open();
+  await waitFor(() => expect(rows()).toHaveLength(1));
+  fireEvent.click(rows()[0]!);
+  const edit = await screen.findByRole('button', {name: 'Edit'}) as HTMLButtonElement;
+  await waitFor(() => expect(edit.disabled).toBe(false));
+  fireEvent.click(edit);
+  await screen.findByText(/could not be read/);
+  // The transaction stays open: closing it and showing nothing would be the silent failure again.
+  expect(screen.queryByText('Supporting statements')).toBeTruthy();
+});
+
+/** Read, but this row's entry is gone — a different situation, so a different sentence. */
+it('says so when the entry behind a hand-recorded row has gone', async () => {
+  await state.repo!.manual.save({id: 'by-hand', kind: 'expense', accountId: 'a', destinationId: null,
+    date: '2026-01-20', minor: '1250', description: 'Synthetic lunch', category: 'Eating out', notes: ''});
+  const [entry] = await state.repo!.manual.list();
+  withManualList([{...entry!, id: 'someone-else'}]);
+  await open();
+  await waitFor(() => expect(rows()).toHaveLength(1));
+  fireEvent.click(rows()[0]!);
+  const edit = await screen.findByRole('button', {name: 'Edit'}) as HTMLButtonElement;
+  await waitFor(() => expect(edit.disabled).toBe(false));
+  fireEvent.click(edit);
+  await screen.findByText(/no longer there/);
+});

@@ -81,7 +81,9 @@ def instrumentation(name, count):
         #
         # So take the failure verbatim: the contiguous block starting at the first `stack=`, which is the
         # assertion message followed by its own stack, then the run's verdict lines from the tail.
-        lines = [line[:400] for line in log.splitlines()]
+        # Wide enough for a whole page of innerText: the assertion carries the screen as it stood, and
+        # a cut-off page is how run 171 answered "is the sheet open?" with "you cannot tell".
+        lines = [line[:6000] for line in log.splitlines()]
         start = next((i for i, line in enumerate(lines) if 'INSTRUMENTATION_STATUS: stack=' in line), None)
         verdict = [line for line in lines
                    if 'FAILURES!!!' in line or line.lstrip().startswith('Tests run:')
