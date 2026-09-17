@@ -609,3 +609,10 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
   border-bottom: 1px solid var(--border-default); display: flex; flex-direction: column;
   align-items: flex-start; gap: 12px; }
 .double-counted p { color: var(--warning-text); }
+
+/* Money the figures had to leave out, said where the figures are. Warning ink: it is about the numbers
+   being incomplete, not about anything the person did wrong. */
+.unconverted { margin-top: 24px; padding: 12px 0; border-top: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-default); display: flex; flex-direction: column;
+  align-items: flex-start; gap: 12px; }
+.unconverted p { color: var(--warning-text); }

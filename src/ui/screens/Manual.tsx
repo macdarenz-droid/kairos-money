@@ -3,6 +3,7 @@ import {useQuery,useQueryClient} from '@tanstack/react-query';
 import type {Account} from '../../core/db/repository';
 import type {ManualEntry} from '../../ledger/manual';
 import {currency,format,money,parseDecimal} from '../../core/money';
+import {convert,rateBetween,type Rate as FxRate} from '../../core/fx';
 import {localDay} from '../../ingest/reminders';
 import {shift as shiftDay} from '../../intelligence/model';
 import {useSession} from '../session';
@@ -47,15 +48,39 @@ export function ManualSheet({accounts,entry,prefill,onClose}:{accounts:Account[]
 }
 export function ManualHistory({accounts,today=false}:{accounts:Account[];today?:boolean}){
  const session=useSession();
+ const day=localDay();
+ const home=useQuery({queryKey:['display-currency'],enabled:session.state==='ready',queryFn:()=>session.run(r=>r.displayCurrency())});
+ const stored=useQuery({queryKey:['fx-rates'],enabled:session.state==='ready',queryFn:()=>session.run(r=>r.rates())});
+ const display=currency(home.data??'AUD');
+ const rates:FxRate[]=(stored.data??[]).map(r=>({asOf:r.asOf,base:currency(r.base),quote:currency(r.quote),rateE8:BigInt(r.rateE8),source:r.source}));
  const data=useQuery({queryKey:['manual'],queryFn:()=>session.run(async r=>({entries:await r.manual.list(),totals:await r.manual.today(localDay()),unresolved:await r.manual.unresolved()})),enabled:session.state==='ready'});
  if(today)return <section className="section-gap"><h2>Recorded today</h2>
  {/* The money comes first. Someone opening this screen is asking what they spent, not what the app can do. */}
- {data.data?.totals.map(t=>{const spent=BigInt(t.spending)+BigInt(t.awaitingSpending),received=BigInt(t.income)+BigInt(t.awaitingIncome),loose=BigInt(t.awaitingSpending)+BigInt(t.awaitingIncome);
- return <div key={t.currency}><Row trailing={<Amount value={money(spent,currency(t.currency))} context="spent today" hero/>}>Spent today</Row>{received>0n&&<Row trailing={<Amount value={money(received,currency(t.currency))} context="received today"/>}>Received today</Row>}
- {/* Money your bank announced counts here. It is marked, not withheld: a balance that waits weeks for a
-     statement before it moves is a balance nobody can use, and confirmation changes how much the app
-     trusts a row, not whether the money left. */}
- {loose>0n&&<p className="meta"><span className="tag">Not on a statement yet</span></p>}</div>;})}{data.data&&!data.data.totals.length&&<p>Nothing recorded today yet.</p>}{data.error&&<p role="alert">Today's entries could not be read.</p>}
+ {/*
+   * ONE SCREEN, ONE CURRENCY.
+   *
+   * This printed a "Spent today" row per currency, each in its own — so an AUD purchase read "$100.00"
+   * directly underneath tiles reading "PHP 0.00", which is the same screen giving two answers about the
+   * same money. Every figure above it follows the display currency, and so does this now: converted at
+   * today's rate, summed into one figure, with anything no rate reaches named rather than dropped.
+   */}
+ {today&&(()=>{
+  const missing:string[]=[];let spent=0n,received=0n,loose=0n;
+  for(const t of data.data?.totals??[]){
+   const held=currency(t.currency),rate=rateBetween(rates,held,display,day);
+   if(rate===null){if(!missing.includes(held))missing.push(held);continue;}
+   const into=(v:string)=>convert(money(BigInt(v),held),display,rate).minor;
+   spent+=into(t.spending)+into(t.awaitingSpending);received+=into(t.income)+into(t.awaitingIncome);
+   loose+=into(t.awaitingSpending)+into(t.awaitingIncome);
+  }
+  return <><Row trailing={<Amount value={money(spent,display)} context="spent today" hero/>}>Spent today</Row>
+  {received>0n&&<Row trailing={<Amount value={money(received,display)} context="received today"/>}>Received today</Row>}
+  {/* Money your bank announced counts here. It is marked, not withheld: a balance that waits weeks for a
+      statement before it moves is a balance nobody can use, and confirmation changes how much the app
+      trusts a row, not whether the money left. */}
+  {loose>0n&&<p className="meta"><span className="tag">Not on a statement yet</span></p>}
+  {missing.length>0&&<p className="meta">{missing.join(' and ')} not included: no stored rate reaches {display}.</p>}</>;
+ })()}{data.data&&!data.data.totals.length&&<p>Nothing recorded today yet.</p>}{data.error&&<p role="alert">Today's entries could not be read.</p>}
  {data.data&&Object.keys(data.data.unresolved).length>0&&<p>Some entries may be duplicates. Review them in Ledger before trusting these totals.</p>}
  <RepeatTiles accounts={accounts} entries={data.data?.entries??[]}/>
  </section>;
