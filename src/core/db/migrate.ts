@@ -8,8 +8,10 @@ import up4 from './migrations/0004_fx_rates.up.sql?raw';
 import down4 from './migrations/0004_fx_rates.down.sql?raw';
 import up5 from './migrations/0005_debts.up.sql?raw';
 import down5 from './migrations/0005_debts.down.sql?raw';
+import up6 from './migrations/0006_people.up.sql?raw';
+import down6 from './migrations/0006_people.down.sql?raw';
 import type { Driver } from './driver';
-export const migrations = [{ version: 1, up: up1, down: down1 }, { version: 2, up: up2, down: down2 }, { version: 3, up: up3, down: down3 }, { version: 4, up: up4, down: down4 }, { version: 5, up: up5, down: down5 }] as const;
+export const migrations = [{ version: 1, up: up1, down: down1 }, { version: 2, up: up2, down: down2 }, { version: 3, up: up3, down: down3 }, { version: 4, up: up4, down: down4 }, { version: 5, up: up5, down: down5 }, { version: 6, up: up6, down: down6 }] as const;
 /**
  * Split a migration into statements.
  *

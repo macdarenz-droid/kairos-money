@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync }  from 'node:fs';
 import { createHash } from 'node:crypto';
 import { memoryDriver } from './db-helper';
-import { migrate } from '../src/core/db/migrate';
+import { migrate, migrations } from '../src/core/db/migrate';
 import { repository } from '../src/core/db/repository';
 import { hash, normalizeRow } from '../src/ingest/normalize';
 import { coverage, dataHealth, pendingCommitments, reconcile, totals } from '../src/ingest/reconcile';
@@ -37,4 +37,10 @@ it('commits a multi-file session atomically',async()=>{const {r}=await repo();co
 // The two numbers move independently, which is the whole point of the pair: migration 4 added the
 // fx_rates table, so the database version went to 4 while the export contract stayed at 2. A backup
 // written before today still restores.
-it('keeps the export contract compatible and identifies the storage schema separately',async()=>{const {r}=await repo();const data=await r.exportAll();expect(data.schema_version).toBe(2);expect(data.database_schema_version).toBe(5);});
+//
+// ONE IS A LITERAL AND ONE IS DERIVED, deliberately. 2 is the export CONTRACT — a promise to every
+// backup already written, so it is spelled out and changing it has to be a decision somebody typed.
+// The storage version is a FACT about this database, and writing it as a literal only meant editing
+// this line on every migration; asserting it equals migrations.length also catches the real bug, a
+// migration declared but never applied.
+it('keeps the export contract compatible and identifies the storage schema separately',async()=>{const {r}=await repo();const data=await r.exportAll();expect(data.schema_version).toBe(2);expect(data.database_schema_version).toBe(migrations.length);});

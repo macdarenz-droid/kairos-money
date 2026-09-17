@@ -1,6 +1,7 @@
 import {foreignCurrencyRepository} from '../../ledger/foreign-currency';
 import {splitRepository} from '../../ledger/splits';
 import {debtRepository} from '../../ledger/debts';
+import {peopleRepository} from '../../ledger/people';
 import {cancellationRepository} from '../../ledger/cancellations';
 import { manualRepository } from '../../ledger/manual';
 import { noticeRepository } from '../../ledger/notices';
@@ -41,6 +42,7 @@ export function repository(driver: Driver) {
     preferences: preferenceRepository(driver),
     splits: splitRepository(driver),
     debts: debtRepository(driver),
+    people: peopleRepository(driver),
     foreignCurrency: foreignCurrencyRepository(driver),
     attachments: attachmentRepository(driver),
     restoreBackup: (snapshot: unknown) => restoreSnapshot(driver, snapshot),

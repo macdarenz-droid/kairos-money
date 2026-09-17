@@ -537,3 +537,26 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
 
 /* A cleared debt is kept, not deleted — what it cost is part of the record — but it is no longer news. */
 .debt-cleared { opacity: .6; }
+
+/* Money between people. A centre line with bars either side of it: right is coming back to you, left is
+   money you are holding that is not yours. The warm/cool pair is the same one money in and money out
+   already use, and it only ever reinforces a side the position has already stated. */
+.person-balance { width: 100%; height: 8px; display: block; border-radius: 4px; overflow: hidden; }
+.person-bar-to-me { fill: var(--flow-in); }
+.person-bar-by-me { fill: var(--flow-out); }
+/* A track behind both bars, so the plot is a full-width scale and its middle means something. Without
+   it there is nothing for the centre to be the centre OF. */
+.person-track { fill: var(--surface-3); }
+.person-plot { position: relative; display: block; width: 100%; }
+.person-plot::after { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px;
+  background: var(--text-meta); }
+.person-line { display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 100%;
+  border: 0; background: transparent; padding: 14px 0; text-align: left; min-height: 56px;
+  border-bottom: 1px solid var(--border-subtle); }
+.person-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.person-line:active { opacity: .75; }
+.person-settled { opacity: .6; }
+@media (prefers-reduced-motion: no-preference) {
+  .person-bar-to-me { animation: measure var(--motion-sweep) var(--ease-out) both; transform-origin: left center; }
+  .person-bar-by-me { animation: measure var(--motion-sweep) var(--ease-out) both; transform-origin: right center; }
+}

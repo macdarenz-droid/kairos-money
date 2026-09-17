@@ -187,12 +187,25 @@ export const debts = sqliteTable('debts', {
   closed_at: text('closed_at'),
 });
 
+/** Mirrors migration 0006. amount_minor is always positive; `direction` says who is holding it. */
+export const ious = sqliteTable('ious', {
+  id: text('id').primaryKey().notNull(),
+  person: text('person').notNull(),
+  direction: text('direction').notNull(),
+  currency: text('currency').notNull(),
+  amount_minor: integer('amount_minor').notNull(),
+  reason: text('reason').notNull(),
+  occurred_on: text('occurred_on').notNull(),
+  transaction_id: text('transaction_id'),
+  settled_at: text('settled_at'),
+});
+
 export const app_settings = sqliteTable('app_settings', {
   key: text('key').primaryKey().notNull(),
   value: text('value').notNull(),
 });
 
-export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings, debts };
+export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings, debts, ious };
 /**
  * The migration each table first appeared in.
  *
@@ -205,5 +218,5 @@ export const schema = { accounts, import_batches, coverage_ranges, categories, m
  * Add a row here whenever a migration creates a table. A table absent from this map is assumed to have
  * been there from the beginning, which is true of the sixteen from migration 1.
  */
-export const tableIntroduced: Partial<Record<(typeof tableNames)[number], number>> = { debts: 5 };
-export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings', 'debts'] as const;
+export const tableIntroduced: Partial<Record<(typeof tableNames)[number], number>> = { debts: 5, ious: 6 };
+export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings', 'debts', 'ious'] as const;

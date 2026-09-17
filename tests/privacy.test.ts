@@ -5,6 +5,7 @@ import { migrate } from '../src/core/db/migrate';
 import { repository } from '../src/core/db/repository';
 import { requiresUnlock } from '../src/core/crypto/lifecycle';
 import { memoryDriver } from './db-helper';
+import { tableNames } from '../src/core/db/schema';
 import { seedSynthetic } from './fixtures';
 it('exports all actual tables as JSON and CSV without corrupting exact values', async () => {
   const { driver, raw } = memoryDriver(); await migrate(driver); await seedSynthetic(driver);
@@ -12,9 +13,12 @@ it('exports all actual tables as JSON and CSV without corrupting exact values', 
   const json = JSON.parse(strFromU8(archive['kairos-money.json']!)) as { tables: Record<string, unknown[]> };
   expect(json.tables['accounts']).toHaveLength(1);
   expect(strFromU8(archive['transactions.csv']!)).toContain('"-500"');
-  // One JSON plus a CSV per ledger table. It moves when a table joins the export — `debts` did, in
-  // migration 5, because a debt is typed in by hand and cannot be re-derived the way a rate can.
-  expect(Object.keys(archive)).toHaveLength(19); raw.close();
+  // A CSV per ledger table, plus kairos-money.json and README.txt — hence the two. This was a
+  // hand-written 19 and had to be edited, and this file re-frozen, every time a table joined the
+  // export: `debts` in migration 5, `ious` in migration 6. Deriving it from tableNames states what the
+  // check is actually for — that EVERY table reaches the archive and none is silently dropped — and
+  // states it for every migration still to come.
+  expect(Object.keys(archive)).toHaveLength(tableNames.length + 2); raw.close();
 });
 it('neutralizes spreadsheet formulas but preserves signed numeric money', () => {
   expect(csvCell('=SUM(1,2)')).toBe('"\'=SUM(1,2)"'); expect(csvCell(-500)).toBe('"-500"');
