@@ -45,10 +45,32 @@ export function intelligenceRepository(driver:Driver){
   * number, and one of them silently.
   */
  async function snapshot(asOf:string,code:string):Promise<Snapshot>{
-  const c=currency(code),accounts=await driver.query('SELECT * FROM accounts WHERE archived_at IS NULL'),ids=accounts.map(a=>String(a.id));
+  const c=currency(code),all=await driver.query('SELECT * FROM accounts WHERE archived_at IS NULL');
   const stored=await driver.query('SELECT as_of,base,quote,rate_e8,source FROM fx_rates');
   const rates:FxRate[]=stored.map(r=>({asOf:String(r.as_of),base:currency(String(r.base)),quote:currency(String(r.quote)),rateE8:BigInt(String(r.rate_e8)),source:String(r.source)}));
   const unconverted=new Set<Currency>();
+  /**
+   * THE ACCOUNTS IN THE ANALYSIS ARE THE ONES WHOSE MONEY CAN ACTUALLY REACH IT.
+   *
+   * `covered` counts a day only when EVERY account in the snapshot has statement coverage for it, which
+   * is the honest rule: money can move through an account you have no statement for, so a day with a gap
+   * in one of them is a day nobody can say what was spent.
+   *
+   * That rule and "read every account" collided. Taking in an account whose currency has no rate dropped
+   * a fixture from 20 covered days to 8 — while that account's money was not in the analysis at all,
+   * having gone into `unconverted`. Charging the coverage for an account that is being excluded is
+   * incoherent: it makes the figures less trusted on account of money that is not in them.
+   *
+   * So an account joins the analysis when its currency can be reached at all, and is named rather than
+   * counted when it cannot. Once rates exist for everything the rule tightens by itself, which is right:
+   * an analysis that really does span every account needs every account covered.
+   */
+  const accounts=all.filter(a=>{
+   const held=currency(String(a.currency));
+   if(rateBetween(rates,held,c,asOf)!==null)return true;
+   unconverted.add(held);return false;
+  });
+  const ids=accounts.map(a=>String(a.id));
   /** An exact amount in the displayed currency, or null when no published rate reaches that day. */
   const into=(minor:string,from:Currency,date:string):string|null=>{
    if(from===c)return minor;

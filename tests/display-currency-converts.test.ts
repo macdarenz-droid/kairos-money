@@ -162,3 +162,43 @@ describe('every currency, not just the one that was asked about', () => {
     expect(snapshot.unconverted).toEqual(['AUD', 'USD']);
   });
 });
+
+/**
+ * THE REGRESSION THE DEVICE CAUGHT, and the reason it is worth a test of its own.
+ *
+ * `covered` in intelligence/model.ts counts a day only when EVERY account in the snapshot has statement
+ * coverage for it — money can move through an account you hold no statement for, so a gap in one is a
+ * gap in all. Reading every account collided with that: a fixture went from 20 covered days to 8 the
+ * moment a thinly-covered account joined, while that account's money was not in the analysis at all
+ * because nothing could convert it.
+ */
+describe('an account whose currency cannot be reached', () => {
+  async function mixed() {
+    const repo = await ledger();
+    await repo.addAccount({id: 'u', name: 'Offshore', institution: '', type: 'checking',
+      currency: 'USD', mask_last4: null, opening_balance_minor: 0n});
+    return repo;
+  }
+
+  it('is left out of the analysis rather than dragging its coverage down', async () => {
+    const repo = await mixed();
+    const snapshot = await repo.intelligence.snapshot('2026-01-31', 'AUD');
+    expect(snapshot.accountIds).toEqual(['a']);
+    expect(snapshot.unconverted).toEqual(['USD']);
+  });
+
+  /** With a rate it joins, and the coverage rule tightens by itself — which is the correct direction. */
+  it('joins the analysis as soon as a rate reaches it', async () => {
+    const repo = await mixed();
+    await repo.saveRates([{asOf: '2026-01-01', base: 'AUD', quote: 'USD', rateE8: 66000000n, source: 'synthetic'}]);
+    const snapshot = await repo.intelligence.snapshot('2026-01-31', 'AUD');
+    expect(snapshot.accountIds.sort()).toEqual(['a', 'u']);
+    expect(snapshot.unconverted).toBeUndefined();
+  });
+
+  /** Named even with nothing in it, so an empty account is never a silent omission either. */
+  it('is named even when it holds no transactions at all', async () => {
+    const repo = await mixed();
+    expect((await repo.intelligence.snapshot('2026-01-31', 'AUD')).unconverted).toEqual(['USD']);
+  });
+});
