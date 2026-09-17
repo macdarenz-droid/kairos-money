@@ -659,3 +659,14 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 /* Quiet maintenance, not an action: the rate refresh sits beside the date it fetched rather than
    shouting over it, while keeping the 44px target every control in this app has. */
 .button.rate-update { font-size: 12px; font-weight: 400; color: var(--text-secondary); padding: 6px 8px; gap: 6px; }
+
+/* The savings path: his record behind today in the accent, the offer ahead of it dashed and quiet. One
+   hue, because colour in this app means an amount and nothing else. */
+.savings-path { margin-top: 24px; }
+.savings-figures { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.savings-figures .band-label { display: block; }
+.savings-plot { width: 100%; height: 140px; overflow: visible; }
+.savings-kept { stroke: var(--accent); }
+.savings-planned { stroke: var(--text-meta); }
+.savings-now { fill: var(--accent); stroke: var(--surface-1); stroke-width: 2; }
+.savings-ends { display: flex; justify-content: space-between; }

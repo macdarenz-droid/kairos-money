@@ -115,7 +115,7 @@ export function intelligenceRepository(driver:Driver){
   const aside=transactions.filter(t=>t.status==='settled'&&!t.transfer&&t.kind==='savings'&&t.date<=asOf);
   const asideMinor=aside.reduce((total,t)=>{const v=BigInt(t.minor);return total+(v<0n?-v:v);},0n);
   const s:Snapshot={asOf,currency:c,accountIds:ids,transactions,coverage,pays,
-   savings:{asideMinor:asideMinor.toString(),evidence:aside.map(t=>t.id)}};if(unconverted.size)s.unconverted=[...unconverted].sort();const reflection=await setting<Snapshot['selfReport']|null>('intelligence:reflection',null);if(reflection)s.selfReport=reflection;
+   savings:{asideMinor:asideMinor.toString(),accountIds:accounts.filter(a=>a.type==='savings'||a.type==='investment').map(a=>String(a.id)),evidence:aside.map(t=>t.id)}};if(unconverted.size)s.unconverted=[...unconverted].sort();const reflection=await setting<Snapshot['selfReport']|null>('intelligence:reflection',null);if(reflection)s.selfReport=reflection;
   const provenance=await queryPages(driver,'SELECT s.transaction_id,s.import_batch_id,s.source_row_id,s.original_payload,b.file_name FROM transaction_sources s JOIN import_batches b ON b.id=s.import_batch_id',[],['transaction_id','import_batch_id','source_row_id']);
   const sources=new Map<string,NonNullable<Transaction['sources']>>();
   for(const r of provenance){const id=String(r.transaction_id),group=sources.get(id)??[];group.push({file:String(r.file_name),row:String(r.source_row_id),raw:String(r.original_payload)});sources.set(id,group);}

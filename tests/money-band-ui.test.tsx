@@ -22,7 +22,7 @@ vi.mock('../src/ui/session', () => ({
     // second pass of its own over every transaction and every source row.
     intelligence: {analyse: () => Promise.resolve({snapshot: {
       asOf: today, currency: AUD, accountIds: ['a'], coverage: [], pays: [],
-      transactions: ledger.transactions, savings: {asideMinor: ledger.aside, evidence: []},
+      transactions: ledger.transactions, savings: {asideMinor: ledger.aside, accountIds: [], evidence: []},
     } satisfies Snapshot})},
   }))}),
 }));
