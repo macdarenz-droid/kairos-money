@@ -14,6 +14,7 @@ import { FileUp, FileCheck2 } from 'lucide-react';
 import type { Account, Repository } from '../../core/db/repository';
 import { currency, currencyDigits, format, money } from '../../core/money';
 import { FileSource, MappingRequired, type ExportMapping } from '../../ingest/sources';
+import { PeriodTooNarrow } from '../../ingest/types';
 import { tierLabel } from '../../ingest/integrity';
 import { importResultSentence } from '../../ingest/freshness';
 import { Backup } from './Backup';
@@ -119,6 +120,10 @@ function FileReview({ id, accounts, onClose, onStaged }: { id: string; accounts:
     {accounts.find(a => a.id === selectedAccountId)?.type === 'credit' && <label className="check-row"><input type="checkbox" checked={invert} onChange={e => setInvert(e.target.checked)}/>Positive signed amounts are card purchases</label>}
     {prepared.error && <><Failure error={prepared.error}/><Button onClick={() => void prepared.refetch()}>Try reading file again</Button></>}
     {mutation.error instanceof MappingRequired && <><ColumnMapping table={mutation.error.table} mapping={mapping ?? mutation.error.proposal} onChange={setMapping}/><Button onClick={()=>{const selected=mapping ?? (mutation.error as MappingRequired).proposal;setMapping(selected);mutation.mutate(selected);}}>Use mapping and read</Button></>}
+    {/* The dates are filled in, not submitted. The statement period is a thing a person declares about
+        their own file, and an app that silently widens it to whatever makes the import succeed is an
+        app whose coverage claims mean nothing. He sees the two fields change, then presses Extract. */}
+    {mutation.error instanceof PeriodTooNarrow && <Button onClick={()=>{const span=(mutation.error as PeriodTooNarrow).span;setStart(span.start);setEnd(span.end);}}>Use {(mutation.error as PeriodTooNarrow).span.start} – {(mutation.error as PeriodTooNarrow).span.end}</Button>}
     {mutation.error && <Failure error={mutation.error}/>} {discard.error && <Failure error={discard.error}/>} <div className="form-actions"><Button disabled={mutation.isPending || discard.isPending} onClick={() => discard.mutate()}>Discard file</Button><Button type="submit" variant="primary" disabled={mutation.isPending || discard.isPending}>Extract for review</Button></div></form></Sheet>;
 }
 function BatchReview({ id, onClose, onResult }: { id: string; onClose: () => void; onResult:(message:string, added:number)=>void }) {

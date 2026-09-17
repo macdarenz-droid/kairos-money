@@ -1,7 +1,7 @@
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 import { currencyDigits, money, parseDecimal, type Currency } from '../../core/money';
-import { ImportFailure, type ImportContext, type NormalizedRow, type Period, type RawRow } from '../types';
+import { DateOutsidePeriod, ImportFailure, type ImportContext, type NormalizedRow, type Period, type RawRow } from '../types';
 export function hash(value: string | Uint8Array): string { return bytesToHex(sha256(typeof value === 'string' ? new TextEncoder().encode(value) : value)); }
 export function isoDay(input: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input) || !Number.isFinite(Date.parse(input)) || new Date(input).toISOString().slice(0, 10) !== input) throw new Error(`Invalid calendar date: ${input}.`);
@@ -40,9 +40,32 @@ export function normalizeDate(value: string, period: Period, order: 'DMY' | 'MDY
     const month = Number(m[order === 'DMY' ? 2 : 1]), day = Number(m[order === 'DMY' ? 1 : 2]);
     candidates = build(day, month, m[3]);
   }
-  candidates = candidates.filter(s => s >= period.start && s <= period.end);
-  if (candidates.length !== 1) throw new ImportFailure('The date format was read.', 'The date is ambiguous or outside the statement period.', value, 'Confirm the statement dates and date format.');
-  return candidates[0]!;
+  // THREE OUTCOMES, NOT ONE. The window is what disambiguates a date like 03/04, so it has to be
+  // applied — but failing it means three different things, and they had one message between them.
+  const inside = candidates.filter(s => s >= period.start && s <= period.end);
+  if (inside.length === 1) return inside[0]!;
+  if (inside.length > 1) throw new ImportFailure('The statement period is known.', 'This date reads as two different days inside the statement period.', value, 'Set the date format to day/month or month/day.');
+  // Read without doubt, just not inside the window. The remedy is the statement dates, so say so.
+  if (candidates.length) throw new DateOutsidePeriod([...candidates].sort()[0]!, period);
+  throw new ImportFailure('The statement period is known.', 'This date could not be read as a real day.', value, 'Confirm the date format and the column mapping.');
+}
+
+/**
+ * The first and last date a column actually contains, read against a deliberately wide window.
+ *
+ * Used only to tell somebody what to type when their statement period is too narrow. The wide window
+ * means a two-digit year can read as several years at once and this gives up rather than guess — an
+ * offer of the wrong dates is worse than no offer.
+ */
+export function dateSpan(values: readonly string[], period: Period, order: 'DMY' | 'MDY'): Period | null {
+  if (!values.length) return null;
+  const wide = { start: `${Number(period.start.slice(0, 4)) - 2}-01-01`, end: `${Number(period.end.slice(0, 4)) + 2}-12-31` };
+  const days: string[] = [];
+  for (const value of values) {
+    try { days.push(normalizeDate(value, wide, order)); } catch { return null; }
+  }
+  const sorted = [...days].sort();
+  return { start: sorted[0]!, end: sorted.at(-1)! };
 }
 export function normalizeAmount(value: string, code: Currency, decimal: '.' | ','): bigint {
   let s = value.trim().toUpperCase();

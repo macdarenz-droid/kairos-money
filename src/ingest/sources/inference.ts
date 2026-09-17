@@ -1,6 +1,6 @@
-import { hash, normalizeAmount, normalizeDate } from '../normalize';
+import { dateSpan, hash, normalizeAmount, normalizeDate } from '../normalize';
 import type { ImportContext, RawRow } from '../types';
-import { ImportFailure } from '../types';
+import { ImportFailure, PeriodTooNarrow, type Period } from '../types';
 import type { ColumnRole, ExportMapping } from './types';
 const labels: Record<ColumnRole, RegExp> = {
  date: /^(date|posted date|posting date|transaction date)$/i,
@@ -23,12 +23,13 @@ export function inferExport(table: string[][], context: ImportContext, saved?: E
  if (table.some(r => r.length !== width)) throw new Error('Export rows have different column counts. Check the delimiter or export again.');
  const header = table[0].some(c => Object.values(labels).some(pattern => pattern.test(c.trim())));
  const signature = hash(JSON.stringify([width, header ? table[0].map(c => c.trim().toLowerCase()) : 'headerless']));
- if (saved && saved.signature === signature) { validateMapping(saved, width); return { mapping: saved, confidence: 10000, reasons: [] }; }
+ if (saved && saved.signature === signature) { validateMapping(saved, width); return { mapping: saved, confidence: 10000, reasons: [], outside: null }; }
  const columns: ExportMapping['columns'] = {};
  if (header) for (const [role, pattern] of Object.entries(labels)) { const found = table[0].flatMap((v, i) => pattern.test(v.trim()) ? [i] : []); if (found.length === 1) columns[role as ColumnRole] = found[0]!; }
  const rows = table.slice(header ? 1 : 0);
  if (!rows.length) throw new Error('The export contains headings but no transactions.');
  const reasons: string[] = [];
+ let outside: Period | null = null;
  const candidates = (test: (v: string) => boolean) => Array.from({ length: width }, (_, i) => i).filter(i => rows.every(r => test(r[i] ?? '')));
  const dates = candidates(v => /^\d{4}-\d{2}-\d{2}$|^\d{1,2}[/.-]\d{1,2}(?:[/.-](?:\d{2}|\d{4}))?$/.test(v));
  if (columns.date === undefined && dates.length === 1) columns.date = dates[0]!;
@@ -50,12 +51,22 @@ export function inferExport(table: string[][], context: ImportContext, saved?: E
   const valid = (order: 'DMY' | 'MDY') => rows.every(r => { try { normalizeDate(r[columns.date!]!, context.period, order); return true; } catch { return false; } });
   const dmy = valid('DMY'), mdy = valid('MDY');
   if (dmy !== mdy) dateOrder = dmy ? 'DMY' : 'MDY';
-  else if (!dmy) reasons.push('Dates do not match the supplied export range.');
+  else if (!dmy) {
+   // "Dates do not match the supplied export range" sent people to the column mapping and the date
+   // format, when what was wrong was the statement period — and this is the case that actually happens,
+   // because an export covers whatever range you asked the bank for and the period is typed separately.
+   // Reading the column's own span says which dates to enter, once, for every row at the same time.
+   outside = dateSpan(rows.map(r => r[columns.date!] ?? ''), context.period, 'DMY')
+     ?? dateSpan(rows.map(r => r[columns.date!] ?? ''), context.period, 'MDY');
+   reasons.push(outside
+     ? `This file covers ${outside.start} to ${outside.end}, which the statement period does not include.`
+     : 'Dates do not match the supplied export range.');
+ }
   else if (rows.some(r => !/^\d{4}-/.test(r[columns.date!]!) && r[columns.date!]!.split(/[/.-]/)[0] !== r[columns.date!]!.split(/[/.-]/)[1])) reasons.push('Day/month and month/day are both possible.');
  }
  const mapping = { columns, header, dateOrder, signature };
  try { validateMapping(mapping, width); } catch { reasons.push('Date, description and amount columns need confirmation.'); }
- return { mapping, confidence: reasons.length ? 5000 : 9800, reasons };
+ return { mapping, confidence: reasons.length ? 5000 : 9800, reasons, outside };
 }
 export function validateMapping(mapping: ExportMapping, width: number) {
  const c = mapping.columns, used = Object.values(c);
@@ -63,6 +74,9 @@ export function validateMapping(mapping: ExportMapping, width: number) {
 }
 export function parseExport(table: string[][], context: ImportContext, saved?: ExportMapping) {
  const inferred = inferExport(table, context, saved);
+ // A period that leaves rows out is its own problem with its own fix, and asking somebody to reassign
+ // columns they never got wrong is how an import becomes unreachable.
+ if (inferred.outside) throw new PeriodTooNarrow(inferred.outside, context.period);
  if (inferred.confidence < 9000) throw new MappingRequired(table, inferred.mapping, inferred.reasons);
  const m = inferred.mapping, c = m.columns; validateMapping(m, table[0]!.length);
  const rows: RawRow[] = table.slice(m.header ? 1 : 0).map((r, i) => {
