@@ -97,15 +97,26 @@ export function MoneyBand() {
    * rate, which is the same rule the combined total states at length. An account no rate reaches is left
    * out rather than counted as nought, and Unconverted at the top of this screen names it.
    */
-  const held = live.reduce((total, account) => {
+  /**
+   * SAVINGS IS SEPARATE MONEY. "savings money doesnt mix in overall balance. its a separate money."
+   *
+   * A savings or investment account is money being KEPT; everything else is money to spend. They were one
+   * figure, so the number he read as "what I can spend" included the money he had deliberately put out of
+   * reach — the one mistake a money app must not make.
+   */
+  const kept = (account: {type?: string}) => account.type === 'savings' || account.type === 'investment';
+  const total = (rows: typeof live) => rows.reduce((sum, account) => {
     const rate = rateBetween(rates, currency(account.currency), code, today);
-    if (rate === null) return total;
+    if (rate === null) return sum;
     const minor = BigInt(balances.data?.find(row => row.accountId === account.id)?.minor ?? 0n);
-    return total + convert(money(minor, currency(account.currency)), code, rate).minor;
+    return sum + convert(money(minor, currency(account.currency)), code, rate).minor;
   }, 0n);
+  const spending = live.filter(account => !kept(account));
+  const held = total(spending);
+  // Plus what was set aside with no savings account to set it in, which the snapshot counted from the
+  // ledger. A transfer into a tracked savings account is not in that figure, so nothing is doubled.
+  const saved = total(live.filter(kept)) + BigInt(snapshot.savings?.asideMinor ?? '0');
   const show = (minor: string | bigint) => format(money(BigInt(minor), code));
-  const net = BigInt(band.now.netMinor);
-  const shortfall = net < 0n;
 
   // A change is printed only against a block that had movement, so a first month never reports a rise
   // from nothing, and the change beside a figure is always a change in the same thing over the same
@@ -122,20 +133,22 @@ export function MoneyBand() {
         <p>Money moved between your own accounts is left out of both figures. Moving it is not earning or
           spending it.</p>
         <p>Balance now is each account's opening balance plus everything recorded against it since —
-          imported, approved or entered by hand.</p>
+          imported, approved or entered by hand. Savings and investment accounts are not in it: that
+          money is in Savings, beside it.</p>
         <p>A change is shown only when the thirty days before had movement to compare against.</p>
       </Explain>
     </span>
 
     <div className="money-band">
-      <Tile label={shortfall ? 'Short by' : 'Left over'} figure={show(shortfall ? -net : net)}
-        percent={change(block => block.netMinor)}/>
-      <Tile label="Money in" figure={show(band.now.inMinor)} percent={change(block => block.inMinor)}
-        spark={band.trend ? {values: band.blocks.map(block => block.inMinor), tone: 'in'} : null}/>
+      {/* HIS LAYOUT: "Short by" crossed out, "move up" beside Money out, "put savings display" in the
+          space it left. What went out, what came in, what is being kept, what is left to spend. */}
       <Tile label="Money out" figure={show(band.now.outMinor)} percent={change(block => block.outMinor)}
         spark={band.trend ? {values: band.blocks.map(block => block.outMinor), tone: 'out'} : null}/>
+      <Tile label="Money in" figure={show(band.now.inMinor)} percent={change(block => block.inMinor)}
+        spark={band.trend ? {values: band.blocks.map(block => block.inMinor), tone: 'in'} : null}/>
+      <Tile label="Savings" figure={show(saved)}/>
       <Tile label="Balance now" figure={show(held)}
-        note={`${live.length} ${live.length === 1 ? 'account' : 'accounts'}`}/>
+        note={`${spending.length} ${spending.length === 1 ? 'account' : 'accounts'}`}/>
     </div>
 
     <p className="meta">{stamp(band.now.start)} – {stamp(band.end)}{codes.length > 1 ? ` · ${code}` : ''}

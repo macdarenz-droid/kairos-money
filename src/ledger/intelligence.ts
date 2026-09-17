@@ -106,13 +106,28 @@ export function intelligenceRepository(driver:Driver){
    if(net===null||gross===null)return null;
    return {id:String(r.id),employer:String(r.employer),date,start:String(r.period_start),end:String(r.period_end),net,gross,currency:c,transactionId:r.linked_transaction_id===null?null:String(r.linked_transaction_id)};
   }).filter((p):p is NonNullable<typeof p>=>p!==null);
-  const s:Snapshot={asOf,currency:c,accountIds:ids,transactions,coverage,pays};if(unconverted.size)s.unconverted=[...unconverted].sort();const reflection=await setting<Snapshot['selfReport']|null>('intelligence:reflection',null);if(reflection)s.selfReport=reflection;
+  /**
+   * MONEY SET ASIDE WITHOUT A POT TO SET IT IN. Recording a "Savings" expense from a spending account is
+   * money kept, not money gone, and for someone with no savings account it is the only record of it.
+   * Internal transfers are excluded: money moved into a tracked savings account is already that
+   * account's balance, and counting it here as well would double it.
+   */
+  const aside=transactions.filter(t=>t.status==='settled'&&!t.transfer&&t.kind==='savings'&&t.date<=asOf);
+  const asideMinor=aside.reduce((total,t)=>{const v=BigInt(t.minor);return total+(v<0n?-v:v);},0n);
+  const s:Snapshot={asOf,currency:c,accountIds:ids,transactions,coverage,pays,
+   savings:{asideMinor:asideMinor.toString(),evidence:aside.map(t=>t.id)}};if(unconverted.size)s.unconverted=[...unconverted].sort();const reflection=await setting<Snapshot['selfReport']|null>('intelligence:reflection',null);if(reflection)s.selfReport=reflection;
   const provenance=await queryPages(driver,'SELECT s.transaction_id,s.import_batch_id,s.source_row_id,s.original_payload,b.file_name FROM transaction_sources s JOIN import_batches b ON b.id=s.import_batch_id',[],['transaction_id','import_batch_id','source_row_id']);
   const sources=new Map<string,NonNullable<Transaction['sources']>>();
   for(const r of provenance){const id=String(r.transaction_id),group=sources.get(id)??[];group.push({file:String(r.file_name),row:String(r.source_row_id),raw:String(r.original_payload)});sources.set(id,group);}
   for(const t of transactions)t.sources=sources.get(t.id)??[];
   const recurringNames=new Set(recurrences(s).map(r=>r.merchant));for(const t of transactions)if(recurringNames.has(t.description.trim().toLowerCase()))t.recurring=true;
-  const liquidAccounts=accounts.filter(a=>['checking','savings','cash','credit'].includes(String(a.type)));let balance=0n,liability=0n;const evidence:string[]=[];let valid=liquidAccounts.length>0;
+  /**
+   * SAVINGS IS NOT SPENDING MONEY. "savings money doesnt mix in overall balance. its a separate money."
+   *
+   * A savings account used to be counted as liquid, so every figure built on this — safe-to-spend above
+   * all — was free to offer his savings as today's money. An app that does that is not advising him.
+   */
+  const liquidAccounts=accounts.filter(a=>['checking','cash','credit'].includes(String(a.type)));let balance=0n,liability=0n;const evidence:string[]=[];let valid=liquidAccounts.length>0;
   for(const a of liquidAccounts){const anchors=await driver.query("SELECT * FROM import_batches WHERE account_id=? AND status='committed' AND integrity_tier='A' AND period_end<=? AND stated_closing_minor IS NOT NULL ORDER BY period_end DESC,id",[String(a.id),asOf]);const anchor=anchors[0];if(!anchor){valid=false;continue;}const date=String(anchor.period_end);const intervals=coverage.filter(v=>v.accountId===a.id);for(let d=day(date);d<=day(asOf);d++)if(!intervals.some(v=>day(v.start)<=d&&day(v.end)>=d))valid=false;
    // Converted at the anchor's OWN date: it is a fact about that day, and the movements added to it were
    // each valued at their own. An account whose currency has no rate cannot be counted, and saying the
