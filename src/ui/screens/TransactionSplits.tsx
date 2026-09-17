@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {useQuery,useQueryClient} from '@tanstack/react-query';
 import {currencyDigits,money,parseDecimal,type Currency} from '../../core/money';
 import {splitCategories,validSplit} from '../../ledger/splits';
-import {Amount,Button,Input,Row} from '../design/primitives';
+import {Amount,Button,Explain,Input,Row} from '../design/primitives';
 import {fillTarget,splitEvenly} from '../proposals/allocate';
 import {useSession} from '../session';
 function decimal(minor:string,code:Currency){const value=BigInt(minor),digits=currencyDigits[code],unit=10n**BigInt(digits);return `${value/unit}${digits?'.'+(value%unit).toString().padStart(digits,'0'):''}`;}
@@ -15,7 +15,9 @@ export function TransactionSplits({id,minor,code}:{id:string;minor:string;code:C
  const refresh=()=>client.invalidateQueries();
  function edit(){setError('');setParts(q.data?.parts.map(p=>({category:p.category,amount:decimal(p.minor,code)}))??[{category:'Groceries',amount:''},{category:'Shopping',amount:''}]);setEditing(true);}
  async function save(){setBusy(true);setError('');try{await session.run(r=>r.splits.save(id,parts.map(p=>({category:p.category,minor:parseDecimal(p.amount,code).minor.toString()}))));await refresh();setEditing(false);}catch(e){setError(e instanceof Error?e.message:'The split could not be saved.');}finally{setBusy(false);}}
- return <section className="stack"><h3>Category split</h3><p className="meta">Divide this expense between categories. It remains one payment with the original amount and source evidence.</p>
+ return <section className="stack"><span className="heading-row"><h3>Category split</h3><Explain title="Category split">
+ <p>Divide this expense between categories. It remains one payment with the original amount and source evidence.</p>
+ </Explain></span>
  {q.error?<p role="alert">The split could not be read. <Button onClick={()=>void q.refetch()}>Retry</Button></p>:q.isPending?<p>Reading category split…</p>:<>
  {q.data&&!active&&<p role="alert">The saved split no longer matches this payment. It is excluded from analysis until you update or remove it.</p>}
  {!editing&&<>{q.data?.parts.map((p,i)=><Row key={i} trailing={<Amount value={money(BigInt(p.minor),code)} context={p.category}/>}>{p.category}</Row>)}<Button onClick={edit}>{q.data?'Edit category split':'Split this expense'}</Button>{q.data&&<Button onClick={()=>setRemoving(true)}>Remove split</Button>}</>}
