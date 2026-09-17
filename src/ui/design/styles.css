@@ -516,3 +516,24 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
   .due-tick { animation: measure-up var(--motion-settle) var(--ease-out) both; transform-origin: bottom; transform-box: fill-box; }
 }
 @keyframes measure-up { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* A debt falling to zero. One line, one hue, a floor that is literally zero — nothing else, because the
+   only two facts are how steep it is and where it lands. */
+.debt-burn { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.debt-burn-plot { width: 100%; height: 96px; display: block; overflow: visible; }
+.debt-burn-floor { stroke: var(--border-default); stroke-width: 1; }
+.debt-burn-line { fill: none; stroke: var(--accent-text); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.debt-burn figcaption { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+/* No line at all when the payment does not cover the interest. The caption carries it alone, so it takes
+   the warning ink — and it has to out-specify `.debt-burn figcaption` above, which is a class AND a type
+   and therefore beats a lone class. The same specificity trap silently disabled a scroll animation
+   earlier in this project; it is written out here so the next reader does not have to rediscover it. */
+.debt-burn figcaption.debt-burn-none { color: var(--warning-text); }
+/* The line draws itself from the balance you hold to the month it is gone, once, on the shared tokens. */
+@media (prefers-reduced-motion: no-preference) {
+  .debt-burn-line { stroke-dasharray: 1; animation: draw-down var(--motion-sweep) var(--ease-out) both; }
+}
+@keyframes draw-down { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+/* A cleared debt is kept, not deleted — what it cost is part of the record — but it is no longer news. */
+.debt-cleared { opacity: .6; }

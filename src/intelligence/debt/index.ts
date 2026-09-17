@@ -1,3 +1,5 @@
+import {day} from '../model';
+
 /**
  * WHAT A DEBT COSTS, AND WHEN IT ENDS.
  *
@@ -87,6 +89,8 @@ export type Plan = {
   interestMinor: string;
   /** The order debts are cleared in, by id. */
   order: string[];
+  /** Total still owed at the end of each month, for drawing the burn-down. */
+  balances: string[];
   growing: boolean;
 };
 
@@ -107,16 +111,16 @@ export function plan(debts: readonly Debt[], budgetMinor: string, strategy: Stra
   if (budget < 0n) throw new Error('A monthly budget cannot be negative.');
   const live = debts.filter(d => BigInt(d.balanceMinor) > 0n)
     .map(d => ({...d, balance: BigInt(d.balanceMinor), rate: BigInt(d.annualRateBp), minimum: BigInt(d.minimumMinor)}));
-  if (!live.length) return {strategy, months: 0, interestMinor: '0', order: [], growing: false};
+  if (!live.length) return {strategy, months: 0, interestMinor: '0', order: [], balances: [], growing: false};
 
   const minimums = live.reduce((total, d) => total + d.minimum, 0n);
   if (budget < minimums) throw new Error('The monthly budget is below the total of the minimum payments.');
 
-  const order: string[] = [];
+  const order: string[] = [], balances: string[] = [];
   let interest = 0n;
   for (let month = 1; month <= HORIZON_MONTHS; month++) {
     const open = live.filter(d => d.balance > 0n);
-    if (!open.length) return {strategy, months: month - 1, interestMinor: interest.toString(), order, growing: false};
+    if (!open.length) return {strategy, months: month - 1, interestMinor: interest.toString(), order, balances, growing: false};
 
     for (const d of open) { const charge = monthlyInterest(d.balance, d.rate); interest += charge; d.balance += charge; }
 
@@ -133,11 +137,12 @@ export function plan(debts: readonly Debt[], budgetMinor: string, strategy: Stra
       if (d.balance === 0n) order.push(d.id);
     }
     const pay = spare < target.balance ? spare : target.balance;
-    if (pay <= 0n) return {strategy, months: null, interestMinor: interest.toString(), order, growing: true};
+    if (pay <= 0n) return {strategy, months: null, interestMinor: interest.toString(), order, balances, growing: true};
     target.balance -= pay;
     if (target.balance === 0n) order.push(target.id);
+    balances.push(live.reduce((total, d) => total + d.balance, 0n).toString());
   }
-  return {strategy, months: null, interestMinor: interest.toString(), order, growing: false};
+  return {strategy, months: null, interestMinor: interest.toString(), order, balances, growing: false};
 }
 
 /** What choosing the cheaper ordering is worth, in money and in months. */
@@ -147,4 +152,69 @@ export function compare(debts: readonly Debt[], budgetMinor: string) {
   const savedMinor = (BigInt(snowball.interestMinor) - BigInt(avalanche.interestMinor)).toString();
   return {avalanche, snowball, savedMinor,
     savedMonths: avalanche.months !== null && snowball.months !== null ? snowball.months - avalanche.months : null};
+}
+
+/**
+ * WHEN THE NEXT PAYMENT IS DUE.
+ *
+ * A lender sets a day of the month, not a date, and the two are not the same thing: a card due on the
+ * 31st is due on the 30th in April and on the 28th or 29th in February. Clamping to the last day of the
+ * month is what lenders actually do, and guessing otherwise would put a mark on a day that does not
+ * exist.
+ */
+function lastDayOfMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** The first occurrence of `dueDay` on or after `asOf`. */
+export function nextDueDate(dueDay: number, asOf: string): string {
+  if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31) throw new Error('A due day is a day of the month.');
+  day(asOf);
+  let year = Number(asOf.slice(0, 4)), month = Number(asOf.slice(5, 7));
+  // Two passes is always enough: a clamped day in a LATER month cannot be earlier than a date in this one.
+  for (let step = 0; step < 2; step++) {
+    const clamped = Math.min(dueDay, lastDayOfMonth(year, month));
+    const date = `${year}-${String(month).padStart(2, '0')}-${String(clamped).padStart(2, '0')}`;
+    if (date >= asOf) return date;
+    month += 1;
+    if (month > 12) { month = 1; year += 1; }
+  }
+  throw new Error('A due day could not be placed on the calendar.');
+}
+
+/** A debt only needs its payment schedule to answer "is something due soon". */
+export type Scheduled = {id: string; name: string; minimumMinor: string; dueDay: number | null};
+
+export type DebtDue = {id: string; name: string; minimumMinor: string; date: string; offset: number};
+
+/**
+ * Debts whose payment day falls within the next `withinDays`.
+ *
+ * A debt with no due day is skipped rather than assumed: money owed to a friend has no date, and
+ * inventing one would make the app confident about something nobody told it.
+ */
+export function dueDebts(debts: readonly Scheduled[], asOf: string, withinDays: number): DebtDue[] {
+  const asOfDay = day(asOf);
+  return debts
+    .flatMap(d => {
+      if (d.dueDay === null) return [];
+      const date = nextDueDate(d.dueDay, asOf);
+      const offset = day(date) - asOfDay;
+      return offset <= withinDays ? [{id: d.id, name: d.name, minimumMinor: d.minimumMinor, date, offset}] : [];
+    })
+    .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+}
+
+/**
+ * A rate as people write it, from basis points, without ever touching a float.
+ *
+ * 1150 basis points is 11.5%, and the first version of the debt list printed it as "11%" — a rate
+ * rounded DOWN by half a point, on the one screen whose job is to say what a debt costs. Truncating a
+ * rate always flatters the lender.
+ */
+export function ratePercent(annualRateBp: string): string {
+  const bp = BigInt(annualRateBp);
+  const whole = bp / 100n, rest = bp % 100n;
+  if (rest === 0n) return `${whole}%`;
+  return `${whole}.${rest.toString().padStart(2, '0').replace(/0$/, '')}%`;
 }

@@ -1,5 +1,6 @@
 import {abs, median, type Signal, type Snapshot, type Transaction} from '../model';
 import type {DueWindow} from '../visuals/due';
+import {dueDebts, type Scheduled} from '../debt';
 
 /**
  * WHAT DESERVES SCREEN SPACE RIGHT NOW.
@@ -24,7 +25,7 @@ import type {DueWindow} from '../visuals/due';
  * At most three show at once. The fourth-most-urgent thing is, by definition, not urgent.
  */
 export type Surface = {
-  id: 'runway' | 'fixed-burden' | 'unusual-charge' | 'due-soon';
+  id: 'runway' | 'fixed-burden' | 'unusual-charge' | 'due-soon' | 'debt-due';
   urgency: 1 | 2 | 3;
   /** Exact values as decimal strings. Never a float, never a formatted string — the screen formats. */
   data: Record<string, string>;
@@ -98,8 +99,29 @@ function unusual(s: Snapshot): Surface | null {
   };
 }
 
-export function surfaces(s: Snapshot, signals: Signal[], due?: DueWindow): Surface[] {
+/**
+ * A debt payment is due within DUE_SOON_DAYS.
+ *
+ * The SAME three days as a bill, and for the same reason. A debt is a standing fact — it is true every
+ * day of the year — so a surface that fired on "you have a debt" would be permanent furniture. What has a
+ * date attached is the PAYMENT, and only in the few days before it. The rest of the time the debt lives
+ * in the Ledger and its shape lives in Insights, where you go looking for it.
+ */
+function debtDue(debts: readonly Scheduled[], asOf: string): Surface | null {
+  const soon = dueDebts(debts, asOf, DUE_SOON_DAYS);
+  if (!soon.length) return null;
+  return {
+    id: 'debt-due', urgency: 3, evidence: [],
+    data: {count: soon.length.toString(), date: soon[0]!.date, name: soon[0]!.name,
+      minor: soon.reduce((total, d) => total + BigInt(d.minimumMinor), 0n).toString()},
+  };
+}
+
+export function surfaces(s: Snapshot, signals: Signal[], due?: DueWindow, debts?: readonly Scheduled[]): Surface[] {
   const out: Surface[] = [];
+
+  const debt = debts?.length ? debtDue(debts, s.asOf) : null;
+  if (debt) out.push(debt);
 
   // Bills the ledger already knew the dates of and had never once drawn.
   const soon = due?.dues.filter(d => d.offset <= DUE_SOON_DAYS) ?? [];

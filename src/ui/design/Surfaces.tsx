@@ -23,6 +23,10 @@ export function Surfaces() {
   const home = useQuery({queryKey: ['display-currency'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.displayCurrency())});
   const code = home.data ?? 'AUD';
+  // Debts are read separately and cheaply: the analysis is a heavy pass over the ledger, and a list of
+  // standing facts the person typed in does not belong inside it.
+  const debts = useQuery({queryKey: ['debts'], enabled: session.state === 'ready',
+    queryFn: () => session.run(repo => repo.debts.list())});
   const report = useQuery({
     queryKey: ['intelligence', today, code, {extra: '0', cut: 0}],
     queryFn: () => session.run(r => r.intelligence.analyse(today, code, '0', 0)),
@@ -33,8 +37,10 @@ export function Surfaces() {
   if (!report.data) return null;
   const forecast = report.data.forecast;
   const due = dueWindow(forecast.recurrences, report.data.snapshot.asOf, forecast.nextPay);
+  const owing = (debts.data ?? []).filter(d => d.closedAt === null && d.currency === code && BigInt(d.balanceMinor) > 0n)
+    .map(d => ({id: d.id, name: d.name, minimumMinor: d.minimumMinor, dueDay: d.dueDay}));
   const showing = surfaces(report.data.snapshot,
-    report.data.signals.filter(s => s.period.startsWith('trailing-90:')), due);
+    report.data.signals.filter(s => s.period.startsWith('trailing-90:')), due, owing);
   if (!showing.length) return null;
 
   const amount = (minor: string) => format(money(BigInt(minor), currency(code)));
@@ -45,6 +51,9 @@ export function Surfaces() {
       </div>;
       if (surface.id === 'fixed-burden') return <div className="surface-card" key={surface.id}>
         <FixedFree basisPoints={surface.data['basisPoints']!}/>
+      </div>;
+      if (surface.id === 'debt-due') return <div className="surface-card" key={surface.id}>
+        <p>{surface.data['name']} · {amount(surface.data['minor']!)} due {surface.data['date']}</p>
       </div>;
       if (surface.id === 'due-soon') return <div className="surface-card" key={surface.id}>
         {/* The strip, not a list. Which day, and which side of payday, is the whole question. */}
