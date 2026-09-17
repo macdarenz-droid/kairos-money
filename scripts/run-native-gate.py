@@ -73,16 +73,24 @@ def instrumentation(name, count):
         #
         # So it goes to a file, and a workflow step AFTER the emulator is killed prints it. Same answer as
         # the signing fingerprint: put the thing somebody has to act on where a tail actually reaches.
-        marks = ('INSTRUMENTATION_STATUS: stack=', 'INSTRUMENTATION_STATUS: test=',
-                 'INSTRUMENTATION_STATUS: class=', 'INSTRUMENTATION_STATUS_CODE:', 'INSTRUMENTATION_RESULT:')
-        lines = log.splitlines()
-        failures = [line for line in lines
-                    if line.startswith(marks) or 'FAILURES!!!' in line or line.lstrip().startswith('Tests run:')
-                    or 'at app.kairos.money.' in line or 'AssertionFailedError' in line]
-        shown = failures[-80:] if failures else lines[-60:]
-        summary = (name + ' failed. What it said'
-                   + ('' if failures else ' (no assertion lines matched; plain tail)') + ':\n'
-                   + '\n'.join(shown))
+        #
+        # A previous version of this filtered the log down to lines it recognised, and that threw away the
+        # one line worth having. The assertion message is the text AFTER `stack=` on its own line, and this
+        # suite's messages carry the page's innerText, so the message runs over dozens of plain lines that
+        # match no mark at all. Keeping only matching lines kept the frame addresses and dropped the reason.
+        #
+        # So take the failure verbatim: the contiguous block starting at the first `stack=`, which is the
+        # assertion message followed by its own stack, then the run's verdict lines from the tail.
+        lines = [line[:400] for line in log.splitlines()]
+        start = next((i for i, line in enumerate(lines) if 'INSTRUMENTATION_STATUS: stack=' in line), None)
+        verdict = [line for line in lines
+                   if 'FAILURES!!!' in line or line.lstrip().startswith('Tests run:')
+                   or 'INSTRUMENTATION_STATUS_CODE:' in line or 'INSTRUMENTATION_RESULT:' in line]
+        if start is None:
+            shown = ['(no assertion was reported; plain tail follows)'] + lines[-60:]
+        else:
+            shown = lines[start:start + 150] + ['---'] + verdict[-12:]
+        summary = name + ' failed. What it said:\n' + '\n'.join(shown)
         (EVIDENCE / 'instrumentation-failure.log').write_text(summary + '\n')
         print(summary, flush=True)
         raise RuntimeError(name + ' did not pass; see its instrumentation log')
