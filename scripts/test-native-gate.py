@@ -17,7 +17,7 @@ COUNTS = {
     'KeyProtectionInstrumentedTest': 1, 'HardeningInstrumentedTest': 1,
     'ImportInstrumentedTest': 2, 'LargeImportInstrumentedTest': 1,
     'NotificationsInstrumentedTest': 1,
-    'RevisionInstrumentedTest': 2, 'IntelligenceInstrumentedTest': 4,
+    'RevisionInstrumentedTest': 1, 'IntelligenceInstrumentedTest': 4,
     'LedgerPerformanceInstrumentedTest': 1,
     'NoticeCaptureInstrumentedTest': 5,
     'AccessibilityInstrumentedTest': 1, 'UsabilityBaselineInstrumentedTest': 1, 'AcceptanceInstrumentedTest': 1,

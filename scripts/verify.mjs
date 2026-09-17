@@ -14,7 +14,9 @@
  */
 import { spawnSync } from 'node:child_process';
 
-const steps = ['lint', 'device:strings', 'test', 'build', 'schema', 'release:config'];
+// gate:runner is the Android gate's own runner, tested on the host. It failed in CI on a change that
+// npm run verify called green, because verify did not run it and the workflow did — so it does now.
+const steps = ['lint', 'device:strings', 'gate:runner', 'test', 'build', 'schema', 'release:config'];
 const failed = [];
 for (const step of steps) {
   const run = spawnSync('npm', ['run', step], { stdio: 'inherit' });
@@ -26,4 +28,4 @@ if (failed.length) {
   console.log(`VERDICT: FAILED — ${failed.join(', ')}`);
   process.exit(1);
 }
-console.log('VERDICT: GREEN — lint, device strings, tests, build, schema and release config all pass.');
+console.log('VERDICT: GREEN — lint, device strings, gate runner, tests, build, schema and release config all pass.');
