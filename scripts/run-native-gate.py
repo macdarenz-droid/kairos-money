@@ -67,14 +67,25 @@ def instrumentation(name, count):
         # THE ASSERTION, LAST, WHERE A LOG IS ACTUALLY READ.
         #
         # The whole instrumentation log is printed above, and on this runner it carries thousands of
-        # interleaved device lines — so the one thing somebody has to act on sits in the middle of it and
-        # a tail of the job log never reaches it. Twice now a failing device test has been diagnosed by
-        # guessing instead of by reading. The failure lines are cheap to repeat and they belong at the
-        # end, for the same reason the signing fingerprint is printed twice.
-        failures = [line for line in log.splitlines()
-                    if re.search(r'^\s*(Failures?:|FAILURES!!!|Tests run:|junit\.|org\.junit\.|java\.lang\.\w*(Error|Exception)|at app\.kairos\.money\.)', line)]
-        if failures:
-            print(name + ' failed. What it said:\n' + '\n'.join(failures[-60:]), flush=True)
+        # interleaved device lines, so the one thing somebody has to act on sits in the middle of it and a
+        # tail of the job log never reaches it. The evidence artifact that holds it cleanly lives on a host
+        # some sandboxes cannot reach.
+        #
+        # The first attempt at this matched `junit.` and `Tests run:` at the START of a line and printed
+        # NOTHING, because `am instrument` does not format it that way — it wraps the assertion up as
+        # "INSTRUMENTATION_STATUS: stack=junit.framework...". So match what the tool actually emits, and
+        # fall back to the plain tail when nothing matches, because a diagnostic that can come back empty
+        # is the diagnostic that just cost a run.
+        marks = ('INSTRUMENTATION_STATUS: stack=', 'INSTRUMENTATION_STATUS: test=',
+                 'INSTRUMENTATION_STATUS: class=', 'INSTRUMENTATION_STATUS_CODE:', 'INSTRUMENTATION_RESULT:')
+        lines = log.splitlines()
+        failures = [line for line in lines
+                    if line.startswith(marks) or 'FAILURES!!!' in line or line.lstrip().startswith('Tests run:')
+                    or 'at app.kairos.money.' in line or 'AssertionFailedError' in line]
+        shown = failures[-80:] if failures else lines[-60:]
+        print(name + ' failed. What it said'
+              + ('' if failures else ' (no assertion lines matched; plain tail)') + ':\n'
+              + '\n'.join(shown), flush=True)
         raise RuntimeError(name + ' did not pass; see its instrumentation log')
     completed_instrumentation.append(name)
 
