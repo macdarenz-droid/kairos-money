@@ -45,15 +45,24 @@ public class IntelligenceInstrumentedTest {
         while (System.currentTimeMillis() < deadline) { if ("true".equals(js(condition))) return; Thread.sleep(150); }
         fail("Import UI condition failed: " + condition + "; page: " + js("document.body.innerText"));
     }
+    /**
+     * Press a button once it is actually pressable.
+     *
+     * Waiting only for the button to EXIST is a race, and the History detail sheet made it a real one:
+     * Edit and Delete appear immediately but stay disabled until the entry behind the row has been read,
+     * so the press landed on a dead button and the sheet that should have opened never did. A disabled
+     * button is never a meaningful thing to click, so this waits for both.
+     */
     private void click(String name) throws Exception {
         String button = "Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===" + JSONObject.quote(name) + ")";
-        awaitJs("Boolean(" + button + ")"); js(button + ".click()");
+        awaitJs("Boolean(" + button + ") && !" + button + ".disabled"); js(button + ".click()");
     }
     /** Open one row of History by what it says, which is the only way to reach a transaction now. */
     private void openRow(String text) throws Exception {
         String row = "Array.from(document.querySelectorAll('button.transaction-row')).find(b=>b.textContent.includes(" + JSONObject.quote(text) + "))";
         awaitJs("Boolean(" + row + ")"); js(row + ".click()");
-        awaitJs("Boolean(document.querySelector('dialog'))");
+        // The sheet, and the detail inside it — an open <dialog> alone can still be mid-render.
+        awaitJs("Boolean(document.querySelector('dialog[open]')) && document.querySelector('dialog').innerText.includes(" + JSONObject.quote(text) + ")");
     }
     /** Wait for the target to remain visible across frames, including asynchronous layout. */
     private void captureHeading(String heading, String name) throws Exception {
