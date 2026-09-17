@@ -1,5 +1,6 @@
 import type {Driver} from '../core/db/driver';
 import {currency, money, toDatabase, type Currency} from '../core/money';
+import {convert, rateBetween, type Rate} from '../core/fx';
 
 /**
  * MONEY BETWEEN PEOPLE.
@@ -75,16 +76,45 @@ function validate(iou: IouInput) {
  * A person whose entries cancel out exactly is dropped: nought owed in either direction is not a fact
  * that needs a row, and a list that keeps them is a list of people you have finished with.
  */
-export function netByPerson(ious: readonly Iou[], code: Currency): PersonNet[] {
+/**
+ * MONEY BETWEEN PEOPLE IS MONEY, so it follows the displayed currency like everything else.
+ *
+ * This dropped any entry not already in the displayed currency, under a heading that says "Net, PHP".
+ * Lend a friend fifty Australian dollars, switch the app to pesos, and the debt disappears — not marked,
+ * not converted, gone. Measured before it was touched: one row shown in AUD, nought shown in PHP.
+ *
+ * Each entry converts at the rate for THE DAY IT HAPPENED, like every other amount in the app. The NET
+ * converts; the entries underneath stay exactly as they were recorded, because the detail is kept so the
+ * number can be opened rather than replaced by it — and "I lent him fifty dollars" is what happened,
+ * whatever it is worth today.
+ *
+ * An entry in a currency no rate reaches is left out and named by `unreachableCurrencies`, never counted
+ * as nought. A debt quietly worth zero is the worst of the three possible answers.
+ */
+/** One entry in the displayed currency at the rate for its own day, or null when no rate reaches it. */
+function shown(iou: Iou, code: Currency, rates: readonly Rate[]): bigint | null {
+  const rate = rateBetween(rates, iou.currency, code, iou.occurredOn);
+  return rate === null ? null : convert(money(BigInt(iou.amountMinor), iou.currency), code, rate).minor;
+}
+
+/** The currencies held between people that no stored rate reaches, so a screen can name them. */
+export function unreachableCurrencies(ious: readonly Iou[], code: Currency, rates: readonly Rate[] = []): Currency[] {
+  const missing = new Set<Currency>();
+  for (const iou of ious) if (iou.settledAt === null && shown(iou, code, rates) === null) missing.add(iou.currency);
+  return [...missing].sort();
+}
+
+export function netByPerson(ious: readonly Iou[], code: Currency, rates: readonly Rate[] = []): PersonNet[] {
   const people = new Map<string, Iou[]>();
   for (const iou of ious) {
-    if (iou.settledAt !== null || iou.currency !== code) continue;
+    if (iou.settledAt !== null || shown(iou, code, rates) === null) continue;
     people.set(iou.person, [...(people.get(iou.person) ?? []), iou]);
   }
   const out: PersonNet[] = [];
   for (const [person, items] of people) {
-    const toMe = items.filter(i => i.direction === 'owed_to_me').reduce((total, i) => total + BigInt(i.amountMinor), 0n);
-    const byMe = items.filter(i => i.direction === 'owed_by_me').reduce((total, i) => total + BigInt(i.amountMinor), 0n);
+    const total = (direction: Direction) => items.filter(i => i.direction === direction)
+      .reduce((sum, i) => sum + shown(i, code, rates)!, 0n);
+    const toMe = total('owed_to_me'), byMe = total('owed_by_me');
     const net = toMe - byMe;
     if (net === 0n) continue;
     out.push({person, currency: code, netMinor: net.toString(),

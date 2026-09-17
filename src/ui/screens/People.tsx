@@ -1,7 +1,8 @@
 import {useState} from 'react';
 import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {currency, currencyDigits, money, parseDecimal} from '../../core/money';
-import {netByPerson, type Direction, type Iou} from '../../ledger/people';
+import {netByPerson, unreachableCurrencies, type Direction, type Iou} from '../../ledger/people';
+import {type Rate as FxRate} from '../../core/fx';
 import {localDay} from '../../ingest/reminders';
 import {Amount, Button, Input, Row, Sheet} from '../design/primitives';
 import {PersonBalance} from '../design/PersonBalance';
@@ -28,6 +29,8 @@ export function People() {
   const code = home.data ?? 'AUD';
   const entries = useQuery({queryKey: ['ious'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.people.list())});
+  const stored = useQuery({queryKey: ['fx-rates'], enabled: session.state === 'ready',
+    queryFn: () => session.run(repo => repo.rates())});
   const [draft, setDraft] = useState<Draft | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -35,7 +38,10 @@ export function People() {
   if (session.state !== 'ready') return null;
 
   const rows = entries.data ?? [];
-  const nets = netByPerson(rows, currency(code));
+  const rates: FxRate[] = (stored.data ?? []).map(r => ({asOf: r.asOf, base: currency(r.base),
+    quote: currency(r.quote), rateE8: BigInt(r.rateE8), source: r.source}));
+  const nets = netByPerson(rows, currency(code), rates);
+  const unreachable = unreachableCurrencies(rows, currency(code), rates);
   const largest = nets.reduce((most, n) => { const size = BigInt(n.netMinor) < 0n ? -BigInt(n.netMinor) : BigInt(n.netMinor); return size > most ? size : most; }, 1n);
   const refresh = () => client.invalidateQueries({queryKey: ['ious']});
 
@@ -60,6 +66,8 @@ export function People() {
   const detail = (item: Iou) => `${item.occurredOn} · ${item.reason}`;
   return <section className="stack">
     <div className="list-heading"><h2>Between people</h2><span className="meta">Net, {code}</span></div>
+    {/* A debt in a currency no rate reaches is left out, and said so — never quietly worth nothing. */}
+    {unreachable.length > 0 && <p className="meta">{unreachable.join(' and ')} not included: no stored rate reaches {code}.</p>}
     {/* NOT a Row. A Row sizes its leading cell to its content, and three rows of different widths put
         three diverging centres in three different places — which is the one thing this chart cannot
         survive. The bar spans the full row so every centre is the same centre. */}

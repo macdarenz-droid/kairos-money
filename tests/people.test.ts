@@ -2,7 +2,8 @@ import {describe, expect, it} from 'vitest';
 import {memoryDriver} from './db-helper';
 import {migrate} from '../src/core/db/migrate';
 import {repository} from '../src/core/db/repository';
-import {netByPerson, type Iou} from '../src/ledger/people';
+import {netByPerson, unreachableCurrencies, type Iou} from '../src/ledger/people';
+import {type Rate} from '../src/core/fx';
 import {currency} from '../src/core/money';
 
 async function ledger() {
@@ -141,5 +142,57 @@ describe('recording money between people', () => {
     const restored = await ledger();
     await restored.repo.restoreBackup(snapshot);
     expect(await restored.repo.people.list()).toEqual([entry()]);
+  });
+});
+
+/**
+ * MONEY BETWEEN PEOPLE IS MONEY. This dropped any entry not already in the displayed currency, under a
+ * heading that says "Net, PHP" — lend a friend fifty Australian dollars, switch the app to pesos, and
+ * the debt is not marked or converted, it is gone. Measured before it was touched: one row in AUD,
+ * nought in PHP.
+ */
+describe('between people, shown in another currency', () => {
+  const lent = (over: Partial<Iou> = {}): Iou => ({id: '1', person: 'Alex', direction: 'owed_to_me',
+    currency: currency('AUD'), amountMinor: '5000', reason: 'Lunch', occurredOn: '2026-01-20',
+    transactionId: null, settledAt: null, ...over});
+  /** Published the way the app fetches it: the display currency is the base. */
+  const php: Rate[] = [{asOf: '2026-01-01', base: currency('PHP'), quote: currency('AUD'),
+    rateE8: 2640000n, source: 'synthetic'}];
+
+  it('converts the net rather than dropping the debt', () => {
+    const [net] = netByPerson([lent()], currency('PHP'), php);
+    // A$50.00 at 0.0264 AUD per PHP is ₱1,893.94.
+    expect(net?.netMinor).toBe('189394');
+    expect(net?.currency).toBe('PHP');
+  });
+
+  /** The entries underneath stay as recorded: "I lent him fifty dollars" is what happened. */
+  it('keeps each entry in the currency it was recorded in', () => {
+    const [net] = netByPerson([lent()], currency('PHP'), php);
+    expect(net?.items[0]?.amountMinor).toBe('5000');
+    expect(net?.items[0]?.currency).toBe('AUD');
+  });
+
+  /** Two currencies between one person net against each other once both are converted. */
+  it('nets entries in different currencies against each other', () => {
+    const nets = netByPerson([lent(), lent({id: '2', direction: 'owed_by_me',
+      currency: currency('PHP'), amountMinor: '100000'})], currency('PHP'), php);
+    // ₱1,893.94 owed to me less ₱1,000.00 owed by me.
+    expect(nets[0]?.netMinor).toBe('89394');
+  });
+
+  /** A debt quietly worth nothing is the worst of the three answers, so it is named instead. */
+  it('names a currency no rate reaches instead of counting it as nought', () => {
+    expect(netByPerson([lent()], currency('PHP'))).toEqual([]);
+    expect(unreachableCurrencies([lent()], currency('PHP'))).toEqual(['AUD']);
+  });
+
+  it('has nothing to name once a rate reaches every entry', () => {
+    expect(unreachableCurrencies([lent()], currency('PHP'), php)).toEqual([]);
+  });
+
+  /** Settled debts are not outstanding, so they are never named as missing either. */
+  it('ignores settled entries when naming what it could not reach', () => {
+    expect(unreachableCurrencies([lent({settledAt: '2026-02-01'})], currency('PHP'))).toEqual([]);
   });
 });
