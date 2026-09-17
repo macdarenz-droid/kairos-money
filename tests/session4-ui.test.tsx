@@ -24,4 +24,16 @@ it.each(['dark','light'])('shows unknown/provisional monthly views and month com
  fireEvent.change(screen.getByRole('slider'),{target:{value:'1'}});await waitFor(()=>expect(screen.getByRole('slider').getAttribute('aria-valuetext')).toContain('compared with'));
  fireEvent.click(screen.getByRole('button',{name:'Buffer days · Unknown'}));expect(await screen.findByRole('dialog')).toBeTruthy();expect(screen.getByText('No source transactions are available for this value.')).toBeTruthy();
 });
+/**
+ * ONE CURRENCY, SET ONCE. "remove, replace global currency conversion inside app" — this screen had a
+ * picker of its own, so the month view could report itself in AUD while the tiles above it were in PHP.
+ */
+it('follows the display currency instead of offering one of its own',async()=>{
+ await state.repo!.setDisplayCurrency('PHP');
+ mount(<MoneyVisuals/>);await screen.findByRole('heading',{name:'Money Fingerprint'});
+ expect(screen.queryByLabelText('History currency')).toBeNull();
+ // The scale of an empty month is still stated, and it is stated in the currency he chose.
+ await waitFor(()=>expect(document.body.textContent).toContain('PHP'));
+ expect(document.body.textContent).not.toContain('solid.');
+});
 it('shows all ten recovery groups while preserving the complete selectable code',()=>{const code='2345-6789-ABCD-EFGH-JKLM-NPQR-STUV-WXYZ-2345-6789';const view=render(<RecoveryCode value={code}/>);expect((screen.getByLabelText('Recovery code') as HTMLInputElement).value).toBe(code);expect(view.container.querySelectorAll('.recovery-groups span')).toHaveLength(10);});

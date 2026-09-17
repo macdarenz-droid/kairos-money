@@ -35,6 +35,7 @@ const People=lazy(()=>import('./screens/People').then(module=>({default:module.P
 const MoneyFlowCard=lazy(()=>import('./screens/MoneyFlowCard').then(module=>({default:module.MoneyFlowCard})));
 const CurrencyExposureCard=lazy(()=>import('./screens/CurrencyExposureCard').then(module=>({default:module.CurrencyExposureCard})));
 import {Settings, type SettingsFocus} from './screens/Settings';
+import {Rates} from './screens/Rates';
 const useNavigation = create<{ tab: Tab; setTab: (tab: Tab) => void }>(set => ({ tab: 'Today', setTab: tab => set({ tab }) }));
 // Left to right, as they sit in the tab bar. Travelling right brings a screen in from the right.
 const TAB_ORDER = ['Today', 'Ledger', 'Insights', 'You'] as const satisfies readonly Tab[];
@@ -116,7 +117,7 @@ export default function App() {
       <Suspense fallback={null}><MoneyFlowCard/><CurrencyExposureCard/><DebtShape/></Suspense>
       <details className="section-gap"><summary>Habits</summary><Intelligence/></details>
       <details><summary>Every measure</summary><Suspense fallback={<Skeleton label="Opening money analysis"/>}><Analysis/></Suspense></details></>}
-    {tab === 'You' && <><Suspense fallback={<Skeleton label="Opening your money views"/>}><MoneyVisuals/><NetWorth/></Suspense><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []} focus={settingsFocus} onFocused={clearFocus}/></>}
+    {tab === 'You' && <>{/* "put at the very top of the you section": every figure in the app is shown in this currency, so the control that sets it comes before the figures rather than after them. */}<Rates accounts={accounts.data ?? []} notify={setToast}/><Suspense fallback={<Skeleton label="Opening your money views"/>}><MoneyVisuals/><NetWorth/></Suspense><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []} focus={settingsFocus} onFocused={clearFocus}/></>}
     </div>
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} kind={manualKind} onClose={()=>setSheet(null)}/>}

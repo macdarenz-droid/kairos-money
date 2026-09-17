@@ -9,7 +9,6 @@ import { deleteDatabase } from '../../core/db/native';
 import { base64, exportArchive } from '../../core/db/export';
 import { useTheme, type ThemePreference } from '../design/theme';
 import { Button, Row, Sheet } from '../design/primitives';
-import { Rates } from './Rates';
 import { useSession } from '../session';
 /** What Quick can jump straight to. He asked for backup and restore twice while both were already here. */
 export type SettingsFocus = 'backup' | 'restore' | 'export' | 'currency';
@@ -49,7 +48,6 @@ export function Settings({ onAccount, notify, accounts = [], focus = null, onFoc
     <section className="settings-section"><h2>Your ledger</h2><div className="action-list"><Button onClick={onAccount}><Plus size={18}/>Add an account</Button><Button disabled={session.state === 'preview'} onClick={() => setDialog('backup')}><ShieldPlus size={18}/>Back up</Button><Button disabled={session.state === 'preview'} onClick={() => setDialog('restore')}><ArchiveRestore size={18}/>Restore a backup</Button><Button disabled={session.state === 'preview'} onClick={() => setDialog('export')}><Download size={18}/>Export all data</Button></div></section>
     <NotificationSettings/>
     <NoticeSettings accounts={accounts}/>
-    <Rates accounts={accounts} notify={notify}/>
     <section className="settings-section"><h2>Privacy and security</h2><Row trailing={<ShieldCheck size={18}/>}>On-device storage<p>No amount, merchant or account leaves this device.</p></Row>
       {session.state === 'ready' && <><Row trailing={<Button aria-pressed={session.biometricEnabled} disabled={!session.biometric} onClick={() => { void Vault.setBiometric({ enabled: !session.biometricEnabled }).then(session.refreshBiometric).catch(() => setError('Biometrics could not be enabled. Check your Android security settings.')); }}>{session.biometricEnabled ? 'On' : 'Off'}</Button>}><Fingerprint size={16}/> Biometric unlock<p>{session.biometric ? 'Optional. Your PIN remains available.' : 'Set up biometrics in Android settings.'}</p></Row><div className="action-list"><Button onClick={() => void session.lock().catch(() => setError('Kairos locked. Restart the app to close storage safely.'))}><LockKeyhole size={18}/>Lock now</Button></div></>}
       <div className="action-list"><Button onClick={() => setDialog('privacy')}><ShieldCheck size={18}/>Privacy log</Button><Button variant="danger" disabled={session.state === 'preview'} onClick={() => setDialog('delete')}><Trash2 size={18}/>Delete all data</Button></div>

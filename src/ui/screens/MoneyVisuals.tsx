@@ -7,6 +7,7 @@ import {TimingCharts} from './TimingCharts';
 import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {useSession} from '../session';
+import {useDisplayCurrency} from '../currency';
 import {Amount,Button,Explain,Row,Sheet,Skeleton} from '../design/primitives';
 import {SourceLine} from '../design/SourceLine';
 import {currency,money} from '../../core/money';
@@ -22,7 +23,7 @@ function monthWindow(today:string,offset:number):Window {
 }
 function point(index:number,radius:number){const angle=index*Math.PI*2/5-Math.PI/2;return `${120+Math.cos(angle)*radius},${120+Math.sin(angle)*radius}`;}
 export function MoneyVisuals(){
- const session=useSession(),[code,setCode]=useState('AUD'),[offset,setOffset]=useState(0),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
+ const session=useSession(),code=useDisplayCurrency(),[offset,setOffset]=useState(0),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
  const today=localDay();const q=useQuery({queryKey:['visual-snapshot',today,code],queryFn:()=>session.run(r=>r.intelligence.snapshot(today,code)),enabled:session.state==='ready'});
  if(session.state!=='ready')return null;
  if(q.isPending)return <Skeleton label="Reading monthly history"/>;
@@ -37,9 +38,8 @@ export function MoneyVisuals(){
  for(const t of tx){if(BigInt(t.minor)>=0n)continue;for(const p of categoryAmounts(t)){const row=categories.get(p.category)??{minor:0n,ids:[]};row.minor+=BigInt(p.minor);if(!row.ids.includes(t.id))row.ids.push(t.id);categories.set(p.category,row);}}
  const sorted=[...categories].sort((a,b)=>a[1].minor>b[1].minor?-1:1);
  return <section className="stack money-visuals" aria-label="Monthly money history">
- <h2>Money Fingerprint</h2><label className="input-label">History currency<select value={code} onChange={e=>setCode(e.target.value)}>{['AUD','USD','PHP','EUR','GBP','NZD','CAD','SGD','JPY','KWD'].map(c=><option key={c}>{c}</option>)}</select></label>
+ <h2>Money Fingerprint</h2>
  <label className="input-label">Compare month · {w.label}<input type="range" min="0" max="11" value={offset} aria-valuetext={`${w.label}, compared with ${previous.label}`} onChange={e=>setOffset(Number(e.target.value))}/></label>
- <p className="meta">{w.label} · solid. {previous.label} · dashed. {current.provisional?'Provisional: incomplete coverage or missing inputs.':'Complete monthly inputs.'} {current.unverified?'Includes balance-unverified data.':''}</p>
  <svg viewBox="0 0 240 240" className="fingerprint" role="img" aria-label={`Money Fingerprint for ${w.label}${current.provisional?', provisional':''}`}>
  {[30,60,90].map(r=><polygon key={r} points={[0,1,2,3,4].map(i=>point(i,r)).join(' ')} fill="none" stroke="var(--border-default)"/>)}
  {current.axes.map((a,i)=><line key={a.key} x1="120" y1="120" x2={point(i,90).split(',')[0]} y2={point(i,90).split(',')[1]} stroke="var(--border-default)"/>)}

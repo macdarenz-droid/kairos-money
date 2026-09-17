@@ -15,7 +15,14 @@ it.each(['dark','light'])('selects the reconciled account currency independently
  await driver.execute("INSERT INTO import_batches(id,account_id,source_file_hash,file_name,parser_version,period_start,period_end,status,stated_closing_minor,created_at,integrity_tier) VALUES('usd-import','USD','usd-hash','usd.csv','test','2026-01-01','2026-01-31','committed',150000,'2026-02-01','A')");
  document.documentElement.dataset.theme=theme;const q=new QueryClient({defaultOptions:{queries:{retry:false}}});render(<QueryClientProvider client={q}><NetWorth/></QueryClientProvider>);
  await screen.findByText('Synthetic AUD');fireEvent.click(screen.getByText('Imported account ownership'));expect((screen.getByRole('button',{name:'Include balance'}) as HTMLButtonElement).disabled).toBe(true);
- fireEvent.change(screen.getByLabelText('Net worth currency'),{target:{value:'USD'}});await screen.findByText('Synthetic USD');expect(screen.queryByText('Synthetic AUD')).toBeNull();expect(screen.getByText('Latest reconciled statement closing balance.')).toBeTruthy();
+ // THE CURRENCY IS THE APP'S, NOT THIS CARD'S. It had a picker of its own, so net worth could report
+ // itself in a currency nothing else on the screen was using. It follows the display currency now, and
+ // changing that setting is what moves it — which is also the only way he ever wanted to change it.
+ expect(screen.queryByLabelText('Net worth currency')).toBeNull();
+ cleanup();await state.repo.setDisplayCurrency('USD');
+ render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><NetWorth/></QueryClientProvider>);
+ await screen.findByText('Synthetic USD');fireEvent.click(screen.getByText('Imported account ownership'));
+ expect(screen.queryByText('Synthetic AUD')).toBeNull();expect(screen.getByText('Latest reconciled statement closing balance.')).toBeTruthy();
  fireEvent.click(screen.getByRole('button',{name:'Include balance'}));await screen.findByText(/2026-01-31 · included/);expect(screen.getByLabelText(/USD\s1,500\.00 USD, combined net worth/)).toBeTruthy();
  expect((await state.repo.netWorth.accountPositions()).find(a=>a.accountId==='AUD')?.choice).toBe('review');
 });
