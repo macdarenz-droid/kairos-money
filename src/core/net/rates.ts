@@ -1,3 +1,4 @@
+import { Capacitor, CapacitorHttp, type HttpResponse } from '@capacitor/core';
 import { currencyDigits, type Currency } from '../money';
 import { type Rate } from '../fx';
 
@@ -52,6 +53,52 @@ export function decimalToE8(text: string, pair: string): bigint {
 }
 
 /**
+ * ON THE PHONE THIS GOES OUT THROUGH JAVA, NOT THROUGH THE WEBVIEW.
+ *
+ * `fetch` inside a Capacitor WebView is a browser request from the origin https://localhost, so it is
+ * subject to CORS: a server that does not name that origin back has its answer thrown away before a line
+ * of this file runs, and the browser reports it as "Failed to fetch" — the same words it uses for being
+ * offline, for DNS, for TLS and for a refused connection. His phone showed exactly that, on 5G, and the
+ * one message covers four different faults.
+ *
+ * CapacitorHttp is the native HTTP client. It runs outside the WebView, so CORS does not apply to it at
+ * all, and it reports a real reason when something fails. Read as TEXT either way, because the rate
+ * digits are taken from the response characters rather than through a float.
+ *
+ * THE REDIRECT RULE SURVIVES. Native follows redirects before this code can object, so the destination
+ * is checked afterwards and the answer is refused if it moved — naming where it went, which is the one
+ * thing nobody could see before. A rate lookup carries a currency code and a date and cannot read the
+ * ledger, but "one module, one address" is a promise the app makes on screen, and it is kept.
+ */
+async function read(url: string): Promise<string> {
+  const host = new URL(HOST).host;
+  const unreachable = (reason: string) => new Error(`Could not reach ${host}. ${reason}`);
+  if (Capacitor.isNativePlatform()) {
+    let response: HttpResponse;
+    try {
+      response = await CapacitorHttp.request({ method: 'GET', url, headers: { accept: 'application/json' }, responseType: 'text' });
+    } catch (error) {
+      throw unreachable(`Check the connection. The phone reported: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    if (response.url && new URL(response.url).host !== host) {
+      throw new Error(`The rate service redirected to ${new URL(response.url).host}, which this app is not`
+        + ` set up to use. Tell Kairos's author that address and it can be added.`);
+    }
+    if (response.status < 200 || response.status >= 300) throw new Error(`Exchange rates are unavailable right now (${response.status}).`);
+    return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+  }
+  let response: Response;
+  try {
+    response = await fetch(url, { headers: { accept: 'application/json' }, redirect: 'error' });
+  } catch {
+    throw unreachable('Check the connection; if it is working, the rate service may have moved —'
+      + ' this app will not follow a redirect to an address it does not know.');
+  }
+  if (!response.ok) throw new Error(`Exchange rates are unavailable right now (${response.status}).`);
+  return response.text();
+}
+
+/**
  * @param on an ISO day for a historical rate, or omitted for the latest published set.
  */
 export async function fetchRates(base: Currency, quotes: readonly Currency[], on?: string): Promise<RateResponse> {
@@ -74,17 +121,7 @@ export async function fetchRates(base: Currency, quotes: readonly Currency[], on
    * host nobody vetted, and the whole point of this module is that exactly one address is reachable
    * from the app. So the refusal is stated instead of hidden.
    */
-  let response: Response;
-  try {
-    response = await fetch(url, { headers: { accept: 'application/json' }, redirect: 'error' });
-  } catch {
-    throw new Error(`Could not reach ${new URL(HOST).host}. Check the connection; if it is working, the`
-      + ` rate service may have moved — this app will not follow a redirect to an address it does not know.`);
-  }
-  if (!response.ok) throw new Error(`Exchange rates are unavailable right now (${response.status}).`);
-
-  // Read as text, so the rate digits can be taken exactly. The structure is still validated by parsing.
-  const text = await response.text();
+  const text = await read(url);
   const body = JSON.parse(text) as { base?: unknown; date?: unknown; rates?: unknown };
   if (typeof body.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(body.date)) throw new Error('The rate source did not say which day its rates are for.');
   // Without this the app would file today's rates under a date it assumed, which is the same retroactive

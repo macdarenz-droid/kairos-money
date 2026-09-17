@@ -23,7 +23,10 @@ const ALLOWED = 'src/core/net/rates.ts';
  * a file off the device. Requiring the call to follow await, =, return or ( separates a call to the
  * global from both `source.fetch(...)` and a method declaration.
  */
-const CALLS = /(?:await|=|return|\()\s*fetch\s*\(|\bnew\s+(?:XMLHttpRequest|WebSocket|EventSource)\b|\bsendBeacon\s*\(/;
+// CapacitorHttp is the NATIVE client, outside the WebView and outside CORS. It is the way the phone
+// actually reaches the rate source, so leaving it out of this rule would have quietly retired the
+// guarantee this test exists to keep: one module reaches the network, and it cannot read the ledger.
+const CALLS = /(?:await|=|return|\()\s*fetch\s*\(|\bnew\s+(?:XMLHttpRequest|WebSocket|EventSource)\b|\bsendBeacon\s*\(|\bCapacitorHttp\b/;
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap(entry => {
