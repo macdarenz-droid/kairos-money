@@ -63,19 +63,24 @@ it('shows a hand-recorded purchase in the same list as an imported one', async (
   expect(screen.getByText(/Recorded by hand/)).toBeTruthy();
 });
 
-it('shows five at a time and steps through the rest', async () => {
-  await importRows(12);
+/**
+ * FROM HIS SCREENSHOT: "remove here, sort. awkward positioning in between previous and next" — the row
+ * count sat wedged between Previous and Next, and five rows a page made 74 pages of his own history.
+ * The list grows downward instead: what has been read stays read, and the count moved up to the heading.
+ */
+it('loads more rather than paging, and keeps the rows already read', async () => {
+  await importRows(30);
   await open();
-  await waitFor(() => expect(rows()).toHaveLength(5));
-  expect(screen.getByText('12 transactions')).toBeTruthy();
-  const next = screen.getByRole('button', {name: 'Next'});
-  expect((screen.getByRole('button', {name: 'Previous'}) as HTMLButtonElement).disabled).toBe(true);
-  fireEvent.click(next);
-  await waitFor(() => expect(rows()).toHaveLength(5));
-  fireEvent.click(screen.getByRole('button', {name: 'Next'}));
-  // Twelve rows over pages of five leaves two on the last one, and Next has nowhere further to go.
-  await waitFor(() => expect(rows()).toHaveLength(2));
-  expect((screen.getByRole('button', {name: 'Next'}) as HTMLButtonElement).disabled).toBe(true);
+  await waitFor(() => expect(rows()).toHaveLength(25));
+  expect(screen.getByText('30 transactions')).toBeTruthy();
+  expect(screen.getByText('Showing 25 of 30')).toBeTruthy();
+  // Nothing steps backwards, because nothing was taken away.
+  expect(screen.queryByRole('button', {name: 'Previous'})).toBeNull();
+  expect(screen.queryByRole('button', {name: 'Next'})).toBeNull();
+  fireEvent.click(screen.getByRole('button', {name: 'Load more'}));
+  await waitFor(() => expect(rows()).toHaveLength(30));
+  // Everything is shown, so there is nothing left to offer.
+  expect(screen.queryByRole('button', {name: 'Load more'})).toBeNull();
 });
 
 /** The list is for finding a transaction. Acting on one belongs to the one you opened. */

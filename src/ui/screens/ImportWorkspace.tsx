@@ -10,7 +10,7 @@ import {BulkCategories} from './BulkCategories';
 import { ImportProgress } from '../design/ImportProgress';
 import { BusyOverlay } from '../design/KairosMark';
 import { useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileUp, FileCheck2 } from 'lucide-react';
 import type { Account, Repository } from '../../core/db/repository';
 import { currency, currencyDigits, format, money } from '../../core/money';
@@ -35,11 +35,21 @@ const categoryNames = ['Groceries', 'Housing', 'Utilities', 'Transport', 'Health
 function decimalString(minor: string, code: string): string { const value = BigInt(minor), digits = currencyDigits[currency(code)], unit = 10n ** BigInt(digits), absolute = value < 0n ? -value : value; return `${value < 0n ? '-' : ''}${absolute / unit}${digits ? '.' + (absolute % unit).toString().padStart(digits, '0') : ''}`; }
 type Review = Awaited<ReturnType<Repository['imports']['review']>>;
 /** Five, because he asked for five: a short list you step through beats a wall you scroll. */
-const PAGE = 5;
+/**
+ * TWENTY-FIVE ROWS A PRESS, NOT FIVE WITH A PAGER.
+ *
+ * Five rows and Previous/Next made 74 pages of his own history, with the count wedged between the two
+ * buttons — which is what he marked. Baymard's mobile testing puts "load more" ahead of classic paging
+ * on a phone, and it disposes of the page-jump control nobody wants to use with a thumb.
+ *
+ * The request shape is unchanged: one page per press, so the native bridge still answers with 25 rows
+ * rather than the whole ledger. That limit is what tests/query-pages.test.ts exists to hold.
+ */
+const PAGE = 25;
 function Failure({ error }: { error: Error }) { return <div className="import-failure" role="alert">{error instanceof ImportFailure && <><p>{error.understood}</p><pre>{error.excerpt}</pre></>}<p>{error.message}</p></div>; }
 export function ImportWorkspace({ accounts, request, consumed }: { accounts: Account[]; request: number; consumed: () => void }) {
   const session = useSession(), query = useQueryClient();
-  const [fileId, setFileId] = useState<string | null>(null), [reviewId, setReviewId] = useState<string | null>(null), [transaction, setTransaction] = useState<LedgerRow | null>(null), [undo, setUndo] = useState<BatchSummary | null>(null), [search, setSearch] = useState(''), [pageIndex, setPageIndex] = useState(0), [notice, setNotice] = useState(''), [updateReview, setUpdateReview] = useState<string[] | null>(null);
+  const [fileId, setFileId] = useState<string | null>(null), [reviewId, setReviewId] = useState<string | null>(null), [transaction, setTransaction] = useState<LedgerRow | null>(null), [undo, setUndo] = useState<BatchSummary | null>(null), [search, setSearch] = useState(''), [notice, setNotice] = useState(''), [updateReview, setUpdateReview] = useState<string[] | null>(null);
   const [backupSuggested, setBackupSuggested] = useState(false), [backupOpen, setBackupOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<ManualEntry | null>(null), [removeEntry, setRemoveEntry] = useState<ManualEntry | null>(null), [matchEntry, setMatchEntry] = useState<ManualEntry | null>(null), [removeError, setRemoveError] = useState(''), [entryError, setEntryError] = useState(''), [opening, setOpening] = useState(false);
   /**
@@ -93,10 +103,13 @@ export function ImportWorkspace({ accounts, request, consumed }: { accounts: Acc
   // which existed because transferring the whole ledger across the native bridge measured 52,310 ms of
   // a 52,491 ms load. Paging asks for five, so that problem cannot arise at all, and a short list you
   // step through is the thing that was actually wanted.
-  const page = useQuery({ queryKey: ['ledger-window', search, pageIndex], queryFn: () => session.run(repo => repo.imports.ledgerPage(search, pageIndex * PAGE, PAGE)), enabled: session.state === 'ready', placeholderData: previous => previous });
-  const total = page.data?.total ?? 0, loaded = page.data?.rows ?? [];
-  // Deleting the last row of the last page must not strand somebody on a page that no longer exists.
-  useEffect(() => { if (total && pageIndex * PAGE >= total) setPageIndex(Math.max(0, Math.ceil(total / PAGE) - 1)); }, [total, pageIndex]);
+  // Each press fetches the next page and keeps the ones already read, so the list only ever grows
+  // downward — and a deleted row, an edit or a new import refetches exactly the pages on screen.
+  const page = useInfiniteQuery({ queryKey: ['ledger-window', search], enabled: session.state === 'ready',
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) => session.run(repo => repo.imports.ledgerPage(search, pageParam * PAGE, PAGE)),
+    getNextPageParam: (last, pages) => pages.reduce((n, p) => n + p.rows.length, 0) < last.total ? pages.length : undefined });
+  const total = page.data?.pages[0]?.total ?? 0, loaded = page.data?.pages.flatMap(p => p.rows) ?? [];
   return <section className="import-workspace" onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();if(session.state==='ready')drop.mutate(Array.from(e.dataTransfer.files));}}><div className="form-actions"><Button variant="primary" disabled={!accounts.length || pick.isPending || session.state !== 'ready'} onClick={() => pick.mutate()}><FileUp size={16}/>{pick.isPending ? 'Selecting files…' : 'Import statements'}</Button></div>
     {(pick.isPending || drop.isPending) && <ImportProgress message="Selecting and securing your files…"/>}
     {backupSuggested && <div className="form-actions"><p>Save an encrypted backup of this import.</p><Button onClick={() => setBackupOpen(true)}>Back up</Button><Button variant="quiet" onClick={() => setBackupSuggested(false)}>Dismiss</Button></div>}
@@ -120,7 +133,7 @@ export function ImportWorkspace({ accounts, request, consumed }: { accounts: Acc
         receipts, splits, edit, match, delete — stacked under every entry. A purchase is not a different
         KIND of thing because of how it reached the app, and a list is for finding one, not for acting
         on all of them. The row says what it was, when, and how much. Everything else is one tap away. */}
-    <section className="section-gap"><div className="list-heading"><h2>History</h2>{!!total&&<Button onClick={()=>setBulkOpen(true)}>Change categories</Button>}</div><Input label="Search history" placeholder="Merchant, date or category" value={search} onChange={e => { setSearch(e.target.value); setPageIndex(0); }}/>{total ? <>{loaded.map(row => <button type="button" className="transaction-row" key={row.id} onClick={() => { setEntryError(''); setTransaction(row); }}><span className="row-lead"><CategoryMark description={row.merchant} category={row.transferGroup ? 'Transfer' : row.category}/><span><strong>{row.merchant}</strong><span className="meta">{relativeDay(row.date, localDay())} · {row.pending ? 'Pending · ' : ''}{row.manualId ? 'Recorded by hand' : row.transferGroup ? 'Internal transfer' : row.category ?? 'Uncategorised'}</span></span></span><Amount value={money(BigInt(row.minor), row.currency)} context={row.merchant}/></button>)}<div className="form-actions"><Button disabled={pageIndex === 0} onClick={() => setPageIndex(p => p - 1)}>Previous</Button><span className="meta">{total} {total === 1 ? 'transaction' : 'transactions'}</span><Button disabled={(pageIndex + 1) * PAGE >= total} onClick={() => setPageIndex(p => p + 1)}>Next</Button></div></> : <EmptyState icon={<FileCheck2 size={24}/>} title={search ? 'No matching transactions' : 'No transactions yet'} action={search ? <Button onClick={() => setSearch('')}>Clear search</Button> : <Button disabled={!accounts.length || pick.isPending || session.state !== 'ready'} onClick={() => pick.mutate()}>Choose statements</Button>}>Import a statement, review its rows, then confirm the import.</EmptyState>}</section>
+    <section className="section-gap"><div className="list-heading"><div><h2>History</h2>{!!total&&<p className="meta">{total} {total === 1 ? 'transaction' : 'transactions'}</p>}</div>{!!total&&<Button onClick={()=>setBulkOpen(true)}>Change categories</Button>}</div><Input label="Search history" placeholder="Merchant, date or category" value={search} onChange={e => setSearch(e.target.value)}/>{total ? <>{loaded.map(row => <button type="button" className="transaction-row" key={row.id} onClick={() => { setEntryError(''); setTransaction(row); }}><span className="row-lead"><CategoryMark description={row.merchant} category={row.transferGroup ? 'Transfer' : row.category}/><span><strong>{row.merchant}</strong><span className="meta">{relativeDay(row.date, localDay())} · {row.pending ? 'Pending · ' : ''}{row.manualId ? 'Recorded by hand' : row.transferGroup ? 'Internal transfer' : row.category ?? 'Uncategorised'}</span></span></span><Amount value={money(BigInt(row.minor), row.currency)} context={row.merchant}/></button>)}{page.hasNextPage && <div className="load-more"><p className="meta">Showing {loaded.length} of {total}</p><Button className="full-width" disabled={page.isFetchingNextPage} onClick={() => void page.fetchNextPage()}>{page.isFetchingNextPage ? 'Loading…' : 'Load more'}</Button></div>}</> : <EmptyState icon={<FileCheck2 size={24}/>} title={search ? 'No matching transactions' : 'No transactions yet'} action={search ? <Button onClick={() => setSearch('')}>Clear search</Button> : <Button disabled={!accounts.length || pick.isPending || session.state !== 'ready'} onClick={() => pick.mutate()}>Choose statements</Button>}>Import a statement, review its rows, then confirm the import.</EmptyState>}</section>
     {accounts.map(account => <Coverage key={account.id} account={account} batches={batches} health={health}/>)}
     {bulkOpen&&<BulkCategories onClose={()=>setBulkOpen(false)}/>}
     {batches.some(b => b.status === 'committed' && b.payslip) && <section className="section-gap"><h2>Payslips</h2>{accounts.map(account => { const pays = batches.filter(b => b.status === 'committed' && b.context.accountId === account.id).flatMap(b => b.payslip ? [b.payslip] : []); if (!pays.length) return null; const metrics = payMetrics(pays); return <div key={account.id}><h3>{account.name}</h3><Row trailing={<span>{metrics.cycle.replaceAll('_', ' ')}</span>}>Detected pay cycle</Row><p className="meta">At least three distinct pay dates are needed. Payslips link to ledger income; they never add a second salary transaction.</p>{pays.map((p, i) => <Row key={i} trailing={<Amount value={money(BigInt(p.net), p.currency)} context="Payslip net pay"/>}>{p.employer}<p>{p.payDate} · Net pay</p></Row>)}</div>; })}</section>}

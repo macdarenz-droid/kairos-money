@@ -11,14 +11,28 @@ import {Amount,Button,Input,Row,Sheet} from '../design/primitives';
 import {preferredCategories,repeatEntryProposals} from '../proposals/derive';
 import type {RepeatEntryPrefill} from '../proposals/model';
 const categories=['Groceries','Housing','Utilities','Transport','Health','Eating out','Shopping','Entertainment','Debt','Savings'];
-export function ManualSheet({accounts,entry,prefill,onClose}:{accounts:Account[];entry?:ManualEntry;prefill?:RepeatEntryPrefill;onClose:()=>void}){
+/**
+ * WHAT HE ASKED FOR, IN HIS WORDS: "add transaction should be bigger and first thing you see when u open
+ * the app. and when clicked, open its own tab like what kind of transaction, income, outcome, transfer.
+ * u making the app too complicated" — and, pointing at a sheet from another app, "copy similar pop up
+ * when adding transaction. not the color though".
+ *
+ * So the sheet leads with the amount, because that is what someone opened it to type, and the kind of
+ * transaction is three buttons you can see at once rather than a dropdown you have to open to find out
+ * what the choices are. Account and date sit side by side instead of each taking a line of their own.
+ * Cancel and Save are together at the bottom, where a hand holding a phone can reach them.
+ *
+ * `kind` seeds the type: the Quick action "Transfer between accounts" opened this sheet on Expense, which
+ * is why pressing it looked like it had done nothing.
+ */
+export function ManualSheet({accounts,entry,prefill,kind:initialKind,onClose}:{accounts:Account[];entry?:ManualEntry;prefill?:RepeatEntryPrefill;kind?:ManualEntry['kind'];onClose:()=>void}){
  const session=useSession(),query=useQueryClient();
  // A remembered account is a preference, not a financial fact: it changes what the form starts with and
  // nothing that is recorded. An explicit choice here is what stores it.
  const preferred=useQuery({queryKey:['preference','preferred-account'],queryFn:()=>session.run(r=>r.preferences.read('preferred-account')),enabled:session.state==='ready'});
  const history=useQuery({queryKey:['manual'],queryFn:()=>session.run(async r=>({entries:await r.manual.list(),totals:await r.manual.today(localDay()),unresolved:await r.manual.unresolved()})),enabled:session.state==='ready'});
  const chips=preferredCategories(history.data?.entries??[]);
- const [id]=useState(entry?.id??crypto.randomUUID()),[kind,setKind]=useState<ManualEntry['kind']>(entry?.kind??prefill?.kind??'expense'),[accountId,setAccount]=useState(entry?.accountId??prefill?.accountId??''),[destinationId,setDestination]=useState(entry?.destinationId??''),[date,setDate]=useState(entry?.date??prefill?.date??localDay()),[amount,setAmount]=useState(()=>{const seed=entry??(prefill?{minor:prefill.minor,accountId:prefill.accountId}:null);if(!seed)return '';const a=accounts.find(a=>a.id===seed.accountId);const digits=new Intl.NumberFormat('en',{style:'currency',currency:a?.currency??'AUD'}).resolvedOptions().maximumFractionDigits??2;const n=BigInt(seed.minor),base=10n**BigInt(digits);return `${n/base}${digits?'.'+(n%base).toString().padStart(digits,'0'):''}`;}),[description,setDescription]=useState(entry?.description??prefill?.description??''),[category,setCategory]=useState(entry?.category??prefill?.category??''),[notes,setNotes]=useState(entry?.notes??''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [id]=useState(entry?.id??crypto.randomUUID()),[kind,setKind]=useState<ManualEntry['kind']>(entry?.kind??prefill?.kind??initialKind??'expense'),[accountId,setAccount]=useState(entry?.accountId??prefill?.accountId??''),[destinationId,setDestination]=useState(entry?.destinationId??''),[date,setDate]=useState(entry?.date??prefill?.date??localDay()),[amount,setAmount]=useState(()=>{const seed=entry??(prefill?{minor:prefill.minor,accountId:prefill.accountId}:null);if(!seed)return '';const a=accounts.find(a=>a.id===seed.accountId);const digits=new Intl.NumberFormat('en',{style:'currency',currency:a?.currency??'AUD'}).resolvedOptions().maximumFractionDigits??2;const n=BigInt(seed.minor),base=10n**BigInt(digits);return `${n/base}${digits?'.'+(n%base).toString().padStart(digits,'0'):''}`;}),[description,setDescription]=useState(entry?.description??prefill?.description??''),[category,setCategory]=useState(entry?.category??prefill?.category??''),[notes,setNotes]=useState(entry?.notes??''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  // A hand-entered transaction starts on the account he nominated as his main one, not on whichever
  // account happens to sort first. Seeded rather than forced: once the form has an account — his pick or
  // a prefill — this leaves it alone.
@@ -31,20 +45,27 @@ export function ManualSheet({accounts,entry,prefill,onClose}:{accounts:Account[]
   if(entry||prefill||!preferred.data)return;
   if(preferred.data!==accountId&&accounts.some(a=>a.id===preferred.data)&&accountId===(accounts[0]?.id??''))setAccount(preferred.data);
  },[preferred.data,entry,prefill,accounts,accountId]);
- return <Sheet title={entry?'Edit transaction':'Add transaction'} onClose={()=>{if(!busy)onClose();}}><form className="stack" onSubmit={e=>{e.preventDefault();void save();}}>
- <label className="input-label">Transaction type<select value={kind} onChange={e=>setKind(e.target.value as ManualEntry['kind'])}><option value="expense">Expense</option><option value="income">Income</option><option value="transfer">Transfer</option></select></label>
- <label className="input-label">{kind==='transfer'?'From account':'Account'}<select value={accountId} onChange={e=>setAccount(e.target.value)}>{accounts.map(a=><option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</select></label>
+ const busyClose=()=>{if(!busy)onClose();};
+ return <Sheet title={entry?'Edit transaction':'Add transaction'} onClose={busyClose}><form className="stack" onSubmit={e=>{e.preventDefault();void save();}}>
+ <Input label="Amount" className="amount-field" inputMode="decimal" autoFocus required value={amount} onChange={e=>setAmount(e.target.value)}/>
+ {/* Three buttons, not a dropdown: the choices are the point, and a closed select hides them. */}
+ <div className="segmented" role="group" aria-label="Transaction type">{([['expense','Expense'],['income','Income'],['transfer','Transfer']] as const).map(([value,label])=>
+  <Button key={value} type="button" aria-pressed={kind===value} onClick={()=>setKind(value)}>{label}</Button>)}</div>
+ <div className="split-field">
+  <label className="input-label">{kind==='transfer'?'From account':'Account'}<select value={accountId} onChange={e=>setAccount(e.target.value)}>{accounts.map(a=><option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</select></label>
+  <Input label="Date" type="date" required value={date} onChange={e=>setDate(e.target.value)}/>
+ </div>
  {kind==='transfer'&&<label className="input-label">To account<select required value={destinationId} onChange={e=>setDestination(e.target.value)}><option value="">Choose account</option>{accounts.filter(a=>a.id!==accountId&&a.currency===accounts.find(b=>b.id===accountId)?.currency).map(a=><option key={a.id} value={a.id}>{a.name} · {a.currency}</option>)}</select></label>}
- <Input label="Amount" inputMode="decimal" autoFocus required value={amount} onChange={e=>setAmount(e.target.value)}/>
  <div className="form-actions">{[{label:'Today',value:localDay()},{label:'Yesterday',value:shiftDay(localDay(),-1)}].map(chip=>
   <Button key={chip.label} type="button" aria-pressed={date===chip.value} onClick={()=>setDate(chip.value)}>{chip.label}</Button>)}</div>
- <Input label="Date" type="date" required value={date} onChange={e=>setDate(e.target.value)}/><Input label="Description" required maxLength={200} value={description} onChange={e=>setDescription(e.target.value)}/>
+ <Input label="Description" required maxLength={200} value={description} onChange={e=>setDescription(e.target.value)}/>
  {kind==='expense'&&<>
   {chips.length>0&&<div className="form-actions">{chips.map(c=>
    <Button key={c} type="button" aria-pressed={category===c} onClick={()=>setCategory(c)}>{c}</Button>)}</div>}
   <label className="input-label">Category<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">Uncategorised</option>{categories.map(c=><option key={c}>{c}</option>)}</select></label>
  </>}
- <Input label="Note (optional)" maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/>{error&&<p role="alert">{error}</p>}<Button type="submit" variant="primary" disabled={busy||!accounts.length}>{busy?'Saving…':'Save transaction'}</Button></form></Sheet>;
+ <Input label="Note (optional)" maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/>{error&&<p role="alert">{error}</p>}
+ <div className="sheet-actions"><Button type="button" onClick={busyClose}>Cancel</Button><Button type="submit" variant="primary" disabled={busy||!accounts.length}>{busy?'Saving…':'Save transaction'}</Button></div></form></Sheet>;
 }
 export function ManualHistory({accounts,today=false}:{accounts:Account[];today?:boolean}){
  const session=useSession();

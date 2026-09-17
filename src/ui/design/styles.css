@@ -621,3 +621,21 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
    together because they are one action. */
 .own-rate { display: flex; align-items: flex-end; gap: 12px; margin-top: 16px; }
 .own-rate .input-label { flex: 1; }
+
+/* THE ADD-TRANSACTION SHEET, after his review. The amount is what someone opened the sheet to type, so
+   it is set at the size of a figure rather than of a form field; the type is three buttons side by side
+   because a closed select hides the very choice it is asking about (M3 puts two-to-five options in a
+   segmented control); and Cancel/Save ride the bottom of the sheet where a thumb already is, instead of
+   being scrolled to. */
+.segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.segmented .button { width: 100%; padding: 10px 6px; }
+input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -.6px; }
+.sheet-actions { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  padding: 12px 0 calc(4px + env(safe-area-inset-bottom)); background: var(--surface-1); }
+.sheet-actions .button { width: 100%; min-height: 48px; }
+/* The one primary action on Today. It sat under four other things and was the same size as a filter
+   chip; it is now the first thing the screen offers after the figures it is about. */
+.button.add-primary { width: 100%; min-height: 52px; font-size: 15px; margin-top: 20px; }
+
+.load-more { margin-top: 16px; display: grid; gap: 8px; justify-items: center; }
+.list-heading > div > .meta { margin-top: 2px; }
