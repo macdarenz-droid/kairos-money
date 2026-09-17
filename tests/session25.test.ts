@@ -37,4 +37,4 @@ it('commits a multi-file session atomically',async()=>{const {r}=await repo();co
 // The two numbers move independently, which is the whole point of the pair: migration 4 added the
 // fx_rates table, so the database version went to 4 while the export contract stayed at 2. A backup
 // written before today still restores.
-it('keeps the export contract compatible and identifies the storage schema separately',async()=>{const {r}=await repo();const data=await r.exportAll();expect(data.schema_version).toBe(2);expect(data.database_schema_version).toBe(4);});
+it('keeps the export contract compatible and identifies the storage schema separately',async()=>{const {r}=await repo();const data=await r.exportAll();expect(data.schema_version).toBe(2);expect(data.database_schema_version).toBe(5);});

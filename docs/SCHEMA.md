@@ -49,6 +49,23 @@ References: parent_id → categories.id (NO ACTION).
 
 References: import_batch_id → import_batches.id (CASCADE); account_id → accounts.id (NO ACTION).
 
+## debts
+
+| Column | Storage | Required | Default |
+|---|---|---|---|
+| id | TEXT | No | — |
+| name | TEXT | Yes | — |
+| account_id | TEXT | No | — |
+| currency | TEXT | Yes | — |
+| balance_minor | INTEGER | Yes | — |
+| annual_rate_bp | INTEGER | Yes | — |
+| minimum_minor | INTEGER | Yes | — |
+| due_day | INTEGER | No | — |
+| opened_at | TEXT | Yes | — |
+| closed_at | TEXT | No | — |
+
+References: account_id → accounts.id (SET NULL).
+
 ## fx_rates
 
 | Column | Storage | Required | Default |
