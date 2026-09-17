@@ -26,6 +26,7 @@ const COMPOSED = new Map([
   ['3 transactions', 'template: `${n} transactions`'],
   ['9d', 'template: Freshness renders `${days}d`'],
   ['20 covered days', 'template: `${days} covered days`'],
+  ['20000 transactions', 'template: History renders `${total} transactions`'],
   ['Added 1 new transaction', 'template: `Added ${n} new transaction${n === 1 ? "" : "s"}`'],
   ['Added 2 new transactions', 'template: as above'],
   ['Amount 1', 'template: split rows are `Amount ${i}`'],

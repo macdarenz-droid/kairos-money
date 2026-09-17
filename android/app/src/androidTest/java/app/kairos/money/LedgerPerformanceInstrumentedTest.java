@@ -165,11 +165,11 @@ public class LedgerPerformanceInstrumentedTest {
                 scenario.recreate();scenario.onActivity(a->activity=a);unlock();
                 phase="ledger load";checkpoint(phase,samples,null);
                 // Split the load so the evidence says where the time goes: opening the tab, the first
-                // row reaching the DOM (data read and transferred), then filtering and full virtualization.
+                // row reaching the DOM (data read and transferred), then searching across all twenty thousand.
                 js("window.__kairosQueries&&window.__kairosQueries.reset()");
                 long started=SystemClock.elapsedRealtime();click("Ledger");
                 long tabMs=SystemClock.elapsedRealtime()-started;
-                awaitSampled("ledger first row","Boolean(document.querySelector('.windowed-list [role=listitem]'))",samples);
+                awaitSampled("ledger first row","Boolean(document.querySelector('button.transaction-row'))",samples);
                 long firstRowMs=SystemClock.elapsedRealtime()-started;
                 // Which statements the device actually spent that time in. Shapes only, no values.
                 String profile=js("JSON.stringify((window.__kairosQueries&&window.__kairosQueries.read(5))||[])");
@@ -178,27 +178,48 @@ public class LedgerPerformanceInstrumentedTest {
                 long searchMs=SystemClock.elapsedRealtime()-started;
                 // The measured window continues past the first row, so keep sampling: a crash after this
                 // point would otherwise be reported with a heap reading taken before the search ran.
-                awaitSampled("ledger search","document.querySelector('.windowed-list [role=listitem]')?.getAttribute('aria-setsize')==='20000'",samples);
+                awaitSampled("ledger search","document.body.innerText.includes('20000 transactions')",samples);
                 long loadMs=SystemClock.elapsedRealtime()-started;
                 for(int zoom:new int[]{100,200}) {
-                    phase="scroll text "+zoom;checkpoint(phase,samples,null);
+                    phase="page text "+zoom;checkpoint(phase,samples,null);
                     InstrumentationRegistry.getInstrumentation().runOnMainSync(()->activity.getBridge().getWebView().getSettings().setTextZoom(zoom));
-                    js("(()=>{const list=document.querySelector('.windowed-list');list.scrollTop=0;list.scrollIntoView({behavior:'instant',block:'start'});})()");
-                    awaitJs("Boolean(document.querySelector('.windowed-list [aria-posinset=\"1\"]'))");
+                    // HISTORY IS PAGED NOW, NOT VIRTUALIZED. It shows five at a time with Previous and Next,
+                    // so there is no scroller to fling and no mounted-row count to keep under forty: the list
+                    // is five rows by construction, which is the stronger version of the same guarantee.
+                    // What is worth measuring is what a person actually does to it — turn pages, and search.
+                    js("(()=>{const h=Array.from(document.querySelectorAll('h2')).find(e=>e.textContent.trim()==='History');h&&h.scrollIntoView({behavior:'instant',block:'start'});})()");
+                    awaitJs("Boolean(document.querySelector('button.transaction-row'))");
                     NativeEvidence.capture(activity,"ledger-20000-text-"+zoom+"-start");
-                    js("(()=>{window.__ledgerFrames=null;const list=document.querySelector('.windowed-list'),frames=[];let previous=null,n=0,maxRows=0;function step(now){if(previous!==null)frames.push(now-previous);previous=now;maxRows=Math.max(maxRows,list.querySelectorAll('[role=listitem]').length);list.scrollTop+=list.clientHeight/3;if(++n<121)requestAnimationFrame(step);else window.__ledgerFrames={frame_intervals_ms:frames,max_mounted_rows:maxRows,scroll_top:list.scrollTop};}requestAnimationFrame(step);})()");
+                    js("(()=>{window.__ledgerFrames=null;const frames=[];let previous=null,n=0,maxRows=0,turned=0;"
+                      +"const next=()=>Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Next');"
+                      +"function step(now){if(previous!==null)frames.push(now-previous);previous=now;"
+                      +"maxRows=Math.max(maxRows,document.querySelectorAll('button.transaction-row').length);"
+                      +"if(n%10===0){const b=next();if(b&&!b.disabled){b.click();turned++;}}"
+                      +"if(++n<121)requestAnimationFrame(step);"
+                      +"else window.__ledgerFrames={frame_intervals_ms:frames,max_mounted_rows:maxRows,pages_turned:turned};}"
+                      +"requestAnimationFrame(step);})()");
                     awaitJs("Boolean(window.__ledgerFrames)");JSONObject sample=new JSONObject(js("window.__ledgerFrames"));
-                    assertTrue("Virtualization mounted too many rows",sample.getInt("max_mounted_rows")<=40);
-                    assertTrue("List did not scroll",sample.getDouble("scroll_top")>0);
-                    // Visit middle and final rows separately; end-to-end reachability is not inferred from a small fling.
-                    js("(()=>{const l=document.querySelector('.windowed-list');l.scrollTop=l.scrollHeight/2;})()");
-                    awaitJs("Array.from(document.querySelectorAll('.windowed-list [role=listitem]')).some(e=>Number(e.getAttribute('aria-posinset'))>9000)");
-                    js("(()=>{const l=document.querySelector('.windowed-list');l.scrollTop=l.scrollHeight;})()");
-                    awaitJs("Boolean(document.querySelector('.windowed-list [aria-posinset=\"20000\"]'))");
-                    assertTrue(Integer.parseInt(js("document.querySelectorAll('.windowed-list [role=listitem]').length"))<=40);
-                    assertEquals("false",js("(()=>{const l=document.querySelector('.windowed-list');return l.scrollWidth>l.clientWidth+1})()"));
+                    assertTrue("A page of history mounted more than its five rows",sample.getInt("max_mounted_rows")<=5);
+                    assertTrue("History did not turn a page",sample.getInt("pages_turned")>0);
+                    // THE FAR END, REACHED ON PURPOSE rather than inferred from a short burst of Next. Turning
+                    // pages five at a time cannot walk across twenty thousand rows, and searching is how this
+                    // list is navigated now — so the claim under test is that the fixture's LAST row is
+                    // reachable at all. That is a claim about the query rather than about scrolling, which is
+                    // the stronger of the two: the old test scrolled to display position 20,000, which is not
+                    // the same row and proves nothing about reaching a particular one.
+                    input("Search history","merchant EOBP");
+                    awaitJs("document.querySelectorAll('button.transaction-row').length===1"
+                      +" && document.querySelector('button.transaction-row').textContent.toUpperCase().includes('MERCHANT EOBP')");
+                    assertEquals("1",js("document.querySelectorAll('button.transaction-row').length"));
+                    // Scoped to a row, as the old check was scoped to the list. At 200% text a row that
+                    // cannot fit its own width is the failure this catches; widening it to the whole page
+                    // would fail on any other screen's layout and say nothing about History.
+                    assertEquals("false",js("(()=>{const r=document.querySelector('button.transaction-row');return r.scrollWidth>r.clientWidth+1})()"));
                     NativeEvidence.capture(activity,"ledger-20000-text-"+zoom+"-end");
                     samples.put(sample.put("text_zoom",zoom).put("reached_last_row",true));
+                    // Put the whole ledger back, so the next text size starts where this one did.
+                    input("Search history","Synthetic performance merchant");
+                    awaitJs("document.body.innerText.includes('20000 transactions')");
                 }
                 File directory=new File(activity.getExternalFilesDir(null),"evidence");assertTrue(directory.exists()||directory.mkdirs());
                 Files.write(new File(directory,"ledger-20000.json").toPath(),new JSONObject().put("rows",20000).put("source_links",20000).put("ledger_load_ms",loadMs).put("ledger_load_budget_ms",10000)
