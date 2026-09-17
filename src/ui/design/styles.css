@@ -616,3 +616,8 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
   border-bottom: 1px solid var(--border-default); display: flex; flex-direction: column;
   align-items: flex-start; gap: 12px; }
 .unconverted p { color: var(--warning-text); }
+
+/* A rate typed in by hand, when the published one cannot be reached. The field and its button sit
+   together because they are one action. */
+.own-rate { display: flex; align-items: flex-end; gap: 12px; margin-top: 16px; }
+.own-rate .input-label { flex: 1; }

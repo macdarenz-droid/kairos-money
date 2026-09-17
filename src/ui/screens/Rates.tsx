@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { currency, currencyDigits, type Currency } from '../../core/money';
-import { asRates, fetchRates } from '../../core/net/rates';
+import { asRates, decimalToE8, fetchRates } from '../../core/net/rates';
 import { rateDays } from '../../core/fx';
-import { Button, Row } from '../design/primitives';
+import { Button, Input, Row } from '../design/primitives';
+import { localDay } from '../../ingest/reminders';
 import { useSession } from '../session';
 
 /**
@@ -22,7 +23,7 @@ export function Rates({ accounts, notify }: {
   notify: (text: string) => void;
 }) {
   const session = useSession(), client = useQueryClient();
-  const [error, setError] = useState(''), [progress, setProgress] = useState('');
+  const [error, setError] = useState(''), [progress, setProgress] = useState(''), [typed, setTyped] = useState<Record<string, string>>({});
 
   const held = [...new Set(accounts.filter(a => !a.archived_at).map(a => a.currency))] as Currency[];
   const home = useQuery({ queryKey: ['display-currency'], enabled: session.state === 'ready',
@@ -77,6 +78,35 @@ export function Rates({ accounts, notify }: {
     onError: e => { setProgress(''); setError(e instanceof Error ? e.message : 'Rates could not be updated.'); },
   });
 
+  /**
+   * A RATE HE TYPES IN HIMSELF, because the published one cannot always be reached.
+   *
+   * The rate service is unreachable from his phone and I cannot see why from here. Waiting on that to
+   * show him his own money in his own currency is the app holding his data hostage to somebody else's
+   * uptime. A rate is one number; he knows it; he can type it.
+   *
+   * DATED AT THE LEDGER'S FIRST DAY, so it covers everything he has rather than only what happens from
+   * now on — a conversion uses the newest rate on or before a date, and one dated today would convert
+   * nothing older than today. That does mean one typed figure values the whole ledger, which a published
+   * set never would, so the screen says exactly that rather than leaving it to be discovered.
+   *
+   * Stored as source 'manual', beside the published ones and distinguishable from them forever.
+   */
+  const enter = useMutation({
+    mutationFn: async (code: string) => {
+      const value = (typed[code] ?? '').trim();
+      if (!value) throw new Error(`Enter how many ${display} one ${code} is worth.`);
+      const rateE8 = decimalToE8(value, `${code}/${display}`);
+      const span = await session.run(repo => repo.ledgerSpan());
+      const asOf = span?.first ?? localDay();
+      await session.run(repo => repo.saveRates([{ asOf, base: code, quote: String(display), rateE8, source: 'manual' }]));
+      return code;
+    },
+    onSuccess: async code => { setError(''); setTyped(rest => ({ ...rest, [code]: '' }));
+      await client.invalidateQueries(); notify(`Using your own ${code} rate.`); },
+    onError: e => setError(e instanceof Error ? e.message : 'That rate could not be saved.'),
+  });
+
   const choose = useMutation({
     mutationFn: (code: string) => session.run(repo => repo.setDisplayCurrency(code)),
     onSuccess: () => client.invalidateQueries(),
@@ -107,6 +137,13 @@ export function Rates({ accounts, notify }: {
     {/* A state, not a failure, so it does not compete with the error below for the same role. */}
     {!held.includes(display) && !asOf.data && !error && <p role="status">No rates are stored yet, so amounts
       cannot be converted into {display}. Press Update, or choose a currency you hold an account in.</p>}
+    {held.filter(code => code !== display).map(code => <div key={code} className="own-rate">
+      <Input label={`1 ${code} in ${display}`} inputMode="decimal" placeholder="0.00"
+        value={typed[code] ?? ''} onChange={e => setTyped(rest => ({ ...rest, [code]: e.target.value }))}/>
+      <Button disabled={enter.isPending} onClick={() => enter.mutate(code)}>Use my own rate</Button>
+    </div>)}
+    {held.some(code => code !== display) && <p className="meta">A rate you enter is used for every date in
+      your ledger, and is kept as yours rather than a published one.</p>}
     {error && <p role="alert">{error}</p>}
   </section>;
 }
