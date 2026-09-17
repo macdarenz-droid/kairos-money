@@ -1,4 +1,5 @@
 import {abs, median, type Signal, type Snapshot, type Transaction} from '../model';
+import type {DueWindow} from '../visuals/due';
 
 /**
  * WHAT DESERVES SCREEN SPACE RIGHT NOW.
@@ -23,7 +24,7 @@ import {abs, median, type Signal, type Snapshot, type Transaction} from '../mode
  * At most three show at once. The fourth-most-urgent thing is, by definition, not urgent.
  */
 export type Surface = {
-  id: 'runway' | 'fixed-burden' | 'unusual-charge';
+  id: 'runway' | 'fixed-burden' | 'unusual-charge' | 'due-soon';
   urgency: 1 | 2 | 3;
   /** Exact values as decimal strings. Never a float, never a formatted string — the screen formats. */
   data: Record<string, string>;
@@ -39,6 +40,14 @@ export const RUNWAY_DAYS = 30n;
 export const RUNWAY_URGENT_DAYS = 7n;
 /** Fixed costs above this share of income is a standing fact worth one glance, not an alarm. */
 export const FIXED_BURDEN_BP = 6000n;
+/**
+ * A bill inside this many days has a date attached and the date is close.
+ *
+ * Three, not thirty. Something is due before your next pay in almost every week of everyone's life, so a
+ * surface that fired on that would be permanent furniture — and permanent furniture is invisible. Three
+ * days makes this appear a handful of times a month, which is the only reason it will still be read.
+ */
+export const DUE_SOON_DAYS = 3;
 /** A charge this many times the usual at the same merchant is worth naming. */
 export const UNUSUAL_MULTIPLE = 3n;
 
@@ -89,8 +98,16 @@ function unusual(s: Snapshot): Surface | null {
   };
 }
 
-export function surfaces(s: Snapshot, signals: Signal[]): Surface[] {
+export function surfaces(s: Snapshot, signals: Signal[], due?: DueWindow): Surface[] {
   const out: Surface[] = [];
+
+  // Bills the ledger already knew the dates of and had never once drawn.
+  const soon = due?.dues.filter(d => d.offset <= DUE_SOON_DAYS) ?? [];
+  if (soon.length) out.push({
+    id: 'due-soon', urgency: 3, evidence: [],
+    data: {count: soon.length.toString(), date: soon[0]!.date, merchant: soon[0]!.merchant,
+      minor: soon.reduce((total, d) => total + BigInt(d.minor), 0n).toString()},
+  });
 
   // buffer_days is days × 10000, because days are not whole. Truncating toward zero is deliberate:
   // 6.9 days of money left is 6 days you can count on.

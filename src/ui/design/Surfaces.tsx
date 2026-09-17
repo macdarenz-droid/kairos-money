@@ -2,6 +2,8 @@ import {useQuery} from '@tanstack/react-query';
 import {currency, format, money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {surfaces} from '../../intelligence/surfaces';
+import {dueWindow} from '../../intelligence/visuals/due';
+import {DueStrip} from './DueStrip';
 import {useSession} from '../session';
 import {FixedFree, Runway} from './Runway';
 
@@ -29,7 +31,10 @@ export function Surfaces() {
   // Silence on error too. A failure to read the ledger is not a reason to shout on the home screen; the
   // screens that exist to show that evidence say so in their own words.
   if (!report.data) return null;
-  const showing = surfaces(report.data.snapshot, report.data.signals.filter(s => s.period.startsWith('trailing-90:')));
+  const forecast = report.data.forecast;
+  const due = dueWindow(forecast.recurrences, report.data.snapshot.asOf, forecast.nextPay);
+  const showing = surfaces(report.data.snapshot,
+    report.data.signals.filter(s => s.period.startsWith('trailing-90:')), due);
   if (!showing.length) return null;
 
   const amount = (minor: string) => format(money(BigInt(minor), currency(code)));
@@ -40,6 +45,10 @@ export function Surfaces() {
       </div>;
       if (surface.id === 'fixed-burden') return <div className="surface-card" key={surface.id}>
         <FixedFree basisPoints={surface.data['basisPoints']!}/>
+      </div>;
+      if (surface.id === 'due-soon') return <div className="surface-card" key={surface.id}>
+        {/* The strip, not a list. Which day, and which side of payday, is the whole question. */}
+        <DueStrip window={due} label={`${amount(surface.data['minor']!)} due by ${surface.data['date']}`}/>
       </div>;
       return <div className="surface-card" key={surface.id}>
         {/* Stated, not judged. A large charge at a merchant can be perfectly intended, and the app has

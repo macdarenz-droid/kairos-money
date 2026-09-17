@@ -500,3 +500,19 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
   .runway-fill, .fixed-free-committed, .fixed-free-left { animation: measure var(--motion-sweep) var(--ease-out) both; transform-origin: left center; }
 }
 @keyframes measure { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* The next thirty days. Ticks on a baseline, one vertical rule for payday, nothing else — the strip is
+   about WHEN, and a second colour dimension would start it arguing about what. */
+.due-strip { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.due-plot { width: 100%; height: 44px; display: block; overflow: visible; }
+.due-axis { stroke: var(--border-default); stroke-width: 1; }
+/* Payday is a rule behind the ticks, not a tick itself: it is a boundary, not an amount. */
+.due-payday { stroke: var(--accent-text); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
+.due-tick { stroke: var(--text-tertiary); stroke-width: 3; stroke-linecap: round; }
+/* Due before the next pay — these have to come out of what you hold now. */
+.due-tick-before { stroke: var(--flow-out); }
+.due-strip figcaption { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+@media (prefers-reduced-motion: no-preference) {
+  .due-tick { animation: measure-up var(--motion-settle) var(--ease-out) both; transform-origin: bottom; transform-box: fill-box; }
+}
+@keyframes measure-up { from { transform: scaleY(0); } to { transform: scaleY(1); } }

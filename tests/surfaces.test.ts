@@ -125,3 +125,37 @@ describe('the cap', () => {
     expect(surfaces(s, sig)).toEqual(surfaces(s, sig));
   });
 });
+
+describe('a bill that is nearly due', () => {
+  const due = (offsets: number[], payOffset: number | null = null) => ({
+    days: 30, payOffset, beforePayMinor: '0',
+    dues: offsets.map(offset => ({date: `2026-09-${String(16 + offset).padStart(2, '0')}`, offset,
+      merchant: 'Synthetic utility', minor: '50000', height: '1000000', beforePay: false})),
+  });
+
+  it('says nothing about a bill three weeks out', () => {
+    // Something is due before the next pay in almost every week of everyone's life. A surface that
+    // fired on that would be permanent furniture, and permanent furniture is invisible.
+    expect(surfaces(snapshot(), [], due([21]))).toEqual([]);
+  });
+
+  it('speaks up inside three days, at the highest urgency', () => {
+    const found = surfaces(snapshot(), [], due([2]));
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatchObject({id: 'due-soon', urgency: 3, data: {count: '1', minor: '50000'}});
+  });
+
+  it('adds up everything landing in that window', () => {
+    const found = surfaces(snapshot(), [], due([0, 1, 3, 9]));
+    expect(found[0]?.data).toMatchObject({count: '3', minor: '150000'});
+  });
+
+  it('outranks a low runway, because it has a date on it', () => {
+    const found = surfaces(snapshot(), [signal('buffer_days', (20n * 10000n).toString())], due([1]));
+    expect(found.map(s => s.id)).toEqual(['due-soon', 'runway']);
+  });
+
+  it('is absent entirely when the ledger knows of no repeating payments', () => {
+    expect(surfaces(snapshot(), [], undefined)).toEqual([]);
+  });
+});
