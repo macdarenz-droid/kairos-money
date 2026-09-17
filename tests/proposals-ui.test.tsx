@@ -3,7 +3,7 @@ import {afterEach,expect,it,vi} from 'vitest';
 import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
 import {BulkProposals} from '../src/ui/screens/BulkProposals';
-import {ManualHistory,ManualSheet} from '../src/ui/screens/Manual';
+import {ManualSheet} from '../src/ui/screens/Manual';
 import type {Account} from '../src/core/db/repository';
 import type {ManualEntry} from '../src/ledger/manual';
 
@@ -48,8 +48,9 @@ it('offers nothing when the merchant has no category the user chose',async()=>{
 
 it('prefills a repeat entry without saving it, leaving Save to press',async()=>{
  state.entries=[entry({id:'e1',description:'Cafe Mika'})];
- // The repeat tiles sit on Today now: the manual list they used to head no longer exists.
- wrap(<ManualHistory accounts={accounts} today/>);
+ // The shortcut sits inside the Add transaction sheet now — he circled the row of tiles on Today and
+ // wrote "remove", having already said: "too many buttons... keep one only on main screen".
+ wrap(<ManualSheet accounts={accounts} onClose={()=>undefined}/>);
  const tile=await screen.findByRole('button',{name:/Record Cafe Mika/});
  fireEvent.click(tile);
  // The sheet opens with the entry's own values and nothing is committed yet.

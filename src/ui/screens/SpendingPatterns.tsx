@@ -1,7 +1,7 @@
 import {AllocationBreakdown} from './AllocationBreakdown';
 import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
-import {currency,money} from '../../core/money';
+import {money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {spendingPatterns,countsAsMovement} from '../../intelligence/visuals/spending-patterns';
 import {Amount,Button,Row,Sheet,Skeleton} from '../design/primitives';
@@ -11,10 +11,10 @@ import {FlowBar} from '../design/FlowBar';
 import {MonthBalance} from '../design/MonthBalance';
 import {CategorySplit} from '../design/CategorySplit';
 import {useSession} from '../session';
+import {useDisplayCurrency} from '../currency';
 export function SpendingPatterns(){
- const session=useSession(),[selectedCode,setCode]=useState<string|null>(null),[month,setMonth]=useState('all'),[account,setAccount]=useState('all'),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
+ const session=useSession(),code=useDisplayCurrency(),[month,setMonth]=useState('all'),[account,setAccount]=useState('all'),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
  const accounts=useQuery({queryKey:['accounts'],queryFn:()=>session.run(r=>r.accounts()),enabled:session.state==='ready'});
- const codes=[...new Set((accounts.data??[]).filter(a=>!a.archived_at).map(a=>a.currency))];const code=currency(selectedCode??(codes.includes('AUD')?'AUD':codes[0]??'AUD'));
  const today=localDay(),q=useQuery({queryKey:['spending-patterns',today,code],queryFn:()=>session.run(r=>r.intelligence.snapshot(today,code)),enabled:session.state==='ready'&&!!accounts.data,staleTime:0});
  if(session.state!=='ready')return null;
  if(accounts.error||q.error)return <p role="alert">Spending patterns could not be read. <Button onClick={()=>{void accounts.refetch();void q.refetch();}}>Retry</Button></p>;
@@ -46,8 +46,7 @@ export function SpendingPatterns(){
   .map(([m,cell])=>({month:m,inMinor:cell.received.toString(),outMinor:cell.spent.toString()}));
  const period=month==='all'?(p.start&&p.end?`${p.start} to ${p.end}`:'everything recorded'):month;
  return <section className="stack spending-patterns" aria-label="Your spending patterns"><h2>Your spending patterns</h2>
- <label className="input-label">Spending currency<select value={code} onChange={e=>{setCode(e.target.value);setMonth('all');setAccount('all');}}>{codes.length?codes.map(c=><option key={c}>{c}</option>):<option>AUD</option>}</select></label>
- <label className="input-label">Spending account<select value={account} onChange={e=>{setAccount(e.target.value);setMonth('all');}}><option value="all">All accounts in {code}</option>{(accounts.data??[]).filter(a=>!a.archived_at&&a.currency===code).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
+ <label className="input-label">Spending account<select value={account} onChange={e=>{setAccount(e.target.value);setMonth('all');}}><option value="all">All accounts</option>{(accounts.data??[]).filter(a=>!a.archived_at).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
  <label className="input-label">Spending period<select value={month} onChange={e=>setMonth(e.target.value)}><option value="all">All imported dates</option>{p.months.map(m=><option key={m}>{m}</option>)}</select></label>
  {!p.rows.length?<p>No settled transactions in this selection. Import a statement or choose another account or period.</p>:<>
  {/* Picture first, then the one line that says what the picture says, then the depth underneath. Someone

@@ -8,6 +8,7 @@ import {localDay} from '../../ingest/reminders';
 import {Amount, Button, Input, Row, Sheet} from '../design/primitives';
 import {DebtBurn} from '../design/DebtBurn';
 import {useSession} from '../session';
+import {useConverter} from '../currency';
 
 const blank = (code: string) => ({id: '', name: '', accountId: '', currency: code, balance: '', rate: '', minimum: '', dueDay: '', openedAt: localDay()});
 type Draft = ReturnType<typeof blank>;
@@ -40,6 +41,7 @@ function projectable(debts: DebtRecord[], code: string): Debt[] {
  */
 export function Debts({accounts}: {accounts: {id: string; name: string; currency: string}[]}) {
   const session = useSession(), client = useQueryClient();
+  const shown = useConverter();
   const debts = useDebts();
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState('');
@@ -68,7 +70,7 @@ export function Debts({accounts}: {accounts: {id: string; name: string; currency
   return <section className="stack">
     <div className="list-heading"><h2>Debts</h2><span className="meta">Owed now</span></div>
     {open.map(debt => <Row key={debt.id}
-      trailing={<Amount value={money(BigInt(debt.balanceMinor), debt.currency)} context={`${debt.name} owed`}/>}>
+      trailing={<Amount value={shown.into(debt.balanceMinor, debt.currency) ?? money(BigInt(debt.balanceMinor), debt.currency)} context={`${debt.name} owed`}/>}>
       <button type="button" className="account-open" onClick={() => { setError(''); setDraft(toDraft(debt)); }}>
         <span className="account-summary"><span><h3>{debt.name}</h3><p className="account-meta">{ratePercent(debt.annualRateBp)}{debt.dueDay === null ? '' : ` · due the ${debt.dueDay}`}</p></span></span>
         <ChevronRight size={16}/>

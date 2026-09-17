@@ -288,8 +288,11 @@ public class IntelligenceInstrumentedTest {
             scenario.onActivity(a->activity=a);unlock();
             for(String theme:new String[]{"Light","Dark"}) {
                 click("You");click(theme);click("Insights");
-                awaitJs("Boolean(document.querySelector('.spending-patterns select'))");
-                js("(()=>{const e=document.querySelector('.spending-patterns select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+                // The display currency is set once, on You, and every card follows it — this screen has no
+                // picker of its own any more. The reconciled fixture is USD.
+                click("You");js("(()=>{const e=document.querySelector('#settings-currency select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+                awaitJs("document.querySelector('#settings-currency select').value==='USD'");click("Insights");
+                awaitJs("Boolean(document.querySelector('.spending-patterns'))");
                 awaitJs("document.querySelector('.spending-patterns').innerText.includes('Purchases')");
                 captureHeading("Your spending patterns",theme.toLowerCase()+"-spending-patterns");
                 js("Array.from(document.querySelectorAll('.spending-patterns h3')).find(e=>e.textContent==='Monthly balance').scrollIntoView({behavior:'instant'})");
@@ -323,7 +326,18 @@ public class IntelligenceInstrumentedTest {
         }
     }
     private void openInsightDetail() throws Exception {js("document.querySelectorAll('main details').forEach(d=>{d.open=true;})");}
-    private void selectCurrency() throws Exception {click("Insights");openInsightDetail();awaitJs("Boolean(document.querySelector('.intelligence select'))");js("(()=>{const e=document.querySelector('.intelligence select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");openInsightDetail();}
+    /**
+     * The app shows money in one currency, chosen once on You. Every card followed a picker of its own
+     * before, so this used to reach into the intelligence card; it sets the app's currency now, and the
+     * cards follow. Setting it to what it already is costs nothing, so callers can keep calling it.
+     */
+    private void selectCurrency() throws Exception {
+        click("You");
+        awaitJs("Boolean(document.querySelector('#settings-currency select'))");
+        js("(()=>{const e=document.querySelector('#settings-currency select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+        awaitJs("document.querySelector('#settings-currency select').value==='USD'");
+        click("Insights");openInsightDetail();
+    }
     @Test public void a_intelligenceEvidenceAndThemes() throws Exception {
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a->activity=a);unlock();seed(20,false);selectCurrency();awaitJs("document.body.innerText.includes('Still learning') && document.body.innerText.includes('20 covered days')");for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('20 covered days')");captureHeading("Still learning",theme.toLowerCase()+"-intelligence-learning");}

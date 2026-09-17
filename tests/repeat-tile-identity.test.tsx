@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import {afterEach,expect,it,vi} from 'vitest';
-import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {cleanup,fireEvent,render,screen} from '@testing-library/react';
 import {QueryClient,QueryClientProvider} from '@tanstack/react-query';
-import {ManualHistory} from '../src/ui/screens/Manual';
+import {ManualSheet} from '../src/ui/screens/Manual';
 import {repeatEntryProposals} from '../src/ui/proposals/derive';
 import type {Account} from '../src/core/db/repository';
 import type {ManualEntry} from '../src/ledger/manual';
@@ -42,22 +42,24 @@ afterEach(cleanup);
 const tile=()=>screen.findByRole('button',{name:/Record Synthetic usability probe/});
 
 it('survives saving from it, so the next tap is not lost',async()=>{
- // Recording the same expense twice in a row is what a repeat tile is for, and it was the case that broke:
+ // Recording the same expense twice in a row is what the shortcut is for, and it was the case that broke:
  // saving created a duplicate, the tile's identity moved to the new entry, React destroyed and rebuilt the
  // button that had just been pressed, and a tap landing in that window reached a detached node and did
- // nothing at all — no error, no sheet.
+ // nothing at all — no error, no sheet. The shortcut is inside the sheet now; the same tap must survive
+ // the same save.
  state.entries=[entry({id:'e1'})];
  render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}>
-  <ManualHistory accounts={accounts} today/></QueryClientProvider>);
+  <ManualSheet accounts={accounts} onClose={()=>undefined}/></QueryClientProvider>);
 
  fireEvent.click(await tile());
  fireEvent.click(await screen.findByRole('button',{name:'Save transaction'}));
- await waitFor(()=>expect(screen.queryByRole('button',{name:'Save transaction'})).toBeNull());
 
- // Deliberately no settling pause: tapping straight after the save is the whole point.
+ // Deliberately no settling pause: tapping straight after the save is the whole point. The entry list
+ // behind the shortcut is refetched by that save, so the button is rebuilt while the finger is still on
+ // its way down — and it must be the same button when it lands.
  const second=await tile();
  expect(document.contains(second)).toBe(true);
  fireEvent.click(second);
- await screen.findByRole('button',{name:'Save transaction'});
  expect(document.contains(second)).toBe(true);
+ expect((screen.getByLabelText('Amount') as HTMLInputElement).value).toBe('15.00');
 });

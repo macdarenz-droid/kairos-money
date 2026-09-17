@@ -126,7 +126,10 @@ public class UsabilityBaselineInstrumentedTest {
             assertTrue("Recording from scratch types the amount and the description",scratchTyping>=2);
             taps=0;typingSessions=0;
 
-            // Task two: record the same expense again from its repeat tile.
+            // Task two: record the same expense again from its repeat tile, which lives inside the sheet
+            // now — he circled the row of tiles on Today and wrote "remove", having already asked for one
+            // way in from the home screen. The shortcut moved to where it is used.
+            tap(named("Add transaction"));
             tap(labelled("Record "+PROBE));
             awaitJs("Boolean("+named("Save transaction")+")");
             tap(named("Save transaction"));
@@ -136,7 +139,11 @@ public class UsabilityBaselineInstrumentedTest {
 
             // The claims this pass makes, asserted. No target tap count is asserted anywhere.
             assertEquals("Repeating an entry must need no typing",0,repeatTyping);
-            assertTrue("Repeating must not cost more taps than entering from scratch",repeatTaps<=scratchTaps);
+            // WHAT THE SHORTCUT IS WORTH, restated for where it now lives. Both tasks open the same sheet,
+            // so repeating costs exactly one more tap than starting blank — and buys back every keystroke.
+            // Typing is the expensive part on a phone, which is why zero typing is the assertion that
+            // matters and this one is a bound rather than a win.
+            assertTrue("Repeating must cost at most one tap more than entering from scratch",repeatTaps<=scratchTaps+1);
             assertTrue("Repeating must still end at a Save the user presses",repeatTaps>=2);
 
             // Task three: the same repeat, at 200% text.
@@ -150,6 +157,7 @@ public class UsabilityBaselineInstrumentedTest {
                 activity.getBridge().getWebView().getSettings().setTextZoom(200));
             try {
                 taps=0;typingSessions=0;
+                tap(named("Add transaction"));
                 tap(labelled("Record "+PROBE));
                 // Three runs failed here, and the cause was not the text zoom this task changes — it was
                 // that saving from the tile replaced the tile. The proposal was identified by whichever

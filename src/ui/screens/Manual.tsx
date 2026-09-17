@@ -32,6 +32,7 @@ export function ManualSheet({accounts,entry,prefill,kind:initialKind,onClose}:{a
  const preferred=useQuery({queryKey:['preference','preferred-account'],queryFn:()=>session.run(r=>r.preferences.read('preferred-account')),enabled:session.state==='ready'});
  const history=useQuery({queryKey:['manual'],queryFn:()=>session.run(async r=>({entries:await r.manual.list(),totals:await r.manual.today(localDay()),unresolved:await r.manual.unresolved()})),enabled:session.state==='ready'});
  const chips=preferredCategories(history.data?.entries??[]);
+ const repeats=repeatEntryProposals(history.data?.entries??[],localDay());
  const [id]=useState(entry?.id??crypto.randomUUID()),[kind,setKind]=useState<ManualEntry['kind']>(entry?.kind??prefill?.kind??initialKind??'expense'),[accountId,setAccount]=useState(entry?.accountId??prefill?.accountId??''),[destinationId,setDestination]=useState(entry?.destinationId??''),[date,setDate]=useState(entry?.date??prefill?.date??localDay()),[amount,setAmount]=useState(()=>{const seed=entry??(prefill?{minor:prefill.minor,accountId:prefill.accountId}:null);if(!seed)return '';const a=accounts.find(a=>a.id===seed.accountId);const digits=new Intl.NumberFormat('en',{style:'currency',currency:a?.currency??'AUD'}).resolvedOptions().maximumFractionDigits??2;const n=BigInt(seed.minor),base=10n**BigInt(digits);return `${n/base}${digits?'.'+(n%base).toString().padStart(digits,'0'):''}`;}),[description,setDescription]=useState(entry?.description??prefill?.description??''),[category,setCategory]=useState(entry?.category??prefill?.category??''),[notes,setNotes]=useState(entry?.notes??''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  // A hand-entered transaction starts on the account he nominated as his main one, not on whichever
  // account happens to sort first. Seeded rather than forced: once the form has an account — his pick or
@@ -47,6 +48,21 @@ export function ManualSheet({accounts,entry,prefill,kind:initialKind,onClose}:{a
  },[preferred.data,entry,prefill,accounts,accountId]);
  const busyClose=()=>{if(!busy)onClose();};
  return <Sheet title={entry?'Edit transaction':'Add transaction'} onClose={busyClose}><form className="stack" onSubmit={e=>{e.preventDefault();void save();}}>
+ {/* WHAT HE CIRCLED ON TODAY: a row of repeat tiles under a sentence explaining them — "remove". He
+     had already said it once: "too many buttons... keep one only on main screen and quick search". So
+     the shortcut moved to where the shortcut is used. It fills this form in and saves nothing; the Save
+     below is still yours to press. */}
+ {!entry&&repeats.length>0&&<div className="form-actions">{repeats.map(p=>{
+  const held=accounts.find(a=>a.id===p.prefill.accountId);
+  const label=held?`${p.label}, ${format(money(BigInt(p.prefill.minor),currency(held.currency)))}`:p.label;
+  return <Button key={p.id} type="button" aria-label={`Record ${label} again. ${p.detail}`} onClick={()=>{
+   setKind(p.prefill.kind);setAccount(p.prefill.accountId);setDate(p.prefill.date);
+   setDescription(p.prefill.description);setCategory(p.prefill.category??'');
+   const digits=new Intl.NumberFormat('en',{style:'currency',currency:held?.currency??'AUD'}).resolvedOptions().maximumFractionDigits??2;
+   const n=BigInt(p.prefill.minor),base=10n**BigInt(digits);
+   setAmount(`${n/base}${digits?'.'+(n%base).toString().padStart(digits,'0'):''}`);
+  }}>{label}</Button>;
+ })}</div>}
  <Input label="Amount" className="amount-field" inputMode="decimal" autoFocus required value={amount} onChange={e=>setAmount(e.target.value)}/>
  {/* Three buttons, not a dropdown: the choices are the point, and a closed select hides them. */}
  <div className="segmented" role="group" aria-label="Transaction type">{([['expense','Expense'],['income','Income'],['transfer','Transfer']] as const).map(([value,label])=>
@@ -67,7 +83,7 @@ export function ManualSheet({accounts,entry,prefill,kind:initialKind,onClose}:{a
  <Input label="Note (optional)" maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/>{error&&<p role="alert">{error}</p>}
  <div className="sheet-actions"><Button type="button" onClick={busyClose}>Cancel</Button><Button type="submit" variant="primary" disabled={busy||!accounts.length}>{busy?'Saving…':'Save transaction'}</Button></div></form></Sheet>;
 }
-export function ManualHistory({accounts,today=false}:{accounts:Account[];today?:boolean}){
+export function ManualHistory({today=false}:{today?:boolean}){
  const session=useSession();
  const day=localDay();
  const home=useQuery({queryKey:['display-currency'],enabled:session.state==='ready',queryFn:()=>session.run(r=>r.displayCurrency())});
@@ -103,7 +119,6 @@ export function ManualHistory({accounts,today=false}:{accounts:Account[];today?:
   {missing.length>0&&<p className="meta">{missing.join(' and ')} not included: no stored rate reaches {display}.</p>}</>;
  })()}{data.data&&!data.data.totals.length&&<p>Nothing recorded today yet.</p>}{data.error&&<p role="alert">Today's entries could not be read.</p>}
  {data.data&&Object.keys(data.data.unresolved).length>0&&<p>Some entries may be duplicates. Review them in Ledger before trusting these totals.</p>}
- <RepeatTiles accounts={accounts} entries={data.data?.entries??[]}/>
  </section>;
  // The "Manual transactions" list lived here: every entry with Notes and receipts, Split expense
  // categories, Edit, Match with statement and Delete stacked underneath it. Those rows are in History
@@ -113,23 +128,3 @@ export function ManualHistory({accounts,today=false}:{accounts:Account[];today?:
 }
 
 
-/**
- * One-tap repeat entry.
- *
- * A tile prefills the form from an entry the user already wrote, dated today. It commits nothing: the sheet
- * opens with Save still to press, so this removes typing rather than the confirmation.
- */
-function RepeatTiles({accounts,entries}:{accounts:Account[];entries:ManualEntry[]}){
- const [prefill,setPrefill]=useState<RepeatEntryPrefill>();
- const proposals=repeatEntryProposals(entries,localDay());
- if(!proposals.length||!accounts.length)return null;
- return <div className="section-gap">
-  <p className="meta">Record one of these again. Nothing is saved until you confirm.</p>
-  <div className="form-actions">{proposals.map(p=>{
-   const account=accounts.find(a=>a.id===p.prefill.accountId);
-   const label=account?`${p.label}, ${format(money(BigInt(p.prefill.minor),currency(account.currency)))}`:p.label;
-   return <Button key={p.id} onClick={()=>setPrefill(p.prefill)} aria-label={`Record ${label} again. ${p.detail}`}>{label}</Button>;
-  })}</div>
-  {prefill&&<ManualSheet accounts={accounts} prefill={prefill} onClose={()=>setPrefill(undefined)}/>}
- </div>;
-}

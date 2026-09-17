@@ -123,8 +123,10 @@ export function Rates({ accounts, notify }: {
     </label>
     {/* Pressed before the stored display currency has loaded, this fetched against whatever the picker
         was defaulting to and the source answered about a different currency. It waits for the setting. */}
-    <Row trailing={<Button disabled={refresh.isPending || !home.isSuccess} onClick={() => refresh.mutate()}>
-      <RefreshCw size={16}/>{refresh.isPending ? (progress || 'Updating') : 'Update'}</Button>}>
+    {/* "update button, fix. make subtle more silent. little smaller." It is maintenance, not a thing to
+        do — the rates keep themselves once fetched — so it stops competing with the figures. */}
+    <Row trailing={<Button variant="quiet" className="rate-update" disabled={refresh.isPending || !home.isSuccess} onClick={() => refresh.mutate()}>
+      <RefreshCw size={14}/>{refresh.isPending ? (progress || 'Updating') : 'Update'}</Button>}>
       Rates
       {/* The day the rates belong to, not the moment they were downloaded. */}
       <p>{asOf.data ? `From ${asOf.data}` : 'None yet'}</p>
@@ -142,8 +144,6 @@ export function Rates({ accounts, notify }: {
         value={typed[code] ?? ''} onChange={e => setTyped(rest => ({ ...rest, [code]: e.target.value }))}/>
       <Button disabled={enter.isPending} onClick={() => enter.mutate(code)}>Use my own rate</Button>
     </div>)}
-    {held.some(code => code !== display) && <p className="meta">A rate you enter is used for every date in
-      your ledger, and is kept as yours rather than a published one.</p>}
     {error && <p role="alert">{error}</p>}
   </section>;
 }

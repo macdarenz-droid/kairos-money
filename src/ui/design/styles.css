@@ -655,3 +655,7 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 .ranked-fill[data-rank="3"] { background: var(--heat-2); }
 .ranked-fill[data-rank="4"] { background: var(--heat-1); }
 .ranked-fill[data-rank="5"] { background: var(--border-control); }
+
+/* Quiet maintenance, not an action: the rate refresh sits beside the date it fetched rather than
+   shouting over it, while keeping the 44px target every control in this app has. */
+.button.rate-update { font-size: 12px; font-weight: 400; color: var(--text-secondary); padding: 6px 8px; gap: 6px; }

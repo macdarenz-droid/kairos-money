@@ -2,6 +2,7 @@ import {AllocationBreakdown} from './AllocationBreakdown';
 import {useState} from 'react';
 import {useQuery,useQueryClient} from '@tanstack/react-query';
 import {useSession} from '../session';
+import {useDisplayCurrency} from '../currency';
 import {Amount,Button,Input,Row,Sheet,Skeleton,Surface} from '../design/primitives';
 import {SourceLine} from '../design/SourceLine';
 import {DayStrip} from '../design/DayStrip';
@@ -13,12 +14,11 @@ import type {Transaction} from '../../intelligence/model';
 import type {intelligenceRepository} from '../../ledger/intelligence';
 type Report=Awaited<ReturnType<ReturnType<typeof intelligenceRepository>['analyse']>>;
 export function Intelligence({mode='insights'}:{mode?:'insights'|'today'}){
- const session=useSession(),client=useQueryClient(),[chosen,setCode]=useState<string|null>(null),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null),[edit,setEdit]=useState<Transaction|null>(null),[reflection,setReflection]=useState(false),[goal,setGoal]=useState(false),[scenario,setScenario]=useState(false),[extra,setExtra]=useState('0'),[cut,setCut]=useState('0'),[applied,setApplied]=useState({extra:'0',cut:0}),[error,setError]=useState('');
+ const session=useSession(),client=useQueryClient(),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null),[edit,setEdit]=useState<Transaction|null>(null),[reflection,setReflection]=useState(false),[goal,setGoal]=useState(false),[scenario,setScenario]=useState(false),[extra,setExtra]=useState('0'),[cut,setCut]=useState('0'),[applied,setApplied]=useState({extra:'0',cut:0}),[error,setError]=useState('');
  // The analysis opened in Australian dollars for everybody, because 'AUD' was the initial state of a
- // picker. Someone whose money is in pesos got an empty screen and no clue why. It follows the display
- // currency until they choose otherwise, and their choice then holds for the visit.
- const home=useQuery({queryKey:['display-currency'],enabled:session.state==='ready',queryFn:()=>session.run(r=>r.displayCurrency())});
- const code=chosen??home.data??'AUD';
+ // picker. Someone whose money is in pesos got an empty screen and no clue why — and a picker of its own
+ // meant this screen could disagree with every other one. There is one currency in this app now.
+ const code=useDisplayCurrency();
  const today=localDay();const q=useQuery({queryKey:['intelligence',today,code,applied],queryFn:()=>session.run(r=>r.intelligence.analyse(today,code,applied.extra,applied.cut)),enabled:session.state==='ready',staleTime:0});
  const refresh=async()=>{await client.invalidateQueries({queryKey:['intelligence']});};
  const show=(title:string,ids:string[],text='')=>setDetail({title,ids,text});
@@ -31,7 +31,6 @@ export function Intelligence({mode='insights'}:{mode?:'insights'|'today'}){
  const forecastWorking=[...(f.status==='ok'?[`Available liquid balance ${formatted(r.snapshot.liquid!.minor)}, less pending purchases ${formatted(f.pending)}, outstanding credit ${formatted(r.snapshot.committedLiability?.minor??'0')}, bills before next pay ${formatted(f.committed)}, and chosen buffer ${formatted(f.buffer)}. Divide the remainder by ${day(f.nextPay!)-day(today)} days; amounts below zero are shown as zero.`]:[]),...f.assumptions].join(' ');
  const evidenceButton=(title:string,ids:string[],text:string,child:React.ReactNode)=><Button variant="quiet" onClick={()=>show(title,ids,text)}>{child}</Button>;
  return <section className="stack intelligence" aria-label="Money evidence">
- {mode==='insights'&&<label className="input-label">Analysis currency<select value={code} onChange={e=>setCode(e.target.value)}>{['AUD','USD','PHP','EUR','GBP','NZD','CAD','SGD','JPY','KWD'].map(c=><option key={c}>{c}</option>)}</select></label>}
  {r.distress?<Surface className="surface-muted"><h2>Focus on essentials</h2><p>Keep this small. The next essential bill, and the money available for it.</p><p>Free, confidential financial counselling: National Debt Helpline, <a href="tel:1800007007">1800 007 007</a>.</p>{evidenceButton('Triage evidence',r.profile.evidence,'Precautionary thresholds: buffer below 5 days, rising explicitly recorded high-interest debt, or repeated recorded overdraft fees. These are not a diagnosis.','View the evidence')}</Surface>:mode==='insights'&&<><h2>{r.profile.archetype??'Still learning'}</h2><p>{r.profile.reason}</p>{r.profile.movement&&<p>{r.profile.movement}. Patterns can change with the evidence.</p>}{evidenceButton('Profile evidence',r.profile.evidence,'Descriptive heuristic, not a clinical or validated personality assessment.',`${r.profile.coveredDays} covered days · ${r.profile.confidence}% evidence completeness`)}<AxisPositions axes={Object.entries(r.profile.axes).map(([key,v])=>({name:key,at:v}))}/>
  {evidenceButton('What these describe',r.profile.evidence,'Version 1 descriptive axes; missing inputs remain unknown. They describe recorded patterns, not a diagnosis or a score of financial worth.','See what these are based on')}</>}
  {mode==='insights'&&signal.some(v=>v.unverified)&&<p className="muted">Some statements had no closing balance to check against. Those figures are approximate.</p>}

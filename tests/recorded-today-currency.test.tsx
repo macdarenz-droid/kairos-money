@@ -23,7 +23,7 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 const open = async () => render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
-  <ManualHistory accounts={await state.repo!.accounts()} today/></QueryClientProvider>);
+  <ManualHistory today/></QueryClientProvider>);
 
 /**
  * FROM HIS SCREEN. "Spent today $100.00" sat directly under tiles reading "Money out PHP 0.00" — the

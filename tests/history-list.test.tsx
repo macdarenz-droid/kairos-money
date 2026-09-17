@@ -8,6 +8,7 @@ import {repository, type Repository} from '../src/core/db/repository';
 import {hash, normalizeRow} from '../src/ingest/normalize';
 import type {Document, ImportContext} from '../src/ingest/types';
 import {ImportWorkspace} from '../src/ui/screens/ImportWorkspace';
+import {localDay} from '../src/ingest/reminders';
 
 const state = vi.hoisted(() => ({repo: undefined as Repository | undefined, tail: Promise.resolve() as Promise<unknown>}));
 vi.mock('../src/ui/session', () => ({useSession: () => ({state: 'ready', run: <T,>(fn: (repo: Repository) => Promise<T>) => { const next = state.tail.then(() => fn(state.repo!)); state.tail = next.catch(() => undefined); return next; }})}));
@@ -84,6 +85,28 @@ it('loads more rather than paging, and keeps the rows already read', async () =>
   await waitFor(() => expect(rows()).toHaveLength(30));
   // Everything is shown, so there is nothing left to offer.
   expect(screen.queryByRole('button', {name: 'Load more'})).toBeNull();
+});
+
+/**
+ * FROM HIS SCREEN: "currency working now, but only in today section. not in ledger, not in insights."
+ *
+ * The tiles converted because MoneyBand had been taught to; History printed whatever currency each row
+ * was recorded in, so one screen said PHP and the next said A$. It converts now — and at the rate for the
+ * row's OWN day, which is the part that cannot be got wrong quietly: a purchase made in January is worth
+ * what it was worth in January, not what today's rate would make of it.
+ */
+it('shows each row in the display currency, at the rate for its own date', async () => {
+  await state.repo!.setDisplayCurrency('PHP');
+  await state.repo!.saveRates([
+    {asOf: '2026-01-01', base: 'AUD', quote: 'PHP', rateE8: 3800000000n, source: 'test'},
+    {asOf: localDay(), base: 'AUD', quote: 'PHP', rateE8: 9900000000n, source: 'test'},
+  ]);
+  await importRows(1);   // one A$1.00 purchase, dated 2026-01-01
+  await open();
+  // 1.00 at 38 is ₱38.00 — January's rate, not today's ₱99.00.
+  await waitFor(() => expect(document.body.textContent).toContain('38.00'));
+  expect(document.body.textContent).not.toContain('99.00');
+  expect(document.body.textContent).not.toContain('$1.00');
 });
 
 /** The list is for finding a transaction. Acting on one belongs to the one you opened. */
