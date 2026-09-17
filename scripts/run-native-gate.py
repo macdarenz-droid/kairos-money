@@ -64,6 +64,17 @@ def instrumentation(name, count):
         if progress:
             (EVIDENCE / (name + '-progress.log')).write_text(progress)
             print('device-progress:\n' + progress, flush=True)
+        # THE ASSERTION, LAST, WHERE A LOG IS ACTUALLY READ.
+        #
+        # The whole instrumentation log is printed above, and on this runner it carries thousands of
+        # interleaved device lines — so the one thing somebody has to act on sits in the middle of it and
+        # a tail of the job log never reaches it. Twice now a failing device test has been diagnosed by
+        # guessing instead of by reading. The failure lines are cheap to repeat and they belong at the
+        # end, for the same reason the signing fingerprint is printed twice.
+        failures = [line for line in log.splitlines()
+                    if re.search(r'^\s*(Failures?:|FAILURES!!!|Tests run:|junit\.|org\.junit\.|java\.lang\.\w*(Error|Exception)|at app\.kairos\.money\.)', line)]
+        if failures:
+            print(name + ' failed. What it said:\n' + '\n'.join(failures[-60:]), flush=True)
         raise RuntimeError(name + ' did not pass; see its instrumentation log')
     completed_instrumentation.append(name)
 
