@@ -54,7 +54,7 @@ export function Rates({ accounts, notify }: {
 
   if (session.state !== 'ready') return null;
 
-  return <section className="settings-section">
+  return <section className="settings-section" id="settings-currency">
     <h2>Currency</h2>
     <label className="input-label">Show amounts in
       <select value={display} disabled={choose.isPending} onChange={e => choose.mutate(e.target.value)}>

@@ -10,7 +10,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import type { Account } from '../core/db/repository';
 import { create } from 'zustand';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarDays, ChevronRight, FileText, Layers3, LockKeyhole, Plus, Search, ShieldCheck, WalletCards } from 'lucide-react';
+import { ArchiveRestore, ArrowLeftRight, CalendarDays, ChevronRight, Coins, Download, FileText, Layers3, LockKeyhole, Plus, Search, ShieldCheck, ShieldPlus, WalletCards } from 'lucide-react';
 import { currency, fromDatabase, money } from '../core/money';
 import { Amount, Button, EmptyState, Input, Row, Sheet, Skeleton, Tabs, Toast, type Tab } from './design/primitives';
 import { followSystem } from './design/theme';
@@ -29,7 +29,7 @@ const MoneyVisuals=lazy(()=>import('./screens/MoneyVisuals').then(module=>({defa
 const Analysis=lazy(()=>import('./screens/Analysis').then(module=>({default:module.Analysis})));
 const BulkProposals=lazy(()=>import('./screens/BulkProposals').then(module=>({default:module.BulkProposals})));
 const NetWorth=lazy(()=>import('./screens/NetWorth').then(module=>({default:module.NetWorth})));
-import {Settings} from './screens/Settings';
+import {Settings, type SettingsFocus} from './screens/Settings';
 const useNavigation = create<{ tab: Tab; setTab: (tab: Tab) => void }>(set => ({ tab: 'Today', setTab: tab => set({ tab }) }));
 export default function App() {
   const { tab, setTab } = useNavigation(); const session = useSession(); const queryClient = useQueryClient();
@@ -37,12 +37,14 @@ export default function App() {
   const primaryAccount = useQuery({ queryKey: ['primary-account'], enabled: session.state === 'ready', queryFn: () => session.run(repo => repo.notices.defaultAccount()) });
   const [sheet, setSheet] = useState<'quick' | 'account' | 'update' | 'manual' | 'notices' | null>(null); const [search, setSearch] = useState(''); const [toast, setToast] = useState('');
   const [importRequest, setImportRequest] = useState(0);
+  const [settingsFocus, setSettingsFocus] = useState<SettingsFocus | null>(null);
+  const clearFocus = useCallback(() => setSettingsFocus(null), []);
   const consumeImport = useCallback(() => setImportRequest(0), []);
   const dismissToast = useCallback(() => setToast(''), []);
   const [quickAddRequest,setQuickAddRequest]=useState<string|null>(null);
   const openManual=useCallback((requestId:string)=>{setQuickAddRequest(requestId);setSheet('manual');},[]);
   useEffect(followSystem, []);
-  useEffect(() => { if (session.state !== 'ready' && session.state !== 'preview') { setSheet(null); setQuickAddRequest(null); setSearch(''); setToast(''); } }, [session.state]);
+  useEffect(() => { if (session.state !== 'ready' && session.state !== 'preview') { setSheet(null); setQuickAddRequest(null); setSearch(''); setToast(''); setSettingsFocus(null); } }, [session.state]);
   const accounts = useQuery({ queryKey: ['accounts'], queryFn: () => session.run(repo => repo.accounts()), enabled: session.state === 'ready' });
   // What each account holds now, not what it opened with. Invalidated by every write, like the rest.
   const balances = useQuery({ queryKey: ['account-balances'], queryFn: () => session.run(repo => repo.accountBalances()), enabled: session.state === 'ready' });
@@ -79,27 +81,32 @@ export default function App() {
   const accountAction = <Button variant="primary" onClick={() => setSheet('account')}><Plus size={16}/>Set up an account</Button>;
   // Verbs first, then navigation. Half of this list used to be "Open <tab>", which is movement rather than
   // an action; every one of them is still here, below the things a person opens this sheet to do.
-  const quickActions = [{label:'Add transaction',icon:Plus,act:()=>setSheet('manual')},{ label: 'Import statements', icon: FileText, act: () => { if (!count) { setSheet('account'); return; } setTab('Ledger'); setSheet(null); setImportRequest(n => n + 1); } },{label:'Update accounts',icon:FileText,act:()=>setSheet('update')}, { label: 'Add an account', icon: Plus, act: () => setSheet('account') }, { label: 'Find a transaction', icon: Search, act: () => { setTab('Ledger'); setSheet(null); } }, ...(['Today', 'Ledger', 'Insights', 'You'] as const).map(t => ({ label: `Open ${t === 'You' ? 'settings' : t.toLowerCase()}`, icon: t === 'Today' ? CalendarDays : t === 'Ledger' ? FileText : t === 'Insights' ? Layers3 : ShieldCheck, act: () => { setTab(t); setSheet(null); } }))].filter(action => action.label.toLowerCase().includes(search.toLowerCase()));
+  // Quick is the only index of what the app can do, so anything it omits is effectively missing. Backup,
+  // restore and transfers were all built and all asked for again, because this list did not name them.
+  const openSettings = (focus: SettingsFocus) => { setTab('You'); setSheet(null); setSettingsFocus(focus); };
+  const quickActions = [{label:'Add transaction',icon:Plus,act:()=>setSheet('manual')},{label:'Transfer between accounts',icon:ArrowLeftRight,act:()=>{ if (count < 2) { setSheet('account'); return; } setSheet('manual'); }},{ label: 'Import statements', icon: FileText, act: () => { if (!count) { setSheet('account'); return; } setTab('Ledger'); setSheet(null); setImportRequest(n => n + 1); } },{label:'Update accounts',icon:FileText,act:()=>setSheet('update')}, { label: 'Add an account', icon: Plus, act: () => setSheet('account') }, { label: 'Find a transaction', icon: Search, act: () => { setTab('Ledger'); setSheet(null); } }, {label:'Back up your ledger',icon:ShieldPlus,act:()=>openSettings('backup')}, {label:'Restore a backup',icon:ArchiveRestore,act:()=>openSettings('restore')}, {label:'Change display currency',icon:Coins,act:()=>openSettings('currency')}, {label:'Export all data',icon:Download,act:()=>openSettings('export')}, ...(['Today', 'Ledger', 'Insights', 'You'] as const).map(t => ({ label: `Open ${t === 'You' ? 'settings' : t.toLowerCase()}`, icon: t === 'Today' ? CalendarDays : t === 'Ledger' ? FileText : t === 'Insights' ? Layers3 : ShieldCheck, act: () => { setTab(t); setSheet(null); } }))].filter(action => action.label.toLowerCase().includes(search.toLowerCase()));
   return <div className="app" aria-hidden={session.state === 'background' || undefined} style={session.state === 'background' ? { display: 'none' } : undefined}><header className="brand-bar"><Brand/><div className="privacy-status"><LockKeyhole size={12}/><span>{session.state === 'preview' ? 'Design preview' : 'On this device'}</span></div></header>
     <NotificationSync/>
     {session.state === 'preview' && <p className="notice">Account storage and security require the Android app.</p>}
-    <main><header className="screen-header"><div><h1>{tab === 'You' ? 'Your money, your way' : tab}</h1><p>{tab === 'Today' ? 'What you have spent today.' : tab === 'Ledger' ? 'Every account. One place to understand it.' : tab === 'Insights' ? 'Patterns need evidence.' : 'A private ledger you control.'}</p></div>{tab === 'Ledger' && <Button variant="quiet" className="icon-button" aria-label="Add account" onClick={() => setSheet('account')}><Plus size={20}/></Button>}</header>
+    <main>{/* A heading names the screen. The sentence that used to sit under it described the app to itself and
+        cost a line of every screen. */}
+      <header className="screen-header"><div><h1>{tab}</h1></div>{tab === 'Ledger' && <Button variant="quiet" className="icon-button" aria-label="Add account" onClick={() => setSheet('account')}><Plus size={20}/></Button>}</header>
     {accounts.error && <p className="error" role="alert">Accounts could not be read. Lock and reopen Kairos before continuing.</p>}
     {quickAddError && <p className="error" role="alert">{quickAddError}</p>}
     {tab === 'Today' && <><MoneyBand/>{session.state==='ready'&&days===0&&<FirstImport hasAccount={count>0} loading={accounts.isPending} onAccount={()=>setSheet('account')} onRecord={()=>setSheet('manual')} onRead={()=>{setTab('Ledger');setImportRequest(n=>n+1);}}/>}<ManualHistory accounts={accounts.data??[]} today/><Button variant="primary" onClick={()=>setSheet('manual')}>Add transaction</Button><Intelligence mode="today"/><Freshness accounts={accounts.data??[]} batches={statementData.data??[]} today={localDay()} onUpdate={()=>setSheet('update')} awaiting={awaitingStatement.data??0}/><SpendRing/></>}
     {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Skeleton label="Reading accounts"/> : count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Balance now</span></div>{accounts.data?.map(account => { const held = balances.data?.find(b => b.accountId === account.id); return <Row key={account.id} trailing={<Amount value={money(BigInt(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor), currency(account.currency))} context={`${account.name} balance`}/>}>{/* The row was a caption. An account is the one thing on this screen a person most expects to be able to open, and nothing happened when he pressed it. */}<button type="button" className="account-open" onClick={() => setEditAccount(account)}><span className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><span><h3>{account.name}</h3><p className="account-meta">{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}{primaryAccount.data === account.id && <span className="tag tag-primary">Primary</span>}{account.archived_at && <span className="tag">Closed</span>}</p></span></span><ChevronRight size={16}/></button></Row>; })}</> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}<CombinedTotal accounts={accounts.data ?? []} balances={balances.data}/>{!(session.state==='ready' && accounts.isPending)&&<Suspense fallback={<Skeleton label="Opening imports"/>}><ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport}/></Suspense>}</>}
     {tab === 'Ledger' && count>0 && <><Suspense fallback={null}><BulkProposals/></Suspense><Button onClick={()=>setSheet('manual')}>Add transaction</Button><ManualHistory accounts={accounts.data??[]}/></>}
     {tab === 'Insights' && <><Suspense fallback={<Skeleton label="Opening spending patterns"/>}><SpendingPatterns/></Suspense>
-      <details className="section-gap"><summary>What my spending says about my habits</summary><Intelligence/></details>
-      <details><summary>Every measure, with the evidence behind it</summary><Suspense fallback={<Skeleton label="Opening money analysis"/>}><Analysis/></Suspense></details></>}
-    {tab === 'You' && <><Suspense fallback={<Skeleton label="Opening your money views"/>}><MoneyVisuals/><NetWorth/></Suspense><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []}/></>}
+      <details className="section-gap"><summary>Habits</summary><Intelligence/></details>
+      <details><summary>Every measure</summary><Suspense fallback={<Skeleton label="Opening money analysis"/>}><Analysis/></Suspense></details></>}
+    {tab === 'You' && <><Suspense fallback={<Skeleton label="Opening your money views"/>}><MoneyVisuals/><NetWorth/></Suspense><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []} focus={settingsFocus} onFocused={clearFocus}/></>}
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} onClose={()=>setSheet(null)}/>}
     {sheet === 'update' && <UpdateAccounts accounts={accounts.data??[]} batches={statementData.data??[]} today={localDay()} onClose={()=>setSheet(null)} onImport={()=>{setTab('Ledger');setSheet(null);setImportRequest(n=>n+1);}}/>}
     {sheet === 'notices' && <NoticeReview accounts={accounts.data ?? []} onClose={() => setSheet(null)}/>}
     {sheet === 'account' && <AccountSheet onClose={() => setSheet(null)} onSaved={() => { setTab('Ledger'); setToast('Account saved on this device.'); }}/>}
     {editAccount && <AccountSheet account={editAccount} onClose={() => setEditAccount(null)} onSaved={() => setToast('Account updated on this device.')}/>}
-    {sheet === 'quick' && <Sheet title="Quick" onClose={() => setSheet(null)}><Input label="Find an action" placeholder="Search actions or screens" value={search} onChange={e => setSearch(e.target.value)}/><div className="action-list">{quickActions.map(action => <Button key={action.label} onClick={action.act}><action.icon size={18}/><span style={{ flex: 1, textAlign: 'left' }}>{action.label}</span><ChevronRight size={16}/></Button>)}</div>{!quickActions.length && <p className="section-gap"><Search size={16}/> No matching action. Try “account” or “settings”.</p>}<p className="meta section-gap">Find a transaction in Ledger, or stage statement files for review.</p></Sheet>}
+    {sheet === 'quick' && <Sheet title="Quick" onClose={() => setSheet(null)}><Input label="Find an action" placeholder="Search actions or screens" value={search} onChange={e => setSearch(e.target.value)}/><div className="action-list">{quickActions.map(action => <Button key={action.label} onClick={action.act}><action.icon size={18}/><span style={{ flex: 1, textAlign: 'left' }}>{action.label}</span><ChevronRight size={16}/></Button>)}</div>{!quickActions.length && <p className="section-gap"><Search size={16}/> No matching action. Try “account” or “settings”.</p>}</Sheet>}
     {toast && <Toast message={toast} onDismiss={dismissToast}/>}
   </div>;
 }

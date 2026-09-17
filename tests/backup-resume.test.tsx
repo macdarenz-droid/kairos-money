@@ -33,7 +33,8 @@ describe('Backup picker session continuity', () => {
     await setup(); fireEvent.click(screen.getByRole('button', { name: 'You' }));
     fireEvent.click(screen.getByRole('button', { name: theme === 'dark' ? 'Dark' : 'Light' }));
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe(theme));
-    fireEvent.click(screen.getByRole('button', { name: 'Encrypted backup' }));
+    // Settings names restore at the top level, so it opens the restore screen directly rather than a
+    // chooser whose only job was to show the same two words again.
     fireEvent.click(screen.getByRole('button', { name: 'Restore a backup' }));
     fireEvent.change(screen.getByLabelText('Backup recovery code'), { target: { value: 'synthetic-test-code' } });
     native.listener!({ isActive: false });

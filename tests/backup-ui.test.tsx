@@ -29,7 +29,7 @@ beforeEach(async () => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 function mount() { render(<QueryClientProvider client={new QueryClient()}><Backup onClose={() => {}} notify={() => {}}/></QueryClientProvider>); }
 for (const theme of ['dark', 'light'] as const) it(`requires written-code confirmation and saves encrypted data in ${theme}`, async () => {
-  useTheme.getState().set(theme); mount(); fireEvent.click(screen.getByRole('button', { name: 'Save backup or view recovery code' }));
+  useTheme.getState().set(theme); mount(); fireEvent.click(screen.getByRole('button', { name: 'Save a backup' }));
   await screen.findByLabelText('Recovery code'); const save = screen.getByRole('button', { name: 'Choose backup location' });
   expect(save.hasAttribute('disabled')).toBe(true); expect(native.saved).toBe(''); expect(native.acknowledged).toBe(false);
   fireEvent.click(screen.getByLabelText('I have written this down.')); fireEvent.click(save);

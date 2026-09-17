@@ -14,7 +14,7 @@ public class BackupBeforeResetInstrumentedTest {
             final MainActivity[] current = new MainActivity[1]; scenario.onActivity(activity -> current[0] = activity);
             BackupTestUi ui = new BackupTestUi(current[0]); ui.unlock("246810");
             String before = DatabaseDigest.hash(current[0]);
-            ui.click("You"); ui.click("Encrypted backup"); ui.captureBoth("backup-options"); ui.click("Save backup or view recovery code");
+            ui.click("You"); ui.click("Back up"); ui.captureBoth("backup-options"); ui.click("Save a backup");
             ui.await("Boolean(Array.from(document.querySelectorAll('label')).find(l=>l.textContent.startsWith('Recovery code'))) ");
             ui.captureBoth("backup-save-code");
             String recoveryCode = ui.value("Recovery code");

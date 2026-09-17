@@ -13,7 +13,7 @@ public class BackupAfterResetInstrumentedTest {
             final MainActivity[] current = new MainActivity[1]; scenario.onActivity(activity -> current[0] = activity);
             BackupTestUi ui = new BackupTestUi(current[0]); ui.setup("135790");
             String code = ui.readExternal("kairos-test-recovery.txt"), expected = ui.readExternal("kairos-test-ledger-digest.txt");
-            ui.click("You"); ui.click("Encrypted backup"); ui.click("Restore a backup");
+            ui.click("You"); ui.click("Restore a backup");
             ui.captureBoth("backup-restore");
             String emptyLedger = DatabaseDigest.hash(current[0]);
             String wrong = (code.startsWith("2") ? "3" : "2") + code.substring(1);

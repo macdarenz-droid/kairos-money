@@ -8,9 +8,11 @@ import { backupLimit, decryptBackup, encryptBackup } from '../../core/crypto/bac
 import { base64 } from '../../core/db/export';
 import { Button, Input, Sheet } from '../design/primitives';
 import { useSession } from '../session';
-export function Backup({ onClose, notify }: { onClose: () => void; notify: (message: string) => void }) {
+export function Backup({ onClose, notify, start = 'choose' }: { onClose: () => void; notify: (message: string) => void; start?: 'choose' | 'restore' }) {
   const session = useSession(); const query = useQueryClient();
-  const [mode, setMode] = useState<'choose' | 'save' | 'restore'>('choose');
+  // Opened from Settings as "Restore a backup" it should BE the restore screen. Landing on a chooser and
+  // pressing restore again is the same screen twice.
+  const [mode, setMode] = useState<'choose' | 'save' | 'restore'>(start);
   const [code, setCode] = useState(''); const [written, setWritten] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   function failure(e: unknown) { setError(e instanceof Error ? e.message : 'The backup operation did not complete. Your ledger has not changed.'); }
@@ -46,9 +48,9 @@ export function Backup({ onClose, notify }: { onClose: () => void; notify: (mess
     } catch (e) { failure(e); } finally { bytes?.fill(0); setBusy(false); }
   }
   return <Sheet title="Encrypted backup" onClose={() => { if (!busy) onClose(); }}><div className="stack">
-    {mode === 'choose' && <><p>Save a private backup, or restore one into an empty ledger. The recovery code decrypts backups; it cannot unlock this app.</p><Button disabled={busy} onClick={() => void prepare()}>Save backup or view recovery code</Button><Button disabled={busy} onClick={() => { setCode(''); setMode('restore'); }}>Restore a backup</Button></>}
-    {mode === 'save' && <><p>Write down all ten groups and keep them separately from your backup. Without this code, a backup cannot be recovered after a reset or on another device.</p><RecoveryCode value={code}/><label className="check-row"><input type="checkbox" checked={written} onChange={event => setWritten(event.target.checked)}/>I have written this down.</label><p className="meta">You can review this code here whenever Kairos is unlocked.</p><Button variant="primary" disabled={busy || !written} onClick={() => void save()}>{busy ? 'Preparing backup…' : 'Choose backup location'}</Button></>}
-    {mode === 'restore' && <><p>Start with an empty Kairos ledger and enter the code saved with your backup. Existing accounts or imports will not be replaced. Your current app PIN stays unchanged.</p><Input label="Backup recovery code" autoComplete="off" spellCheck={false} value={code} onChange={event => setCode(event.target.value)}/><Button variant="primary" disabled={busy || !code.trim()} onClick={() => void restore()}>{busy ? 'Restoring…' : 'Choose backup file'}</Button></>}
+    {mode === 'choose' && <><p>A backup is encrypted with a recovery code. That code is not your PIN and cannot unlock this app.</p><Button disabled={busy} onClick={() => void prepare()}>Save a backup</Button><Button disabled={busy} onClick={() => { setCode(''); setMode('restore'); }}>Restore a backup</Button></>}
+    {mode === 'save' && <><p>Write down all ten groups and keep them away from the backup file. Without this code the backup cannot be recovered.</p><RecoveryCode value={code}/><label className="check-row"><input type="checkbox" checked={written} onChange={event => setWritten(event.target.checked)}/>I have written this down.</label><p className="meta">Shown here again whenever Kairos is unlocked.</p><Button variant="primary" disabled={busy || !written} onClick={() => void save()}>{busy ? 'Preparing backup…' : 'Choose backup location'}</Button></>}
+    {mode === 'restore' && <><p>Restores into an empty ledger. Existing accounts and imports are kept, not replaced. Your PIN is unchanged.</p><Input label="Backup recovery code" autoComplete="off" spellCheck={false} value={code} onChange={event => setCode(event.target.value)}/><Button variant="primary" disabled={busy || !code.trim()} onClick={() => void restore()}>{busy ? 'Restoring…' : 'Choose backup file'}</Button></>}
     {error && <p role="alert">{error}</p>}
   </div></Sheet>;
 }
