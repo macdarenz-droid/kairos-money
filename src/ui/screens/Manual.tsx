@@ -1,7 +1,4 @@
-import {hash} from '../../ingest/normalize';
-import {CategoryMark, relativeDay} from '../design/CategoryMark';
-import {TransactionAttachments} from './TransactionAttachments';
-import {lazy,Suspense,useEffect,useState} from 'react';
+import {useEffect,useState} from 'react';
 import {useQuery,useQueryClient} from '@tanstack/react-query';
 import type {Account} from '../../core/db/repository';
 import type {ManualEntry} from '../../ledger/manual';
@@ -12,7 +9,6 @@ import {useSession} from '../session';
 import {Amount,Button,Input,Row,Sheet} from '../design/primitives';
 import {preferredCategories,repeatEntryProposals} from '../proposals/derive';
 import type {RepeatEntryPrefill} from '../proposals/model';
-const TransactionSplits=lazy(()=>import('./TransactionSplits').then(m=>({default:m.TransactionSplits})));
 const categories=['Groceries','Housing','Utilities','Transport','Health','Eating out','Shopping','Entertainment','Debt','Savings'];
 export function ManualSheet({accounts,entry,prefill,onClose}:{accounts:Account[];entry?:ManualEntry;prefill?:RepeatEntryPrefill;onClose:()=>void}){
  const session=useSession(),query=useQueryClient();
@@ -50,10 +46,8 @@ export function ManualSheet({accounts,entry,prefill,onClose}:{accounts:Account[]
  <Input label="Note (optional)" maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/>{error&&<p role="alert">{error}</p>}<Button type="submit" variant="primary" disabled={busy||!accounts.length}>{busy?'Saving…':'Save transaction'}</Button></form></Sheet>;
 }
 export function ManualHistory({accounts,today=false}:{accounts:Account[];today?:boolean}){
- const session=useSession(),query=useQueryClient(),[edit,setEdit]=useState<ManualEntry>(),[remove,setRemove]=useState<ManualEntry>(),[match,setMatch]=useState<ManualEntry>(),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const session=useSession();
  const data=useQuery({queryKey:['manual'],queryFn:()=>session.run(async r=>({entries:await r.manual.list(),totals:await r.manual.today(localDay()),unresolved:await r.manual.unresolved()})),enabled:session.state==='ready'});
- const candidates=useQuery({queryKey:['manual-matches',match?.id],queryFn:()=>session.run(r=>r.manual.candidates(match!.id)),enabled:!!match&&session.state==='ready'});
- async function act(fn:()=>Promise<unknown>){setBusy(true);setError('');try{await fn();await query.invalidateQueries();setRemove(undefined);setMatch(undefined);}catch(e){setError(e instanceof Error?e.message:'The change could not be saved.');}finally{setBusy(false);}}
  if(today)return <section className="section-gap"><h2>Recorded today</h2>
  {/* The money comes first. Someone opening this screen is asking what they spent, not what the app can do. */}
  {data.data?.totals.map(t=>{const spent=BigInt(t.spending)+BigInt(t.awaitingSpending),received=BigInt(t.income)+BigInt(t.awaitingIncome),loose=BigInt(t.awaitingSpending)+BigInt(t.awaitingIncome);
@@ -65,16 +59,13 @@ export function ManualHistory({accounts,today=false}:{accounts:Account[];today?:
  {data.data&&Object.keys(data.data.unresolved).length>0&&<p>Some entries may be duplicates. Review them in Ledger before trusting these totals.</p>}
  <RepeatTiles accounts={accounts} entries={data.data?.entries??[]}/>
  </section>;
- return <section className="section-gap"><h2>Manual transactions</h2>
- <RepeatTiles accounts={accounts} entries={data.data?.entries??[]}/>{data.error&&<p role="alert">Manual history could not be read. Try reopening Ledger.</p>}{data.data?.entries.slice().sort((a,b)=>b.date.localeCompare(a.date)||a.id.localeCompare(b.id)).map(e=>{const account=accounts.find(a=>a.id===e.accountId);return <div key={e.id} className="section-gap"><Row trailing={account&&<Amount value={money(BigInt(e.minor)*(e.kind==='expense'?-1n:1n),currency(account.currency))} context={`${e.kind} ${e.description}`}/>}><span className="row-lead"><CategoryMark description={e.description} category={e.category}/><span><h3>{e.description}</h3><p>{relativeDay(e.date,localDay())} · {account?.name} · {e.kind}</p></span></span></Row>{data.data?.unresolved[e.id]&&<p role="status">{data.data.unresolved[e.id]} possible statement matches. Review before trusting combined totals.</p>}{e.notes&&<p>{e.notes}</p>}<ReceiptDetails id={e.id} minor={e.minor} code={account?.currency}/>{e.kind==='expense'&&account&&Object.keys(e.links).length===0&&<ManualSplit id={e.id} minor={e.minor} code={account.currency}/>}<div className="form-actions"><Button onClick={()=>setEdit(e)}>Edit</Button><Button onClick={()=>setMatch(e)}>Match with statement</Button><Button variant="danger" onClick={()=>setRemove(e)}>Delete</Button></div>{Object.keys(e.links).length>0&&<p className="meta">A statement match is saved. If that source is rolled back, the manual entry counts again.</p>}</div>;})}
- {edit&&<ManualSheet accounts={accounts} entry={edit} onClose={()=>setEdit(undefined)}/>}
- {remove&&<Sheet title="Delete manual transaction?" onClose={()=>{if(!busy)setRemove(undefined);}}><p>{remove.description}. This removes the manual record only; imported statement entries remain.</p><Button variant="danger" disabled={busy} onClick={()=>void act(()=>session.run(r=>r.manual.remove(remove.id)))}>Delete transaction</Button>{error&&<p role="alert">{error}</p>}</Sheet>}
- {match&&<Sheet title="Match with statement" onClose={()=>{if(!busy)setMatch(undefined);}}><p>Confirm only if these are the same purchase or transfer. Similar amounts can be different transactions.</p>{candidates.data?.map(c=><Row key={c.leg+c.batchId+c.sourceId} trailing={<Button disabled={busy} onClick={()=>void act(()=>session.run(r=>r.manual.match(match.id,c.leg,c.transactionId)))}>Same transaction</Button>}>{c.description}<p>{c.date} · {c.leg==='entry'?'Statement transaction':c.leg==='from'?'Transfer out':'Transfer in'}</p></Row>)}{candidates.data&&!candidates.data.length&&<p>No imported entry with the same account and amount within three days. Import the statement first, or keep these separate.</p>}{Object.keys(match.links).length>0&&<Button disabled={busy} onClick={()=>void act(()=>session.run(r=>r.manual.unmatch(match.id)))}>Remove saved matches</Button>}{(error||candidates.error)&&<p role="alert">{error||'Matches could not be read.'}</p>}</Sheet>}
- </section>;
+ // The "Manual transactions" list lived here: every entry with Notes and receipts, Split expense
+ // categories, Edit, Match with statement and Delete stacked underneath it. Those rows are in History
+ // now, beside the statement and notification rows they were always the same kind of thing as, and the
+ // controls moved into the one transaction that is open. Only the Today summary is left here.
+ return null;
 }
-function ReceiptDetails({id,minor,code}:{id:string;minor?:string|undefined;code?:string|undefined}){const [open,setOpen]=useState(false);return <details onToggle={e=>setOpen(e.currentTarget.open)}><summary>Notes and receipts</summary>{open&&<TransactionAttachments target={'manual:'+id} recordedMinor={minor} code={code}/>}</details>;}
 
-function ManualSplit({id,minor,code}:{id:string;minor:string;code:string}){const [open,setOpen]=useState(false);return <details onToggle={e=>setOpen(e.currentTarget.open)}><summary>Split expense categories</summary>{open&&<Suspense fallback={<p>Opening category split…</p>}><TransactionSplits id={hash('manual-transaction:'+id+':entry')} minor={(-BigInt(minor)).toString()} code={currency(code)}/></Suspense>}</details>;}
 
 /**
  * One-tap repeat entry.

@@ -174,7 +174,7 @@ public class LedgerPerformanceInstrumentedTest {
                 // Which statements the device actually spent that time in. Shapes only, no values.
                 String profile=js("JSON.stringify((window.__kairosQueries&&window.__kairosQueries.read(5))||[])");
                 checkpoint("ledger search entry",samples,null);
-                input("Search transactions","Synthetic performance merchant");
+                input("Search history","Synthetic performance merchant");
                 long searchMs=SystemClock.elapsedRealtime()-started;
                 // The measured window continues past the first row, so keep sampling: a crash after this
                 // point would otherwise be reported with a heap reading taken before the search ran.

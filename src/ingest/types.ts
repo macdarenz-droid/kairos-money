@@ -10,7 +10,10 @@ export type Batch = Document & { status: 'staged' | 'committed' | 'rolled_back' 
 export type BatchSummary = Pick<Batch, 'id' | 'fileName' | 'status' | 'integrityTier' | 'sessionId' | 'payslip'> & {
   context: Pick<ImportContext, 'accountId' | 'period'>;
 };
-export type LedgerRow = NormalizedRow & { id: string; owner: string; transferGroup: string | null; sources: { batchId: string; sourceId: string }[] };
+export type LedgerRow = NormalizedRow & { id: string; owner: string; transferGroup: string | null;
+  sources: { batchId: string; sourceId: string }[];
+  /** Set when this row was typed in by hand: the manual entry it came from, so it can be edited or removed. */
+  manualId?: string };
 export class ImportFailure extends Error {
   constructor(public understood: string, public unreadable: string, public excerpt: string, public action: string) { super(`${unreadable} ${action}`); this.name = 'ImportFailure'; }
 }

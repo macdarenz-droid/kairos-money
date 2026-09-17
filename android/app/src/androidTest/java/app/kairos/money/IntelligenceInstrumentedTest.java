@@ -49,6 +49,12 @@ public class IntelligenceInstrumentedTest {
         String button = "Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===" + JSONObject.quote(name) + ")";
         awaitJs("Boolean(" + button + ")"); js(button + ".click()");
     }
+    /** Open one row of History by what it says, which is the only way to reach a transaction now. */
+    private void openRow(String text) throws Exception {
+        String row = "Array.from(document.querySelectorAll('button.transaction-row')).find(b=>b.textContent.includes(" + JSONObject.quote(text) + "))";
+        awaitJs("Boolean(" + row + ")"); js(row + ".click()");
+        awaitJs("Boolean(document.querySelector('dialog'))");
+    }
     /** Wait for the target to remain visible across frames, including asynchronous layout. */
     private void captureHeading(String heading, String name) throws Exception {
         String element = "Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,[role=heading]')).find(e=>e.textContent.trim()===" + JSONObject.quote(heading) + ")";
@@ -167,9 +173,12 @@ public class IntelligenceInstrumentedTest {
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-entry");click("Save transaction");
                 awaitJs("!document.querySelector('dialog')");click("Ledger");
                 awaitJs("document.body.innerText.includes('Synthetic manual purchase "+theme+"')");
-                captureHeading("Manual transactions",theme.toLowerCase()+"-manual-history");click("Edit");input("Amount","15.00");
+                captureHeading("History",theme.toLowerCase()+"-manual-history");
+                // A hand-recorded purchase is now a row in History like any other, and everything you can
+                // do to it lives in the transaction you opened rather than under every row in the list.
+                openRow("Synthetic manual purchase "+theme);click("Edit");input("Amount","15.00");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-edit");click("Save transaction");awaitJs("!document.querySelector('dialog')");
-                js("[...document.querySelectorAll('summary')].find(e=>e.textContent==='Split expense categories').click()");
+                openRow("Synthetic manual purchase "+theme);
                 click("Split this expense");input("Amount 1","10.00");input("Amount 2","5.00");click("Save category split");
                 awaitJs("[...document.querySelectorAll('button')].some(e=>e.textContent==='Edit category split')");
                 captureHeading("Category split",theme.toLowerCase()+"-manual-category-split");
@@ -177,6 +186,7 @@ public class IntelligenceInstrumentedTest {
                 awaitJs("[...document.querySelectorAll('button')].some(e=>e.textContent==='Split this expense')");
                 click("Match with statement");awaitJs("document.body.innerText.includes('No imported entry with the same account')");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-match");js("document.querySelector('dialog .icon-button').click()");
+                openRow("Synthetic manual purchase "+theme);
                 click("Delete");NativeEvidence.capture(activity,theme.toLowerCase()+"-manual-delete");click("Delete transaction");
                 awaitJs("!document.querySelector('dialog') && !document.body.innerText.includes('Synthetic manual purchase "+theme+"')");
             }
@@ -259,7 +269,7 @@ public class IntelligenceInstrumentedTest {
                 js("document.querySelector('.spending-patterns .row button').click()");awaitJs("Boolean(document.querySelector('dialog'))");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-spending-evidence");js("document.querySelector('dialog .icon-button').click()");
                 // Use an actual prior file import; intelligence-only SQL fixtures have no staged source document.
-                click("Ledger");input("Search transactions","");
+                click("Ledger");input("Search history","");
                 String expense="Array.from(document.querySelectorAll('.transaction-row')).find(e=>e.querySelector('.amount')?.getAttribute('aria-label')?.startsWith('Negative') && !e.textContent.includes('Internal transfer') && !e.textContent.includes('Pending'))";
                 awaitJs("Boolean("+expense+")");js(expense+".click()");
                 awaitJs("Boolean(document.querySelector('dialog .amount'))");

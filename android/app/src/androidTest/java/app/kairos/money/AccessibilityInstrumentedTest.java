@@ -26,7 +26,7 @@ public class AccessibilityInstrumentedTest {
         String content;
         switch (tab) {
             case "Today": content="Boolean(document.querySelector('.intelligence'))"; break;
-            case "Ledger": content="document.querySelector('main').innerText.includes('Search transactions')"; break;
+            case "Ledger": content="document.querySelector('main').innerText.includes('Search history')"; break;
             case "Insights":
                 js("document.querySelectorAll('main details').forEach(d=>{d.open=true;})");
                 content="Boolean(document.querySelector('.spending-patterns select')) && Boolean(document.querySelector('.intelligence select'))"; break;

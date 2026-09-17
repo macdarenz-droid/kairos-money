@@ -48,7 +48,8 @@ it('offers nothing when the merchant has no category the user chose',async()=>{
 
 it('prefills a repeat entry without saving it, leaving Save to press',async()=>{
  state.entries=[entry({id:'e1',description:'Cafe Mika'})];
- wrap(<ManualHistory accounts={accounts}/>);
+ // The repeat tiles sit on Today now: the manual list they used to head no longer exists.
+ wrap(<ManualHistory accounts={accounts} today/>);
  const tile=await screen.findByRole('button',{name:/Record Cafe Mika/});
  fireEvent.click(tile);
  // The sheet opens with the entry's own values and nothing is committed yet.
