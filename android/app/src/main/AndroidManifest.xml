@@ -57,8 +57,6 @@
             </intent-filter>
 
         </activity>
-
-        <receiver android:name=".ReminderReceiver" android:exported="false" />
         <!-- Takes the answer given in the shade. Not exported: only our own notification actions reach it. -->
         <receiver android:name=".NoticeActionReceiver" android:exported="false" />
 

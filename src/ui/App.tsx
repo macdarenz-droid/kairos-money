@@ -23,8 +23,6 @@ import { Surfaces } from './design/Surfaces';
 import { SpendRing } from './design/SpendRing';
 import { AccountSheet } from './screens/AccountSheet';
 import { coveredDays } from '../ingest/reconcile';
-import { Freshness, UpdateAccounts } from './screens/UpdateAccounts';
-import { localDay, syncReminder } from '../ingest/reminders';
 const ImportWorkspace=lazy(()=>import('./screens/ImportWorkspace').then(module=>({default:module.ImportWorkspace})));
 const SpendingPatterns=lazy(()=>import('./screens/SpendingPatterns').then(module=>({default:module.SpendingPatterns})));
 const MoneyVisuals=lazy(()=>import('./screens/MoneyVisuals').then(module=>({default:module.MoneyVisuals})));
@@ -44,7 +42,7 @@ export default function App() {
   const { tab, setTab } = useNavigation(); const session = useSession(); const queryClient = useQueryClient();
   const [editAccount, setEditAccount] = useState<Account | null>(null);
   const primaryAccount = useQuery({ queryKey: ['primary-account'], enabled: session.state === 'ready', queryFn: () => session.run(repo => repo.notices.defaultAccount()) });
-  const [sheet, setSheet] = useState<'quick' | 'account' | 'update' | 'manual' | 'notices' | null>(null); const [search, setSearch] = useState(''); const [toast, setToast] = useState('');
+  const [sheet, setSheet] = useState<'quick' | 'account' | 'manual' | 'notices' | null>(null); const [search, setSearch] = useState(''); const [toast, setToast] = useState('');
   const [importRequest, setImportRequest] = useState(0);
   const [settingsFocus, setSettingsFocus] = useState<SettingsFocus | null>(null);
   const clearFocus = useCallback(() => setSettingsFocus(null), []);
@@ -73,11 +71,7 @@ export default function App() {
   // something new, because a prompt that reappears after being dismissed stops being read.
   const noticeQueue = useQuery({ queryKey: ['captured-notices'], queryFn: capturedNotices, enabled: session.state === 'ready' });
   const [noticesAsked, setNoticesAsked] = useState(false);
-  // Approved notifications no statement has confirmed. The home screen used to say Kairos knew nothing
-  // past the last statement, which stopped being true the moment one of these was approved.
-  const awaitingStatement = useQuery({ queryKey: ['awaiting-statement'], queryFn: () => session.run(repo => repo.notices.awaiting()), enabled: session.state === 'ready' });
   const statementData = useQuery({ queryKey: ['coverage-summary'], queryFn: () => session.run(repo => repo.imports.summaries()), enabled: session.state === 'ready' });
-  useEffect(()=>{if(session.state==='ready' && accounts.data && statementData.data)void session.run(repo=>repo.imports.reminderDay()).then(day=>syncReminder(day,accounts.data!.map(a=>a.id),statementData.data!,localDay())).catch(()=>undefined);},[session.state,accounts.data,statementData.data]);
   useEffect(()=>{if(sheet==='manual' && accounts.data?.length===0)setSheet('account');},[sheet,accounts.data]);
   const firstAccount = accounts.data?.find(a => !a.archived_at);
   const undecided = (noticeQueue.data ?? []).filter(n => !n.decision);
@@ -103,7 +97,7 @@ export default function App() {
   // Quick is the only index of what the app can do, so anything it omits is effectively missing. Backup,
   // restore and transfers were all built and all asked for again, because this list did not name them.
   const openSettings = (focus: SettingsFocus) => { setTab('You'); setSheet(null); setSettingsFocus(focus); };
-  const quickActions = [{label:'Add transaction',icon:Plus,act:()=>openManualSheet()},{label:'Transfer between accounts',icon:ArrowLeftRight,act:()=>{ if (count < 2) { setSheet('account'); return; } openManualSheet('transfer'); }},{ label: 'Import statements', icon: FileText, act: () => { if (!count) { setSheet('account'); return; } setTab('Ledger'); setSheet(null); setImportRequest(n => n + 1); } },{label:'Update accounts',icon:FileText,act:()=>setSheet('update')}, { label: 'Add an account', icon: Plus, act: () => setSheet('account') }, { label: 'Find a transaction', icon: Search, act: () => { setTab('Ledger'); setSheet(null); } }, {label:'Back up your ledger',icon:ShieldPlus,act:()=>openSettings('backup')}, {label:'Restore a backup',icon:ArchiveRestore,act:()=>openSettings('restore')}, {label:'Change display currency',icon:Coins,act:()=>openSettings('currency')}, {label:'Export all data',icon:Download,act:()=>openSettings('export')}, {label:'Open settings',icon:ShieldCheck,act:()=>{setTab('You');setSheet(null);}}].filter(action => action.label.toLowerCase().includes(search.toLowerCase()));
+  const quickActions = [{label:'Add transaction',icon:Plus,act:()=>openManualSheet()},{label:'Transfer between accounts',icon:ArrowLeftRight,act:()=>{ if (count < 2) { setSheet('account'); return; } openManualSheet('transfer'); }},{ label: 'Import statements', icon: FileText, act: () => { if (!count) { setSheet('account'); return; } setTab('Ledger'); setSheet(null); setImportRequest(n => n + 1); } },{ label: 'Add an account', icon: Plus, act: () => setSheet('account') }, { label: 'Find a transaction', icon: Search, act: () => { setTab('Ledger'); setSheet(null); } }, {label:'Back up your ledger',icon:ShieldPlus,act:()=>openSettings('backup')}, {label:'Restore a backup',icon:ArchiveRestore,act:()=>openSettings('restore')}, {label:'Change display currency',icon:Coins,act:()=>openSettings('currency')}, {label:'Export all data',icon:Download,act:()=>openSettings('export')}, {label:'Open settings',icon:ShieldCheck,act:()=>{setTab('You');setSheet(null);}}].filter(action => action.label.toLowerCase().includes(search.toLowerCase()));
   return <div className="app" aria-hidden={session.state === 'background' || undefined} style={session.state === 'background' ? { display: 'none' } : undefined}><header className="brand-bar"><Brand/><div className="privacy-status"><LockKeyhole size={12}/><span>{session.state === 'preview' ? 'Design preview' : 'On this device'}</span></div></header>
     <NotificationSync/>
     {session.state === 'preview' && <p className="notice">Account storage and security require the Android app.</p>}
@@ -113,7 +107,7 @@ export default function App() {
     {accounts.error && <p className="error" role="alert">Accounts could not be read. Lock and reopen Kairos before continuing.</p>}
     {quickAddError && <p className="error" role="alert">{quickAddError}</p>}
     <div className="screen" key={tab} data-direction={nav.current.direction}>
-    {tab === 'Today' && <><Unconverted onFix={() => openSettings('currency')}/><MoneyBand/>{/* The one thing this app is for, directly under the figures it changes — not below four other cards at the size of a filter chip. */}<Button variant="primary" className="add-primary" onClick={()=>openManualSheet()}><Plus size={18}/>Add transaction</Button><Surfaces/><ManualHistory accounts={accounts.data??[]} today/><Intelligence mode="today"/><Freshness accounts={accounts.data??[]} batches={statementData.data??[]} today={localDay()} onUpdate={()=>setSheet('update')} awaiting={awaitingStatement.data??0}/><SpendRing/></>}
+    {tab === 'Today' && <><Unconverted onFix={() => openSettings('currency')}/><MoneyBand/>{/* The one thing this app is for, directly under the figures it changes — not below four other cards at the size of a filter chip. */}<Button variant="primary" className="add-primary" onClick={()=>openManualSheet()}><Plus size={18}/>Add transaction</Button><Surfaces/><ManualHistory accounts={accounts.data??[]} today/><Intelligence mode="today"/><SpendRing/></>}
     {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Skeleton label="Reading accounts"/> : count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Balance now</span></div>{accounts.data?.map(account => { const held = balances.data?.find(b => b.accountId === account.id); return <Row key={account.id} trailing={<Amount value={money(BigInt(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor), currency(account.currency))} context={`${account.name} balance`}/>}>{/* The row was a caption. An account is the one thing on this screen a person most expects to be able to open, and nothing happened when he pressed it. */}<button type="button" className="account-open" onClick={() => setEditAccount(account)}><span className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><span><h3>{account.name}</h3><p className="account-meta">{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}{primaryAccount.data === account.id && <span className="tag tag-primary">Primary</span>}{account.archived_at && <span className="tag">Closed</span>}</p></span></span><ChevronRight size={16}/></button></Row>; })}</> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}<CombinedTotal accounts={accounts.data ?? []} balances={balances.data}/>{!(session.state==='ready' && accounts.isPending)&&<Suspense fallback={<Skeleton label="Opening imports"/>}><ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport}/></Suspense>}</>}
     {tab === 'Ledger' && count>0 && <Suspense fallback={null}><BulkProposals/></Suspense>}
     {tab === 'Ledger' && <Suspense fallback={null}><Debts accounts={accounts.data??[]}/><People/></Suspense>}
@@ -126,7 +120,6 @@ export default function App() {
     </div>
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} kind={manualKind} onClose={()=>setSheet(null)}/>}
-    {sheet === 'update' && <UpdateAccounts accounts={accounts.data??[]} batches={statementData.data??[]} today={localDay()} onClose={()=>setSheet(null)} onImport={()=>{setTab('Ledger');setSheet(null);setImportRequest(n=>n+1);}}/>}
     {sheet === 'notices' && <NoticeReview accounts={accounts.data ?? []} onClose={() => setSheet(null)}/>}
     {sheet === 'account' && <AccountSheet onClose={() => setSheet(null)} onSaved={() => { setTab('Ledger'); setToast('Account saved on this device.'); }}/>}
     {editAccount && <AccountSheet account={editAccount} onClose={() => setEditAccount(null)} onSaved={() => setToast('Account updated on this device.')}/>}

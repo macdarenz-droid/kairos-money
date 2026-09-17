@@ -124,14 +124,7 @@ public class RevisionInstrumentedTest {
                     awaitJs("Boolean(document.querySelector('dialog')?.innerText.includes('Tier C')) && Boolean(Array.from(document.querySelectorAll('dialog button')).find(b=>b.textContent==='Confirm import' && !b.disabled))");
                     NativeEvidence.capture(activity,prefix+"-revision-tier-c");click("Confirm import");
                     awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Added 1 new transaction')");
-                    NativeEvidence.capture(activity,prefix+"-revision-result");click("Today");
-                    awaitJs("document.body.innerText.includes('9d') && Boolean(document.querySelector('.surface-muted'))");
-                    NativeEvidence.capture(activity,prefix+"-revision-stale");click("Bring my statements up to date");
-                    awaitJs("Boolean(document.querySelector('dialog')) && document.body.innerText.includes('Export ')");
-                    String range=js("document.querySelector('.export-range').textContent");
-                    assertTrue(range.contains(String.valueOf(end.minusDays(6).getDayOfMonth())));
-                    NativeEvidence.capture(activity,prefix+"-revision-update");
-                    js("document.querySelector('dialog .icon-button').click()");click("Ledger");
+                    NativeEvidence.capture(activity,prefix+"-revision-result");click("Ledger");
                 } finally { target.getContentResolver().delete(uri,null,null); }
                 String ambiguous="Kairos-ambiguous-"+prefix+".csv";
                 Uri mappingUri=download(ambiguous,(theme.equals("Dark")?"Transaction date,Details,Amount\n":"Date,Description,Amount\n")+"03/04/2026,Synthetic mapping "+prefix+",-4.00\n");
@@ -157,28 +150,5 @@ public class RevisionInstrumentedTest {
 
             }
         }
-    }
-    @Test public void b_localReminderDeliversAndCancelsWithoutNetwork() throws Exception {
-        InstrumentationRegistry.getInstrumentation().getUiAutomation().grantRuntimePermission(target.getPackageName(),android.Manifest.permission.POST_NOTIFICATIONS);
-        try {
-            android.app.NotificationManager manager=target.getSystemService(android.app.NotificationManager.class);
-            assertTrue("Notification permission was not enabled",manager.areNotificationsEnabled());
-            new ReminderReceiver().onReceive(target,new android.content.Intent(target,ReminderReceiver.class));
-            // NotificationManager enqueues asynchronously. Observe the actual
-            // notification before the finally block can cancel its queued post.
-            long deadline=SystemClock.uptimeMillis()+10000;
-            android.service.notification.StatusBarNotification delivered=null;
-            while(SystemClock.uptimeMillis()<deadline && delivered==null) {
-                for(android.service.notification.StatusBarNotification notification:manager.getActiveNotifications())
-                    if(notification.getId()==250 && "account-updates".equals(notification.getNotification().getChannelId()))delivered=notification;
-                if(delivered==null)SystemClock.sleep(100);
-            }
-            assertNotNull("Kairos account-update notification did not become active within 10 seconds",delivered);
-            assertEquals("Update accounts",delivered.getNotification().extras.getString(android.app.Notification.EXTRA_TITLE));
-            ReminderReceiver.cancel(target);
-            deadline=SystemClock.uptimeMillis()+10000;
-            while(SystemClock.uptimeMillis()<deadline && manager.getActiveNotifications().length>0)SystemClock.sleep(100);
-            assertEquals(0,manager.getActiveNotifications().length);
-        } finally { ReminderReceiver.cancel(target); }
     }
 }
