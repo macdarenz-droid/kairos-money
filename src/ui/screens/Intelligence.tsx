@@ -13,7 +13,12 @@ import type {Transaction} from '../../intelligence/model';
 import type {intelligenceRepository} from '../../ledger/intelligence';
 type Report=Awaited<ReturnType<ReturnType<typeof intelligenceRepository>['analyse']>>;
 export function Intelligence({mode='insights'}:{mode?:'insights'|'today'}){
- const session=useSession(),client=useQueryClient(),[code,setCode]=useState('AUD'),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null),[edit,setEdit]=useState<Transaction|null>(null),[reflection,setReflection]=useState(false),[goal,setGoal]=useState(false),[scenario,setScenario]=useState(false),[extra,setExtra]=useState('0'),[cut,setCut]=useState('0'),[applied,setApplied]=useState({extra:'0',cut:0}),[error,setError]=useState('');
+ const session=useSession(),client=useQueryClient(),[chosen,setCode]=useState<string|null>(null),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null),[edit,setEdit]=useState<Transaction|null>(null),[reflection,setReflection]=useState(false),[goal,setGoal]=useState(false),[scenario,setScenario]=useState(false),[extra,setExtra]=useState('0'),[cut,setCut]=useState('0'),[applied,setApplied]=useState({extra:'0',cut:0}),[error,setError]=useState('');
+ // The analysis opened in Australian dollars for everybody, because 'AUD' was the initial state of a
+ // picker. Someone whose money is in pesos got an empty screen and no clue why. It follows the display
+ // currency until they choose otherwise, and their choice then holds for the visit.
+ const home=useQuery({queryKey:['display-currency'],enabled:session.state==='ready',queryFn:()=>session.run(r=>r.displayCurrency())});
+ const code=chosen??home.data??'AUD';
  const today=localDay();const q=useQuery({queryKey:['intelligence',today,code,applied],queryFn:()=>session.run(r=>r.intelligence.analyse(today,code,applied.extra,applied.cut)),enabled:session.state==='ready',staleTime:0});
  const refresh=async()=>{await client.invalidateQueries({queryKey:['intelligence']});};
  const show=(title:string,ids:string[],text='')=>setDetail({title,ids,text});

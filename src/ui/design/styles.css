@@ -471,3 +471,32 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
     }
   }
 }
+
+/* ────────────────────────────────────────────────────────────────────────────────────────────────
+   SURFACES — the things the app shows only when they are true.
+
+   Deliberately plain: a surface earns attention by being RARE, not by being loud. If these needed a
+   border, an icon and a colour to be noticed, they would be appearing too often. */
+.surfaces { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
+.surface-card { display: flex; flex-direction: column; gap: 8px; }
+.surface-card p { color: var(--text-meta); }
+
+/* A length, not a sentence. The track is one month wide; the fill is what is left of it. */
+.runway, .fixed-free { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.runway-plot, .fixed-free-plot { width: 100%; height: 10px; display: block; border-radius: 5px; overflow: hidden; }
+.runway-track { fill: var(--surface-3); }
+.runway-fill { fill: var(--accent-text); }
+/* Under a week takes the warning ink — but the LENGTH already said it, and the caption says it in
+   words. Colour is never the only thing carrying the message. */
+.runway-fill-short { fill: var(--warning-text); }
+.fixed-free-committed { fill: var(--text-tertiary); }
+.fixed-free-left { fill: var(--accent-text); }
+.runway figcaption, .fixed-free figcaption { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+.runway figcaption strong, .fixed-free figcaption strong { font-size: 15px; line-height: 22px; color: var(--text-primary); font-weight: 600; }
+
+/* The fill grows from nothing on arrival, once, on the same tokens as everything else. A bar that
+   snaps to length reads as a static picture; one that grows reads as a measurement being taken. */
+@media (prefers-reduced-motion: no-preference) {
+  .runway-fill, .fixed-free-committed, .fixed-free-left { animation: measure var(--motion-sweep) var(--ease-out) both; transform-origin: left center; }
+}
+@keyframes measure { from { transform: scaleX(0); } to { transform: scaleX(1); } }
