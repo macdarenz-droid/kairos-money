@@ -43,7 +43,19 @@ export function ImportWorkspace({ accounts, request, consumed }: { accounts: Acc
   const [backupSuggested, setBackupSuggested] = useState(false), [backupOpen, setBackupOpen] = useState(false);
   // Only fetched once a hand-recorded row is actually open, because for every other row it is not needed.
   const [editEntry, setEditEntry] = useState<ManualEntry | null>(null), [removeEntry, setRemoveEntry] = useState<ManualEntry | null>(null), [matchEntry, setMatchEntry] = useState<ManualEntry | null>(null), [removeError, setRemoveError] = useState('');
-  const manualEntries = useQuery({ queryKey: ['manual'], queryFn: () => session.run(repo => repo.manual.list()), enabled: session.state === 'ready' && !!transaction?.manualId });
+  /**
+   * A CHILD KEY, NOT ['manual'] ITSELF.
+   *
+   * ManualSheet caches {entries, totals, unresolved} under ['manual']; this wants only the list. Sharing
+   * the key meant whichever resolved last won the cache, and the sheet then read `.entries` off a bare
+   * array — which is NOT undefined, because Array.prototype.entries is a real method, so the `?? []`
+   * fallback never fired and a function was spread as if it were a list. The sheet threw "entries is not
+   * iterable" and simply never opened, which on a device looks exactly like a button that does nothing.
+   *
+   * Nesting under ['manual'] keeps prefix invalidation working: anything that invalidates ['manual']
+   * still refreshes this.
+   */
+  const manualEntries = useQuery({ queryKey: ['manual', 'entries'], queryFn: () => session.run(repo => repo.manual.list()), enabled: session.state === 'ready' && !!transaction?.manualId });
   const openManual = (act: (entry: ManualEntry) => void) => { const entry = manualEntries.data?.find(e => e.id === transaction?.manualId); if (entry) { setTransaction(null); act(entry); } };
   const forget = useMutation({ mutationFn: (id: string) => session.run(repo => repo.manual.remove(id)), onSuccess: async () => { setRemoveEntry(null); await query.invalidateQueries(); }, onError: () => setRemoveError('The transaction could not be removed.') });
   // Matching is what stops the same purchase being counted twice once its statement arrives, so it kept

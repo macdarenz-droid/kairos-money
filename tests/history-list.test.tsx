@@ -88,6 +88,25 @@ it('carries no buttons on its rows, and opens the transaction when one is presse
   await screen.findByText('Supporting statements');
 });
 
+/**
+ * THE DEVICE'S EXACT ASSERTION. The Android flow opens the row, presses Edit and then types into the
+ * "Amount" field — and that field never appeared, four runs running. Delete alone did not cover it,
+ * because Edit and Delete fail differently: both are enabled the moment the entry list loads, but Edit
+ * has to hand a matching entry to the sheet, and a mismatch there does nothing at all rather than error.
+ */
+it('opens the entry for editing with its amount already in it', async () => {
+  await state.repo!.manual.save({id: 'by-hand', kind: 'expense', accountId: 'a', destinationId: null,
+    date: '2026-01-20', minor: '1250', description: 'Synthetic lunch', category: 'Eating out', notes: ''});
+  await open();
+  await waitFor(() => expect(rows()).toHaveLength(1));
+  fireEvent.click(rows()[0]!);
+  const edit = await screen.findByRole('button', {name: 'Edit'}) as HTMLButtonElement;
+  await waitFor(() => expect(edit.disabled).toBe(false));
+  fireEvent.click(edit);
+  const amount = await screen.findByLabelText('Amount') as HTMLInputElement;
+  expect(amount.value).toBe('12.50');
+});
+
 it('offers edit and delete on a hand-recorded transaction, and removes it', async () => {
   await state.repo!.manual.save({id: 'by-hand', kind: 'expense', accountId: 'a', destinationId: null,
     date: '2026-01-20', minor: '1250', description: 'Synthetic lunch', category: 'Eating out', notes: ''});
