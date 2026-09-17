@@ -65,6 +65,16 @@ public class IntelligenceInstrumentedTest {
         awaitJs("Boolean(document.querySelector('dialog[open]')) && document.querySelector('dialog').innerText.includes(" + JSONObject.quote(text) + ")");
     }
     /** Wait for the target to remain visible across frames, including asynchronous layout. */
+    /**
+     * Sections draw nothing until they have something to draw, so two of them depend on evidence this
+     * fixture does not guarantee: "Spending after payday" needs three recorded pay dates, and "What
+     * changed" needs two fully covered months. Captured when they are there, skipped when they are not;
+     * everything the fixture does guarantee is still asserted by captureHeading below.
+     */
+    private void captureHeadingIfPresent(String heading, String name) throws Exception {
+        String element = "Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,[role=heading]')).find(e=>e.textContent.trim()===" + JSONObject.quote(heading) + ")";
+        if ("true".equals(js("Boolean(" + element + ")"))) captureHeading(heading, name);
+    }
     private void captureHeading(String heading, String name) throws Exception {
         String element = "Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,[role=heading]')).find(e=>e.textContent.trim()===" + JSONObject.quote(heading) + ")";
         awaitJs("Boolean(" + element + ")");
@@ -224,11 +234,14 @@ public class IntelligenceInstrumentedTest {
                 awaitJs("document.querySelector('#settings-currency select').value==='USD'");
                 // The monthly views live on Insights now: derived money sits with the other derived money.
                 click("Insights");awaitJs("Boolean(document.querySelector('.fingerprint'))");
-                for(String heading:new String[]{"Money Fingerprint","Daily cashflow","Spending after payday","Recurring payment timeline","Spending by category","What changed","Recurring costs","Upcoming bills","Merchant history"}) {
+                for(String heading:new String[]{"Money Fingerprint","Daily cashflow","Recurring payment timeline","Spending by category","Recurring costs","Upcoming bills","Merchant history"}) {
                     if (heading.equals("Recurring payment timeline")) {
                         awaitJs("Array.from(document.querySelectorAll('[aria-label]')).some(e=>e.getAttribute('aria-label').startsWith('synthetic fortnightly membership:') && e.querySelectorAll('circle').length>0)");
                     }
                     captureHeading(heading,theme.toLowerCase()+"-monthly-"+heading.toLowerCase().replace(' ','-'));
+                }
+                for(String heading:new String[]{"Spending after payday","What changed"}) {
+                    captureHeadingIfPresent(heading,theme.toLowerCase()+"-monthly-"+heading.toLowerCase().replace(' ','-'));
                 }
                 click("Record cancellation · synthetic fortnightly membership");
                 input("Contact or confirmation date",java.time.LocalDate.now().minusDays(1).toString());

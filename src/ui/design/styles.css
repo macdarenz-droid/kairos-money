@@ -639,3 +639,19 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 
 .load-more { margin-top: 16px; display: grid; gap: 8px; justify-items: center; }
 .list-heading > div > .meta { margin-top: 2px; }
+
+/* Bars for "which of these is the big one": one hue stepped by magnitude, 8px tall with rounded ends
+   anchored to a shared left edge, and every bar still carries its own figure. */
+.ranked { margin: 24px 0 0; }
+.ranked-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 14px; }
+.ranked-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ranked-name { font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
+.ranked-amount { min-height: 32px; padding: 4px 0; font-size: 15px; font-weight: 600; }
+.ranked-track { display: block; height: 8px; margin-top: 6px; border-radius: 4px; background: var(--surface-2); }
+.ranked-fill { display: block; height: 100%; border-radius: 4px; min-width: 4px; }
+.ranked-fill[data-rank="0"] { background: var(--heat-5); }
+.ranked-fill[data-rank="1"] { background: var(--heat-4); }
+.ranked-fill[data-rank="2"] { background: var(--heat-3); }
+.ranked-fill[data-rank="3"] { background: var(--heat-2); }
+.ranked-fill[data-rank="4"] { background: var(--heat-1); }
+.ranked-fill[data-rank="5"] { background: var(--border-control); }

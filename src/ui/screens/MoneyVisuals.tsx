@@ -3,6 +3,7 @@ import {categoryAmounts} from '../../intelligence/allocations';
 import {Cancellations} from './Cancellations';
 import {activityHistory} from '../../intelligence/visuals/activity';
 import {CategorySplit} from '../design/CategorySplit';
+import {RankedBars} from '../design/RankedBars';
 import {TimingCharts} from './TimingCharts';
 import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
@@ -63,8 +64,14 @@ export function MoneyVisuals(){
  {activity.comparable&&activity.changes.length>0&&<h2>What changed</h2>}{activity.comparable&&activity.changes.map(c=><Row key={c.category} trailing={<Button variant="quiet" onClick={()=>show(c.category,c.ids,`Previous month ${c.previous}; selected month ${c.current} minor units. Difference is observed spending, not an inferred cause.`)}><Amount value={money(BigInt(c.difference),currency(code))} context={`change in ${c.category}`}/></Button>}>{c.category}</Row>)}
  {activity.recurring.length>0&&<span className="heading-row"><h2>Recurring costs</h2><Explain title="Recurring costs"><p>Patterns Kairos detected in your own payments, not confirmed contracts. A yearly figure assumes the current amount keeps repeating.</p><p>Removing one here does not cancel anything with the provider.</p></Explain></span>}{activity.recurring.map(r=><Row key={r.merchant} trailing={<Button variant="quiet" onClick={()=>show(r.merchant,r.evidence,`Estimated yearly cost ${r.annual} minor units; current payment ${r.minor}; repeats ${r.monthly?'monthly':`every ${r.interval} days`}. Before cancelling: check the provider and renewal date, save confirmation, then verify the next statement. Removing an expected bill does not cancel a contract.`)}><Amount value={money(BigInt(r.annual),currency(code))} context={`estimated yearly ${r.merchant}`}/></Button>}>{r.merchant}<p className="meta">Estimated yearly · next {r.next}</p></Row>)}
  <Cancellations code={currency(code)} merchants={activity.recurring.map(r=>r.merchant)} payments={historical(snapshot,{start:'1970-01-01',end:today,label:''}).filter(t=>BigInt(t.minor)<0n).map(t=>({merchant:t.description,date:t.date,id:t.id}))} review={(merchant,ids)=>show(merchant,ids,'Settled payments on dates after your recorded cancellation contact or confirmation. These may be final charges; check the provider confirmation and statement before acting.')}/>
- {activity.bills.length>0&&<span className="heading-row"><h2>Upcoming bills</h2><Explain title="Upcoming bills"><p>The next 30 days, worked out from payments that have already repeated. It is an expectation, not a confirmed charge — check dates with the provider.</p></Explain></span>}{activity.bills.map(b=><Row key={b.merchant+b.date} trailing={<Button variant="quiet" onClick={()=>show(b.merchant,b.ids,'Expected from previous settled payments; not confirmation of an upcoming charge.')}><Amount value={money(BigInt(b.minor),currency(code))} context={`expected ${b.merchant}`}/></Button>}>{b.date} · {b.merchant}</Row>)}
- {activity.merchants.length>0&&<h2>Merchant history</h2>}{activity.merchants.map(m=><Row key={m.name} trailing={<Button variant="quiet" onClick={()=>show(m.name,m.ids,`${m.count} settled purchases on covered days in ${w.label}.`)}><Amount value={money(BigInt(m.minor),currency(code))} context={m.name}/></Button>}>{m.name}<p className="meta">{m.count} purchases</p></Row>)}
+ {/* In date order, because the question is when; the step says which one is the big one. */}
+ <RankedBars heading="Upcoming bills" code={currency(code)} order="given"
+  trailing={<Explain title="Upcoming bills"><p>The next 30 days, worked out from payments that have already repeated. It is an expectation, not a confirmed charge — check dates with the provider.</p></Explain>}
+  items={activity.bills.map(b=>({name:`${b.date} · ${b.merchant}`,minor:b.minor,
+   onOpen:()=>show(b.merchant,b.ids,'Expected from previous settled payments; not confirmation of an upcoming charge.')}))}/>
+ <RankedBars heading="Merchant history" code={currency(code)} trailing={<span className="meta">{w.label}</span>}
+  items={activity.merchants.map(m=>({name:m.name,minor:m.minor,detail:`${m.count} ${m.count===1?'purchase':'purchases'}`,
+   onOpen:()=>show(m.name,m.ids,`${m.count} settled purchases on covered days in ${w.label}.`)}))}/>
  {detail&&<Sheet title={detail.title} onClose={()=>setDetail(null)}><p>{detail.text}</p>{snapshot.transactions.filter(t=>detail.ids.includes(t.id)).map(t=><div key={t.id}><Row trailing={<Amount value={money(BigInt(t.minor),t.currency)} context={t.description}/>}><h3>{t.description}</h3><p>{t.date} · {t.category}</p></Row><AllocationBreakdown parts={t.allocations} code={t.currency}/>{t.sources?.map((s,i)=><SourceLine key={i} file={s.file} row={s.row} raw={s.raw}/>)}</div>)}{!detail.ids.length&&<p>No source transactions are available for this value.</p>}</Sheet>}
  </section>;
 }
