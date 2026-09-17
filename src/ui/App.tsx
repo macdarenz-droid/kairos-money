@@ -6,7 +6,7 @@ import {FirstImport} from './screens/FirstImport';
 import {useQuickAddLaunch} from './quick-add';
 import { NotificationSync } from './screens/Notifications';
 import { Intelligence } from './screens/Intelligence';
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { Account } from '../core/db/repository';
 import { create } from 'zustand';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -31,6 +31,8 @@ const BulkProposals=lazy(()=>import('./screens/BulkProposals').then(module=>({de
 const NetWorth=lazy(()=>import('./screens/NetWorth').then(module=>({default:module.NetWorth})));
 import {Settings, type SettingsFocus} from './screens/Settings';
 const useNavigation = create<{ tab: Tab; setTab: (tab: Tab) => void }>(set => ({ tab: 'Today', setTab: tab => set({ tab }) }));
+// Left to right, as they sit in the tab bar. Travelling right brings a screen in from the right.
+const TAB_ORDER = ['Today', 'Ledger', 'Insights', 'You'] as const satisfies readonly Tab[];
 export default function App() {
   const { tab, setTab } = useNavigation(); const session = useSession(); const queryClient = useQueryClient();
   const [editAccount, setEditAccount] = useState<Account | null>(null);
@@ -39,6 +41,12 @@ export default function App() {
   const [importRequest, setImportRequest] = useState(0);
   const [settingsFocus, setSettingsFocus] = useState<SettingsFocus | null>(null);
   const clearFocus = useCallback(() => setSettingsFocus(null), []);
+  // Which way the screen should come in. Derived during render rather than in an effect: the wrapper
+  // is keyed by tab, so it mounts once and its animation starts immediately — a direction arriving one
+  // render later would either be missed or would restart the animation half way through. Held in a ref
+  // so that re-rendering the SAME tab cannot swap the animation-name under a running animation.
+  const nav = useRef<{ tab: Tab; direction: 'forward' | 'back' }>({ tab, direction: 'forward' });
+  if (nav.current.tab !== tab) nav.current = { tab, direction: TAB_ORDER.indexOf(tab) < TAB_ORDER.indexOf(nav.current.tab) ? 'back' : 'forward' };
   const consumeImport = useCallback(() => setImportRequest(0), []);
   const dismissToast = useCallback(() => setToast(''), []);
   const [quickAddRequest,setQuickAddRequest]=useState<string|null>(null);
@@ -93,6 +101,7 @@ export default function App() {
       <header className="screen-header"><div><h1>{tab}</h1></div>{tab === 'Ledger' && <Button variant="quiet" className="icon-button" aria-label="Add account" onClick={() => setSheet('account')}><Plus size={20}/></Button>}</header>
     {accounts.error && <p className="error" role="alert">Accounts could not be read. Lock and reopen Kairos before continuing.</p>}
     {quickAddError && <p className="error" role="alert">{quickAddError}</p>}
+    <div className="screen" key={tab} data-direction={nav.current.direction}>
     {tab === 'Today' && <><MoneyBand/>{session.state==='ready'&&days===0&&<FirstImport hasAccount={count>0} loading={accounts.isPending} onAccount={()=>setSheet('account')} onRecord={()=>setSheet('manual')} onRead={()=>{setTab('Ledger');setImportRequest(n=>n+1);}}/>}<ManualHistory accounts={accounts.data??[]} today/><Button variant="primary" onClick={()=>setSheet('manual')}>Add transaction</Button><Intelligence mode="today"/><Freshness accounts={accounts.data??[]} batches={statementData.data??[]} today={localDay()} onUpdate={()=>setSheet('update')} awaiting={awaitingStatement.data??0}/><SpendRing/></>}
     {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Skeleton label="Reading accounts"/> : count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Balance now</span></div>{accounts.data?.map(account => { const held = balances.data?.find(b => b.accountId === account.id); return <Row key={account.id} trailing={<Amount value={money(BigInt(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor), currency(account.currency))} context={`${account.name} balance`}/>}>{/* The row was a caption. An account is the one thing on this screen a person most expects to be able to open, and nothing happened when he pressed it. */}<button type="button" className="account-open" onClick={() => setEditAccount(account)}><span className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><span><h3>{account.name}</h3><p className="account-meta">{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}{primaryAccount.data === account.id && <span className="tag tag-primary">Primary</span>}{account.archived_at && <span className="tag">Closed</span>}</p></span></span><ChevronRight size={16}/></button></Row>; })}</> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}<CombinedTotal accounts={accounts.data ?? []} balances={balances.data}/>{!(session.state==='ready' && accounts.isPending)&&<Suspense fallback={<Skeleton label="Opening imports"/>}><ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport}/></Suspense>}</>}
     {tab === 'Ledger' && count>0 && <><Suspense fallback={null}><BulkProposals/></Suspense><Button onClick={()=>setSheet('manual')}>Add transaction</Button><ManualHistory accounts={accounts.data??[]}/></>}
@@ -100,6 +109,7 @@ export default function App() {
       <details className="section-gap"><summary>Habits</summary><Intelligence/></details>
       <details><summary>Every measure</summary><Suspense fallback={<Skeleton label="Opening money analysis"/>}><Analysis/></Suspense></details></>}
     {tab === 'You' && <><Suspense fallback={<Skeleton label="Opening your money views"/>}><MoneyVisuals/><NetWorth/></Suspense><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []} focus={settingsFocus} onFocused={clearFocus}/></>}
+    </div>
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} onClose={()=>setSheet(null)}/>}
     {sheet === 'update' && <UpdateAccounts accounts={accounts.data??[]} batches={statementData.data??[]} today={localDay()} onClose={()=>setSheet(null)} onImport={()=>{setTab('Ledger');setSheet(null);setImportRequest(n=>n+1);}}/>}
