@@ -45,7 +45,6 @@ export type MoneyFlow = {
 export const MAX_BANDS = 6;
 /** The gathered tail is named rather than hidden; a chart that quietly drops money is a lie. */
 export const OTHER = 'Other';
-export const LEFTOVER = 'Left over';
 
 export type Amount = {id: string; label: string; minor: string};
 
@@ -93,20 +92,21 @@ export function moneyFlow(income: readonly Amount[], spending: readonly Amount[]
   // income look identical to one that spent half — the comparison IS the chart.
   const scale = totalIn > totalOut ? totalIn : totalOut;
 
-  // What is left is drawn on the spending side, because it is where the money ended up — but ALWAYS
-  // LAST, and never inside the sort. Ranked by size among the categories it reads as another thing you
-  // spent on, which it is precisely not; and counted against MAX_BANDS it pushes a real category into
-  // "Other", so a month with something left over would show less of where the money actually went.
+  // WHAT IS LEFT IS NOT A BAND. It was one, placed last on the spending side, and that quietly destroyed
+  // the only thing this chart had to say: a leftover band makes both stacks exactly the same height by
+  // construction, so the joining band ran dead flat and the taper — the whole picture — could never
+  // appear in a month that had anything left. It showed up only when overspending, which is half the
+  // cases and the wrong half to design for.
   //
-  // An overspend gets no band at all: the out stack is simply taller than the in stack, which is the
-  // picture, and "Left over: -400" would be a sentence pretending to be a quantity.
-  const destinations = [...gather(spending),
-    ...(leftover > 0n ? [{id: 'leftover', label: LEFTOVER, minor: leftover.toString()}] : [])];
+  // So the out stack is what actually went out, and a surplus is the space it does not reach. The band
+  // then tapers IN when less left than arrived and swells OUT when more did, which is one shape reading
+  // correctly in both directions. The figure itself is in the caption, where a number belongs.
+  const destinations = gather(spending);
 
   return {
     totalInMinor: totalIn.toString(), totalOutMinor: totalOut.toString(), leftoverMinor: leftover.toString(),
     sources: stack(gather(income), scale), destinations: stack(destinations, scale),
     inHeight: displayRatio(totalIn.toString(), scale.toString()),
-    outHeight: displayRatio((totalOut + (leftover > 0n ? leftover : 0n)).toString(), scale.toString()),
+    outHeight: displayRatio(totalOut.toString(), scale.toString()),
   };
 }

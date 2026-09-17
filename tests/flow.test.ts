@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {LEFTOVER, MAX_BANDS, OTHER, moneyFlow, type Amount} from '../src/intelligence/visuals/flow';
+import {MAX_BANDS, OTHER, moneyFlow, type Amount} from '../src/intelligence/visuals/flow';
 
 const a = (id: string, minor: string, label = id): Amount => ({id, label, minor});
 const sum = (bands: {minor: string}[]) => bands.reduce((total, b) => total + BigInt(b.minor), 0n).toString();
@@ -10,14 +10,19 @@ describe('the money flow', () => {
     expect(moneyFlow([a('x', '0')], [a('y', '0')])).toBeNull();
   });
 
-  /** The two sides share one scale: the comparison between them IS the chart. */
-  it('scales both sides against the larger of the two', () => {
+  /**
+   * THE TAPER MUST WORK IN BOTH DIRECTIONS, and this is the test that would have caught it not doing so.
+   *
+   * What is left was once drawn as a band on the spending side, which made both stacks exactly the same
+   * height whenever anything was left over — so the joining band ran dead flat and the picture said
+   * nothing in every month that went well. A surplus is the height the out stack does NOT reach.
+   */
+  it('leaves the spending side short by whatever was not spent', () => {
     const flow = moneyFlow([a('pay', '100000')], [a('rent', '50000')])!;
     expect(flow.inHeight).toBe('1000000');
-    // Spending plus what is left fills the same height, because that is where the money ended up.
-    expect(flow.outHeight).toBe('1000000');
+    expect(flow.outHeight).toBe('500000');
     expect(flow.leftoverMinor).toBe('50000');
-    expect(flow.destinations.map(d => d.label)).toEqual(['rent', LEFTOVER]);
+    expect(flow.destinations.map(d => d.label)).toEqual(['rent']);
   });
 
   /** An overspend has no leftover band — the out stack is simply taller, and that is the picture. */
@@ -44,25 +49,18 @@ describe('the money flow', () => {
   it('gathers the tail into one named band rather than dropping it', () => {
     const many = Array.from({length: 12}, (_, i) => a(`c${i}`, String(1200 - i * 100)));
     const flow = moneyFlow([a('pay', '100000')], many)!;
-    const bands = flow.destinations.filter(d => d.label !== LEFTOVER);
+    const bands = flow.destinations;
     expect(bands).toHaveLength(MAX_BANDS);
     expect(bands.at(-1)?.label).toBe(OTHER);
     expect(sum(bands)).toBe(sum(many));
   });
 
-  /**
-   * Ranked among the categories, "Left over" reads as another thing you spent on. And counted against
-   * MAX_BANDS it pushes a real category into "Other" — so the month you actually had something left is
-   * the month the chart tells you least about where the money went.
-   */
-  it('always puts what is left last, and never at a category’s expense', () => {
-    const equal = moneyFlow([a('pay', '100000')], [a('rent', '50000')])!;
-    expect(equal.destinations.map(d => d.label)).toEqual(['rent', LEFTOVER]);
-
+  /** Every band is a category, so a month with money left still shows all six of them. */
+  it('spends its bands on categories, never on the surplus', () => {
     const many = Array.from({length: 12}, (_, i) => a(`c${i}`, String(1200 - i * 100)));
     const flow = moneyFlow([a('pay', '100000')], many)!;
-    expect(flow.destinations.at(-1)?.label).toBe(LEFTOVER);
-    expect(flow.destinations.filter(d => d.label !== LEFTOVER)).toHaveLength(MAX_BANDS);
+    expect(flow.destinations).toHaveLength(MAX_BANDS);
+    expect(BigInt(flow.leftoverMinor) > 0n).toBe(true);
   });
 
   it('leaves a short list alone', () => {
@@ -77,10 +75,12 @@ describe('the money flow', () => {
     expect(flow.sources.map(s => s.label)).toEqual(['pay']);
   });
 
+  /** Nothing spent is a real answer: a full in stack and no out stack at all. */
   it('draws a side with income but nothing spent', () => {
     const flow = moneyFlow([a('pay', '100000')], [])!;
-    expect(flow.destinations.map(d => d.label)).toEqual([LEFTOVER]);
-    expect(flow.outHeight).toBe('1000000');
+    expect(flow.destinations).toEqual([]);
+    expect(flow.inHeight).toBe('1000000');
+    expect(flow.outHeight).toBe('0');
   });
 
   /** Every band's height must add up to its side, or the picture is not of this ledger. */

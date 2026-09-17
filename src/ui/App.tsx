@@ -33,6 +33,7 @@ const NetWorth=lazy(()=>import('./screens/NetWorth').then(module=>({default:modu
 const Debts=lazy(()=>import('./screens/Debts').then(module=>({default:module.Debts})));
 const DebtShape=lazy(()=>import('./screens/Debts').then(module=>({default:module.DebtShape})));
 const People=lazy(()=>import('./screens/People').then(module=>({default:module.People})));
+const MoneyFlowCard=lazy(()=>import('./screens/MoneyFlowCard').then(module=>({default:module.MoneyFlowCard})));
 import {Settings, type SettingsFocus} from './screens/Settings';
 const useNavigation = create<{ tab: Tab; setTab: (tab: Tab) => void }>(set => ({ tab: 'Today', setTab: tab => set({ tab }) }));
 // Left to right, as they sit in the tab bar. Travelling right brings a screen in from the right.
@@ -111,8 +112,8 @@ export default function App() {
     {tab === 'Ledger' && count>0 && <><Suspense fallback={null}><BulkProposals/></Suspense><Button onClick={()=>setSheet('manual')}>Add transaction</Button></>}
     {tab === 'Ledger' && <Suspense fallback={null}><Debts accounts={accounts.data??[]}/><People/></Suspense>}
     {tab === 'Insights' && <><Suspense fallback={<Skeleton label="Opening spending patterns"/>}><SpendingPatterns/></Suspense>
-      {/* Renders nothing at all when no debt is recorded — an empty debt chart is a chart about nothing. */}
-      <Suspense fallback={null}><DebtShape/></Suspense>
+      {/* Both render nothing at all when there is nothing to draw: an empty chart is a chart about nothing. */}
+      <Suspense fallback={null}><MoneyFlowCard/><DebtShape/></Suspense>
       <details className="section-gap"><summary>Habits</summary><Intelligence/></details>
       <details><summary>Every measure</summary><Suspense fallback={<Skeleton label="Opening money analysis"/>}><Analysis/></Suspense></details></>}
     {tab === 'You' && <><Suspense fallback={<Skeleton label="Opening your money views"/>}><MoneyVisuals/><NetWorth/></Suspense><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []} focus={settingsFocus} onFocused={clearFocus}/></>}

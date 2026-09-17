@@ -122,6 +122,44 @@ export function importService(driver: Driver) {
       await save(doc);
     });
   }
+  /**
+   * "when i click confirm, nothing happens."
+   *
+   * Confirm was disabled, because rows the app is unsure about have to be settled first. Most of them
+   * were one question asked many times over: a statement full of the same $11.95 at the same petrol
+   * station on three consecutive days, and the same $1.90 twice in one afternoon. Of 44 uncertain rows
+   * in his file, 34 were that — identical to another row IN THE SAME FILE — and answering them one sheet
+   * at a time is not review, it is attrition.
+   *
+   * So they are answered once. Every row that looks like another row in this same file is marked a
+   * separate purchase, which is what RowCorrection's "Keep as a separate purchase" does for one row.
+   *
+   * WHAT THIS DELIBERATELY WILL NOT TOUCH: a row that resembles something ALREADY IN THE LEDGER. That is
+   * the case where saying "they are both real" double counts money, and it is the one that has to be
+   * looked at. Categories are left alone too, so this and "Use these categories" can be pressed in
+   * either order without one undoing the other.
+   *
+   * @returns how many rows it settled, so the screen can say so rather than appear to do nothing.
+   */
+  async function keepSeparate(id: string) {
+    return driver.transaction(async () => {
+      const check = await review(id);
+      const doc = (await batches()).find(b => b.id === id);
+      if (!doc || !['staged', 'quarantined'].includes(doc.status)) throw new Error('Only staged rows can be corrected.');
+      let settled = 0;
+      for (const item of check.items) {
+        if (!item.blocked || (!item.collision && item.near.length === 0)) continue;
+        if (item.near.some(r => r.sources.some(source => source.batchId !== id))) continue;
+        const row = doc.rows.find(r => r.sourceId === item.row.sourceId);
+        if (!row) continue;
+        Object.assign(row, {occurrence: row.reference || `${id}:${row.sourceId}`, duplicateOf: null, verified: true, issues: []});
+        row.fingerprint = rowFingerprint(row);
+        settled += 1;
+      }
+      if (settled) { validate(doc); await save(doc); }
+      return settled;
+    });
+  }
   async function rebuild() {
     const docs = (await batches()).filter(b => b.status === 'committed');
     const ledger = await reconcileAsync(docs);
@@ -244,5 +282,5 @@ export function importService(driver: Driver) {
   async function commitSession(ids: string[]) { return driver.transaction(async()=> { const results=[]; for(const id of ids) results.push(await commitUnlocked(id)); return results; }); }
   async function reminderDay(): Promise<number|null> { const r=(await driver.query("SELECT value FROM app_settings WHERE key='update-reminder'"))[0]; if(!r)return null;const value=JSON.parse(String(r.value)) as unknown;return typeof value==='number' && Number.isInteger(value)&&value>=0&&value<=6?value:null; }
   async function setReminderDay(day:number|null) { if(day!==null&&(!Number.isInteger(day)||day<0||day>6))throw new Error('Choose a weekday.');await driver.execute("INSERT OR REPLACE INTO app_settings(key,value) VALUES('update-reminder',?)",[JSON.stringify(day)]); }
-  return { workspace, ledgerPage, ledgerBulk, ledgerHealth, leaveCategoriesUnassigned, useSuggestedCategories, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
+  return { workspace, keepSeparate, ledgerPage, ledgerBulk, ledgerHealth, leaveCategoriesUnassigned, useSuggestedCategories, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
 }

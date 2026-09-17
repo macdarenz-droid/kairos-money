@@ -146,6 +146,7 @@ function BatchReview({ id, onClose, onResult }: { id: string; onClose: () => voi
   const session = useSession(), query = useQueryClient(); const [selected, setSelected] = useState<Review['items'][number] | null>(null), [shown, setShown] = useState(FIRST);
   const review = useQuery({ queryKey: ['import-review', id], queryFn: () => session.run(repo => repo.imports.review(id)) });
   const commit = useMutation({ mutationFn: () => session.run(repo => repo.imports.commit(id)), onSuccess: async result => { onResult(importResultSentence([result]), result.added + result.superseded); await query.invalidateQueries(); onClose(); } });
+  const keepAll = useMutation({ mutationFn: () => session.run(repo => repo.imports.keepSeparate(id)), onSuccess: () => query.invalidateQueries({ queryKey: ['import-review', id] }) });
   const discard = useMutation({ mutationFn: () => session.run(repo => repo.imports.rollback(id)), onSuccess: async () => { await query.invalidateQueries(); onClose(); } });
   const leaveCategories = useMutation({ mutationFn: () => session.run(repo => repo.imports.leaveCategoriesUnassigned(id)), onSuccess: () => query.invalidateQueries({ queryKey: ['import-review', id] }) });
   const useSuggested = useMutation({ mutationFn: () => session.run(repo => repo.imports.useSuggestedCategories(id)), onSuccess: () => query.invalidateQueries({ queryKey: ['import-review', id] }) });
@@ -154,9 +155,23 @@ function BatchReview({ id, onClose, onResult }: { id: string; onClose: () => voi
   // at the top of a 733-row import while the rows that actually block Confirm — the ones needing review —
   // sat at position four hundred, with the button greyed out and nothing on screen saying why. Ordering by
   // what needs a decision costs nothing and makes the short list the useful one.
+  // Rows whose look-alikes are all inside this same file, which is the question that can be answered once.
+  const sameFileLookalikes = (value?.items ?? []).filter(item => item.blocked && (item.collision || item.near.length > 0)
+    && !item.near.some(r => r.sources.some(source => source.batchId !== id))).length;
+  // Why the confirm cannot be pressed, in the words somebody would use about their own statement.
+  const blocking = !value || value.doc.status === 'committed' ? ''
+    : !value.balance.valid ? 'The running balance in this file does not add up, so it is quarantined rather than added.'
+    : value.uncertainCount > 0 ? `${value.uncertainCount} ${value.uncertainCount === 1 ? 'row needs' : 'rows need'} a decision before this can be added. They are at the top of the list, marked “Review needed”.`
+    : '';
   const ordered = value ? [...value.items].sort((a, b) =>
     (a.blocked ? 0 : a.duplicate ? 1 : 2) - (b.blocked ? 0 : b.duplicate ? 1 : 2)) : [];
   return <Sheet title="Review import" onClose={() => { if (!commit.isPending && !discard.isPending) onClose(); }}><div className="stack" aria-busy={commit.isPending || undefined}>{review.error && <Failure error={review.error}/>} {value && <><p>{value.doc.fileName}</p>{value.doc.status === 'committed' ? <p>This file is already imported. No transactions were added a second time.</p> : <><div className="review-counts"><span>{value.newCount} new</span><span>{value.duplicateCount} duplicates skipped</span><span>{value.uncertainCount} uncertain</span>{value.supersededCount>0 && <span>{value.supersededCount} pending updated</span>}</div><p>{value.doc.integrityTier==='C' ? `Tier C · Continuity-checked · balance unverified. ${value.continuity==='gap'?'There is a coverage gap before this export.':value.continuity==='first-import'?'This is the first covered period.':'This range overlaps or continues existing coverage.'}` : value.doc.integrityTier==='B' && value.balance.valid ? 'Tier B · Running-balance-verified' : value.balance.valid ? '✓ Balance check passed' : `Balance mismatch: ${format(money(value.balance.difference, value.doc.context.currency))}. This import is quarantined.`}</p><p>{coveredDays(value.coverageAdded)} new covered days. Coverage: {value.doc.context.period.start}–{value.doc.context.period.end}{value.doc.payslip ? ' · Payslips do not add statement coverage' : ''}</p>{!value.doc.payslip && (!value.doc.integrityTier || value.doc.integrityTier==='A') && <BalanceCorrection review={value}/>}{value.doc.payslip && <div className="stack"><h3>{value.doc.payslip.employer}</h3><p>Pay date {value.doc.payslip.payDate}</p>{(['gross', 'net', 'tax', 'super'] as const).map(key => <Row key={key} trailing={<Amount value={money(BigInt(value.doc.payslip![key]), value.doc.context.currency)} context={`Payslip ${key}`}/>}>{key === 'gross' ? 'Gross pay' : key === 'net' ? 'Net pay' : key === 'tax' ? 'Tax withheld' : 'Super / pension'}</Row>)}<PayslipCorrection review={value}/><p className="meta">Gross includes allowances. Deductions reduce net pay; employer super does not. Check these values against your source.</p></div>}
+    {sameFileLookalikes > 0 && <div className="stack">
+      <p>{sameFileLookalikes} {sameFileLookalikes === 1 ? 'row looks' : 'rows look'} identical to another row in this same file — the same amount, at the same place, on the same day. That is usually exactly what it is: the same thing bought twice.</p>
+      <Button variant="primary" disabled={keepAll.isPending || commit.isPending} onClick={() => keepAll.mutate()}>{keepAll.isPending ? 'Settling…' : `Keep all ${sameFileLookalikes} as separate purchases`}</Button>
+      <p className="meta">Anything that looks like a transaction already in your ledger is left out of this and still has to be checked on its own, because that is where the same money can be counted twice.</p>
+      {keepAll.error && <Failure error={keepAll.error}/>}
+    </div>}
     {value.items.some(item => item.categoryOnly) && <div className="stack">
       <p>{value.items.filter(item => item.categoryOnly).length} {value.items.filter(item => item.categoryOnly).length === 1 ? 'purchase has a category' : 'purchases have categories'} worked out from the statement wording, with less than full certainty. Accepting them takes one press, and any of them can be changed afterwards in the ledger.</p>
       <Button variant="primary" disabled={useSuggested.isPending || leaveCategories.isPending || commit.isPending} onClick={() => useSuggested.mutate()}>Use these categories</Button>
@@ -169,7 +184,11 @@ function BatchReview({ id, onClose, onResult }: { id: string; onClose: () => voi
         long list leaves the screen looking stuck. The wait belongs where the eye is, and it says what it is
         waiting for. */}
     {commit.isPending && <BusyOverlay message="Adding these transactions to your ledger…"/>}
-    <div className="form-actions sheet-actions"><Button disabled={commit.isPending || discard.isPending} onClick={() => discard.mutate()}>Discard import</Button><Button variant="primary" disabled={!value.balance.valid || value.uncertainCount > 0 || commit.isPending || discard.isPending} onClick={() => commit.mutate()}>{commit.isPending ? 'Committing…' : 'Confirm import'}</Button></div></>}</>}{selected && <RowCorrection id={id} item={selected} onClose={() => setSelected(null)}/>}</div></Sheet>;
+    {/* A DISABLED BUTTON THAT DOES NOT SAY WHY IS A BROKEN BUTTON. "when i click confirm, nothing happens"
+        — it was refusing because rows were unsettled, and the only place that was written down was the
+        word "uncertain" in a row of counts at the top of a long list. */}
+    {blocking && <p role="status" className="import-blocked">{blocking}</p>}
+    <div className="form-actions sheet-actions"><Button disabled={commit.isPending || discard.isPending} onClick={() => discard.mutate()}>Discard import</Button><Button variant="primary" disabled={!!blocking || commit.isPending || discard.isPending} onClick={() => commit.mutate()}>{commit.isPending ? 'Committing…' : 'Confirm import'}</Button></div></>}</>}{selected && <RowCorrection id={id} item={selected} onClose={() => setSelected(null)}/>}</div></Sheet>;
 }
 function BalanceCorrection({ review }: { review: Review }) {
   const session = useSession(), query = useQueryClient(); const code = review.doc.context.currency;
