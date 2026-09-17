@@ -15,7 +15,10 @@ const served: string[] = [];
 function serve(byDay: Record<string, string>) {
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = new URL(String(input));
-    const asked = url.pathname.slice(1);
+    // Every endpoint of the source sits under /v1; the day (or `latest`) is the segment after it. Pinned
+    // here rather than shrugged off, so a request that loses the prefix fails a test instead of a phone.
+    expect(url.pathname.startsWith('/v1/')).toBe(true);
+    const asked = url.pathname.slice('/v1/'.length);
     served.push(asked);
     const date = byDay[asked];
     if (!date) return new Response('no', {status: 404});

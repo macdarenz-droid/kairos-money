@@ -38,10 +38,21 @@ describe('what the rate fetch says when it does not come back', () => {
   it('asks for the display currency as the base and reads the rates exactly', async () => {
     const spy = answer({base: 'PHP', date: '2026-09-16', rates: {AUD: 0.0264, USD: 0.0177}});
     const response = await fetchRates(PHP, [AUD, USD]);
-    expect(String(spy.mock.calls[0]?.[0])).toBe('https://api.frankfurter.dev/latest?from=PHP&to=AUD,USD');
+    expect(String(spy.mock.calls[0]?.[0])).toBe('https://api.frankfurter.dev/v1/latest?base=PHP&symbols=AUD,USD');
     expect(response.asOf).toBe('2026-09-16');
     expect(response.rates.AUD).toBe(2640000n);
     expect(response.rates.USD).toBe(1770000n);
+  });
+
+  /**
+   * THE PATH IS PART OF THE ADDRESS. The old host answered /latest?from=…&to=…; the one it redirects to
+   * serves everything under /v1 and names the currencies base and symbols. A host moved without its path
+   * would have turned "Failed to fetch" into a 404 and cost another round on his phone to discover.
+   */
+  it('asks a day of the past by putting the date where latest goes', async () => {
+    const spy = answer({base: 'PHP', date: '2026-09-16', rates: {AUD: 0.0264}});
+    await fetchRates(PHP, [AUD], '2026-09-16');
+    expect(String(spy.mock.calls[0]?.[0])).toBe('https://api.frankfurter.dev/v1/2026-09-16?base=PHP&symbols=AUD');
   });
 
   /** A source answering about a different currency would file PHP rates under the wrong base. */

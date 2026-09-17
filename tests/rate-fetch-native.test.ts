@@ -14,7 +14,7 @@ beforeEach(() => { cap.native = true; cap.request.mockReset(); });
 afterEach(() => vi.restoreAllMocks());
 
 const answered = (over: Record<string, unknown> = {}) => cap.request.mockResolvedValue({
-  status: 200, url: 'https://api.frankfurter.dev/latest?from=PHP&to=AUD', headers: {},
+  status: 200, url: 'https://api.frankfurter.dev/v1/latest?base=PHP&symbols=AUD', headers: {},
   data: JSON.stringify({base: 'PHP', date: '2026-09-16', rates: {AUD: 0.0264}}), ...over});
 
 /**
@@ -48,8 +48,8 @@ describe('reading rates on the phone', () => {
    * rather than the old address.
    */
   it('refuses an answer from an address it was not set up for, and names it', async () => {
-    answered({url: 'https://rates.example.invalid/latest?from=PHP&to=AUD'});
-    await expect(fetchRates(PHP, [AUD])).rejects.toThrow(/redirected to https:\/\/rates\.example\.invalid\/latest/);
+    answered({url: 'https://rates.example.invalid/v1/latest?base=PHP&symbols=AUD'});
+    await expect(fetchRates(PHP, [AUD])).rejects.toThrow(/redirected to https:\/\/rates\.example\.invalid\/v1\/latest/);
   });
 
   it('accepts the answer when it came from the address it asked', async () => {

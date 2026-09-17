@@ -114,7 +114,21 @@ export async function fetchRates(base: Currency, quotes: readonly Currency[], on
   if (!wanted.length) return { asOf: on ?? '', base, rates: {} };
   if (on !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(on)) throw new Error('Ask for rates on a calendar date.');
 
-  const url = `${HOST}/${on ?? 'latest'}?from=${base}&to=${wanted.join(',')}`;
+  /**
+   * THE PATH AND THE PARAMETERS ARE THE .dev API'S, NOT THE OLD HOST'S.
+   *
+   * api.frankfurter.app answered `/latest?from=AUD&to=PHP`. The address it redirects to is a different
+   * API surface: every endpoint sits under /v1, and the currencies are named by `base` and `symbols`.
+   * Moving the host without moving the path would have traded "Failed to fetch" for a 404 — a different
+   * message for the same nothing, and another round on his phone to find out.
+   *
+   *   https://api.frankfurter.dev/v1/latest?base=PHP&symbols=AUD,USD
+   *   https://api.frankfurter.dev/v1/2026-09-16?base=PHP&symbols=AUD
+   *
+   * A day is asked for by putting the date where `latest` goes, which is why storing rates by date costs
+   * nothing here: the same request shape answers "today" and "the day that purchase settled".
+   */
+  const url = `${HOST}/v1/${on ?? 'latest'}?base=${base}&symbols=${wanted.join(',')}`;
 
   /**
    * A REQUEST THAT NEVER COMPLETED SAYS WHAT WAS TRIED, RATHER THAN "Failed to fetch".
