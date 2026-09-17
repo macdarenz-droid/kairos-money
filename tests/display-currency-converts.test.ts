@@ -94,3 +94,71 @@ describe('showing amounts in another currency', () => {
     expect((await repo.imports.ledgerPage('', 0, 5)).rows[0]?.minor).toBe('-1250');
   });
 });
+
+/**
+ * "what if i set to usd, samething happens?"
+ *
+ * Yes — there is one code path, not a rule per currency. Every supported currency is checked here so
+ * that stays true, including the two that break a conversion written carelessly: JPY has no minor units
+ * at all and KWD has three, so a conversion that forgets to rescale is out by a hundred or a thousand
+ * and says nothing. A$12.50 is the same purchase in every row below.
+ *
+ * Worth recording that this row caught ME rather than the code: I wrote 0.026 for the KWD case, having
+ * divided correctly and then written the answer in two decimal places out of habit. 12.50 / 4.90 is
+ * 2.551 KWD, which in three-decimal minor units is 2551. That is the exact mistake the row exists for.
+ */
+describe('every currency, not just the one that was asked about', () => {
+  /** base = the DISPLAY currency, which is the direction Rates.tsx actually stores. */
+  const at = (quote: string, rateE8: bigint) =>
+    [{asOf: '2026-01-01', base: quote, quote: 'AUD', rateE8, source: 'synthetic'}];
+
+  it.each([
+    // display, AUD per 1 unit of display, what 12.50 AUD comes to
+    ['USD', 150000000n, '-833'],      // 1.50 AUD per USD -> 8.33
+    ['PHP', 2640000n, '-47348'],      // 0.0264 AUD per PHP -> 473.48
+    ['EUR', 165000000n, '-758'],      // 1.65 AUD per EUR -> 7.58
+    ['GBP', 195000000n, '-641'],      // 1.95 AUD per GBP -> 6.41
+    ['SGD', 115000000n, '-1087'],     // 1.15 AUD per SGD -> 10.87
+    ['JPY', 1000000n, '-1250'],       // 0.01 AUD per JPY -> 1250 yen, and yen has NO minor units
+    ['KWD', 490000000n, '-2551'],     // 4.90 AUD per KWD -> 2.551, and KWD has THREE, so 2551
+  ])('shows an AUD ledger in %s', async (code, rateE8, expected) => {
+    const repo = await ledger();
+    await repo.saveRates(at(code, rateE8));
+    const snapshot = await repo.intelligence.snapshot('2026-01-31', code);
+    expect(snapshot.transactions[0]!.minor).toBe(expected);
+    expect(snapshot.transactions[0]!.currency).toBe(code);
+    expect(snapshot.unconverted).toBeUndefined();
+  });
+
+  /**
+   * A ledger holding two currencies, shown in one of them: the foreign side converts and the side
+   * already in that currency passes through untouched rather than round-tripping through a rate.
+   */
+  it('converts the foreign side and leaves the native side exactly as it stands', async () => {
+    const repo = await ledger();
+    await repo.addAccount({id: 'u', name: 'Offshore', institution: '', type: 'checking',
+      currency: 'USD', mask_last4: null, opening_balance_minor: 0n});
+    await repo.manual.save({id: 'u1', kind: 'expense', accountId: 'u', destinationId: null,
+      date: '2026-01-20', minor: '2000', description: 'Synthetic dinner', category: 'Eating out', notes: ''});
+    await repo.saveRates(at('USD', 150000000n));
+
+    const snapshot = await repo.intelligence.snapshot('2026-01-31', 'USD');
+    const by = (text: string) => snapshot.transactions.find(t => t.description === text)!.minor;
+    expect(by('Synthetic lunch')).toBe('-833');   // 12.50 AUD converted
+    expect(by('Synthetic dinner')).toBe('-2000'); // 20.00 USD untouched
+    expect(snapshot.unconverted).toBeUndefined();
+  });
+
+  /** Held in two currencies, shown in a third it has no rate for: both are named, neither is invented. */
+  it('names every currency it cannot reach, not just the first', async () => {
+    const repo = await ledger();
+    await repo.addAccount({id: 'u', name: 'Offshore', institution: '', type: 'checking',
+      currency: 'USD', mask_last4: null, opening_balance_minor: 0n});
+    await repo.manual.save({id: 'u1', kind: 'expense', accountId: 'u', destinationId: null,
+      date: '2026-01-20', minor: '2000', description: 'Synthetic dinner', category: 'Eating out', notes: ''});
+
+    const snapshot = await repo.intelligence.snapshot('2026-01-31', 'PHP');
+    expect(snapshot.transactions).toHaveLength(0);
+    expect(snapshot.unconverted).toEqual(['AUD', 'USD']);
+  });
+});
