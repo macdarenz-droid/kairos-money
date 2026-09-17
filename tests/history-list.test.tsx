@@ -38,8 +38,10 @@ beforeEach(async () => {
 });
 afterEach(cleanup);
 
+let client: QueryClient;
 async function open() {
-  render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+  client = new QueryClient({defaultOptions: {queries: {retry: false}}});
+  render(<QueryClientProvider client={client}>
     <ImportWorkspace accounts={await state.repo!.accounts()} request={0} consumed={() => undefined}/>
   </QueryClientProvider>);
 }
@@ -174,4 +176,53 @@ it('says so when the entry behind a hand-recorded row has gone', async () => {
   await waitFor(() => expect(edit.disabled).toBe(false));
   fireEvent.click(edit);
   await screen.findByText(/no longer there/);
+});
+
+/**
+ * THE DEVICE'S ACTUAL FAILURE, which passed on the first hand-recorded transaction every time and
+ * failed on the second, four runs running.
+ *
+ * The entry list was cached under a query that was only enabled while such a row was open. Recording
+ * the second transaction invalidated a DISABLED query — React Query marks that stale and does not
+ * refetch it — so opening the next row was served the list as it stood when the FIRST row was open.
+ * The new id was not in it and Edit did nothing at all.
+ *
+ * Reproducing it needs the order the device had: open one, which fills the cache; record another, which
+ * only invalidates; then open that one. Saving both up front fills the cache with both and the bug
+ * cannot appear, which is exactly why every earlier test of mine passed.
+ */
+it('opens a hand-recorded transaction recorded after the list was last read', async () => {
+  await state.repo!.manual.save({id: 'first', kind: 'expense', accountId: 'a', destinationId: null,
+    date: '2026-01-20', minor: '1250', description: 'Synthetic lunch', category: 'Eating out', notes: ''});
+  await open();
+  await waitFor(() => expect(rows()).toHaveLength(1));
+
+  // Open the first one, which is what fills the cache this used to read.
+  fireEvent.click(rows()[0]!);
+  const first = await screen.findByRole('button', {name: 'Edit'}) as HTMLButtonElement;
+  await waitFor(() => expect(first.disabled).toBe(false));
+  fireEvent.click(first);
+  expect(((await screen.findByLabelText('Amount')) as HTMLInputElement).value).toBe('12.50');
+  fireEvent.click(screen.getByRole('button', {name: 'Close Edit transaction'}));
+  await waitFor(() => expect(screen.queryByLabelText('Amount')).toBeNull());
+
+  // Record another, exactly as the Today screen does: save, then invalidate.
+  await state.repo!.manual.save({id: 'second', kind: 'expense', accountId: 'a', destinationId: null,
+    date: '2026-01-21', minor: '640', description: 'Synthetic coffee', category: 'Eating out', notes: ''});
+  // Reading the list takes real time on a device — SQLCipher across the Capacitor bridge — and that is
+  // the whole race: a cached query hands back the OLD list the instant it is re-enabled and refetches
+  // behind it, so the button is pressable while what it would read is out of date. In jsdom the refetch
+  // lands before anything can press, which is why every version of this test passed until it was slowed
+  // down to a device's speed.
+  const real = state.repo!;
+  state.repo = {...real, manual: {...real.manual,
+    list: async () => { await new Promise(resolve => setTimeout(resolve, 50)); return real.manual.list(); }}} as Repository;
+  await client.invalidateQueries();
+  await waitFor(() => expect(rows()).toHaveLength(2));
+
+  fireEvent.click(rows().find(row => row.textContent?.includes('Synthetic coffee'))!);
+  const second = await screen.findByRole('button', {name: 'Edit'}) as HTMLButtonElement;
+  await waitFor(() => expect(second.disabled).toBe(false));
+  fireEvent.click(second);
+  expect(((await screen.findByLabelText('Amount')) as HTMLInputElement).value).toBe('6.40');
 });

@@ -41,38 +41,37 @@ export function ImportWorkspace({ accounts, request, consumed }: { accounts: Acc
   const session = useSession(), query = useQueryClient();
   const [fileId, setFileId] = useState<string | null>(null), [reviewId, setReviewId] = useState<string | null>(null), [transaction, setTransaction] = useState<LedgerRow | null>(null), [undo, setUndo] = useState<BatchSummary | null>(null), [search, setSearch] = useState(''), [pageIndex, setPageIndex] = useState(0), [notice, setNotice] = useState(''), [updateReview, setUpdateReview] = useState<string[] | null>(null);
   const [backupSuggested, setBackupSuggested] = useState(false), [backupOpen, setBackupOpen] = useState(false);
-  // Only fetched once a hand-recorded row is actually open, because for every other row it is not needed.
-  const [editEntry, setEditEntry] = useState<ManualEntry | null>(null), [removeEntry, setRemoveEntry] = useState<ManualEntry | null>(null), [matchEntry, setMatchEntry] = useState<ManualEntry | null>(null), [removeError, setRemoveError] = useState(''), [entryError, setEntryError] = useState('');
+  const [editEntry, setEditEntry] = useState<ManualEntry | null>(null), [removeEntry, setRemoveEntry] = useState<ManualEntry | null>(null), [matchEntry, setMatchEntry] = useState<ManualEntry | null>(null), [removeError, setRemoveError] = useState(''), [entryError, setEntryError] = useState(''), [opening, setOpening] = useState(false);
   /**
-   * A CHILD KEY, NOT ['manual'] ITSELF.
+   * READ THE ENTRY AT THE MOMENT OF ACTING ON IT, NOT FROM A CACHE.
    *
-   * ManualSheet caches {entries, totals, unresolved} under ['manual']; this wants only the list. Sharing
-   * the key meant whichever resolved last won the cache, and the sheet then read `.entries` off a bare
-   * array — which is NOT undefined, because Array.prototype.entries is a real method, so the `?? []`
-   * fallback never fired and a function was spread as if it were a list. The sheet threw "entries is not
-   * iterable" and simply never opened, which on a device looks exactly like a button that does nothing.
+   * This used to read a cached list, and that cache is what made Edit do nothing on the second
+   * hand-recorded transaction while working perfectly on the first. The query was only enabled while a
+   * hand-recorded row was open, so saving a new entry invalidated a DISABLED query — which React Query
+   * marks stale and does not refetch. Opening the next row served the stale list from the first
+   * transaction, the new id was not in it, and the press fell through the gap.
    *
-   * Nesting under ['manual'] keeps prefix invalidation working: anything that invalidates ['manual']
-   * still refreshes this.
+   * It had already been a shared cache key before that, and the sheet read `.entries` off a bare array.
+   * Two bugs from one cache, for a list that is three rows long and reachable in a millisecond. So there
+   * is no cache: the action reads what it is about to act on, when it acts on it.
+   *
+   * A BUTTON THAT DOES NOTHING IS THE WORST ANSWER THIS APP CAN GIVE. "when i click confirm, nothing
+   * happens" is the same complaint about a different button. Either the thing happens or the screen says
+   * why it did not, and the two ways this can fail are different situations, so they get different
+   * sentences.
    */
-  const manualEntries = useQuery({ queryKey: ['manual', 'entries'], queryFn: () => session.run(repo => repo.manual.list()), enabled: session.state === 'ready' && !!transaction?.manualId });
-    /**
-   * A BUTTON THAT DOES NOTHING IS THE WORST ANSWER THIS APP CAN GIVE.
-   *
-   * This read the entry behind the open row and, when it did not find one, returned — leaving Edit,
-   * Match and Delete looking pressable and doing nothing at all. "when i click confirm, nothing
-   * happens" is the same complaint about a different button, and it is never acceptable: either the
-   * thing happens or the screen says why it did not.
-   *
-   * The two ways it can fail are different situations and get different sentences. Nothing read at all
-   * means the entry list did not come back; read but no match means this row's entry is gone.
-   */
-  const openManual = (act: (entry: ManualEntry) => void) => {
-    const entries = manualEntries.data;
-    if (!entries?.length) { setEntryError('The transactions you recorded by hand could not be read. Close this and open it again.'); return; }
-    const entry = entries.find(e => e.id === transaction?.manualId);
-    if (!entry) { setEntryError('The entry behind this transaction is no longer there. Close this and open it again.'); return; }
-    setEntryError(''); setTransaction(null); act(entry);
+  const openManual = async (act: (entry: ManualEntry) => void) => {
+    const id = transaction?.manualId;
+    if (!id) return;
+    setOpening(true); setEntryError('');
+    try {
+      const entries = await session.run(repo => repo.manual.list());
+      const entry = entries.find(e => e.id === id);
+      if (!entries.length) setEntryError('The transactions you recorded by hand could not be read. Close this and open it again.');
+      else if (!entry) setEntryError('The entry behind this transaction is no longer there. Close this and open it again.');
+      else { setTransaction(null); act(entry); }
+    } catch { setEntryError('The transactions you recorded by hand could not be read. Close this and open it again.'); }
+    finally { setOpening(false); }
   };
   const forget = useMutation({ mutationFn: (id: string) => session.run(repo => repo.manual.remove(id)), onSuccess: async () => { setRemoveEntry(null); await query.invalidateQueries(); }, onError: () => setRemoveError('The transaction could not be removed.') });
   // Matching is what stops the same purchase being counted twice once its statement arrives, so it kept
@@ -130,7 +129,7 @@ export function ImportWorkspace({ accounts, request, consumed }: { accounts: Acc
     {transaction && <Sheet title="Source transaction" onClose={() => setTransaction(null)}><div className="stack"><Amount value={money(BigInt(transaction.minor), transaction.currency)} context={transaction.merchant}/><p>{transaction.date} · {accounts.find(a => a.id === transaction.accountId)?.name}</p><pre className="raw-excerpt">{transaction.description}</pre><p>{transaction.transferGroup ? 'Matched internal transfer. Excluded from income and spending.' : transaction.category ?? 'Uncategorised'}</p>{!transaction.transferGroup&&!transaction.pending&&BigInt(transaction.minor)<0n&&<TransactionSplits key={transaction.id} id={transaction.id} minor={transaction.minor} code={transaction.currency}/>}{!transaction.pending&&BigInt(transaction.minor)!==0n&&<ForeignCurrency key={'fx:'+transaction.id} id={transaction.id} code={transaction.currency}/>}{!transaction.pending&&!transaction.transferGroup&&BigInt(transaction.minor)!==0n&&<Refunds key={'refund:'+transaction.id} id={transaction.id} credit={BigInt(transaction.minor)>0n}/>}<TransactionAttachments target={transaction.id} recordedMinor={transaction.minor} code={transaction.currency}/><SettlementHistory id={transaction.id}/>{/* Edit and delete belong to something recorded by hand: there is no statement behind it to disagree
         with. An imported row is evidence of what a bank says happened, and editing that would be
         rewriting the record rather than correcting it. */}
-      {transaction.manualId && entryError && <p role="alert">{entryError}</p>}{transaction.manualId && <div className="form-actions"><Button disabled={!manualEntries.data} onClick={() => openManual(setEditEntry)}>Edit</Button><Button disabled={!manualEntries.data} onClick={() => openManual(setMatchEntry)}>Match with statement</Button><Button variant="danger" disabled={!manualEntries.data} onClick={() => openManual(setRemoveEntry)}>Delete</Button></div>}<h3>Supporting statements</h3>{transaction.sources.map(s => <p key={s.batchId + s.sourceId}>{batches.find(b => b.id === s.batchId)?.fileName} · row {s.sourceId}</p>)}</div></Sheet>}
+      {transaction.manualId && entryError && <p role="alert">{entryError}</p>}{transaction.manualId && <div className="form-actions"><Button disabled={opening} onClick={() => void openManual(setEditEntry)}>Edit</Button><Button disabled={opening} onClick={() => void openManual(setMatchEntry)}>Match with statement</Button><Button variant="danger" disabled={opening} onClick={() => void openManual(setRemoveEntry)}>Delete</Button></div>}<h3>Supporting statements</h3>{transaction.sources.map(s => <p key={s.batchId + s.sourceId}>{batches.find(b => b.id === s.batchId)?.fileName} · row {s.sourceId}</p>)}</div></Sheet>}
     {undo && <Sheet title="Roll back this import?" onClose={() => { if (!rollback.isPending) setUndo(null); }}><div className="stack"><p>{undo.fileName}</p><p>Remove this statement’s contribution. Transactions supported by other committed statements remain. Rules created by this import are removed with it.</p>{rollback.error && <Failure error={rollback.error}/>}<Button variant="danger" disabled={rollback.isPending} onClick={() => rollback.mutate(undo.id)}>Confirm rollback</Button></div></Sheet>}
   </section>;
 }
