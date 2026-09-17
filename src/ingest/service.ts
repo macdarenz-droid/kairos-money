@@ -218,6 +218,27 @@ export function importService(driver: Driver) {
   async function rollback(id: string) {
     return driver.transaction(async () => { const doc = (await batches()).find(b => b.id === id); if (!doc) throw new Error('That import was not found.'); await driver.execute("UPDATE import_batches SET status='rolled_back' WHERE id=?", [id]); await rebuild(); });
   }
+  /**
+   * Take a rolled-back import off the list for good.
+   *
+   * A rolled-back file left a row sitting there saying "Removed from ledger" with nothing to press and
+   * nothing more to say — "whats the purpose sitting there". It is a record of something that no longer
+   * affects anything, so it is kept until somebody says otherwise and then it goes completely.
+   *
+   * ONLY A ROLLED-BACK ONE. A committed import is the evidence behind transactions in the ledger, and a
+   * staged one is a file waiting to be reviewed; neither is something to quietly drop.
+   */
+  async function forget(id: string) {
+    return driver.transaction(async () => {
+      const doc = (await batches()).find(b => b.id === id);
+      if (!doc) throw new Error('That import was not found.');
+      if (doc.status !== 'rolled_back') throw new Error('Only an import that has been rolled back can be removed from this list.');
+      for (const table of ['transaction_sources', 'transactions', 'staging_rows', 'coverage_ranges']) {
+        await driver.execute(`DELETE FROM ${table} WHERE import_batch_id=?`, [id]);
+      }
+      await driver.execute('DELETE FROM import_batches WHERE id=?', [id]);
+    });
+  }
   async function ledger() {
     return (await import('./materialized')).materializedLedger(driver);
   }
@@ -282,5 +303,5 @@ export function importService(driver: Driver) {
   async function commitSession(ids: string[]) { return driver.transaction(async()=> { const results=[]; for(const id of ids) results.push(await commitUnlocked(id)); return results; }); }
   async function reminderDay(): Promise<number|null> { const r=(await driver.query("SELECT value FROM app_settings WHERE key='update-reminder'"))[0]; if(!r)return null;const value=JSON.parse(String(r.value)) as unknown;return typeof value==='number' && Number.isInteger(value)&&value>=0&&value<=6?value:null; }
   async function setReminderDay(day:number|null) { if(day!==null&&(!Number.isInteger(day)||day<0||day>6))throw new Error('Choose a weekday.');await driver.execute("INSERT OR REPLACE INTO app_settings(key,value) VALUES('update-reminder',?)",[JSON.stringify(day)]); }
-  return { workspace, keepSeparate, ledgerPage, ledgerBulk, ledgerHealth, leaveCategoriesUnassigned, useSuggestedCategories, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
+  return { workspace, keepSeparate, forget, ledgerPage, ledgerBulk, ledgerHealth, leaveCategoriesUnassigned, useSuggestedCategories, reminderDay, setReminderDay, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
 }

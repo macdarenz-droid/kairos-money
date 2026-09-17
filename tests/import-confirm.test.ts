@@ -109,3 +109,39 @@ describe('confirming an import that has look-alike rows', () => {
     await expect(repo.imports.keepSeparate(doc.id)).rejects.toThrow();
   });
 });
+
+describe('an import that was rolled back', () => {
+  /**
+   * "whats the purpose sitting there and just showing on screen not clickable or auto delete or has
+   * option to delete." A rolled-back file affects nothing any more; it is kept until somebody says
+   * otherwise, and then it goes completely.
+   */
+  it('can be taken off the list for good', async () => {
+    const repo = await ledger();
+    const doc = file('gone.csv', [{date: '2026-01-02', amount: '-11.95', description: 'Synthetic fuel stop'}]);
+    await repo.imports.stage(doc);
+    await repo.imports.commit(doc.id);
+    await repo.imports.rollback(doc.id);
+    expect((await repo.imports.summaries()).map(b => b.id)).toContain(doc.id);
+
+    await repo.imports.forget(doc.id);
+    expect((await repo.imports.summaries()).map(b => b.id)).not.toContain(doc.id);
+    expect(await repo.imports.ledger()).toHaveLength(0);
+  });
+
+  /** A committed import is the evidence behind real transactions, and a staged one is still being read. */
+  it('is the only kind that can be forgotten', async () => {
+    const repo = await ledger();
+    const doc = file('live.csv', [{date: '2026-01-02', amount: '-11.95', description: 'Synthetic fuel stop'}]);
+    await repo.imports.stage(doc);
+    await expect(repo.imports.forget(doc.id)).rejects.toThrow();
+    await repo.imports.commit(doc.id);
+    await expect(repo.imports.forget(doc.id)).rejects.toThrow();
+    expect(await repo.imports.ledger()).toHaveLength(1);
+  });
+
+  it('says so rather than throwing something unreadable when the file is not there', async () => {
+    const repo = await ledger();
+    await expect(repo.imports.forget('nope')).rejects.toThrow('That import was not found.');
+  });
+});
