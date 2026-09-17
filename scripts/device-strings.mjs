@@ -65,11 +65,37 @@ for (const file of walk(TESTS)) {
   }
 }
 
+/**
+ * One number in Java that has to agree with one list in TypeScript.
+ *
+ * The device test opens the real exported ZIP and counts its CSVs — one per ledger table. That count is
+ * written as a literal in Java, and the table list lives in src/core/db/schema.ts, and nothing in either
+ * language connects them. Adding `debts` to the export moved the list and left the literal behind, so
+ * the emulator failed twenty minutes after a fully green local run. This is the cheapest possible bridge
+ * between the two.
+ */
+function crossCheckExportedTableCount() {
+  const schema = readFileSync('src/core/db/schema.ts', 'utf8');
+  const declared = /export const tableNames = \[([^\]]*)\]/.exec(schema);
+  if (!declared) return ['could not read tableNames from src/core/db/schema.ts'];
+  const expected = (declared[1].match(/'[^']+'/g) ?? []).length;
+  const problems = [];
+  for (const file of walk(TESTS)) {
+    for (const [, counted] of readFileSync(file, 'utf8').matchAll(/assertEquals\((\d+),\s*csvCount\)/g)) {
+      if (Number(counted) !== expected) problems.push(
+        `${file} expects ${counted} exported CSVs; src/core/db/schema.ts lists ${expected} tables`);
+    }
+  }
+  return problems;
+}
+
 const source = walk(SOURCE).filter(f => /\.(tsx?|css)$/.test(f)).map(f => readFileSync(f, 'utf8')).join('\n');
 const missing = [...wanted].filter(value => !source.includes(value) && !COMPOSED.has(value)).sort();
 const stale = [...COMPOSED.keys()].filter(value => !wanted.has(value)).sort();
 
+const mismatched = crossCheckExportedTableCount();
+for (const problem of mismatched) console.error(`MISMATCH ${problem}`);
 for (const value of missing) console.error(`MISSING  the device tests press or read ${JSON.stringify(value)}, and no source file contains it`);
 for (const value of stale) console.error(`STALE    ${JSON.stringify(value)} is listed as composed but no device test looks for it any more`);
-console.log(`${wanted.size} device strings checked, ${COMPOSED.size} composed, ${missing.length} missing, ${stale.length} stale`);
-if (missing.length || stale.length) process.exit(1);
+console.log(`${wanted.size} device strings checked, ${COMPOSED.size} composed, ${missing.length} missing, ${stale.length} stale, ${mismatched.length} count mismatches`);
+if (missing.length || stale.length || mismatched.length) process.exit(1);
