@@ -583,3 +583,22 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
   .person-bar-to-me { animation: measure var(--motion-sweep) var(--ease-out) both; transform-origin: left center; }
   .person-bar-by-me { animation: measure var(--motion-sweep) var(--ease-out) both; transform-origin: right center; }
 }
+
+/* What share of the money is in which currency. One bar, largest first, one hue — a currency is not a
+   category with a personality, so the code carries the identity and the shade only repeats size. The
+   key names every band whatever its width, which is also how identity survives colour blindness. */
+.currency-exposure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.currency-exposure-plot { width: 100%; height: auto; display: block; }
+.currency-exposure-key { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px;
+  font-size: 13px; line-height: 20px; color: var(--text-secondary); }
+.currency-exposure-key li { display: flex; align-items: center; gap: 6px; }
+.currency-exposure-key .meta { color: var(--text-meta); }
+/* The swatch is a block of the same ramp, sized to read at a glance without competing with the bar. */
+.exposure-key-mark { width: 10px; height: 10px; border-radius: 2px; }
+.exposure-key-mark.level-1 { background: var(--tile-1); } .exposure-key-mark.level-2 { background: var(--tile-2); }
+.exposure-key-mark.level-3 { background: var(--tile-3); } .exposure-key-mark.level-4 { background: var(--tile-4); }
+.exposure-key-mark.level-5 { background: var(--tile-5); }
+/* Text ON a band wears that ramp's ink, never the page's: the page's came out barely legible on a
+   mid-blue block, which is exactly what a direct label exists to prevent. */
+.exposure-label { font-size: 30px; fill: var(--tile-ink); dominant-baseline: middle; }
+.currency-exposure figcaption { font-size: 11px; line-height: 16px; color: var(--text-meta); }
