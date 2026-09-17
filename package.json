@@ -18,6 +18,7 @@
     "release:config": "node scripts/verify-release-config.mjs",
     "device:strings": "node scripts/device-strings.mjs",
     "check": "npm run lint && npm run device:strings && npm run test && npm run build && npm run schema && npm run release:config",
+    "verify": "node scripts/verify.mjs",
     "android:sync": "npm run build && cap sync android",
     "android:debug": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "dev:fixtures": "tsx scripts/seed-fixtures.ts"
