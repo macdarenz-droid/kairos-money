@@ -36,16 +36,21 @@ function decimalString(minor: string, code: string): string { const value = BigI
 type Review = Awaited<ReturnType<Repository['imports']['review']>>;
 /** Five, because he asked for five: a short list you step through beats a wall you scroll. */
 /**
- * TWENTY-FIVE ROWS A PRESS, NOT FIVE WITH A PAGER.
+ * TEN ROWS A PRESS, NOT FIVE WITH A PAGER.
  *
  * Five rows and Previous/Next made 74 pages of his own history, with the count wedged between the two
  * buttons — which is what he marked. Baymard's mobile testing puts "load more" ahead of classic paging
  * on a phone, and it disposes of the page-jump control nobody wants to use with a thumb.
  *
- * The request shape is unchanged: one page per press, so the native bridge still answers with 25 rows
+ * The request shape is unchanged: one page per press, so the native bridge still answers with one page
  * rather than the whole ledger. That limit is what tests/query-pages.test.ts exists to hold.
+ *
+ * TEN AND NOT TWENTY-FIVE, BECAUSE THE DEVICE SAID SO. At 25 the 20,000-row gate measured 10,102 ms
+ * against a 10,000 ms budget: the page query cost 538 ms across its three calls while the screen was
+ * already waiting on the whole-ledger analysis behind it. The budget is not up for renegotiation, so the
+ * page is the thing that moves. Ten is still twice what the pager showed and needs no page numbers.
  */
-const PAGE = 25;
+const PAGE = 10;
 function Failure({ error }: { error: Error }) { return <div className="import-failure" role="alert">{error instanceof ImportFailure && <><p>{error.understood}</p><pre>{error.excerpt}</pre></>}<p>{error.message}</p></div>; }
 export function ImportWorkspace({ accounts, request, consumed }: { accounts: Account[]; request: number; consumed: () => void }) {
   const session = useSession(), query = useQueryClient();

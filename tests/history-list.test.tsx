@@ -71,12 +71,15 @@ it('shows a hand-recorded purchase in the same list as an imported one', async (
 it('loads more rather than paging, and keeps the rows already read', async () => {
   await importRows(30);
   await open();
-  await waitFor(() => expect(rows()).toHaveLength(25));
+  await waitFor(() => expect(rows()).toHaveLength(10));
   expect(screen.getByText('30 transactions')).toBeTruthy();
-  expect(screen.getByText('Showing 25 of 30')).toBeTruthy();
+  expect(screen.getByText('Showing 10 of 30')).toBeTruthy();
   // Nothing steps backwards, because nothing was taken away.
   expect(screen.queryByRole('button', {name: 'Previous'})).toBeNull();
   expect(screen.queryByRole('button', {name: 'Next'})).toBeNull();
+  fireEvent.click(screen.getByRole('button', {name: 'Load more'}));
+  await waitFor(() => expect(rows()).toHaveLength(20));
+  // What was read stays read: the second press adds to the list rather than replacing it.
   fireEvent.click(screen.getByRole('button', {name: 'Load more'}));
   await waitFor(() => expect(rows()).toHaveLength(30));
   // Everything is shown, so there is nothing left to offer.

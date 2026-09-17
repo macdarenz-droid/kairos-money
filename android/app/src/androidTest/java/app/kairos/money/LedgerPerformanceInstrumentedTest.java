@@ -201,15 +201,15 @@ public class LedgerPerformanceInstrumentedTest {
                       +"requestAnimationFrame(step);})()");
                     awaitJs("Boolean(window.__ledgerFrames)");JSONObject sample=new JSONObject(js("window.__ledgerFrames"));
                     // Twenty thousand rows exist; what is mounted is exactly what was asked for, one page
-                    // per press and not a row more. That is the same promise the five-row page made, stated
-                    // as the arithmetic it now is.
+                    // per press and not a row more — ten of them, the PAGE constant this list is built on.
+                    // That is the same promise the five-row page made, stated as the arithmetic it now is.
                     //
                     // MEASURED FROM WHAT WAS ALREADY THERE, which the first version of this got wrong and
                     // the device caught: "250 > 150". The second text size runs against the same cached
                     // query as the first, so the list opens holding every page the earlier pass asked for —
                     // that is the point of load-more, what has been read stays read. The claim is the
                     // GROWTH: a press adds one page, and nothing mounts that nobody asked for.
-                    int asked=sample.getInt("rows_at_start")+25*sample.getInt("pages_loaded");
+                    int asked=sample.getInt("rows_at_start")+10*sample.getInt("pages_loaded");   // PAGE in ImportWorkspace.tsx
                     assertTrue("History mounted more rows than were asked for: "+sample.getInt("max_mounted_rows")+" > "+asked,
                         sample.getInt("max_mounted_rows")<=asked);
                     assertTrue("History did not load more",sample.getInt("pages_loaded")>0);
