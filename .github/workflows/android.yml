@@ -125,6 +125,15 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+      # The same check again, as the last thing the job prints.
+      #
+      # The verification itself belongs before the emulator, so a rotated key fails in seconds instead of
+      # thirteen minutes later. But that puts its output thousands of logcat lines from the end, and the
+      # log is only readable from the tail — so the one value somebody has to ACT on was the one value
+      # buried deepest. Printing it again at the end costs a second and makes it reachable.
+      - name: Signing identity, repeated at the end of the log so it can be read
+        if: always()
+        run: python3 scripts/verify-signing-identity.py android/app/build/outputs/apk/debug/app-debug.apk "$ANDROID_HOME"
       - name: Upload gate evidence
         if: always()
         uses: actions/upload-artifact@v4
