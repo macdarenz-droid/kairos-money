@@ -28,9 +28,21 @@ export function extractXlsx(bytes: Uint8Array): string[][] {
     }
     return cells;
   }).filter(r => r.some(Boolean));
+  const is1904 = files['xl/workbook.xml'] ? xml(strFromU8(files['xl/workbook.xml'])).querySelector('workbookPr')?.getAttribute('date1904') === '1' : false;
+  return datedSheet(rows, is1904);
+}
+
+/**
+ * Square the grid, then turn the date column's serial numbers into dates.
+ *
+ * Shared with the legacy .xls reader, and the ORDER is the reason it is worth sharing: which column
+ * holds the date is only known after the header row is read, so a spreadsheet's serial numbers cannot
+ * be resolved while the cells are being parsed. Every reader has to do this the same way round, and a
+ * second copy of it would be a second chance to get it wrong.
+ */
+export function datedSheet(rows: string[][], is1904: boolean): string[][] {
   const width = rows[0]?.length ?? 0; rows.forEach(r => { while (r.length < width) r.push(''); });
   const mapping = inferColumns(rows[0] ?? []);
-  const is1904 = files['xl/workbook.xml'] ? xml(strFromU8(files['xl/workbook.xml'])).querySelector('workbookPr')?.getAttribute('date1904') === '1' : false;
   for (const row of rows.slice(1)) { const value = row[mapping.date] ?? ''; if (/^\d{1,6}$/.test(value)) { const serial = Number(value); if (!is1904 && serial === 60) throw new Error('Excel contains the nonexistent 29 February 1900. Correct the date.'); row[mapping.date] = shiftDay(is1904 ? '1904-01-01' : serial < 60 ? '1899-12-31' : '1899-12-30', serial); } }
   return rows;
 }

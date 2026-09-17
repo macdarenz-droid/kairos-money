@@ -5,13 +5,14 @@ import { ImportFailure } from '../types';
 import { textLines, type TextItem } from '../parse/positional';
 import { csvRows } from '../parse/csv';
 import { extractXlsx } from './xlsx';
+import { extractXls } from './xls';
 export type Extracted = { kind: ReturnType<typeof detect>['kind']; text: string; items: TextItem[]; table: string[][] | null; ocr: boolean; issuer: string | null };
 export const OfflineText = registerPlugin<{ recognize(options: { base64: string }): Promise<{ items: { text: string; x: number; y: number; width: number; height: number }[] }> }>('KairosText');
 function base64(bytes: Uint8Array): string { let s = ''; for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode(...bytes.subarray(i, i + 8192)); return btoa(s); }
 async function extractLocal(bytes: Uint8Array, fileName: string, progress: (message: string) => void = () => undefined): Promise<Extracted> {
   if (bytes.length > 20971520) throw new ImportFailure('The file was selected.', 'This file exceeds the 20 MB import limit.', fileName, 'Split the statement into smaller files or export CSV.');
   const detected = detect(bytes, fileName); const result: Extracted = { ...detected, text: '', items: [], table: null, ocr: false };
-  if (detected.kind === 'xlsx') { result.table = extractXlsx(bytes); result.text = result.table.map(r => r.join(' | ')).join('\n'); return result; }
+  if (detected.kind === 'xlsx' || detected.kind === 'xls') { result.table = detected.kind === 'xls' ? extractXls(bytes) : extractXlsx(bytes); result.text = result.table.map(r => r.join(' | ')).join('\n'); return result; }
   if (['csv', 'ofx', 'qif'].includes(detected.kind)) { result.text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); if (detected.kind === 'csv') result.table = csvRows(result.text); return result; }
   if (detected.kind === 'image') { progress('Reading image on this device'); result.ocr = true; result.items = (await OfflineText.recognize({ base64: base64(bytes) })).items.map(i => ({ ...i, page: 1 })); }
   else {
