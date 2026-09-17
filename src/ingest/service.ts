@@ -7,6 +7,7 @@ import type { Driver } from '../core/db/driver';
 import { currency, money, toDatabase } from '../core/money';
 import { categorize, type CategoryRule } from '../ledger/rules';
 import { continuity } from './integrity';
+import { reanchorOpening } from './opening-anchor';
 import type { ExportMapping } from './sources/types';
 import { hash, isoDay, rowFingerprint, dayNumber, similarity } from './normalize';
 import { balance, gaps, nearDuplicates } from './reconcile';
@@ -212,11 +213,13 @@ export function importService(driver: Driver) {
       check.doc.rows.forEach(row => { row.verified = true; });
       await save(check.doc);
       await driver.execute("UPDATE import_batches SET status='committed' WHERE id=?", [id]); await rebuild();
+      await reanchorOpening(driver, check.doc.context.accountId, (await batches()).filter(b => b.status === 'committed'));
       return { added: check.newCount, alreadyImported: false, known: check.duplicateCount, superseded: check.supersededCount };
   }
   async function commit(id: string) { return driver.transaction(()=>commitUnlocked(id)); }
   async function rollback(id: string) {
-    return driver.transaction(async () => { const doc = (await batches()).find(b => b.id === id); if (!doc) throw new Error('That import was not found.'); await driver.execute("UPDATE import_batches SET status='rolled_back' WHERE id=?", [id]); await rebuild(); });
+    return driver.transaction(async () => { const doc = (await batches()).find(b => b.id === id); if (!doc) throw new Error('That import was not found.'); await driver.execute("UPDATE import_batches SET status='rolled_back' WHERE id=?", [id]); await rebuild();
+      await reanchorOpening(driver, doc.context.accountId, (await batches()).filter(b => b.status === 'committed')); });
   }
   /**
    * Take a rolled-back import off the list for good.
