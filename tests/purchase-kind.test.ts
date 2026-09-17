@@ -39,8 +39,8 @@ describe('what kind of purchase a bank description describes', () => {
   });
 
   it('recognises the two lines from the owner\'s own phone', () => {
-    expect(purchaseKind('WITHDRAWAL-OSKO PAYMENT 1826645')).toBe('transfer');
-    expect(purchaseKind("CommBank You've been paid $3.00 into your account ending 189")).toBe('unknown');
+    expect(purchaseKind('WITHDRAWAL-OSKO PAYMENT 4471902')).toBe('transfer');
+    expect(purchaseKind("CommBank You've been paid $3.00 into your account ending 407")).toBe('unknown');
   });
 
   it('is case-insensitive and does not match inside a longer word', () => {

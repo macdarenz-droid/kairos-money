@@ -35,8 +35,8 @@ describe('changing an account after it exists', () => {
 
   it('adds the last four digits, which is what lets notifications find the account', async () => {
     const repo = await ledger();
-    await repo.updateAccount('a', {mask_last4: '6522'});
-    expect((await find(repo, 'a')).mask_last4).toBe('6522');
+    await repo.updateAccount('a', {mask_last4: '3318'});
+    expect((await find(repo, 'a')).mask_last4).toBe('3318');
     await repo.updateAccount('a', {mask_last4: null});
     expect((await find(repo, 'a')).mask_last4).toBeNull();
   });

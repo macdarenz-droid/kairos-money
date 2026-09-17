@@ -93,7 +93,7 @@ export function NoticeSettings({accounts = []}: {accounts?: readonly Account[]} 
       {live.length > 1 && <>
         <span className="heading-row"><h3>Which account these belong to</h3>
           <Explain title="Which account these belong to">
-            <p>When a notification says which account it is about — "ending 189" — Kairos uses that.</p>
+            <p>When a notification says which account it is about — "ending 407" — Kairos uses that.</p>
             <p>This is what it falls back on when the message does not say, and you can still change it on
               any purchase before approving it.</p>
           </Explain>

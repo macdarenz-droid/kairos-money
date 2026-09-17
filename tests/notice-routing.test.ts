@@ -6,31 +6,32 @@ import {currency} from '../src/core/money';
 
 const AUD = currency('AUD');
 const accounts = [
-  {id: 'commbank', mask_last4: '0189'},
-  {id: 'trial', mask_last4: '6522'},
+  {id: 'commbank', mask_last4: '0407'},
+  {id: 'trial', mask_last4: '3318'},
 ];
 
 describe('which account a notification is about', () => {
   it('reads the tail a bank prints, even when it prints fewer digits than are stored', () => {
-    // Verbatim from the owner's phone. CommBank prints three digits; the account stores four.
-    expect(accountFromNotice("CommBank You've been paid $3.00 into your account ending 189", accounts)).toBe('commbank');
-    expect(accountFromNotice('Purchase of $43.20 on card ending 6522', accounts)).toBe('trial');
-    expect(accountFromNotice('Debit from acct ••6522', accounts)).toBe('trial');
+    // A real notification shape with synthetic digits. CommBank prints three; the account stores four.
+    expect(accountFromNotice("CommBank You've been paid $3.00 into your account ending 407", accounts)).toBe('commbank');
+    expect(accountFromNotice('Purchase of $43.20 on card ending 3318', accounts)).toBe('trial');
+    expect(accountFromNotice('Debit from acct ••3318', accounts)).toBe('trial');
   });
 
   it('never routes money by a number that is not an account', () => {
-    // Also verbatim. 1826645 is a payment reference, and $3.00 is an amount; neither identifies anybody.
-    expect(accountFromNotice('WITHDRAWAL-OSKO PAYMENT 1826645 for $3.00', accounts)).toBeNull();
-    expect(accountFromNotice('You spent $189.00 at WOOLWORTHS 1234', accounts)).toBeNull();
+    // Also a real shape, synthetic digits. 4471902 is a payment reference and $3.00 an amount; a router
+    // that treated either as an account tail would post money to the wrong place.
+    expect(accountFromNotice('WITHDRAWAL-OSKO PAYMENT 4471902 for $3.00', accounts)).toBeNull();
+    expect(accountFromNotice('You spent $407.00 at WOOLWORTHS 1234', accounts)).toBeNull();
   });
 
   it('refuses an answer when the digits fit more than one account', () => {
-    const clashing = [{id: 'a', mask_last4: '4189'}, {id: 'b', mask_last4: '0189'}];
-    expect(accountFromNotice('paid into your account ending 189', clashing)).toBeNull();
+    const clashing = [{id: 'a', mask_last4: '4407'}, {id: 'b', mask_last4: '0407'}];
+    expect(accountFromNotice('paid into your account ending 407', clashing)).toBeNull();
   });
 
   it('says nothing when no account has a recorded tail to match', () => {
-    expect(accountFromNotice('account ending 189', [{id: 'commbank', mask_last4: null}])).toBeNull();
+    expect(accountFromNotice('account ending 407', [{id: 'commbank', mask_last4: null}])).toBeNull();
   });
 });
 

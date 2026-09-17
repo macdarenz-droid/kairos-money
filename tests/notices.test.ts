@@ -164,7 +164,7 @@ it('counts what no statement has confirmed, for the home screen to say so honest
 
 it('records a transfer between the owner\'s own accounts as one movement, not as spending', async () => {
  const {driver, repo, notices} = await ready();
- await repo.addAccount({id:'b',name:'Trial',institution:'CommBank',type:'savings',currency:'AUD',mask_last4:'6522',opening_balance_minor:0n});
+ await repo.addAccount({id:'b',name:'Trial',institution:'CommBank',type:'savings',currency:'AUD',mask_last4:'3318',opening_balance_minor:0n});
 
  // The pair the owner actually saw: $3 leaving one bank and arriving at the other.
  await notices.approve(notice({id:'transfer-1', accountId:'a', destinationId:'b', minor:'-300',
