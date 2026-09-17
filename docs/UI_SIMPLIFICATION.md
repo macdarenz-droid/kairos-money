@@ -75,3 +75,27 @@ renders the thing, because a demand answered in the wrong file is a demand not a
 6. You → Insights, and the empty-section rule.
 7. Settings behind the gear.
 8. Bills and merchants as charts.
+
+## What shipped, and the one thing that did not
+
+Done, in this order: the add-transaction sheet and its place on Today; History's load-more; Update
+accounts removed root and branch; Quick cut back to actions; one display currency, at the top of You;
+the analysis moved to Insights under the rule that an empty section renders nothing; bills and merchants
+drawn as lengths; the orphaned virtual list deleted.
+
+**Settings behind a gear is blocked, and not by taste.** Two Session-2 acceptance files are frozen by
+sha256 in `docs/SESSION_2_BASELINE.json`, and `tests/session25.test.ts` fails the build if either
+changes:
+
+- `tests/ui.test.tsx` taps **You → Light → Dark → Export all data → Delete all data** with nothing in
+  between, and
+- `android/app/src/androidTest/java/app/kairos/money/ImportInstrumentedTest.java` taps **You → Light**.
+
+Putting Appearance, backup, export and delete behind a gear moves every one of those controls off the
+You screen, so both files would have to be rewritten and both hashes re-frozen. That freeze is the
+owner's, and re-cutting it to make my own change pass is exactly what a freeze exists to stop. The work
+itself is an hour: a gear button in the You header, `Settings` inside a sheet, and about ten device-test
+call sites that open it first.
+
+**To unblock:** say the Session-2 freeze may be re-cut for these two files, and it goes in with the
+baseline updated in the same commit.
