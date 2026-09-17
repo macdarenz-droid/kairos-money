@@ -191,18 +191,25 @@ public class LedgerPerformanceInstrumentedTest {
                     awaitJs("Boolean(document.querySelector('button.transaction-row'))");
                     NativeEvidence.capture(activity,"ledger-20000-text-"+zoom+"-start");
                     js("(()=>{window.__ledgerFrames=null;const frames=[];let previous=null,n=0,maxRows=0,loaded=0;"
+                      +"const rows=()=>document.querySelectorAll('button.transaction-row').length;const start=rows();"
                       +"const more=()=>Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()==='Load more');"
                       +"function step(now){if(previous!==null)frames.push(now-previous);previous=now;"
-                      +"maxRows=Math.max(maxRows,document.querySelectorAll('button.transaction-row').length);"
+                      +"maxRows=Math.max(maxRows,rows());"
                       +"if(n%10===0){const b=more();if(b&&!b.disabled){b.click();loaded++;}}"
                       +"if(++n<121)requestAnimationFrame(step);"
-                      +"else window.__ledgerFrames={frame_intervals_ms:frames,max_mounted_rows:maxRows,pages_loaded:loaded};}"
+                      +"else window.__ledgerFrames={frame_intervals_ms:frames,max_mounted_rows:maxRows,pages_loaded:loaded,rows_at_start:start};}"
                       +"requestAnimationFrame(step);})()");
                     awaitJs("Boolean(window.__ledgerFrames)");JSONObject sample=new JSONObject(js("window.__ledgerFrames"));
                     // Twenty thousand rows exist; what is mounted is exactly what was asked for, one page
                     // per press and not a row more. That is the same promise the five-row page made, stated
                     // as the arithmetic it now is.
-                    int asked=25*(sample.getInt("pages_loaded")+1);
+                    //
+                    // MEASURED FROM WHAT WAS ALREADY THERE, which the first version of this got wrong and
+                    // the device caught: "250 > 150". The second text size runs against the same cached
+                    // query as the first, so the list opens holding every page the earlier pass asked for —
+                    // that is the point of load-more, what has been read stays read. The claim is the
+                    // GROWTH: a press adds one page, and nothing mounts that nobody asked for.
+                    int asked=sample.getInt("rows_at_start")+25*sample.getInt("pages_loaded");
                     assertTrue("History mounted more rows than were asked for: "+sample.getInt("max_mounted_rows")+" > "+asked,
                         sample.getInt("max_mounted_rows")<=asked);
                     assertTrue("History did not load more",sample.getInt("pages_loaded")>0);
