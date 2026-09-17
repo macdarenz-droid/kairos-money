@@ -60,7 +60,27 @@ export async function fetchRates(base: Currency, quotes: readonly Currency[], on
   if (on !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(on)) throw new Error('Ask for rates on a calendar date.');
 
   const url = `${HOST}/${on ?? 'latest'}?from=${base}&to=${wanted.join(',')}`;
-  const response = await fetch(url, { headers: { accept: 'application/json' }, redirect: 'error' });
+
+  /**
+   * A REQUEST THAT NEVER COMPLETED SAYS WHAT WAS TRIED, RATHER THAN "Failed to fetch".
+   *
+   * That string is the browser's single TypeError for every network-layer failure there is: no route,
+   * DNS, TLS, connection refused, blocked by CORS — and, because of `redirect: 'error'` below, a host
+   * that has moved. It is printed on the Currency screen verbatim, where it names nothing and offers
+   * nothing to do. Someone reading it cannot tell whether their phone is offline or the app is pointed
+   * at an address that no longer answers.
+   *
+   * The redirect is refused deliberately and stays refused: following one would send the request to a
+   * host nobody vetted, and the whole point of this module is that exactly one address is reachable
+   * from the app. So the refusal is stated instead of hidden.
+   */
+  let response: Response;
+  try {
+    response = await fetch(url, { headers: { accept: 'application/json' }, redirect: 'error' });
+  } catch {
+    throw new Error(`Could not reach ${new URL(HOST).host}. Check the connection; if it is working, the`
+      + ` rate service may have moved — this app will not follow a redirect to an address it does not know.`);
+  }
   if (!response.ok) throw new Error(`Exchange rates are unavailable right now (${response.status}).`);
 
   // Read as text, so the rate digits can be taken exactly. The structure is still validated by parsing.

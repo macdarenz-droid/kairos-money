@@ -67,6 +67,20 @@ export function Rates({ accounts, notify }: {
       {/* The day the rates belong to, not the moment they were downloaded. */}
       <p>{asOf.data ? `From ${asOf.data}` : 'None yet'}</p>
     </Row>
+    {/*
+      * CHOOSING A CURRENCY YOU HOLD NOTHING IN EMPTIES THE ANALYSIS, SILENTLY.
+      *
+      * The snapshot every Today and Insights figure is built from selects accounts WHERE currency = the
+      * displayed one, so picking a currency no account is held in returns nothing: no accounts, no
+      * transactions, no signals. Measured, not supposed — an AUD ledger asked for in PHP comes back
+      * with zero of both.
+      *
+      * That is a filter doing a display job, and the deeper fix is for the snapshot to CONVERT rather
+      * than exclude, the way the all-accounts total already does. Until then the app must not answer a
+      * setting with a blank screen and no reason, so it says the consequence next to the choice.
+      */}
+    {!held.includes(display) && <p role="alert">No account is held in {display}, so Today and Insights have
+      nothing to show in it. Choose a currency you hold, or add an account in {display}.</p>}
     {error && <p role="alert">{error}</p>}
   </section>;
 }
