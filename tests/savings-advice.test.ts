@@ -76,8 +76,10 @@ describe('what to keep today', () => {
       currency: PHP, transactionId: null}));
     const keep = keepToday(snapshot(rows, {pays}), '5000000');
     expect(keep.tier).toBe('payday');
-    // ₱14,000 a fortnight is ₱1,000 a day; a fifth of that is ₱200, rounded down to ₱200.
-    expect(keep.keepTodayMinor).toBe('20000');
+    // ₱14,000 a fortnight is ₱1,000 a day; a fifth of that is ₱200 a day. Regular pay and even spending
+    // read as steady, so the method is pay yourself first: the same ₱200 × 14 days, moved once on payday.
+    expect(keep.when).toBe('payday');
+    expect(keep.keepTodayMinor).toBe((20000n * BigInt(keep.days)).toString());
   });
 });
 

@@ -40,7 +40,9 @@ export function SavingsPath() {
   if (keep.status !== 'ok') return null;
 
   const pot = BigInt(potMinor) + BigInt(snapshot.savings?.asideMinor ?? '0');
-  const path = savingsPath(snapshot, pot.toString(), keep.keepTodayMinor);
+  // The line ahead climbs per day, so a lump kept on payday or when paid is spread over the horizon.
+  const perDay = keep.when === 'today' ? BigInt(keep.keepTodayMinor) : BigInt(keep.keepTodayMinor) / BigInt(Math.max(1, keep.days));
+  const path = savingsPath(snapshot, pot.toString(), perDay.toString());
   const values = path.flatMap(point => [point.keptMinor, point.plannedMinor])
     .filter((value): value is string => value !== null).map(BigInt);
   const top = values.reduce((most, value) => value > most ? value : most, 1n);
@@ -62,8 +64,10 @@ export function SavingsPath() {
   return <section className="stack savings-path" aria-label="Savings">
     <div className="savings-figures">
       <div><span className="band-label">Spend today</span><span className="band-figure">{show(keep.spendTodayMinor)}</span></div>
-      <div><span className="band-label">Keep today</span><span className="band-figure">{show(keep.keepTodayMinor)}</span></div>
+      <div><span className="band-label">{keep.when === 'payday' ? 'Keep on payday' : keep.when === 'paid' ? 'Keep when paid' : 'Keep today'}</span><span className="band-figure">{show(keep.keepTodayMinor)}</span></div>
     </div>
+    {/* How he spends, and the method that follows. Two labels; the figures above are the advice. */}
+    <p className="meta savings-method">{keep.reading.label} · {keep.reading.methodLabel}</p>
     <svg viewBox="0 0 1000 200" className="savings-plot" role="img"
       aria-label={`Savings. ${show(pot)} kept now; ${show(path.at(-1)?.plannedMinor ?? pot.toString())} in ${path.length - 1 - here} days if ${show(keep.keepTodayMinor)} is kept each day.`}>
       <line x1="0" y1="190" x2="1000" y2="190" stroke="var(--border-default)" vectorEffect="non-scaling-stroke"/>

@@ -1,6 +1,7 @@
 import {abs, day, dates, median, shift, type Snapshot} from './model';
 import {currencyDigits} from '../core/money';
 import {payCycle, recurrences, scheduledDates} from './forecast';
+import {nextPayDate, roundUp, spendingPattern, type Reading} from './method';
 
 /**
  * WHAT TO KEEP TODAY, AND WHAT IS LEFT TO SPEND AFTER KEEPING IT.
@@ -43,6 +44,10 @@ export type Keep = {
   typicalDayMinor: string;
   keepTodayMinor: string;
   spendTodayMinor: string;
+  /** When the kept amount is meant to move: each day, on payday, or on the day money lands. */
+  when: 'today' | 'payday' | 'paid';
+  /** How he spends, and the method that follows from it. */
+  reading: Reading;
   evidence: string[];
 };
 
@@ -54,8 +59,10 @@ const WINDOW = 60;
  * @param bufferMinor money he has asked to keep untouched, which is never suggested away
  */
 export function keepToday(s: Snapshot, spendableMinor: string, bufferMinor = '0'): Keep {
+  const reading = spendingPattern(s);
   const blank: Keep = {status: 'not_yet', tier: 'month', days: 0, spendableMinor,
-    committedMinor: '0', typicalDayMinor: '0', keepTodayMinor: '0', spendTodayMinor: '0', evidence: []};
+    committedMinor: '0', typicalDayMinor: '0', keepTodayMinor: '0', spendTodayMinor: '0',
+    when: 'today', reading, evidence: []};
   const spendable = BigInt(spendableMinor), buffer = BigInt(bufferMinor);
   if (buffer < 0n) throw new Error('A buffer cannot be negative.');
 
@@ -66,8 +73,7 @@ export function keepToday(s: Snapshot, spendableMinor: string, bufferMinor = '0'
 
   // THE HORIZON. Until his next pay when his payslips say when that is, otherwise to the end of the
   // month — the two real answers to "how long does this have to last".
-  const cycle = payCycle(s).map(c => c.next).filter(next => next > s.asOf).sort();
-  const nextPay = cycle[0];
+  const nextPay = nextPayDate(s) ?? undefined;
   const monthEnd = shift(s.asOf.slice(0, 8) + '01', 31).slice(0, 8) + '01';
   const horizon = nextPay ?? shift(monthEnd, -1);
   const days = Math.max(1, day(horizon) - day(s.asOf));
@@ -110,13 +116,45 @@ export function keepToday(s: Snapshot, spendableMinor: string, bufferMinor = '0'
     : perDay;
 
   const step = 5n * 10n ** BigInt(currencyDigits[s.currency] ?? 2);
-  const keep = capped > 0n ? capped / step * step : 0n;
-  const spend = spendable - pending - committed - buffer - keep * BigInt(days);
+  const doable = (value: bigint) => value > 0n ? value / step * step : 0n;
+  const daily = doable(capped);
+
+  /**
+   * THE METHOD DECIDES THE SHAPE OF THE SUGGESTION, never its ceiling: whatever the pattern, nothing is
+   * suggested beyond the headroom the arithmetic above found.
+   *
+   *   pay-yourself-first  one amount, on payday, for the whole cycle — the daily figure × days, so it
+   *                       is the same money moved once instead of thirty times.
+   *   daily-allowance     the daily figure, today.
+   *   round-up            what rounding the last seven days' small purchases up to the next hundred
+   *                       would have kept, per day — the size of the leak, and no more than headroom.
+   *   baseline-percent    a tenth of what landed in the last seven days, on the day it lands; nothing
+   *                       on the days nothing does.
+   */
+  let keep = daily, when: Keep['when'] = 'today';
+  const week = shift(s.asOf, -6);
+  if (reading.method === 'pay-yourself-first' && tier === 'payday') {
+    keep = doable(daily * BigInt(days)); when = 'payday';
+  } else if (reading.method === 'round-up') {
+    const limit = 15n * 10n ** BigInt(currencyDigits[s.currency] ?? 2);
+    const leaks = s.transactions.filter(t => t.status === 'settled' && !t.transfer && t.kind !== 'savings'
+      && t.date >= week && t.date <= s.asOf && BigInt(t.minor) < 0n && abs(BigInt(t.minor)) < limit);
+    const kept = leaks.reduce((total, t) => total + roundUp(BigInt(t.minor), s.currency), 0n) / 7n;
+    keep = doable(min(kept, daily));
+  } else if (reading.method === 'baseline-percent') {
+    const landed = s.transactions.filter(t => t.kind === 'income' && t.status === 'settled' && !t.transfer
+      && t.date >= week && t.date <= s.asOf && BigInt(t.minor) > 0n)
+      .reduce((total, t) => total + BigInt(t.minor), 0n);
+    keep = doable(min(landed / 10n, daily * BigInt(days))); when = 'paid';
+  }
+  const reserved = when === 'today' ? keep * BigInt(days) : keep;
+  const spend = spendable - pending - committed - buffer - reserved;
 
   return {status: 'ok', tier, days, spendableMinor: spendable.toString(),
     committedMinor: committed.toString(), typicalDayMinor: typicalDay.toString(),
     keepTodayMinor: keep.toString(),
     spendTodayMinor: (spend > 0n ? spend / BigInt(days) : 0n).toString(),
+    when, reading,
     evidence: [...new Set([...bills.flatMap(b => b.evidence), ...s.savings?.evidence ?? []])]};
 }
 
