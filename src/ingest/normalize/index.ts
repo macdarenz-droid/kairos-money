@@ -48,7 +48,15 @@ export function normalizeAmount(value: string, code: Currency, decimal: '.' | ',
   let s = value.trim().toUpperCase();
   const negative = /^\(.*\)$/.test(s) || /DR$/.test(s) || /-$/.test(s) || /^-/.test(s);
   if (/CR$/.test(s) && negative) throw new Error(`Conflicting amount signs: ${value}. Confirm the amount.`);
-  s = s.replace(/(?:DR|CR)$/, '').replace(/[()]/g, '').replace(/^-|-$|^\+/, '').trim().replace(/^(?:AUD|USD|PHP|EUR|GBP|NZD|CAD|SGD|JPY|KWD|A\$|\$|£|€|₱)\s*/, '');
+  // A currency marker can sit on either side of the figure: "PHP 1,200.00" and "1,200.00 PHP" are both
+  // ordinary export formats. Only the leading one was stripped, so the trailing form failed with an
+  // unreadable-fraction error — loud rather than wrong, but it still refused a perfectly good file.
+  // Uppercasing above means Php, php and PHP all arrive here as one spelling.
+  const MARKER = /AUD|USD|PHP|EUR|GBP|NZD|CAD|SGD|JPY|KWD|A\$|\$|£|€|₱/.source;
+  s = s.replace(/(?:DR|CR)$/, '').replace(/[()]/g, '').replace(/^-|-$|^\+/, '').trim()
+    .replace(new RegExp(`^(?:${MARKER})\\s*`), '')
+    .replace(new RegExp(`\\s*(?:${MARKER})$`), '')
+    .trim();
   const grouping = decimal === '.' ? ',' : '.';
   const parts = s.split(decimal);
   if (parts.length > 2 || (parts[1]?.length ?? 0) > currencyDigits[code]) throw new Error(`The decimal format in “${value}” is unclear. Confirm the decimal separator.`);
