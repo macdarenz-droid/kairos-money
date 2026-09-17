@@ -2,7 +2,8 @@ import {validSplit,type Split} from './splits';
 import {manualRepository} from './manual';
 import type {Driver} from '../core/db/driver';
 import {queryPages} from '../core/db/query-pages';
-import {currency,money,toDatabase} from '../core/money';
+import {currency,money,toDatabase,type Currency} from '../core/money';
+import {convert,rateBetween,type Rate as FxRate} from '../core/fx';
 import {computeSignals} from '../intelligence/signals';
 import {profile,distress} from '../intelligence/profile';
 import {insights} from '../intelligence/insights';
@@ -25,14 +26,46 @@ function stored(v:Signal){const {transactions,...inputs}=v.inputs;return {...v,i
 export function intelligenceRepository(driver:Driver){
  async function setting<T>(key:string,fallback:T):Promise<T>{const r=(await driver.query('SELECT value FROM app_settings WHERE key=?',[key]))[0];return r?JSON.parse(String(r.value)) as T:fallback;}
  async function set(key:string,value:unknown){await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',[key,JSON.stringify(value)]);}
+ /**
+  * SHOWING AMOUNTS IN A CURRENCY CONVERTS THE MONEY; IT DOES NOT HIDE IT.
+  *
+  * This selected accounts WHERE currency = the displayed one, which is a FILTER doing a DISPLAY job.
+  * Set an AUD account, switch the setting to PHP, and the whole of Today and Insights was built from
+  * nothing: no accounts, no transactions, no signals, no reason given. Measured on a real ledger it was
+  * one account and one transaction in AUD, zero and zero in PHP.
+  *
+  * Every active account is read now, and each amount is valued in the displayed currency AT THE RATE FOR
+  * ITS OWN DATE — a purchase happened at the rate on the day it happened, and repricing it at today's
+  * rate would make last March's trip cost something different every time the app opens. The anchor
+  * balance a running total starts from is converted at ITS date for the same reason, so the arithmetic
+  * is consistent: everything is valued at the rate in force when it was true.
+  *
+  * A currency with no stored rate is LEFT OUT AND NAMED in `unconverted`, never counted as zero and
+  * never passed through as though it were already in the displayed currency. Both would be inventing a
+  * number, and one of them silently.
+  */
  async function snapshot(asOf:string,code:string):Promise<Snapshot>{
-  const c=currency(code),accounts=await driver.query('SELECT * FROM accounts WHERE archived_at IS NULL AND currency=?',[c]),ids=accounts.map(a=>String(a.id));
+  const c=currency(code),accounts=await driver.query('SELECT * FROM accounts WHERE archived_at IS NULL'),ids=accounts.map(a=>String(a.id));
+  const stored=await driver.query('SELECT as_of,base,quote,rate_e8,source FROM fx_rates');
+  const rates:FxRate[]=stored.map(r=>({asOf:String(r.as_of),base:currency(String(r.base)),quote:currency(String(r.quote)),rateE8:BigInt(String(r.rate_e8)),source:String(r.source)}));
+  const unconverted=new Set<Currency>();
+  /** An exact amount in the displayed currency, or null when no published rate reaches that day. */
+  const into=(minor:string,from:Currency,date:string):string|null=>{
+   if(from===c)return minor;
+   const rate=rateBetween(rates,from,c,date);
+   if(rate===null){unconverted.add(from);return null;}
+   return convert(money(BigInt(minor),from),c,rate).minor.toString();
+  };
   const rows=await queryPages(driver,'SELECT t.*,c.kind AS category_kind,c.name AS category_name,m.canonical_name AS merchant FROM transactions t LEFT JOIN categories c ON c.id=t.category_id LEFT JOIN merchants m ON m.id=t.merchant_id',[],['id']);
   // Use the primary-key index for each bounded read, then stable-sort dates once.
   // Equal dates retain SQLite's id order without repeatedly sorting the full table.
   rows.sort((a,b)=>String(a.posted_date)<String(b.posted_date)?-1:String(a.posted_date)>String(b.posted_date)?1:0);
   const metadata=await setting<Record<string,Partial<Pick<Transaction,'instrument'|'hour'|'planned'|'outsideRoutine'|'overdraftFee'>>>>('intelligence:metadata',{});
-  const transactions:Transaction[]=rows.filter(r=>ids.includes(String(r.account_id))).map(r=>({id:String(r.id),accountId:String(r.account_id),date:String(r.posted_date),minor:String(r.amount_minor),currency:currency(String(r.currency)),description:String(r.merchant??r.raw_description),rawDescription:String(r.raw_description),category:String(r.category_name??'Uncategorised'),kind:(r.category_kind??'unknown') as Kind,status:r.status==='pending'?'pending':'settled',transfer:r.transfer_group_id!==null,recurring:r.is_recurring===1,...metadata[String(r.id)]}));
+  const transactions:Transaction[]=rows.filter(r=>ids.includes(String(r.account_id))).map((r):Transaction|null=>{
+   const held=currency(String(r.currency)),date=String(r.posted_date),shown=into(String(r.amount_minor),held,date);
+   if(shown===null)return null;
+   return {id:String(r.id),accountId:String(r.account_id),date,minor:shown,currency:c,description:String(r.merchant??r.raw_description),rawDescription:String(r.raw_description),category:String(r.category_name??'Uncategorised'),kind:(r.category_kind??'unknown') as Kind,status:r.status==='pending'?'pending':'settled',transfer:r.transfer_group_id!==null,recurring:r.is_recurring===1,...metadata[String(r.id)]};
+  }).filter((t):t is Transaction=>t!==null);
   const {refundRepository}=await import('./refunds');
   const refundLinks=(await refundRepository(driver).active()).filter(l=>l.creditDate<=asOf&&l.purchaseDate<=asOf);
   const refundById=new Map(refundLinks.map(l=>[l.creditId,l.purchaseId]));
@@ -44,8 +77,14 @@ export function intelligenceRepository(driver:Driver){
   for(const t of transactions){const stored=foreign.get(t.id);if(stored)t.foreign=stored;}
   for(const t of transactions){const split=splits.get(t.id);if(split&&split.id===t.id&&t.status==='settled'&&!t.transfer&&validSplit(split,t.minor,t.currency))t.allocations=split.parts;}
   const coverage=(await driver.query("SELECT c.*,b.integrity_tier FROM coverage_ranges c JOIN import_batches b ON b.id=c.import_batch_id WHERE b.status='committed'")).filter(r=>ids.includes(String(r.account_id))).map(r=>({accountId:String(r.account_id),start:String(r.period_start),end:String(r.period_end),tier:(r.integrity_tier==='A'?'A':r.integrity_tier==='B'?'B':'C') as 'A'|'B'|'C'}));
-  const pays=(await driver.query('SELECT * FROM payslips ORDER BY pay_date,id')).filter(r=>r.currency===c).map(r=>({id:String(r.id),employer:String(r.employer),date:String(r.pay_date),start:String(r.period_start),end:String(r.period_end),net:String(r.net_minor),gross:String(r.gross_minor),currency:c,transactionId:r.linked_transaction_id===null?null:String(r.linked_transaction_id)}));
-  const s:Snapshot={asOf,currency:c,accountIds:ids,transactions,coverage,pays};const reflection=await setting<Snapshot['selfReport']|null>('intelligence:reflection',null);if(reflection)s.selfReport=reflection;
+  // Pay converts at the rate for the day it was paid, like every other amount that happened on a date.
+  const pays=(await driver.query('SELECT * FROM payslips ORDER BY pay_date,id')).map(r=>{
+   const paid=currency(String(r.currency)),date=String(r.pay_date);
+   const net=into(String(r.net_minor),paid,date),gross=into(String(r.gross_minor),paid,date);
+   if(net===null||gross===null)return null;
+   return {id:String(r.id),employer:String(r.employer),date,start:String(r.period_start),end:String(r.period_end),net,gross,currency:c,transactionId:r.linked_transaction_id===null?null:String(r.linked_transaction_id)};
+  }).filter((p):p is NonNullable<typeof p>=>p!==null);
+  const s:Snapshot={asOf,currency:c,accountIds:ids,transactions,coverage,pays};if(unconverted.size)s.unconverted=[...unconverted].sort();const reflection=await setting<Snapshot['selfReport']|null>('intelligence:reflection',null);if(reflection)s.selfReport=reflection;
   const provenance=await queryPages(driver,'SELECT s.transaction_id,s.import_batch_id,s.source_row_id,s.original_payload,b.file_name FROM transaction_sources s JOIN import_batches b ON b.id=s.import_batch_id',[],['transaction_id','import_batch_id','source_row_id']);
   const sources=new Map<string,NonNullable<Transaction['sources']>>();
   for(const r of provenance){const id=String(r.transaction_id),group=sources.get(id)??[];group.push({file:String(r.file_name),row:String(r.source_row_id),raw:String(r.original_payload)});sources.set(id,group);}
@@ -53,15 +92,25 @@ export function intelligenceRepository(driver:Driver){
   const recurringNames=new Set(recurrences(s).map(r=>r.merchant));for(const t of transactions)if(recurringNames.has(t.description.trim().toLowerCase()))t.recurring=true;
   const liquidAccounts=accounts.filter(a=>['checking','savings','cash','credit'].includes(String(a.type)));let balance=0n,liability=0n;const evidence:string[]=[];let valid=liquidAccounts.length>0;
   for(const a of liquidAccounts){const anchors=await driver.query("SELECT * FROM import_batches WHERE account_id=? AND status='committed' AND integrity_tier='A' AND period_end<=? AND stated_closing_minor IS NOT NULL ORDER BY period_end DESC,id",[String(a.id),asOf]);const anchor=anchors[0];if(!anchor){valid=false;continue;}const date=String(anchor.period_end);const intervals=coverage.filter(v=>v.accountId===a.id);for(let d=day(date);d<=day(asOf);d++)if(!intervals.some(v=>day(v.start)<=d&&day(v.end)>=d))valid=false;
-   let accountBalance=BigInt(String(anchor.stated_closing_minor));const after=transactions.filter(t=>t.accountId===a.id&&t.date>date&&t.date<=asOf&&t.status==='settled');for(const t of after)accountBalance+=BigInt(t.minor);if(a.type==='credit'){if(accountBalance<0n)liability-=accountBalance;}else balance+=accountBalance;evidence.push(...transactions.filter(t=>t.accountId===a.id&&t.date<=asOf).map(t=>t.id));
+   // Converted at the anchor's OWN date: it is a fact about that day, and the movements added to it were
+   // each valued at their own. An account whose currency has no rate cannot be counted, and saying the
+   // liquid figure is unverified is the honest answer rather than leaving it out of a total silently.
+   const anchored=into(String(anchor.stated_closing_minor),currency(String(a.currency)),date);
+   if(anchored===null){valid=false;continue;}
+   let accountBalance=BigInt(anchored);const after=transactions.filter(t=>t.accountId===a.id&&t.date>date&&t.date<=asOf&&t.status==='settled');for(const t of after)accountBalance+=BigInt(t.minor);if(a.type==='credit'){if(accountBalance<0n)liability-=accountBalance;}else balance+=accountBalance;evidence.push(...transactions.filter(t=>t.accountId===a.id&&t.date<=asOf).map(t=>t.id));
    if(intervals.some(v=>v.tier==='C'&&v.end>date))valid=false;
   }
   if(Object.keys(await manualRepository(driver).unresolved()).length)valid=false;
   // Recorded earmarks reach the snapshot so the analysis layer can report a budget against what the user
   // actually set. They are user-entered plans, never an additional ledger balance.
-  s.goals=(await driver.query('SELECT id,name,target_minor,funded_minor,target_date,kind FROM goals WHERE currency=? ORDER BY target_date,id',[c]))
-   .map(g=>({id:String(g.id),name:String(g.name),targetMinor:String(g.target_minor),fundedMinor:String(g.funded_minor),
-    targetDate:g.target_date===null?'':String(g.target_date),kind:String(g.kind) as NonNullable<Snapshot['goals']>[number]['kind']}));
+  s.goals=(await driver.query('SELECT id,name,target_minor,funded_minor,target_date,kind,currency FROM goals ORDER BY target_date,id'))
+   .map(g=>{
+    // A target is a plan for money he has not spent yet, so it is valued as at the day being reported on.
+    const set=currency(String(g.currency)),targetMinor=into(String(g.target_minor),set,asOf),fundedMinor=into(String(g.funded_minor),set,asOf);
+    if(targetMinor===null||fundedMinor===null)return null;
+    return {id:String(g.id),name:String(g.name),targetMinor,fundedMinor,
+     targetDate:g.target_date===null?'':String(g.target_date),kind:String(g.kind) as NonNullable<Snapshot['goals']>[number]['kind']};
+   }).filter((g):g is NonNullable<typeof g>=>g!==null);
   s.commitmentsKnown=!accounts.some(a=>a.type==='loan');if(valid)s.committedLiability={minor:liability.toString(),evidence};
   if(valid)s.liquid={minor:balance.toString(),asOf,verified:true,evidence};
   return s;

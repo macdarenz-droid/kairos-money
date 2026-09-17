@@ -58,3 +58,22 @@ export function rateAsAt(rates: readonly Rate[], base: Currency, quote: Currency
 export function invert(rate: Rate): Rate {
   return { ...rate, base: rate.quote, quote: rate.base, rateE8: divideRounded(RATE_SCALE * RATE_SCALE, rate.rateE8) };
 }
+
+/**
+ * THE RATE TO GET FROM ONE CURRENCY TO ANOTHER, WHICHEVER DIRECTION WAS PUBLISHED.
+ *
+ * A published set is one-directional: asking the source for PHP gives PHP→AUD, PHP→USD and so on. The
+ * app then asked for AUD→PHP, because that is the direction a conversion runs in — account currency to
+ * displayed currency — and got nothing back. `invert` existed for exactly this and was never called from
+ * anywhere in src, so every conversion silently found no rate and every foreign amount was dropped and
+ * reported as "not included". One fetched pair now serves both ways, which is what a ratio is.
+ *
+ * Returns the identity scale for a conversion into the same currency, so callers do not special-case it.
+ */
+export function rateBetween(rates: readonly Rate[], from: Currency, to: Currency, date: string): bigint | null {
+  if (from === to) return RATE_SCALE;
+  const direct = rateAsAt(rates, from, to, date);
+  if (direct) return direct.rateE8;
+  const published = rateAsAt(rates, to, from, date);
+  return published ? invert(published).rateE8 : null;
+}

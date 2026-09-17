@@ -1,5 +1,5 @@
 import {useQuery} from '@tanstack/react-query';
-import {convert, rateAsAt, type Rate} from '../../core/fx';
+import {convert, rateBetween, type Rate} from '../../core/fx';
 import {currency, format, money, type Currency} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {currencyExposure, type Holding} from '../../intelligence/visuals/exposure';
@@ -45,10 +45,13 @@ export function CurrencyExposureCard() {
     const held = BigInt(balances.data.find(balance => balance.accountId === account.id)?.minor ?? '0');
     const code = currency(account.currency);
     if (code === display) { holdings.push({code, minor: held.toString()}); continue; }
-    const rate = rateAsAt(rates, code, display, today);
-    if (!rate) { if (!missing.includes(code)) missing.push(code); continue; }
-    holdings.push({code, minor: convert(money(held, code), display, rate.rateE8).minor.toString()});
-    if (rate.asOf > newest) newest = rate.asOf;
+    // Either direction, for the same reason the combined total needs it: one published pair, both ways.
+    const rate = rateBetween(rates, code, display, today);
+    if (rate === null) { if (!missing.includes(code)) missing.push(code); continue; }
+    holdings.push({code, minor: convert(money(held, code), display, rate).minor.toString()});
+    const dated = rates.filter(r => (r.base === code && r.quote === display) || (r.base === display && r.quote === code))
+      .reduce((latest, r) => (r.asOf <= today && r.asOf > latest ? r.asOf : latest), '');
+    if (dated > newest) newest = dated;
   }
 
   const exposure = currencyExposure(holdings);

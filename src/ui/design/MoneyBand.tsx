@@ -39,7 +39,18 @@ export function MoneyBand() {
   const accounts = useQuery({queryKey: ['accounts'], queryFn: () => session.run(repo => repo.accounts()), enabled: session.state === 'ready'});
   const live = (accounts.data ?? []).filter(account => !account.archived_at);
   const codes = [...new Set(live.map(account => account.currency))];
-  const code = currency(codes.includes('AUD') ? 'AUD' : codes[0] ?? 'AUD');
+  /**
+   * THE CURRENCY HE CHOSE, like every other figure on this screen.
+   *
+   * This preferred AUD from the accounts while Surfaces and Intelligence followed the display setting,
+   * so one screen gave two different answers to "whose money is this" — his was set to PHP and these
+   * two carried on in AUD. It also split the ['intelligence', day, code, …] key, which made Today read
+   * the whole ledger twice over. The snapshot converts now, so following the setting shows his money in
+   * the currency he asked for rather than emptying the chart.
+   */
+  const home = useQuery({queryKey: ['display-currency'], enabled: session.state === 'ready',
+    queryFn: () => session.run(repo => repo.displayCurrency())});
+  const code = currency(home.data ?? (codes.includes('AUD') ? 'AUD' : codes[0] ?? 'AUD'));
 
   const balances = useQuery({queryKey: ['account-balances'], queryFn: () => session.run(repo => repo.accountBalances()), enabled: session.state === 'ready'});
   /**

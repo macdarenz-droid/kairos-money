@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { currency, format, money, type Currency } from '../../core/money';
-import { convert, rateAsAt, type Rate } from '../../core/fx';
+import { convert, rateBetween, type Rate } from '../../core/fx';
 import { localDay } from '../../ingest/reminders';
 import { useSession } from '../session';
 
@@ -44,12 +44,16 @@ export function CombinedTotal({ accounts, balances }: {
     const held = BigInt(balances.find(b => b.accountId === account.id)?.minor ?? 0n);
     const code = currency(account.currency);
     if (code === display) { total += held; continue; }
-    const rate = rateAsAt(rates, code, display, today);
+    // Either direction: the source publishes one way and the conversion runs the other, so asking only
+    // for base=account, quote=display found nothing and reported every foreign account as "not included".
+    const rate = rateBetween(rates, code, display, today);
     // A currency with no rate is left OUT and named, rather than quietly counted as zero or as though it
     // were already in the display currency. A total that silently drops an account is worse than none.
-    if (!rate) { if (!missing.includes(code)) missing.push(code); continue; }
-    total += convert(money(held, code), display, rate.rateE8).minor;
-    if (rate.asOf > newest) newest = rate.asOf;
+    if (rate === null) { if (!missing.includes(code)) missing.push(code); continue; }
+    total += convert(money(held, code), display, rate).minor;
+    const dated = rates.filter(r => (r.base === code && r.quote === display) || (r.base === display && r.quote === code))
+      .reduce((latest, r) => (r.asOf <= today && r.asOf > latest ? r.asOf : latest), '');
+    if (dated > newest) newest = dated;
   }
 
   return <div className="list-heading combined-total">
