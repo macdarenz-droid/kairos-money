@@ -1,4 +1,4 @@
-import {currency, money, parseDecimal, type Currency} from '../../core/money';
+import {currency, currencyDigits, money, parseDecimal, type Currency} from '../../core/money';
 
 /** `decision` carries an answer already given in the notification shade, before the app was opened. */
 export type Notice = {id: string; source: string; title: string; text: string; postedAt: number; decision?: 'approved' | 'rejected' | null};
@@ -22,15 +22,31 @@ export type ParsedNotice =
 // Balance lines carry a second amount that is not the transaction. They are removed before counting, so a
 // notice reading "You spent $12.50. Available balance $431.20" is not treated as ambiguous — and a notice
 // that is ONLY a balance has no amount left and is skipped.
-const BALANCE = /\b(?:available|remaining|current|new|closing|acct|account)?\s*(?:bal|balance|funds)\b[^\d\n]{0,24}(?:[A-Z]{3}\s*)?[$€£¥]?\s*\d[\d,]*(?:\.\d{1,3})?/gi;
+const BALANCE = /\b(?:available|remaining|current|new|closing|acct|account)?\s*(?:bal|balance|funds)\b[^\d\n]{0,24}(?:[A-Z]{3}\s*)?[$€£¥₱]?\s*\d[\d,]*(?:\.\d{1,3})?/gi;
 const INWARD_PHRASE = /\b(?:been paid|paid into|paid to you|received|deposit(?:ed)?|credited|refund(?:ed)?|transfer(?:red)? from|money in)\b/i;
 const OUTWARD_PHRASE = /\b(?:you spent|spent|purchase(?:d)?|debited|withdrawn|withdrawal|paid from|paid to|payment to|charged|sent to|transfer(?:red)? to|money out)\b/i;
 const OUTWARD_WORD = /\b(?:debit|paid|payment|sent)\b/i;
 const INWARD_WORD = /\b(?:credit|pay)\b/i;
 // A run of digits is only an amount when the bank marked it as one: a currency code, a symbol, or cents.
-// Without that rule a card suffix or a store number ("WOOLWORTHS 1234") counts as a second amount and
-// every ordinary notice is thrown away as ambiguous.
-const AMOUNT = /(?:(?<code>AUD|USD|PHP|EUR|GBP|NZD|CAD|SGD|JPY|KWD)\s*)?(?<symbol>[$€£¥])?\s*(?<whole>\d{1,3}(?:,\d{3})+|\d+)(?:\.(?<fraction>\d{1,3}))?/g;
+// Without that rule a card suffix or a store number ("SYNTHETIC GROCER 1234") counts as a second amount
+// and every ordinary notice is thrown away as ambiguous.
+//
+// The code is matched as ANY standalone three-letter word and validated afterwards against the
+// currencies this app knows, rather than listed here. Two reasons, and the second is the one that bit:
+// the list cannot drift out of step with currencyDigits, and a written list has a case. Philippine
+// banks and e-wallets write "PHP", "Php" and "php" interchangeably, and a case-sensitive list read
+// only the first. A three-letter word that is not a currency ("Ref", "THS" inside a shouted merchant)
+// simply fails validation and the digits after it are judged on their own.
+//
+// ₱ is in the symbol class for the same region. GCash writes round amounts as "₱1,200" with no cents,
+// which carried no code, no known symbol and no fraction — so the commonest message a Philippine user
+// gets was read as having no amount at all and silently skipped.
+const AMOUNT = /(?:(?<code>\b[A-Za-z]{3}\b)\s*)?(?<symbol>[$€£¥₱])?\s*(?<whole>\d{1,3}(?:,\d{3})+|\d+)(?:\.(?<fraction>\d{1,3}))?/g;
+/** A three-letter word is a currency only if this app has one by that name. Case is the bank's business. */
+function declaredCurrency(code: string | undefined): string | undefined {
+  const upper = code?.toUpperCase();
+  return upper && Object.hasOwn(currencyDigits, upper) ? upper : undefined;
+}
 const MERCHANT = /\b(?:at|to|from)\s+([^.,;\n]{2,60})/i;
 const GENERIC = /^(?:your |my |the )?(?:account|acct|card|balance|you)\b/i;
 const STATEMENT_STYLE = /\b[A-Z][A-Z0-9&'*-]{2,}(?:[ -][A-Z0-9&'*-]{2,}){0,5}\b/;
@@ -60,13 +76,16 @@ export function parseNotice(notice: Notice, expected: Currency): ParsedNotice {
 
   const spendable = body.replace(BALANCE, ' ');
   const amounts = [...spendable.matchAll(AMOUNT)]
-    .map(match => match.groups!)
-    .filter(groups => groups['code'] || groups['symbol'] || groups['fraction'] !== undefined);
+    .map(match => {
+      const groups = match.groups as {code?: string; symbol?: string; whole?: string; fraction?: string};
+      return {...groups, declared: declaredCurrency(groups.code)};
+    })
+    .filter(groups => groups.declared || groups.symbol || groups.fraction !== undefined);
   if (!amounts.length) return {status: 'skip', reason: 'No amount could be read from the notification.'};
   if (amounts.length > 1) return {status: 'skip', reason: 'The notification carries more than one amount, so which one was spent is unclear.'};
 
-  const {code, whole, fraction} = amounts[0]! as {code?: string; whole?: string; fraction?: string};
-  if (code && code !== expected) return {status: 'skip', reason: `The notification is in ${code}, not ${expected}.`};
+  const {declared, whole, fraction} = amounts[0]!;
+  if (declared && declared !== expected) return {status: 'skip', reason: `The notification is in ${declared}, not ${expected}.`};
 
   const digits = (whole ?? '').replace(/,/g, '') + (fraction === undefined ? '' : `.${fraction}`);
   let value;

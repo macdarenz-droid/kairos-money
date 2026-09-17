@@ -33,7 +33,13 @@ export function NoticeSettings({accounts = []}: {accounts?: readonly Account[]} 
 
   // Names and package ids of the apps that announce money. Matching is a hint for ordering the list, never
   // a restriction: "Show all apps" is one press away, and anything already ticked is always listed.
-  const MONEY = /bank|banking|money|pay|wallet|card|credit|super|finance|financial|invest|crypto|afterpay|zip|klarna|humm|paypal|wise|revolut|westpac|commbank|nab\b|anz\b|ubank|bendigo|macquarie|amex|visa|mastercard|beem|osko/i;
+  //
+  // The named brands were all Australian, which made this list useless to anybody else — a Philippine
+  // owner would see none of GCash, BPI, BDO or GoTyme near the top and would have to go hunting through
+  // every app on the phone. The generic words carry most of the work (anything with "bank", "pay" or
+  // "wallet" in its name or package id already surfaces, which covers Maribank, Landbank, UnionBank,
+  // Metrobank, SeaBank, Maya and InstaPay); only the brands those words miss are worth naming.
+  const MONEY = /bank|banking|money|pay|wallet|card|credit|super|finance|financial|invest|crypto|afterpay|zip|klarna|humm|paypal|wise|revolut|westpac|commbank|nab\b|anz\b|ubank|bendigo|macquarie|amex|visa|mastercard|beem|osko|gcash|bpi\b|bdo\b|gotyme|rcbc|coins\.ph|grab/i;
   const every = apps.data ?? [];
   const likely = every.filter(app => MONEY.test(app.label) || MONEY.test(app.id) || watched.includes(app.id));
   const hidden = every.length - likely.length;

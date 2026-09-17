@@ -134,3 +134,56 @@ it('reads "paid from account" as money leaving', () => {
  expect(parsed.merchant).not.toBe('account ending');
  expect(parsed.merchant).toContain('OSKO');
 });
+
+// ── Philippine e-wallet and bank alerts ────────────────────────────────────────────────────────────
+// No bank in the Philippines offers this app an API, so a push notification is the only thing that
+// arrives at the moment money moves. That makes these shapes load-bearing rather than nice to have.
+// All synthetic: the wording is what is being tested, never anyone's real transaction.
+const PHP = currency('PHP');
+const peso = (text: string) => parseNotice({id: 'n1', source: 'com.synthetic.wallet', title: 'Synthetic Wallet', text, postedAt: at}, PHP);
+
+it('reads a round peso amount written with the peso sign and no centavos', () => {
+ // The commonest message a Philippine user gets, and the one that used to be dropped: ₱1,200 carries
+ // no currency code, no symbol the app knew, and no cents, so it read as having no amount at all.
+ const parsed = peso('You have received ₱1,200 from SYNTHETIC PAYEE.');
+ expect(parsed.status).toBe('ok');
+ if (parsed.status !== 'ok') return;
+ expect(parsed.minor).toBe('120000');
+});
+
+it('reads the currency code whatever case the bank writes it in', () => {
+ // PHP, Php and php are used interchangeably there. A case-sensitive list read only the first.
+ for (const code of ['PHP', 'Php', 'php']) {
+  const parsed = peso(`You have sent ${code} 500.00 to SYNTHETIC MERCHANT. Your new balance is ${code} 2,050.00.`);
+  expect(parsed.status, code).toBe('ok');
+  if (parsed.status !== 'ok') return;
+  expect(parsed.minor, code).toBe('-50000');
+ }
+});
+
+it('reads a wallet transfer that names no currency at all', () => {
+ // The amount is marked only by its centavos. The trailing balance is still stripped, so this stays
+ // one transaction rather than two.
+ const parsed = peso('You have sent 2,950.00 GCASH to SYNTHETIC PAYEE. Your new balance is 2,050.00.');
+ expect(parsed.status).toBe('ok');
+ if (parsed.status !== 'ok') return;
+ expect(parsed.minor).toBe('-295000');
+});
+
+it('does not mistake a three-letter word for a currency', () => {
+ // The code is now matched as any standalone three-letter word and validated afterwards. "Ref" must
+ // not turn a reference number into an amount — that would make the notice ambiguous and lose it.
+ const parsed = peso('Purchase of ₱349.50 at SYNTHETIC GROCER. Ref 4471902');
+ expect(parsed.status).toBe('ok');
+ if (parsed.status !== 'ok') return;
+ expect(parsed.minor).toBe('-34950');
+});
+
+it('still refuses a notification in a currency the account is not held in', () => {
+ // Case-insensitivity must not become currency-blindness: a USD alert on a PHP account is skipped,
+ // not converted and not assumed.
+ const parsed = peso('You have sent usd 20.00 to SYNTHETIC MERCHANT.');
+ expect(parsed.status).toBe('skip');
+ if (parsed.status !== 'skip') return;
+ expect(parsed.reason).toContain('USD');
+});
