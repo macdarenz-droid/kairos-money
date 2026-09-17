@@ -77,3 +77,38 @@ export function rateBetween(rates: readonly Rate[], from: Currency, to: Currency
   const published = rateAsAt(rates, to, from, date);
   return published ? invert(published).rateE8 : null;
 }
+
+/**
+ * How many months of history one refresh will ask for. Beyond this, older months stay unconverted and
+ * are NAMED as such — which is the existing, honest outcome — rather than turning one tap into hundreds
+ * of requests.
+ */
+export const MAX_RATE_MONTHS = 36;
+
+/**
+ * THE DAYS TO ASK THE RATE SOURCE FOR, SO OLD MONEY CONVERTS TOO.
+ *
+ * Refreshing fetched only `latest`, and a conversion uses the newest rate published ON OR BEFORE a
+ * transaction's date. So one tap produced exactly one usable day: everything older than the tap had no
+ * rate at all and was dropped as unconvertible. Set a new display currency, press Update, and watch most
+ * of the ledger vanish — technically correct and useless.
+ *
+ * One request per transaction date would be hundreds, so this asks for the first of each month the
+ * ledger spans. The source answers a non-publishing day with the most recent published one and states
+ * the date it really belongs to, which is the same mechanism that already gives a Saturday purchase
+ * Friday's rate. A mid-month purchase is therefore valued at that month's opening rate rather than its
+ * own day's — an approximation, and the only one here, made because the alternative is unusable. It is
+ * never a LATER rate than the purchase, which is the thing that would rewrite the past.
+ */
+export function rateDays(first: string, last: string): string[] {
+  const iso = /^\d{4}-\d{2}-\d{2}$/;
+  if (!iso.test(first) || !iso.test(last) || first > last) return [];
+  const months: string[] = [];
+  let [year, month] = [Number(first.slice(0, 4)), Number(first.slice(5, 7))];
+  const end = last.slice(0, 7);
+  while (`${year}-${String(month).padStart(2, '0')}` <= end) {
+    months.push(`${year}-${String(month).padStart(2, '0')}-01`);
+    if (++month > 12) { month = 1; year++; }
+  }
+  return months.slice(-MAX_RATE_MONTHS);
+}

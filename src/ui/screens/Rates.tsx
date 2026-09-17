@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { currency, currencyDigits, type Currency } from '../../core/money';
 import { asRates, fetchRates } from '../../core/net/rates';
+import { rateDays } from '../../core/fx';
 import { Button, Row } from '../design/primitives';
 import { useSession } from '../session';
 
@@ -21,7 +22,7 @@ export function Rates({ accounts, notify }: {
   notify: (text: string) => void;
 }) {
   const session = useSession(), client = useQueryClient();
-  const [error, setError] = useState('');
+  const [error, setError] = useState(''), [progress, setProgress] = useState('');
 
   const held = [...new Set(accounts.filter(a => !a.archived_at).map(a => a.currency))] as Currency[];
   const home = useQuery({ queryKey: ['display-currency'], enabled: session.state === 'ready',
@@ -35,16 +36,45 @@ export function Rates({ accounts, notify }: {
   const wanted = [...new Set([...held, display, ...(['USD', 'PHP', 'AUD'] as Currency[])])]
     .filter(code => Object.hasOwn(currencyDigits, code));
 
+  /**
+   * ONE REFRESH HAS TO COVER THE LEDGER, NOT JUST TODAY.
+   *
+   * This asked for `latest` and nothing else. A conversion uses the newest rate published ON OR BEFORE a
+   * transaction's date, so a single tap left exactly one usable day: everything older had no rate and was
+   * dropped as unconvertible. Change the display currency, press Update, and most of the ledger vanishes.
+   *
+   * So it asks for the first of each month the ledger spans as well — see rateDays for why months rather
+   * than days. Each day is saved as it arrives, so a refresh that fails halfway keeps what it got instead
+   * of discarding the lot; and today is fetched FIRST, because it is the one that makes the newest
+   * figures work and the one most likely to be all somebody needs.
+   */
   const refresh = useMutation({
     mutationFn: async () => {
-      const response = await fetchRates(display, wanted.filter(c => c !== display));
-      const rows = asRates(response);
-      if (!rows.length) throw new Error('No rates were returned for these currencies.');
-      await session.run(repo => repo.saveRates(rows.map(r => ({ ...r, base: String(r.base), quote: String(r.quote) }))));
-      return response.asOf;
+      const quotes = wanted.filter(c => c !== display);
+      const span = await session.run(repo => repo.ledgerSpan());
+      const store = async (response: Awaited<ReturnType<typeof fetchRates>>) => {
+        const rows = asRates(response);
+        if (rows.length) await session.run(repo => repo.saveRates(rows.map(r => ({ ...r, base: String(r.base), quote: String(r.quote) }))));
+        return rows.length;
+      };
+
+      const latest = await fetchRates(display, quotes);
+      if (!await store(latest)) throw new Error('No rates were returned for these currencies.');
+
+      let covered = 1;
+      for (const day of span ? rateDays(span.first, span.last) : []) {
+        if (day > latest.asOf) continue;
+        setProgress(`Reading ${day.slice(0, 7)}`);
+        // A missing month is not a failed refresh: the months that did arrive are worth keeping, and
+        // anything still unconvertible is named on the screens that would have shown it.
+        try { if (await store(await fetchRates(display, quotes, day))) covered++; } catch { /* keep going */ }
+      }
+      setProgress('');
+      return { asOf: latest.asOf, covered };
     },
-    onSuccess: async day => { setError(''); await client.invalidateQueries(); notify(`Rates updated to ${day}.`); },
-    onError: e => setError(e instanceof Error ? e.message : 'Rates could not be updated.'),
+    onSuccess: async ({ asOf, covered }) => { setError(''); await client.invalidateQueries();
+      notify(covered > 1 ? `Rates updated to ${asOf}, covering ${covered} months.` : `Rates updated to ${asOf}.`); },
+    onError: e => { setProgress(''); setError(e instanceof Error ? e.message : 'Rates could not be updated.'); },
   });
 
   const choose = useMutation({
@@ -61,8 +91,10 @@ export function Rates({ accounts, notify }: {
         {wanted.map(code => <option key={code} value={code}>{code}</option>)}
       </select>
     </label>
-    <Row trailing={<Button disabled={refresh.isPending} onClick={() => refresh.mutate()}>
-      <RefreshCw size={16}/>{refresh.isPending ? 'Updating' : 'Update'}</Button>}>
+    {/* Pressed before the stored display currency has loaded, this fetched against whatever the picker
+        was defaulting to and the source answered about a different currency. It waits for the setting. */}
+    <Row trailing={<Button disabled={refresh.isPending || !home.isSuccess} onClick={() => refresh.mutate()}>
+      <RefreshCw size={16}/>{refresh.isPending ? (progress || 'Updating') : 'Update'}</Button>}>
       Rates
       {/* The day the rates belong to, not the moment they were downloaded. */}
       <p>{asOf.data ? `From ${asOf.data}` : 'None yet'}</p>
@@ -72,8 +104,9 @@ export function Rates({ accounts, notify }: {
       * not fine is choosing a currency with no stored rate: nothing can be converted into it, and every
       * figure would be missing with no reason given. So the reason is given, next to the choice.
       */}
-    {!held.includes(display) && !asOf.data && <p role="alert">No rates are stored yet, so amounts cannot be
-      converted into {display}. Press Update, or choose a currency you hold an account in.</p>}
+    {/* A state, not a failure, so it does not compete with the error below for the same role. */}
+    {!held.includes(display) && !asOf.data && !error && <p role="status">No rates are stored yet, so amounts
+      cannot be converted into {display}. Press Update, or choose a currency you hold an account in.</p>}
     {error && <p role="alert">{error}</p>}
   </section>;
 }

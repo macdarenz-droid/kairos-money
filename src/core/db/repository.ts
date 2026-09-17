@@ -103,6 +103,15 @@ export function repository(driver: Driver) {
       return rows.map(row => ({ asOf: String(row.as_of), base: String(row.base), quote: String(row.quote),
         rateE8: String(row.rate_e8), source: String(row.source) }));
     },
+    /**
+     * The first and last day the ledger has anything on, so a rate refresh can cover it.
+     *
+     * Two aggregates over an indexed column; it is asked for once, when somebody presses Update.
+     */
+    async ledgerSpan(): Promise<{first: string; last: string} | null> {
+      const row = (await driver.query('SELECT MIN(posted_date) AS first, MAX(posted_date) AS last FROM transactions'))[0];
+      return row?.first && row.last ? { first: String(row.first), last: String(row.last) } : null;
+    },
     /** When the newest stored rate is from, so the app can say how fresh its figures are. */
     async ratesAsOf(): Promise<string | null> {
       const row = (await driver.query('SELECT MAX(as_of) AS latest FROM fx_rates'))[0];
