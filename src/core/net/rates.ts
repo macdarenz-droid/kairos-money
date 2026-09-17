@@ -18,7 +18,13 @@ import { type Rate } from '../fx';
  * rates, and that is the entire interface. A rate lookup that carried a balance would be telling a
  * stranger what someone owns.
  */
-const HOST = 'https://api.frankfurter.app';
+/**
+ * MOVED, AND HIS PHONE IS WHAT PROVED IT. api.frankfurter.app answered every request with a redirect to
+ * this address, which is why the old one failed with the browser's single "Failed to fetch" for months
+ * of guessing: `redirect: 'error'` turns a moved service into the same word as being offline. Going out
+ * through the native client made the destination visible, it named itself on his screen, and this is it.
+ */
+const HOST = 'https://api.frankfurter.dev';
 
 /**
  * European Central Bank reference rates, republished by Frankfurter. No key, no account, no tracking
@@ -80,9 +86,11 @@ async function read(url: string): Promise<string> {
     } catch (error) {
       throw unreachable(`Check the connection. The phone reported: ${error instanceof Error ? error.message : String(error)}`);
     }
+    // The WHOLE address, not just the host: a service that moves its paths rather than its domain would
+    // otherwise report a destination identical to the one asked for, and say nothing useful.
     if (response.url && new URL(response.url).host !== host) {
-      throw new Error(`The rate service redirected to ${new URL(response.url).host}, which this app is not`
-        + ` set up to use. Tell Kairos's author that address and it can be added.`);
+      throw new Error(`The rate service redirected to ${response.url}, which this app is not set up to`
+        + ` use. Tell Kairos's author that address and it can be added.`);
     }
     if (response.status < 200 || response.status >= 300) throw new Error(`Exchange rates are unavailable right now (${response.status}).`);
     return typeof response.data === 'string' ? response.data : JSON.stringify(response.data);

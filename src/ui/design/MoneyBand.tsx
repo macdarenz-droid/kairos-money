@@ -1,6 +1,7 @@
 import {ArrowDown, ArrowUp} from 'lucide-react';
 import {useQuery} from '@tanstack/react-query';
 import {currency, format, money} from '../../core/money';
+import {convert, rateBetween, type Rate as FxRate} from '../../core/fx';
 import {displayRatio} from '../../intelligence/visuals';
 import {changePercent, moneyBand, type BandBlock} from '../../intelligence/visuals/band';
 import {localDay} from '../../ingest/reminders';
@@ -53,6 +54,10 @@ export function MoneyBand() {
   const code = currency(home.data ?? (codes.includes('AUD') ? 'AUD' : codes[0] ?? 'AUD'));
 
   const balances = useQuery({queryKey: ['account-balances'], queryFn: () => session.run(repo => repo.accountBalances()), enabled: session.state === 'ready'});
+  const stored = useQuery({queryKey: ['fx-rates'], enabled: session.state === 'ready',
+    queryFn: () => session.run(repo => repo.rates())});
+  const rates: FxRate[] = (stored.data ?? []).map(r => ({asOf: r.asOf, base: currency(r.base),
+    quote: currency(r.quote), rateE8: BigInt(r.rateE8), source: r.source}));
   /**
    * THE SAME ANALYSIS THE REST OF THIS SCREEN IS ALREADY WAITING FOR.
    *
@@ -82,8 +87,22 @@ export function MoneyBand() {
   if (!live.length) return null;
 
   const band = moneyBand(snapshot, today);
-  const held = live.filter(account => account.currency === code)
-    .reduce((total, account) => total + BigInt(balances.data?.find(row => row.accountId === account.id)?.minor ?? 0n), 0n);
+  /**
+   * "Balance now" READ PHP 0.00 WHILE HE HELD A$116, because this kept only the accounts whose currency
+   * already matched the one being displayed. Everything else on the screen had been taught to convert;
+   * this one line was still filtering, so the tiles reported what changed correctly and what he has as
+   * nothing at all.
+   *
+   * A balance converts at TODAY'S rate — it is what is held now, and what it is worth now is today's
+   * rate, which is the same rule the combined total states at length. An account no rate reaches is left
+   * out rather than counted as nought, and Unconverted at the top of this screen names it.
+   */
+  const held = live.reduce((total, account) => {
+    const rate = rateBetween(rates, currency(account.currency), code, today);
+    if (rate === null) return total;
+    const minor = BigInt(balances.data?.find(row => row.accountId === account.id)?.minor ?? 0n);
+    return total + convert(money(minor, currency(account.currency)), code, rate).minor;
+  }, 0n);
   const show = (minor: string | bigint) => format(money(BigInt(minor), code));
   const net = BigInt(band.now.netMinor);
   const shortfall = net < 0n;

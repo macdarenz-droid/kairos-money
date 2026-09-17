@@ -11,11 +11,13 @@ const AUD = currency('AUD');
 const today = localDay();
 const back = (days: number) => new Date(Date.parse(today) - days * 86400000).toISOString().slice(0, 10);
 
-const ledger = vi.hoisted(() => ({transactions: [] as Transaction[], balances: [] as {accountId: string; minor: string}[], accounts: [] as {id: string; name: string; currency: string; archived_at: string | null; opening_balance_minor: string; mask_last4: string | null}[]}));
+const ledger = vi.hoisted(() => ({transactions: [] as Transaction[], balances: [] as {accountId: string; minor: string}[], display: 'AUD', rates: [] as {asOf: string; base: string; quote: string; rateE8: string; source: string}[], accounts: [] as {id: string; name: string; currency: string; archived_at: string | null; opening_balance_minor: string; mask_last4: string | null}[]}));
 vi.mock('../src/ui/session', () => ({
   useSession: () => ({state: 'ready', run: (fn: (repo: unknown) => unknown) => Promise.resolve(fn({
     accounts: () => Promise.resolve(ledger.accounts),
     accountBalances: () => Promise.resolve(ledger.balances),
+    displayCurrency: () => Promise.resolve(ledger.display),
+    rates: () => Promise.resolve(ledger.rates),
     // The band reads the snapshot the screen's ONE analysis already built, rather than asking for a
     // second pass of its own over every transaction and every source row.
     intelligence: {analyse: () => Promise.resolve({snapshot: {
@@ -32,7 +34,7 @@ function row(over: Partial<Transaction> & {id: string; date: string; minor: stri
     kind: 'discretionary', status: 'settled', transfer: false, recurring: false, ...over};
 }
 const show = async (transactions: Transaction[], balance = '100000') => {
-  ledger.transactions = transactions;
+  ledger.transactions = transactions; ledger.display = 'AUD'; ledger.rates = [];
   ledger.accounts = [{id: 'a', name: 'Everyday', currency: 'AUD', archived_at: null, opening_balance_minor: '0', mask_last4: null}];
   ledger.balances = [{accountId: 'a', minor: balance}];
   render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}><MoneyBand/></QueryClientProvider>);
@@ -98,4 +100,33 @@ it('describes itself once, behind a mark, and nowhere on the tiles', async () =>
   // and at most one quiet second line.
   expect(screen.getByLabelText('What Your money means')).toBeTruthy();
   expect(document.body.textContent).not.toMatch(/Thirty days up to/);
+});
+
+/**
+ * FROM HIS SCREEN. "Balance now PHP 0.00" sat beside an account holding A$116, because this one line
+ * kept only the accounts whose currency already matched the one being displayed. Everything else had
+ * been taught to convert; this had not, so the tiles reported what MOVED correctly and what he HAS as
+ * nothing at all.
+ */
+it('converts what each account holds instead of dropping the ones in another currency', async () => {
+  ledger.display = 'PHP';
+  ledger.rates = [{asOf: '2026-01-01', base: 'PHP', quote: 'AUD', rateE8: '2380952', source: 'manual'}];
+  ledger.transactions = [];
+  ledger.accounts = [{id: 'a', name: 'G', currency: 'AUD', archived_at: null, opening_balance_minor: '0', mask_last4: null}];
+  ledger.balances = [{accountId: 'a', minor: '11600'}];
+  render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}><MoneyBand/></QueryClientProvider>);
+  await screen.findByLabelText('Your money');
+  // A$116.00 at 42 pesos to the dollar is ₱4,872.00 — not nought, and not dollars.
+  await waitFor(() => expect(document.querySelector('.money-band')!.textContent).toContain('4,872.00'));
+  expect(document.querySelector('.money-band')!.textContent).not.toContain('$116.00');
+});
+
+/** An account no rate reaches is left out rather than counted as nought; Unconverted names it above. */
+it('leaves out an account it cannot value, rather than adding a wrong number', async () => {
+  ledger.display = 'PHP'; ledger.rates = []; ledger.transactions = [];
+  ledger.accounts = [{id: 'a', name: 'G', currency: 'AUD', archived_at: null, opening_balance_minor: '0', mask_last4: null}];
+  ledger.balances = [{accountId: 'a', minor: '11600'}];
+  render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}><MoneyBand/></QueryClientProvider>);
+  await screen.findByLabelText('Your money');
+  expect(document.querySelector('.money-band')!.textContent).not.toContain('116');
 });

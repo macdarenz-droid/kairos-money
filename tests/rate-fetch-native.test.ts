@@ -14,7 +14,7 @@ beforeEach(() => { cap.native = true; cap.request.mockReset(); });
 afterEach(() => vi.restoreAllMocks());
 
 const answered = (over: Record<string, unknown> = {}) => cap.request.mockResolvedValue({
-  status: 200, url: 'https://api.frankfurter.app/latest?from=PHP&to=AUD', headers: {},
+  status: 200, url: 'https://api.frankfurter.dev/latest?from=PHP&to=AUD', headers: {},
   data: JSON.stringify({base: 'PHP', date: '2026-09-16', rates: {AUD: 0.0264}}), ...over});
 
 /**
@@ -42,12 +42,14 @@ describe('reading rates on the phone', () => {
 
   /**
    * Native follows a redirect before this code can object, so the destination is checked afterwards.
-   * Naming where it went is the one thing nobody could see before — the app promises one address, and a
-   * moved service is the likeliest reason a request that used to work stops.
+   * Naming where it went is the one thing nobody could see before, and it is how the real move was
+   * found: his phone reported "redirected to api.frankfurter.dev" and that address is now the one the
+   * app asks. The example here is deliberately somewhere nobody owns, so it keeps testing the refusal
+   * rather than the old address.
    */
   it('refuses an answer from an address it was not set up for, and names it', async () => {
-    answered({url: 'https://api.frankfurter.dev/v1/latest?from=PHP&to=AUD'});
-    await expect(fetchRates(PHP, [AUD])).rejects.toThrow(/redirected to api\.frankfurter\.dev/);
+    answered({url: 'https://rates.example.invalid/latest?from=PHP&to=AUD'});
+    await expect(fetchRates(PHP, [AUD])).rejects.toThrow(/redirected to https:\/\/rates\.example\.invalid\/latest/);
   });
 
   it('accepts the answer when it came from the address it asked', async () => {
@@ -57,9 +59,9 @@ describe('reading rates on the phone', () => {
 
   /** The phone's own reason, instead of the browser's one word for every network fault there is. */
   it('reports what the phone said when it could not connect', async () => {
-    cap.request.mockRejectedValue(new Error('Unable to resolve host "api.frankfurter.app"'));
+    cap.request.mockRejectedValue(new Error('Unable to resolve host "api.frankfurter.dev"'));
     await expect(fetchRates(PHP, [AUD])).rejects.toThrow(/Unable to resolve host/);
-    await expect(fetchRates(PHP, [AUD])).rejects.toThrow(/Could not reach api\.frankfurter\.app/);
+    await expect(fetchRates(PHP, [AUD])).rejects.toThrow(/Could not reach api\.frankfurter\.dev/);
   });
 
   it('keeps an answer that arrived and said no distinct from never arriving', async () => {

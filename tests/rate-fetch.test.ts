@@ -15,7 +15,7 @@ afterEach(() => vi.restoreAllMocks());
 describe('what the rate fetch says when it does not come back', () => {
   it('names the host it could not reach, rather than the browser’s word for it', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
-    await expect(fetchRates(PHP, [AUD, USD])).rejects.toThrow(/Could not reach api\.frankfurter\.app/);
+    await expect(fetchRates(PHP, [AUD, USD])).rejects.toThrow(/Could not reach api\.frankfurter\.dev/);
   });
 
   /**
@@ -38,7 +38,7 @@ describe('what the rate fetch says when it does not come back', () => {
   it('asks for the display currency as the base and reads the rates exactly', async () => {
     const spy = answer({base: 'PHP', date: '2026-09-16', rates: {AUD: 0.0264, USD: 0.0177}});
     const response = await fetchRates(PHP, [AUD, USD]);
-    expect(String(spy.mock.calls[0]?.[0])).toBe('https://api.frankfurter.app/latest?from=PHP&to=AUD,USD');
+    expect(String(spy.mock.calls[0]?.[0])).toBe('https://api.frankfurter.dev/latest?from=PHP&to=AUD,USD');
     expect(response.asOf).toBe('2026-09-16');
     expect(response.rates.AUD).toBe(2640000n);
     expect(response.rates.USD).toBe(1770000n);

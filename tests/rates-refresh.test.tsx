@@ -84,5 +84,5 @@ it('reports a refresh that could not reach the source at all', async () => {
   vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
   await open();
   await press();
-  expect((await screen.findByRole('alert')).textContent).toMatch(/Could not reach api\.frankfurter\.app/);
+  expect((await screen.findByRole('alert')).textContent).toMatch(/Could not reach api\.frankfurter\.dev/);
 });
