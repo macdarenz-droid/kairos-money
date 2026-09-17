@@ -149,10 +149,19 @@ export function repository(driver: Driver) {
       await db.insert(accounts).values({ ...input, name, opening_balance_minor: toDatabase(money(input.opening_balance_minor, input.currency)), archived_at: null });
     },
     async findAccount(id: string) { return (await db.select().from(accounts).where(eq(accounts.id, id)))[0]; },
+    /**
+     * Every ledger table this database actually has.
+     *
+     * Which tables EXIST is asked of the database rather than assumed from the list, because a database
+     * is not always at the newest schema — a partially migrated one, or one a test walks backwards, has
+     * fewer. Exporting a table that is not there yet fails the whole backup with "no such table", which
+     * is a strange way to lose a working export.
+     */
     async exportAll() {
       return driver.transaction(async () => {
         const tables: Record<string, Record<string, SqlValue>[]> = {};
-        for (const table of tableNames) tables[table] = await driver.query(`SELECT * FROM ${table} ORDER BY rowid`);
+        const present = new Set((await driver.query("SELECT name FROM sqlite_master WHERE type='table'")).map(row => String(row.name)));
+        for (const table of tableNames) if (present.has(table)) tables[table] = await driver.query(`SELECT * FROM ${table} ORDER BY rowid`);
         return { format: 'kairos-money', version: 1, schema_version: 2, database_schema_version: Number((await driver.query('SELECT MAX(version) AS version FROM _migrations'))[0]?.version ?? 0), exported_at: new Date().toISOString(), tables };
       });
     },

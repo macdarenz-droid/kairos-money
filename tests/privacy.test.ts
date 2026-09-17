@@ -12,7 +12,9 @@ it('exports all actual tables as JSON and CSV without corrupting exact values', 
   const json = JSON.parse(strFromU8(archive['kairos-money.json']!)) as { tables: Record<string, unknown[]> };
   expect(json.tables['accounts']).toHaveLength(1);
   expect(strFromU8(archive['transactions.csv']!)).toContain('"-500"');
-  expect(Object.keys(archive)).toHaveLength(18); raw.close();
+  // One JSON plus a CSV per ledger table. It moves when a table joins the export — `debts` did, in
+  // migration 5, because a debt is typed in by hand and cannot be re-derived the way a rate can.
+  expect(Object.keys(archive)).toHaveLength(19); raw.close();
 });
 it('neutralizes spreadsheet formulas but preserves signed numeric money', () => {
   expect(csvCell('=SUM(1,2)')).toBe('"\'=SUM(1,2)"'); expect(csvCell(-500)).toBe('"-500"');

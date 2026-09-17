@@ -192,7 +192,7 @@ export const app_settings = sqliteTable('app_settings', {
   value: text('value').notNull(),
 });
 
-export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings };
+export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings, debts };
 /**
  * The migration each table first appeared in.
  *
@@ -202,9 +202,8 @@ export const schema = { accounts, import_batches, coverage_ranges, categories, m
  * have to choose one, and either choice is wrong half the time — silently losing a ledger, or rejecting
  * every backup taken before the newest feature.
  *
- * Add a row here whenever a migration creates a table AND that table joins the export. It is empty today
- * because every exported table came from migration 1 — fx_rates and debts arrived later and are not in
- * the export yet, which is a decision recorded in docs/SESSION_2_BASELINE.json rather than an oversight.
+ * Add a row here whenever a migration creates a table. A table absent from this map is assumed to have
+ * been there from the beginning, which is true of the sixteen from migration 1.
  */
-export const tableIntroduced: Partial<Record<(typeof tableNames)[number], number>> = {};
-export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings'] as const;
+export const tableIntroduced: Partial<Record<(typeof tableNames)[number], number>> = { debts: 5 };
+export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings', 'debts'] as const;

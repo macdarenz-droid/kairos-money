@@ -3,6 +3,7 @@ import {memoryDriver} from './db-helper';
 import {migrate, migrations} from '../src/core/db/migrate';
 import {repository} from '../src/core/db/repository';
 import {restoreSnapshot} from '../src/core/db/restore';
+import {tableNames} from '../src/core/db/schema';
 
 /**
  * A BACKUP IS ONLY A SAFETY NET IF IT STILL WORKS LATER.
@@ -16,23 +17,25 @@ async function fresh() {
   await migrate(driver);
   return {driver, repo: repository(driver)};
 }
-const snapshot = (tables: Record<string, unknown[]>, version = migrations.length) =>
+const snapshot = (tables: Record<string, unknown[]>, version: number = migrations.length) =>
   ({format: 'kairos-money', version: 1, database_schema_version: version, tables});
-const empty = () => Object.fromEntries((['accounts', 'import_batches', 'coverage_ranges', 'categories',
-  'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals',
-  'signals', 'profiles', 'insights', 'privacy_log', 'app_settings'] as const).map(name => [name, []]));
+/** Every table a CURRENT backup carries. Built from the app's own list so it cannot drift from it. */
+const empty = () => Object.fromEntries(tableNames.map(name => [name, [] as unknown[]]));
+/** A backup as written before `debts` existed — the case the whole relaxation is for. */
+const beforeDebts = () => Object.fromEntries(tableNames.filter(name => name !== 'debts').map(name => [name, [] as unknown[]]));
 
 describe('restoring a backup from an older Kairos', () => {
   it('accepts a backup written before the newest migration existed', async () => {
+    // No `debts` table at all, because migration 5 had not happened when this backup was written.
     const {driver} = await fresh();
-    await expect(restoreSnapshot(driver, snapshot(empty(), 1))).resolves.toBeUndefined();
+    await expect(restoreSnapshot(driver, snapshot(beforeDebts(), 4))).resolves.toBeUndefined();
   });
 
   it('restores its rows rather than merely tolerating the file', async () => {
     const {driver, repo} = await fresh();
-    const tables = {...empty(), accounts: [{id: 'a', name: 'Everyday', institution: 'Synthetic Bank',
+    const tables = {...beforeDebts(), accounts: [{id: 'a', name: 'Everyday', institution: 'Synthetic Bank',
       type: 'checking', currency: 'AUD', mask_last4: null, opening_balance_minor: 1000, archived_at: null}]};
-    await restoreSnapshot(driver, snapshot(tables, 1));
+    await restoreSnapshot(driver, snapshot(tables, 4));
     expect(await repo.accounts()).toHaveLength(1);
   });
 

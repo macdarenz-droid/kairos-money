@@ -55,6 +55,16 @@ jobs:
         with:
           path: ~/.android/debug.keystore
           key: kairos-money-debug-signing-v1
+      # A cache is evicted after a week unused, and a rotated key means every phone with the previous
+      # build refuses the new one. When the keystore is held as a secret instead, it never rotates.
+      # The secret is optional: without it the cache above still works.
+      - name: Use the pinned development keystore when one is configured
+        if: env.ANDROID_DEBUG_KEYSTORE_B64 != ''
+        env:
+          ANDROID_DEBUG_KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
+        run: |
+          mkdir -p ~/.android
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
       - run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
       - run: npm ci
       - run: npm run android:sync
@@ -65,6 +75,8 @@ jobs:
         run: ./gradlew :app:assembleBenchmark :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --no-daemon
       - name: Verify APK signature
         run: "$ANDROID_HOME/build-tools/34.0.0/apksigner verify --verbose android/app/build/outputs/apk/debug/app-debug.apk"
+      - name: Verify the signing identity has not rotated
+        run: python3 scripts/verify-signing-identity.py android/app/build/outputs/apk/debug/app-debug.apk "$ANDROID_HOME"
       - name: Verify non-debuggable benchmark APK
         run: python3 scripts/verify-benchmark-apk.py
       - name: Enable emulator acceleration
