@@ -17,6 +17,7 @@ import { followSystem } from './design/theme';
 import { useSession } from './session';
 import { Brand, LockScreen } from './screens/Lock';
 import { CombinedTotal } from './design/CombinedTotal';
+import { DoubleCounted } from './design/DoubleCounted';
 import { MoneyBand } from './design/MoneyBand';
 import { Surfaces } from './design/Surfaces';
 import { SpendRing } from './design/SpendRing';
@@ -112,7 +113,7 @@ export default function App() {
     {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Skeleton label="Reading accounts"/> : count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Balance now</span></div>{accounts.data?.map(account => { const held = balances.data?.find(b => b.accountId === account.id); return <Row key={account.id} trailing={<Amount value={money(BigInt(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor), currency(account.currency))} context={`${account.name} balance`}/>}>{/* The row was a caption. An account is the one thing on this screen a person most expects to be able to open, and nothing happened when he pressed it. */}<button type="button" className="account-open" onClick={() => setEditAccount(account)}><span className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><span><h3>{account.name}</h3><p className="account-meta">{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}{primaryAccount.data === account.id && <span className="tag tag-primary">Primary</span>}{account.archived_at && <span className="tag">Closed</span>}</p></span></span><ChevronRight size={16}/></button></Row>; })}</> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}<CombinedTotal accounts={accounts.data ?? []} balances={balances.data}/>{!(session.state==='ready' && accounts.isPending)&&<Suspense fallback={<Skeleton label="Opening imports"/>}><ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport}/></Suspense>}</>}
     {tab === 'Ledger' && count>0 && <><Suspense fallback={null}><BulkProposals/></Suspense><Button onClick={()=>setSheet('manual')}>Add transaction</Button></>}
     {tab === 'Ledger' && <Suspense fallback={null}><Debts accounts={accounts.data??[]}/><People/></Suspense>}
-    {tab === 'Insights' && <><Suspense fallback={<Skeleton label="Opening spending patterns"/>}><SpendingPatterns/></Suspense>
+    {tab === 'Insights' && <><DoubleCounted onReview={() => setTab('Ledger')}/><Suspense fallback={<Skeleton label="Opening spending patterns"/>}><SpendingPatterns/></Suspense>
       {/* Both render nothing at all when there is nothing to draw: an empty chart is a chart about nothing. */}
       <Suspense fallback={null}><MoneyFlowCard/><CurrencyExposureCard/><DebtShape/></Suspense>
       <details className="section-gap"><summary>Habits</summary><Intelligence/></details>
