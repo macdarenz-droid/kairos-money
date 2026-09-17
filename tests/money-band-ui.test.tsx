@@ -16,10 +16,12 @@ vi.mock('../src/ui/session', () => ({
   useSession: () => ({state: 'ready', run: (fn: (repo: unknown) => unknown) => Promise.resolve(fn({
     accounts: () => Promise.resolve(ledger.accounts),
     accountBalances: () => Promise.resolve(ledger.balances),
-    intelligence: {snapshot: () => Promise.resolve({
+    // The band reads the snapshot the screen's ONE analysis already built, rather than asking for a
+    // second pass of its own over every transaction and every source row.
+    intelligence: {analyse: () => Promise.resolve({snapshot: {
       asOf: today, currency: AUD, accountIds: ['a'], coverage: [], pays: [],
       transactions: ledger.transactions,
-    } satisfies Snapshot)},
+    } satisfies Snapshot})},
   }))}),
 }));
 HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };

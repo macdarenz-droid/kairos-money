@@ -35,17 +35,31 @@ export function SpendRing() {
   const live = (accounts.data ?? []).filter(account => !account.archived_at);
   const codes = [...new Set(live.map(account => account.currency))];
   const code = currency(codes.includes('AUD') ? 'AUD' : codes[0] ?? 'AUD');
-  const snapshot = useQuery({
-    queryKey: ['visual-snapshot', today, code], staleTime: 0,
-    queryFn: () => session.run(repo => repo.intelligence.snapshot(today, code)),
+  /**
+   * THE SAME ANALYSIS THE REST OF THIS SCREEN IS ALREADY WAITING FOR.
+   *
+   * This asked for its own snapshot under its own key while Surfaces and Intelligence asked for an
+   * analysis under theirs — and an analysis begins by building exactly this snapshot. Two full passes
+   * over every transaction and every source row, for one screen. On a 20,000-row ledger the device
+   * profile caught them side by side: 160 paged reads of the transactions and 158 of the provenance,
+   * 7,985 ms between them, about half of it the same work done twice, and the Ledger tab queued behind
+   * all of it because database access is serialised.
+   *
+   * One key, one pass. `analyse` returns the snapshot it built, which is what MoneyFlowCard already
+   * reads, so nothing here needs its own copy.
+   */
+  const report = useQuery({
+    queryKey: ['intelligence', today, code, {extra: '0', cut: 0}], staleTime: 0,
+    queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
     enabled: session.state === 'ready' && !!accounts.data,
   });
+  const snapshot = report.data?.snapshot;
 
-  if (session.state !== 'ready' || snapshot.isPending || accounts.isPending || snapshot.error || !live.length) return null;
+  if (session.state !== 'ready' || report.isPending || accounts.isPending || report.error || !live.length || !snapshot) return null;
 
-  const band = moneyBand(snapshot.data, today);
+  const band = moneyBand(snapshot, today);
   const totals = new Map<string, bigint>();
-  for (const row of bandRows(snapshot.data)) {
+  for (const row of bandRows(snapshot)) {
     if (row.date < band.now.start || row.date > band.now.end || BigInt(row.minor) >= 0n) continue;
     for (const part of categoryAmounts(row)) {
       const name = part.category && part.category !== 'Uncategorised' ? part.category : 'Uncategorised';

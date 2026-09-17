@@ -42,21 +42,35 @@ export function MoneyBand() {
   const code = currency(codes.includes('AUD') ? 'AUD' : codes[0] ?? 'AUD');
 
   const balances = useQuery({queryKey: ['account-balances'], queryFn: () => session.run(repo => repo.accountBalances()), enabled: session.state === 'ready'});
-  const snapshot = useQuery({
-    queryKey: ['visual-snapshot', today, code], staleTime: 0,
-    queryFn: () => session.run(repo => repo.intelligence.snapshot(today, code)),
+  /**
+   * THE SAME ANALYSIS THE REST OF THIS SCREEN IS ALREADY WAITING FOR.
+   *
+   * This asked for its own snapshot under its own key while Surfaces and Intelligence asked for an
+   * analysis under theirs — and an analysis begins by building exactly this snapshot. Two full passes
+   * over every transaction and every source row, for one screen. On a 20,000-row ledger the device
+   * profile caught them side by side: 160 paged reads of the transactions and 158 of the provenance,
+   * 7,985 ms between them, about half of it the same work done twice, and the Ledger tab queued behind
+   * all of it because database access is serialised.
+   *
+   * One key, one pass. `analyse` returns the snapshot it built, which is what MoneyFlowCard already
+   * reads, so nothing here needs its own copy.
+   */
+  const report = useQuery({
+    queryKey: ['intelligence', today, code, {extra: '0', cut: 0}], staleTime: 0,
+    queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
     enabled: session.state === 'ready' && !!accounts.data,
   });
+  const snapshot = report.data?.snapshot;
 
   if (session.state !== 'ready') return null;
-  if (accounts.error || snapshot.error) return <p role="alert">Your money summary could not be read.</p>;
-  if (snapshot.isPending || accounts.isPending) return <Skeleton label="Reading your money"/>;
+  if (accounts.error || report.error) return <p role="alert">Your money summary could not be read.</p>;
+  if (report.isPending || accounts.isPending || !snapshot) return <Skeleton label="Reading your money"/>;
   // Absent rather than empty. With no accounts every tile is a zero, and four zeros above the first-run
   // prompt is the app reporting on its own emptiness — the same thing the thirty-six roll-call was doing.
   // The screen that asks for an account should be the only thing on it.
   if (!live.length) return null;
 
-  const band = moneyBand(snapshot.data, today);
+  const band = moneyBand(snapshot, today);
   const held = live.filter(account => account.currency === code)
     .reduce((total, account) => total + BigInt(balances.data?.find(row => row.accountId === account.id)?.minor ?? 0n), 0n);
   const show = (minor: string | bigint) => format(money(BigInt(minor), code));
