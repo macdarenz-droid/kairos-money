@@ -21,7 +21,6 @@ details > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
 .import-progress { display:flex; align-items:center; gap:12px; padding:16px; border:1px solid var(--border-default); border-radius:10px; background:var(--surface-1); }
 .money-visuals svg { display:block; width:100%; overflow:visible; }
 .money-visuals .fingerprint { max-width:280px; align-self:center; }
-.windowed-list { height:560px; max-height:70vh; overflow:auto; overflow-anchor:none; }
 .recovery-groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(5ch,1fr)); gap:8px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .recovery-groups span { border:1px solid var(--border-default); padding:8px; text-align:center; }
 .import-progress-mark { width:40px; height:40px; flex:none; fill:none; stroke:var(--text-secondary); stroke-width:1; }
