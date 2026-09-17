@@ -1,14 +1,42 @@
 import type { Driver, SqlRow, SqlValue } from './driver';
 import { migrations } from './migrate';
-import { tableNames } from './schema';
+import { tableIntroduced, tableNames } from './schema';
 function object(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === 'object' && !Array.isArray(value); }
+/**
+ * A BACKUP MADE BY AN OLDER KAIROS MUST STILL RESTORE.
+ *
+ * This used to demand the backup's schema version EQUAL the current one, so the moment a migration was
+ * added every backup anybody was holding became unrestorable — with a message telling them to go and
+ * find an older build of the app. For a ledger whose whole safety net is "back up before you reinstall",
+ * that is the net having a hole in exactly the place it is needed.
+ *
+ * Accepting an older version is safe because it was never the check doing the real work. A backup is
+ * only compatible if its ROWS still fit the tables, and that is verified per table, column by column,
+ * further down — which is precise where a version number is blunt. Migration 3 added columns to
+ * transactions and import_batches, so a backup from before it correctly fails on those two tables by
+ * name, instead of everything failing on a number.
+ *
+ * A table the backup could not have known about — one introduced by a LATER migration than the backup
+ * was written at — restores empty. A table that existed at that version and is absent anyway is a
+ * damaged backup and is refused: those two look identical in the file, and treating them the same means
+ * either silently losing a ledger or rejecting every backup taken before the newest feature.
+ *
+ * A table THIS build has never heard of is also a refusal: that backup came from a newer Kairos, its
+ * data has nowhere to go, and dropping it quietly would be losing somebody's ledger without saying so.
+ */
 function validate(value: unknown): Record<string, SqlRow[]> {
-  if (!object(value) || value.format !== 'kairos-money' || value.version !== 1 || value.database_schema_version !== migrations.length || !object(value.tables))
-    throw new Error('This backup uses an unsupported database version. Restore it with the matching Kairos version first.');
+  if (!object(value) || value.format !== 'kairos-money' || value.version !== 1 || !object(value.tables)
+    || typeof value.database_schema_version !== 'number' || !Number.isInteger(value.database_schema_version)
+    || value.database_schema_version < 1)
+    throw new Error('This backup could not be read. Nothing was restored.');
+  if (value.database_schema_version > migrations.length)
+    throw new Error('This backup was made by a newer version of Kairos. Update the app, then restore it.');
   const tables = value.tables;
-  if (Object.keys(tables).length !== tableNames.length || tableNames.some(name => !Object.hasOwn(tables, name))) throw new Error('The backup is missing ledger tables. Nothing was restored.');
+  const unknown = Object.keys(tables).filter(name => !(tableNames as readonly string[]).includes(name));
+  if (unknown.length) throw new Error(`The backup holds tables this version cannot restore: ${unknown.join(', ')}. Nothing was restored.`);
   const result: Record<string, SqlRow[]> = {};
   for (const name of tableNames) {
+    if (!Object.hasOwn(tables, name) && (tableIntroduced[name] ?? 1) > value.database_schema_version) { result[name] = []; continue; }
     const rows = tables[name];
     if (!Array.isArray(rows)) throw new Error(`The backup table ${name} is invalid. Nothing was restored.`);
     result[name] = rows.map((row: unknown) => {

@@ -173,10 +173,38 @@ export const privacy_log = sqliteTable('privacy_log', {
   metadata: text('metadata').notNull(),
 });
 
+/** Mirrors migration 0005. balance_minor is what is OWED, held positive; see that migration for why. */
+export const debts = sqliteTable('debts', {
+  id: text('id').primaryKey().notNull(),
+  name: text('name').notNull(),
+  account_id: text('account_id'),
+  currency: text('currency').notNull(),
+  balance_minor: integer('balance_minor').notNull(),
+  annual_rate_bp: integer('annual_rate_bp').notNull(),
+  minimum_minor: integer('minimum_minor').notNull(),
+  due_day: integer('due_day'),
+  opened_at: text('opened_at').notNull(),
+  closed_at: text('closed_at'),
+});
+
 export const app_settings = sqliteTable('app_settings', {
   key: text('key').primaryKey().notNull(),
   value: text('value').notNull(),
 });
 
 export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings };
+/**
+ * The migration each table first appeared in.
+ *
+ * Restoring needs this to tell two different things apart that look identical in a backup file: a table
+ * MISSING because the app that wrote it did not have that table yet, and a table missing because the
+ * backup is damaged. The first must restore empty; the second must refuse. Without the distinction you
+ * have to choose one, and either choice is wrong half the time — silently losing a ledger, or rejecting
+ * every backup taken before the newest feature.
+ *
+ * Add a row here whenever a migration creates a table AND that table joins the export. It is empty today
+ * because every exported table came from migration 1 — fx_rates and debts arrived later and are not in
+ * the export yet, which is a decision recorded in docs/SESSION_2_BASELINE.json rather than an oversight.
+ */
+export const tableIntroduced: Partial<Record<(typeof tableNames)[number], number>> = {};
 export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings'] as const;
