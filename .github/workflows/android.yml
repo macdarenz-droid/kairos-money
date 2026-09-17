@@ -65,6 +65,29 @@ jobs:
         run: |
           mkdir -p ~/.android
           printf '%s' "$ANDROID_DEBUG_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+      # WITHOUT THIS THE CACHE ABOVE HAS NOTHING TO SAVE, and it never has.
+      #
+      # Every run ended with "Path Validation Error: Path(s) specified in the action for caching do(es)
+      # not exist", because Gradle generates its debug key somewhere the cache was not looking. So the
+      # restore always missed, a NEW key was generated every build, and every APK was signed by a
+      # different identity — which is precisely why an update refuses to install over the copy already
+      # on a phone. The cache was not expiring; it was never working.
+      #
+      # Creating the keystore here puts it at the path Gradle's default debug config reads AND the path
+      # the cache saves, with the conventional debug alias and password. It is made once and then
+      # restored, so the identity stops moving.
+      - name: Create the development keystore if the cache did not restore one
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkeypair -v -keystore ~/.android/debug.keystore \
+              -storepass android -keypass android -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+            echo "Generated a new development keystore; the signing identity has changed."
+          else
+            echo "Restored the existing development keystore; the signing identity is unchanged."
+          fi
       - run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
       - run: npm ci
       - run: npm run android:sync
