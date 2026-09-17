@@ -242,7 +242,10 @@ try:
     instrumentation('ImportInstrumentedTest', 2)
     instrumentation('LargeImportInstrumentedTest', 1)
     instrumentation('NotificationsInstrumentedTest', 1)
-    instrumentation('RevisionInstrumentedTest', 2)
+    # One test, not two: b_localReminderDeliversAndCancelsWithoutNetwork went with the weekly reminder it
+    # tested, and the weekly reminder went with the Update accounts feature. The count is the contract —
+    # it is what catches a test that silently stopped running — so it states what the class now holds.
+    instrumentation('RevisionInstrumentedTest', 1)
     instrumentation('IntelligenceInstrumentedTest', 4)
     instrumentation('LedgerPerformanceInstrumentedTest', 1)
     instrumentation('NoticeCaptureInstrumentedTest', 5)
