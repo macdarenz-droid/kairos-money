@@ -88,6 +88,18 @@ jobs:
           else
             echo "Restored the existing development keystore; the signing identity is unchanged."
           fi
+          # THE KEYSTORE'S OWN FINGERPRINT, so it can be compared with the APK's.
+          #
+          # A build whose cache restored this file still produced a different signing certificate from
+          # the build that created it, and with only the APK's fingerprint printed there was no way to
+          # tell whether the file was wrong or was simply not the one Gradle used. Two numbers answer
+          # that in one reading. They must match.
+          keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey 2>/dev/null \
+            | sed -n 's/.*(SHA-256): //p' | tr -d ':' | tr 'A-F' 'a-f' | sed 's/^/Keystore certificate SHA-256: /'
+      # Gradle chooses the debug keystore's path itself unless it is told, and it was not choosing this
+      # one. Naming it is what makes the cached identity the identity that signs the APK.
+      - name: Sign debug builds with the keystore that is actually cached
+        run: echo "KAIROS_DEBUG_STORE_FILE=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
       - run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
       - run: npm ci
       - run: npm run android:sync
@@ -156,7 +168,10 @@ jobs:
       # buried deepest. Printing it again at the end costs a second and makes it reachable.
       - name: Signing identity, repeated at the end of the log so it can be read
         if: always()
-        run: python3 scripts/verify-signing-identity.py android/app/build/outputs/apk/debug/app-debug.apk "$ANDROID_HOME"
+        run: |
+          keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey 2>/dev/null \
+            | sed -n 's/.*(SHA-256): //p' | tr -d ':' | tr 'A-F' 'a-f' | sed 's/^/Keystore certificate SHA-256: /'
+          python3 scripts/verify-signing-identity.py android/app/build/outputs/apk/debug/app-debug.apk "$ANDROID_HOME"
       - name: Upload gate evidence
         if: always()
         uses: actions/upload-artifact@v4
