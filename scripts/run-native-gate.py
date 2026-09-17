@@ -64,18 +64,15 @@ def instrumentation(name, count):
         if progress:
             (EVIDENCE / (name + '-progress.log')).write_text(progress)
             print('device-progress:\n' + progress, flush=True)
-        # THE ASSERTION, LAST, WHERE A LOG IS ACTUALLY READ.
+        # THE ASSERTION, WRITTEN WHERE A LATER STEP CAN PRINT IT.
         #
-        # The whole instrumentation log is printed above, and on this runner it carries thousands of
-        # interleaved device lines, so the one thing somebody has to act on sits in the middle of it and a
-        # tail of the job log never reaches it. The evidence artifact that holds it cleanly lives on a host
-        # some sandboxes cannot reach.
+        # Printing it here does not work, and it took three runs to see why: the emulator action streams
+        # logcat to stdout continuously in the background, so whatever this prints is buried under device
+        # chatter that keeps arriving afterwards. It is not that the filter matched nothing — it is that
+        # nothing printed from inside this step stays near the end of the job log.
         #
-        # The first attempt at this matched `junit.` and `Tests run:` at the START of a line and printed
-        # NOTHING, because `am instrument` does not format it that way — it wraps the assertion up as
-        # "INSTRUMENTATION_STATUS: stack=junit.framework...". So match what the tool actually emits, and
-        # fall back to the plain tail when nothing matches, because a diagnostic that can come back empty
-        # is the diagnostic that just cost a run.
+        # So it goes to a file, and a workflow step AFTER the emulator is killed prints it. Same answer as
+        # the signing fingerprint: put the thing somebody has to act on where a tail actually reaches.
         marks = ('INSTRUMENTATION_STATUS: stack=', 'INSTRUMENTATION_STATUS: test=',
                  'INSTRUMENTATION_STATUS: class=', 'INSTRUMENTATION_STATUS_CODE:', 'INSTRUMENTATION_RESULT:')
         lines = log.splitlines()
@@ -83,9 +80,11 @@ def instrumentation(name, count):
                     if line.startswith(marks) or 'FAILURES!!!' in line or line.lstrip().startswith('Tests run:')
                     or 'at app.kairos.money.' in line or 'AssertionFailedError' in line]
         shown = failures[-80:] if failures else lines[-60:]
-        print(name + ' failed. What it said'
-              + ('' if failures else ' (no assertion lines matched; plain tail)') + ':\n'
-              + '\n'.join(shown), flush=True)
+        summary = (name + ' failed. What it said'
+                   + ('' if failures else ' (no assertion lines matched; plain tail)') + ':\n'
+                   + '\n'.join(shown))
+        (EVIDENCE / 'instrumentation-failure.log').write_text(summary + '\n')
+        print(summary, flush=True)
         raise RuntimeError(name + ' did not pass; see its instrumentation log')
     completed_instrumentation.append(name)
 

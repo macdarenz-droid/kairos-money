@@ -166,6 +166,12 @@ jobs:
       # thirteen minutes later. But that puts its output thousands of logcat lines from the end, and the
       # log is only readable from the tail — so the one value somebody has to ACT on was the one value
       # buried deepest. Printing it again at the end costs a second and makes it reachable.
+      # The emulator streams logcat to stdout for as long as it is alive, so anything the gate prints
+      # while a device test is failing ends up hundreds of lines from the end of the job log. By here the
+      # emulator is dead and nothing else is writing, so this is the first place a tail reliably reaches.
+      - name: What the device test said, once the device has stopped talking
+        if: always()
+        run: cat docs/evidence/instrumentation-failure.log 2>/dev/null || echo 'No instrumentation failure recorded.'
       - name: Signing identity, repeated at the end of the log so it can be read
         if: always()
         run: |
