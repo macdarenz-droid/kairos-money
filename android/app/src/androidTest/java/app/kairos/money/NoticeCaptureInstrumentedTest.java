@@ -97,7 +97,7 @@ public class NoticeCaptureInstrumentedTest {
         assertEquals("Did you receive this?",
             KairosNoticeListener.questionFor("CommBank You've been paid $3.00 into your account ending 407").title);
         // Says both, or neither: asked plainly rather than guessed either way.
-        assertEquals("Was this you?", KairosNoticeListener.questionFor("Payment received and refund sent.").title);
+        assertEquals("Was this you?", KairosNoticeListener.questionFor("This message mentions money in and money out in the same line.").title);
         assertEquals("Was this you?", KairosNoticeListener.questionFor("Your available balance is $431.20.").title);
     }
 
