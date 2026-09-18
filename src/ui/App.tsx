@@ -34,6 +34,7 @@ const Debts=lazy(()=>import('./screens/Debts').then(module=>({default:module.Deb
 const DebtShape=lazy(()=>import('./screens/Debts').then(module=>({default:module.DebtShape})));
 const People=lazy(()=>import('./screens/People').then(module=>({default:module.People})));
 const MoneyFlowCard=lazy(()=>import('./screens/MoneyFlowCard').then(module=>({default:module.MoneyFlowCard})));
+const MoneyAudit=lazy(()=>import('./screens/MoneyAudit').then(module=>({default:module.MoneyAudit})));
 const CurrencyExposureCard=lazy(()=>import('./screens/CurrencyExposureCard').then(module=>({default:module.CurrencyExposureCard})));
 import {Settings, type SettingsFocus} from './screens/Settings';
 import {Rates} from './screens/Rates';
@@ -130,7 +131,7 @@ export default function App() {
     {tab === 'Ledger' && <Suspense fallback={null}><Debts accounts={accounts.data??[]}/><People/></Suspense>}
     {tab === 'Insights' && <><Unconverted onFix={() => openSettings('currency')}/><DoubleCounted onReview={() => setTab('Ledger')}/><Suspense fallback={<Skeleton label="Opening spending patterns"/>}><SpendingPatterns/></Suspense>
       {/* Both render nothing at all when there is nothing to draw: an empty chart is a chart about nothing. */}
-      <Suspense fallback={null}><MoneyFlowCard/><CurrencyExposureCard/><DebtShape/></Suspense>
+      <Suspense fallback={null}><MoneyFlowCard/><CurrencyExposureCard/><DebtShape/><MoneyAudit/></Suspense>
       {/* Everything derived from the ledger reads here, whatever screen it used to live on: "all money is
           the same insight whatever pattern of a user". Each part draws nothing until it has something to
           draw, so an empty ledger is a short screen rather than a list of its own absences. */}

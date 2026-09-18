@@ -670,3 +670,22 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 .savings-planned { stroke: var(--text-meta); }
 .savings-now { fill: var(--accent); stroke: var(--surface-1); stroke-width: 2; }
 .savings-ends { display: flex; justify-content: space-between; }
+
+/* Money audit: a month as one bar, the roadmap as tracks. Same blue ramp as every other length. */
+.audit-tiles { grid-template-columns: repeat(2, 1fr); }
+.audit-tiles .band-tile { min-height: 84px; }
+.audit-bar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; background: var(--surface-2); }
+.audit-bar > span { display: block; height: 100%; }
+.audit-keep { background: var(--heat-2); }
+.audit-debt { background: var(--heat-4); }
+.audit-save { background: var(--heat-5); }
+.audit-spend { background: var(--border-control); }
+.audit-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; }
+.audit-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.audit-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.audit-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.audit-step[data-status="done"] .ranked-name, .audit-step[data-status="done"] .amount { color: var(--text-meta); }
+.audit-step[data-status="now"] .ranked-name { font-weight: 600; }
+.audit-step .tag { margin-left: 8px; }
+.audit-fill { background: var(--heat-3); }
+.audit-step[data-status="done"] .audit-fill { background: var(--heat-1); }
