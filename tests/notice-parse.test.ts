@@ -1,6 +1,7 @@
 import {expect, it} from 'vitest';
 import {parseNotice, type Notice} from '../src/ingest/notices/parse';
 import {currency} from '../src/core/money';
+import {localDay} from '../src/ingest/reminders';
 
 const AUD = currency('AUD');
 const at = Date.parse('2026-08-26T04:15:00Z');
@@ -13,7 +14,7 @@ it('reads a purchase as money leaving, with the merchant the bank named', () => 
  if (parsed.status !== 'ok') return;
  expect(parsed.minor).toBe('-1250');
  expect(parsed.merchant).toBe('WOOLWORTHS 1234 on your Everyday account');
- expect(parsed.date).toBe('2026-08-26');
+ expect(parsed.date).toBe(localDay(new Date(at)));
 });
 
 it('ignores the balance the bank tacks on, which is not a second transaction', () => {
@@ -107,12 +108,22 @@ it('skips a notice that says money both left and arrived', () => {
  expect(read('Payment received and refund sent.').status).toBe('skip');
 });
 
-it('dates the row by when the phone showed it, which is all a notification knows', () => {
- const parsed = parseNotice({id: 'n', source: 's', title: 'Synthetic Bank',
-  text: 'You spent $5.00 at SYNTHETIC.', postedAt: Date.parse('2026-01-02T22:30:00Z')}, AUD);
- expect(parsed.status).toBe('ok');
- if (parsed.status !== 'ok') return;
- expect(parsed.date).toBe('2026-01-02');
+it('dates the row by when the phone showed it, on the phone\'s own calendar', () => {
+ // 22:30 UTC on the 2nd is already the 3rd in Manila. The row took the UTC day, so a receipt approved
+ // at breakfast there was dated yesterday and missing from "Recorded today"; the ledger's clock is
+ // localDay() everywhere else, and a notice is dated by the same one.
+ const shown = {id: 'n', source: 's', title: 'Synthetic Bank', text: 'You spent $5.00 at SYNTHETIC.',
+  postedAt: Date.parse('2026-01-02T22:30:00Z')};
+ const before = process.env.TZ;
+ try {
+  process.env.TZ = 'Asia/Manila';
+  const manila = parseNotice(shown, AUD);
+  expect(manila.status).toBe('ok');
+  if (manila.status === 'ok') expect(manila.date).toBe('2026-01-03');
+  process.env.TZ = 'UTC';
+  const utc = parseNotice(shown, AUD);
+  if (utc.status === 'ok') expect(utc.date).toBe('2026-01-02');
+ } finally { if (before === undefined) delete process.env.TZ; else process.env.TZ = before; }
 });
 
 // Two real notification SHAPES, with synthetic digits and a synthetic name — the wording is what these

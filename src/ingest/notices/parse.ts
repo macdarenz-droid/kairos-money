@@ -1,4 +1,5 @@
 import {currency, currencyDigits, money, parseDecimal, type Currency} from '../../core/money';
+import {localDay} from '../reminders';
 
 /** `decision` carries an answer already given in the notification shade, before the app was opened. */
 export type Notice = {id: string; source: string; title: string; text: string; postedAt: number; decision?: 'approved' | 'rejected' | null};
@@ -103,7 +104,11 @@ export function parseNotice(notice: Notice, expected: Currency): ParsedNotice {
     // Where the bank did not name anyone, its own words stand in. Inventing a merchant would put a name in
     // the ledger that no statement will ever confirm.
     merchant: named && !/^\d+$/.test(named) ? named : body.slice(0, 60),
-    date: new Date(notice.postedAt).toISOString().slice(0, 10),
+    // THE PHONE'S OWN DAY, not the UTC one. This took the UTC date of the moment the notice was shown, so
+    // on a phone eight hours ahead every notification before eight in the morning was dated yesterday:
+    // absent from "Recorded today", and the day's own figures a day out. The ledger's idea of today is
+    // localDay() everywhere else, and a notice is dated by the same clock.
+    date: localDay(new Date(notice.postedAt)),
     description: body,
   };
 }

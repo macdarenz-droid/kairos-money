@@ -4,6 +4,10 @@ import {migrate} from '../src/core/db/migrate';
 import {repository} from '../src/core/db/repository';
 import {noticeRepository, syncNotices, type NoticeRecord} from '../src/ledger/notices';
 import {hash, normalizeRow} from '../src/ingest/normalize';
+import {applyShadeDecisions} from '../src/ui/notices';
+import {forgetNotices} from '../src/ingest/notices';
+import {moneyBand} from '../src/intelligence/visuals/band';
+import {localDay} from '../src/ingest/reminders';
 import type {Document, ImportContext} from '../src/ingest/types';
 
 const context: ImportContext = {accountId:'a',accountKind:'checking',currency:'AUD',period:{start:'2026-02-01',end:'2026-02-28'},dateOrder:'DMY',decimal:'.',creditPositivePurchases:false};
@@ -215,4 +219,32 @@ it('an account balance is what it holds now, not what it opened with', async () 
  // weeks stale, and banks do not publish statements in real time.
  await notices.approve(notice({id:'n1', accountId:'a', minor:'-1250'}));
  expect((await repo.accountBalances()).find(b => b.accountId === 'a')?.minor).toBe('93750');
+});
+
+it('money received and approved in the shade reaches the balance, today, and the money band', async () => {
+ // "i just received money from someone. the app read it and clicked approved. but didnt reflect on my
+ // balance, no money in. no additional balance everywhere." His setup: a dollar bank account that sorts
+ // first by name, a peso wallet, and a peso receipt approved in the notification shade.
+ const {repo} = await ready();
+ await repo.addAccount({id:'w',name:'Wallet',institution:'Synthetic',type:'cash',currency:'PHP',mask_last4:null,opening_balance_minor:100000n});
+ const accounts = await repo.accounts();
+ expect(accounts[0]!.currency).toBe('AUD');                     // Synthetic sorts before Wallet.
+ const postedAt = Date.now();
+ const result = await applyShadeDecisions([{id:'notice:in', source:'app.synthetic.wallet', title:'Synthetic Wallet', postedAt, decision:'approved',
+   text:'You have received PHP 500.00 from JUAN D. Your new balance is PHP 1,500.00. Ref. No. 1234567890.'}],
+   accounts, null, record => repo.notices.approve(record), forgetNotices);
+ expect(result).toEqual({approved:1, rejected:0, unrecorded:0});
+
+ // Balance now: the wallet holds ₱1,500, and the bank account is untouched.
+ const balances = await repo.accountBalances();
+ expect(balances.find(b => b.accountId === 'w')?.minor).toBe('150000');
+ expect(balances.find(b => b.accountId === 'a')?.minor).toBe('0');
+ // Recorded today, on the phone's own day.
+ const today = localDay(new Date(postedAt));
+ expect((await repo.manual.today(today)).find(t => t.currency === 'PHP')).toMatchObject({awaitingIncome:'50000', income:'0'});
+ // Money in, on the home screen's band, marked as not yet on a statement.
+ const {snapshot} = await repo.intelligence.analyse(today, 'PHP');
+ const band = moneyBand(snapshot, today);
+ expect(band.now.inMinor).toBe('50000');
+ expect(band.now.unconfirmed).toBe(true);
 });

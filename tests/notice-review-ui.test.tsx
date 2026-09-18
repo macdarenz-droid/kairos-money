@@ -98,3 +98,21 @@ it('says plainly when the bank has told it nothing', async () => {
   await show();
   await waitFor(() => expect(screen.getByText('Nothing new from your bank to check.')).toBeTruthy());
 });
+
+it('lists a peso receipt on the peso wallet when the dollar account sorts first, and records it there', async () => {
+  // The sheet read every notice in the FIRST account's currency, so on a phone with a dollar bank and a
+  // peso wallet, money received in pesos was "not about a purchase" and never offered.
+  const two = [{id: 'a', name: 'Everyday', currency: 'AUD', archived_at: null, mask_last4: null},
+    {id: 'w', name: 'Wallet', currency: 'PHP', archived_at: null, mask_last4: null}] as never;
+  captured.notices = [notice({id: 'in1', title: 'Synthetic Wallet',
+    text: 'You have received PHP 500.00 from JUAN D. Your new balance is PHP 1,500.00.'})];
+  render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+    <NoticeReview accounts={two} onClose={() => undefined}/></QueryClientProvider>);
+  await screen.findByText('JUAN D');
+  expect(screen.getByText('PHP 500.00')).toBeTruthy();
+  // Only one account holds pesos, so there is nothing to choose between: no picker.
+  expect(screen.queryByLabelText(/Paid into/)).toBeNull();
+  fireEvent.click(screen.getByRole('button', {name: 'Approve'}));
+  await waitFor(() => expect(approved.calls).toHaveLength(1));
+  expect(approved.calls[0]).toMatchObject({accountId: 'w', minor: '50000'});
+});

@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
-import {accountFromNotice} from '../src/ingest/notices/route';
+import {accountFromNotice, routeNotices} from '../src/ingest/notices/route';
 import {pairNotices} from '../src/ingest/notices/pair';
-import type {ReadableNotice} from '../src/ingest/notices';
+import type {Notice, ReadableNotice} from '../src/ingest/notices';
 import {currency} from '../src/core/money';
 
 const AUD = currency('AUD');
@@ -70,5 +70,45 @@ describe('two notifications that are one transfer', () => {
       route({out: 'a', in: 'b', spare: 'c'}),
     );
     expect(items.map(i => i.kind)).toEqual(['transfer', 'single']);
+  });
+});
+
+describe('where a notification lands, decided once for the sheet and the shade', () => {
+  const at = Date.parse('2026-09-18T01:15:00Z');
+  const say = (id: string, text: string): Notice => ({id, source: 'app.synthetic', title: 'Synthetic', text, postedAt: at});
+  const his = [
+    {id: 'anz', currency: 'AUD', mask_last4: '0407', archived_at: null},
+    {id: 'wallet', currency: 'PHP', mask_last4: null, archived_at: null},
+    {id: 'old', currency: 'PHP', mask_last4: null, archived_at: '2026-01-01T00:00:00Z'},
+  ];
+
+  it('reads a peso receipt on the peso wallet when the dollar bank sorts first', () => {
+    const {readable, unreadable} = routeNotices([say('in', 'You have received PHP 500.00 from JUAN D. Your new balance is PHP 1,500.00.')], his, null);
+    expect(unreadable).toEqual([]);
+    expect(readable[0]).toMatchObject({accountId: 'wallet', minor: '50000', currency: 'PHP'});
+  });
+
+  it('reads a bare-symbol notice in the main account\'s currency, and lands it there', () => {
+    const {readable} = routeNotices([say('b', 'You spent $8.00 at CAFE MIKA.')], his, 'wallet');
+    expect(readable[0]).toMatchObject({accountId: 'wallet', minor: '-800', currency: 'PHP'});
+    expect(routeNotices([say('b', 'You spent $8.00 at CAFE MIKA.')], his, null).readable[0]).toMatchObject({accountId: 'anz', currency: 'AUD'});
+  });
+
+  it('lets the account the bank names win, and does not re-route a notice that disagrees with it', () => {
+    expect(routeNotices([say('n', 'You spent $8.00 on card ending 407.')], his, 'wallet').readable[0]).toMatchObject({accountId: 'anz'});
+    const {readable, unreadable} = routeNotices([say('n', 'PHP 300.00 was debited from your account ending 407.')], his, 'wallet');
+    expect(readable).toEqual([]);
+    expect(unreadable[0]?.reason).toBe('The notification is in PHP, not AUD.');
+  });
+
+  it('never lands money on an archived account, and says so when there is nowhere to land it', () => {
+    expect(routeNotices([say('in', 'You have received PHP 500.00 from JUAN D.')], his, 'old').readable[0]?.accountId).toBe('wallet');
+    const {unreadable} = routeNotices([say('in', 'You have received PHP 500.00 from JUAN D.')], [his[2]!], null);
+    expect(unreadable[0]?.reason).toBe('There is no active account to record this on.');
+  });
+
+  it('gives the reason from the account the owner would have expected it on', () => {
+    const {unreadable} = routeNotices([say('x', 'You have received EUR 20.00 from a friend.')], his, 'wallet');
+    expect(unreadable[0]?.reason).toBe('The notification is in EUR, not PHP.');
   });
 });

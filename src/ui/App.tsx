@@ -1,11 +1,11 @@
 import { ManualHistory, ManualSheet } from './screens/Manual';
-import { capturedNotices, forgetNotices, readNotices } from '../ingest/notices';
-import { applyShadeDecisions } from './notices';
+import { capturedNotices, forgetNotices, routeNotices } from '../ingest/notices';
+import { applyShadeDecisions, shadeBatch } from './notices';
 import { NoticeReview } from './screens/NoticeReview';
 import {useQuickAddLaunch} from './quick-add';
 import { NotificationSync } from './screens/Notifications';
 import { Intelligence } from './screens/Intelligence';
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Account } from '../core/db/repository';
 import { create } from 'zustand';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -75,24 +75,36 @@ export default function App() {
   // What the bank announced while the app was closed. Asked once on opening and not again until there is
   // something new, because a prompt that reappears after being dismissed stops being read.
   const noticeQueue = useQuery({ queryKey: ['captured-notices'], queryFn: capturedNotices, enabled: session.state === 'ready' });
-  const [noticesAsked, setNoticesAsked] = useState(false);
+  const [noticesAsked, setNoticesAsked] = useState('');
   const statementData = useQuery({ queryKey: ['coverage-summary'], queryFn: () => session.run(repo => repo.imports.summaries()), enabled: session.state === 'ready' });
   useEffect(()=>{if(sheet==='manual' && accounts.data?.length===0)setSheet('account');},[sheet,accounts.data]);
   const firstAccount = accounts.data?.find(a => !a.archived_at);
-  const undecided = (noticeQueue.data ?? []).filter(n => !n.decision);
-  const waitingNotices = firstAccount ? readNotices(undecided, currency(firstAccount.currency)).readable.length : 0;
+  // Every notice is routed by the one rule the sheet and the shade share: named account, then the main
+  // account, then the first whose currency it reads in. What waits to be asked is anything unanswered
+  // that reads, plus anything approved in the shade that could NOT be recorded — that one is shown among
+  // the messages that were not about a purchase, rather than carried silently for ever.
+  const waitingIds = useMemo(() => {
+    const routed = routeNotices(noticeQueue.data ?? [], accounts.data ?? [], primaryAccount.data);
+    return [...routed.readable.filter(item => !item.notice.decision), ...routed.unreadable.filter(item => item.notice.decision === 'approved')]
+      .map(item => item.notice.id).sort().join(',');
+  }, [noticeQueue.data, accounts.data, primaryAccount.data]);
+  const waitingNotices = waitingIds ? waitingIds.split(',').length : 0;
   // Answers given in the shade are carried out here, on the first unlock after they were given: this is
-  // the earliest moment the encrypted ledger can receive them. Only the unanswered ones are asked about.
-  const [settled, setSettled] = useState(false);
+  // the earliest moment the encrypted ledger can receive them. Remembered BY ID, not as one flag: an
+  // answer given while the app sat in the background is as new as the first one was.
+  const handledShade = useRef(new Set<string>());
   useEffect(()=>{
-    if(settled || !firstAccount || !noticeQueue.data?.some(n=>n.decision))return;
-    setSettled(true);
-    void applyShadeDecisions(noticeQueue.data, currency(firstAccount.currency), firstAccount.id,
+    if(!firstAccount || !noticeQueue.data || primaryAccount.isPending)return;
+    const batch = shadeBatch(noticeQueue.data, handledShade.current);
+    if(!batch.length)return;
+    for(const notice of batch)handledShade.current.add(notice.id);
+    void applyShadeDecisions(batch, accounts.data ?? [], primaryAccount.data,
       record => session.run(repo => repo.notices.approve(record)), forgetNotices)
       .then(async result => { if(result.approved)await queryClient.invalidateQueries(); })
-      .catch(()=>setSettled(false));
-  },[settled,firstAccount,noticeQueue.data,session,queryClient]);
-  useEffect(()=>{if(!noticesAsked && !sheet && waitingNotices>0){setNoticesAsked(true);setSheet('notices');}},[noticesAsked,sheet,waitingNotices]);
+      .catch(()=>{ for(const notice of batch)handledShade.current.delete(notice.id); });
+  },[firstAccount,accounts.data,noticeQueue.data,primaryAccount.data,primaryAccount.isPending,session,queryClient]);
+  // Asked once per set of waiting notices, not once per app lifetime: a new notification is a new question.
+  useEffect(()=>{if(noticesAsked !== waitingIds && !sheet && waitingNotices>0){setNoticesAsked(waitingIds);setSheet('notices');}},[noticesAsked,sheet,waitingIds,waitingNotices]);
   const days = coveredDays((statementData.data ?? []).filter(b => b.status === 'committed' && !b.payslip).map(b => b.context.period));
   if (session.state !== 'ready' && session.state !== 'preview' && session.state !== 'background') return <LockScreen/>;
   const count = accounts.data?.length ?? 0;

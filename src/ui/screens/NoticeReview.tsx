@@ -1,8 +1,7 @@
 import {useMemo, useState} from 'react';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
-import {currency, format, money} from '../../core/money';
-import {capturedNotices, forgetNotices, readNotices} from '../../ingest/notices';
-import {accountFromNotice} from '../../ingest/notices/route';
+import {format, money} from '../../core/money';
+import {capturedNotices, forgetNotices, routeNotices} from '../../ingest/notices';
 import {pairNotices, type NoticeItem} from '../../ingest/notices/pair';
 import {Button, Explain, Sheet} from '../design/primitives';
 import {CategoryMark} from '../design/CategoryMark';
@@ -23,12 +22,15 @@ import type {Account} from '../../core/db/repository';
  * Which account each one hits is decided per notification, not once for the whole sheet. It used to be one
  * dropdown governing every row, defaulting to whichever account happened to be first — so on a phone with
  * two banks, money landed on a coin toss made silently. Now the notice's own text is read first ("ending
- * 189"), then the account the owner nominated, and the answer is shown on the row so it can be corrected
- * before anything is recorded.
+ * 189"), then the account the owner nominated, then the first account whose currency the notice can be
+ * read in — one rule, shared with the answers given in the notification shade — and the answer is shown
+ * on the row so it can be corrected before anything is recorded. The correction is offered among the
+ * accounts in the notice's currency only: an amount the bank wrote in pesos cannot land on a dollar
+ * account, and the transfer legs already hold that line.
  */
 export function NoticeReview({accounts, onClose}: {accounts: readonly Account[]; onClose: () => void}) {
   const session = useSession(), client = useQueryClient();
-  const active = accounts.filter(a => !a.archived_at);
+  const active = useMemo(() => accounts.filter(a => !a.archived_at), [accounts]);
   const [chosen, setChosen] = useState<Record<string, string>>({});
   const [decided, setDecided] = useState<Record<string, 'approved' | 'rejected'>>({});
   const [error, setError] = useState('');
@@ -39,18 +41,13 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
     queryFn: () => session.run(repo => repo.notices.defaultAccount()),
   });
 
-  // Every account here shares one currency in practice; the first active account's currency is what the
-  // parser is told to expect, exactly as before.
-  const code = currency(active[0]?.currency ?? 'AUD');
-  const read = useMemo(() => readNotices(captured.data ?? [], code), [captured.data, code]);
+  const read = useMemo(() => routeNotices(captured.data ?? [], active, fallback.data), [captured.data, active, fallback.data]);
   const unreadable = read.unreadable;
+  const routed = useMemo(() => new Map(read.readable.map(item => [item.notice.id, item.accountId])), [read.readable]);
 
-  const accountFor = useMemo(() => (item: ReadableNotice) => {
-    const override = chosen[item.notice.id];
-    if (override) return override;
-    const named = accountFromNotice(`${item.notice.title} ${item.notice.text}`, active);
-    return named ?? fallback.data ?? active[0]?.id ?? '';
-  }, [chosen, active, fallback.data]);
+  const accountFor = useMemo(() => (item: ReadableNotice) =>
+    chosen[item.notice.id] ?? routed.get(item.notice.id) ?? fallback.data ?? active[0]?.id ?? '',
+  [chosen, routed, active, fallback.data]);
 
   const items = useMemo(
     () => pairNotices(read.readable.filter(item => !decided[item.notice.id]), accountFor),
@@ -96,12 +93,15 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
   const decide = (entries: readonly NoticeItem[], approve: boolean) => { setError(''); settle.mutate({entries, approve}); };
   const busy = settle.isPending;
 
-  const picker = (noticeId: string, value: string, label: string) => active.length > 1 &&
-    <label className="input-label notice-account">{label}
-      <select value={value} disabled={busy} onChange={e => setChosen(p => ({...p, [noticeId]: e.target.value}))}>
-        {active.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-      </select>
-    </label>;
+  const picker = (noticeId: string, value: string, label: string, code: string) => {
+    const same = active.filter(a => a.currency === code);
+    return same.length > 1 &&
+      <label className="input-label notice-account">{label}
+        <select value={value} disabled={busy} onChange={e => setChosen(p => ({...p, [noticeId]: e.target.value}))}>
+          {same.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+      </label>;
+  };
 
   return <Sheet title="Did you spend this?" onClose={() => { if (!busy) onClose(); }}>
     <div className="stack" aria-busy={busy || undefined}>
@@ -115,7 +115,7 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
                     <CategoryMark description="transfer"/>
                     <strong>{nameOf(entry.fromId)} → {nameOf(entry.toId)}</strong>
                   </span>
-                  <span className="amount">{format(money(BigInt(entry.out.minor) < 0n ? -BigInt(entry.out.minor) : BigInt(entry.out.minor), code))}</span>
+                  <span className="amount">{format(money(BigInt(entry.out.minor) < 0n ? -BigInt(entry.out.minor) : BigInt(entry.out.minor), entry.out.currency))}</span>
                 </div>
                 {/* The claim is a tag, and the reasoning behind it is one press away. Joining two notices
                     into one row IS the app making a claim about the owner's money, so it stays checkable —
@@ -130,8 +130,8 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
                     <p className="meta">{entry.in.notice.title}</p>
                   </Explain>
                 </p>
-                {picker(entry.out.notice.id, entry.fromId, 'Money left')}
-                {picker(entry.in.notice.id, entry.toId, 'Money arrived in')}
+                {picker(entry.out.notice.id, entry.fromId, 'Money left', entry.out.currency)}
+                {picker(entry.in.notice.id, entry.toId, 'Money arrived in', entry.in.currency)}
                 <div className="notice-actions">
                   <Button variant="primary" disabled={busy} onClick={() => decide([entry], true)}>Approve</Button>
                   <Button disabled={busy} onClick={() => decide([entry], false)}>Reject</Button>
@@ -143,11 +143,11 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
                     <CategoryMark description={`${entry.item.merchant} ${entry.item.notice.title}`}/>
                     <strong>{entry.item.merchant}</strong>
                   </span>
-                  <span className="amount">{format(money(BigInt(entry.item.minor), code))}</span>
+                  <span className="amount">{format(money(BigInt(entry.item.minor), entry.item.currency))}</span>
                 </div>
                 <p className="meta">{entry.item.date} · {entry.item.notice.title}</p>
                 {picker(entry.item.notice.id, entry.accountId,
-                  BigInt(entry.item.minor) < 0n ? 'Taken from' : 'Paid into')}
+                  BigInt(entry.item.minor) < 0n ? 'Taken from' : 'Paid into', entry.item.currency)}
                 <div className="notice-actions">
                   <Button variant="primary" disabled={busy} onClick={() => decide([entry], true)}>Approve</Button>
                   <Button disabled={busy} onClick={() => decide([entry], false)}>Reject</Button>

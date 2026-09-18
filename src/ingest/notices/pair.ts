@@ -41,6 +41,7 @@ export function pairNotices(
     const mate = ordered.find(other => {
       if (other.notice.id === item.notice.id || taken.has(other.notice.id)) return false;
       if (BigInt(other.minor) < 0n === outward) return false;          // Same direction: not a transfer.
+      if (other.currency !== item.currency) return false;               // Two currencies is not one movement.
       const otherSize = BigInt(other.minor) < 0n ? (-BigInt(other.minor)).toString() : other.minor;
       if (otherSize !== size) return false;
       if (accountOf(other) === here) return false;                     // One account cannot pay itself.

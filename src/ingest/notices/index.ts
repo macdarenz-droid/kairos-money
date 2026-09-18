@@ -4,6 +4,8 @@ import type {Currency} from '../../core/money';
 export type {Notice, ParsedNotice} from './parse';
 export {Notices, capturedNotices, forgetNotices, noticeAccess, noticesAvailable, watchSources, installedSources} from './bridge';
 export type {NoticeAccess, NoticeSource} from './bridge';
+export {routeNotices, accountFromNotice} from './route';
+export type {NoticeAccount, RoutedNotice} from './route';
 
 export type ReadableNotice = {notice: Notice} & Extract<ParsedNotice, {status: 'ok'}>;
 export type UnreadableNotice = {notice: Notice; reason: string};
