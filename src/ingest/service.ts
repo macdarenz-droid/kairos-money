@@ -1,7 +1,7 @@
 import {reconcileAsync} from './reconcile/async';
 import { syncManual } from '../ledger/manual';
 import { syncNotices } from '../ledger/notices';
-import {applyCategoryEdits} from '../ledger/categories';
+import {applyCategoryEdits, categoryKind} from '../ledger/categories';
 import { hasStatementBalanceChain } from './normalize/statement-evidence';
 import type { Driver } from '../core/db/driver';
 import { currency, money, toDatabase } from '../core/money';
@@ -176,7 +176,7 @@ export function importService(driver: Driver) {
     for (const row of ledger) {
       const suggested = categorize(row, userRules, merchantDefaults, row.mcc); const category = row.category ?? (suggested.confidence >= 9000 ? suggested.category : null);
       const categoryId = category ? hash('category:' + category) : null;
-      if (categoryId) await driver.execute('INSERT OR IGNORE INTO categories(id,name,kind) VALUES(?,?,?)', [categoryId, category, category === 'Income' ? 'income' : category === 'Transfer' ? 'transfer' : category === 'Savings' ? 'savings' : category === 'Debt' ? 'debt' : ['Groceries', 'Housing', 'Utilities', 'Transport', 'Health'].includes(category!) ? 'essential' : 'discretionary']);
+      if (categoryId) await driver.execute('INSERT OR IGNORE INTO categories(id,name,kind) VALUES(?,?,?)', [categoryId, category, categoryKind(category!)]);
       const merchantId = hash('merchant:' + row.merchant);
       await driver.execute('INSERT OR IGNORE INTO merchants(id,canonical_name,aliases,mcc) VALUES(?,?,?,?)', [merchantId, row.merchant, '[]', row.mcc]);
       await driver.execute('INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,merchant_id,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [row.id, row.accountId, row.date, integer(row.minor, row.currency), row.currency, row.description, merchantId, categoryId, BigInt(row.minor) < 0n ? 'debit' : 'credit', row.transferGroup, 0, row.id, row.owner, row.confidence, row.verified ? 1 : 0, notes.get(row.id) ?? '']);

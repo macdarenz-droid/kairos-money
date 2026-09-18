@@ -10,7 +10,7 @@ import {useSession} from '../session';
 import {Amount,Button,Input,Row,Sheet} from '../design/primitives';
 import {preferredCategories,repeatEntryProposals} from '../proposals/derive';
 import type {RepeatEntryPrefill} from '../proposals/model';
-const categories=['Groceries','Housing','Utilities','Transport','Health','Eating out','Shopping','Entertainment','Debt','Savings'];
+import {expenseCategories as categories} from '../../ledger/categories';
 /**
  * WHAT HE ASKED FOR, IN HIS WORDS: "add transaction should be bigger and first thing you see when u open
  * the app. and when clicked, open its own tab like what kind of transaction, income, outcome, transfer.

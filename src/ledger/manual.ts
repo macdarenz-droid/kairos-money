@@ -1,4 +1,5 @@
 import {splitRepository,validSplit} from './splits';
+import {categoryKind,expenseCategories} from './categories';
 import type { Driver } from '../core/db/driver';
 import { currency, money, toDatabase } from '../core/money';
 import { hash, isoDay, dayNumber } from '../ingest/normalize';
@@ -24,7 +25,7 @@ export async function syncManual(driver:Driver):Promise<void>{
   const account=(await driver.query('SELECT currency FROM accounts WHERE id=?',[leg.accountId]))[0];if(!account)throw new Error('A manual entry account is missing.');
   const category=entry.kind==='transfer'?'Transfer':entry.kind==='income'?'Income':entry.category;
   const categoryId=category?hash('category:'+category):null;
-  if(categoryId)await driver.execute('INSERT OR IGNORE INTO categories(id,name,kind) VALUES(?,?,?)',[categoryId,category,entry.kind==='income'?'income':entry.kind==='transfer'?'transfer':category==='Debt'?'debt':category==='Savings'?'savings':['Groceries','Housing','Utilities','Transport','Health'].includes(category!)?'essential':'discretionary']);
+  if(categoryId)await driver.execute('INSERT OR IGNORE INTO categories(id,name,kind) VALUES(?,?,?)',[categoryId,category,entry.kind==='income'?'income':entry.kind==='transfer'?'transfer':categoryKind(category!)]);
   const id=hash('manual-transaction:'+entry.id+':'+leg.key), code=currency(String(account.currency));
   await driver.execute('INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes,status) VALUES(?,?,?,?,?,?,?,?,?,0,?,?,10000,1,?,?)',[id,leg.accountId,entry.date,toDatabase(money(leg.minor,code)),code,entry.description,categoryId,leg.minor<0n?'debit':'credit',entry.kind==='transfer'?hash('manual-transfer:'+entry.id):null,id,batchId(entry.id),entry.notes,'settled']);
   await driver.execute('INSERT INTO transaction_sources VALUES(?,?,?,?)',[id,batchId(entry.id),leg.key,JSON.stringify({...entry,leg:leg.key,origin:'manual'})]);
@@ -39,7 +40,7 @@ export function manualRepository(driver:Driver){
   const description=input.description.trim();if(!description||description.length>200||input.notes.length>2000)throw new Error('Add a description of up to 200 characters and a note of up to 2,000 characters.');
   const from=(await driver.query('SELECT * FROM accounts WHERE id=? AND archived_at IS NULL',[input.accountId]))[0];if(!from)throw new Error('Choose an active account.');money(BigInt(input.minor),currency(String(from.currency)));
   if(input.kind==='transfer') {const to=(await driver.query('SELECT * FROM accounts WHERE id=? AND archived_at IS NULL',[input.destinationId]))[0];if(!to||input.accountId===input.destinationId||to.currency!==from.currency)throw new Error('Choose two different accounts in the same currency.');}
-  if(input.category!==null && !['Groceries','Housing','Utilities','Transport','Health','Eating out','Shopping','Entertainment','Debt','Savings'].includes(input.category))throw new Error('Choose a supported category.');
+  if(input.category!==null && !expenseCategories.includes(input.category))throw new Error('Choose a supported category.');
   const prior=(await manualRecords(driver)).find(e=>e.id===input.id);
   if(prior&&prior.category!==input.category&&await splitRepository(driver).get(hash('manual-transaction:'+input.id+':entry')))throw new Error('Remove the category split before changing the payment’s single category.');
   const changed=prior && ['kind','accountId','destinationId','date','minor'].some(k=>prior[k as keyof ManualInput]!==input[k as keyof ManualInput]);

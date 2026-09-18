@@ -13,7 +13,11 @@ export type BatchSummary = Pick<Batch, 'id' | 'fileName' | 'status' | 'integrity
 export type LedgerRow = NormalizedRow & { id: string; owner: string; transferGroup: string | null;
   sources: { batchId: string; sourceId: string }[];
   /** Set when this row was typed in by hand: the manual entry it came from, so it can be edited or removed. */
-  manualId?: string };
+  manualId?: string;
+  /** Set when this row came from an approved bank notification: the notice's own id, so it can be removed.
+   * There is no statement behind it to disagree with, only a notification the owner approved — unlike a
+   * statement row, it stays revocable. */
+  noticeId?: string };
 export class ImportFailure extends Error {
   constructor(public understood: string, public unreadable: string, public excerpt: string, public action: string) { super(`${unreadable} ${action}`); this.name = 'ImportFailure'; }
 }

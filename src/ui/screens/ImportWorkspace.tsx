@@ -27,12 +27,12 @@ import type { LedgerHealth } from '../../ingest/materialized';
 import type { BatchSummary, ImportContext, LedgerRow, NormalizedRow } from '../../ingest/types';
 import { ImportFailure } from '../../ingest/types';
 import { payMetrics } from '../../ledger/payslips';
+import { categoryNames } from '../../ledger/categories';
 import { Amount, Button, EmptyState, Input, Row, Sheet } from '../design/primitives';
 import { useSession } from '../session';
 import { useConverter } from '../currency';
 /** Rows shown before the first press, then how many each press adds. */
 const FIRST = 5, MORE = 10;
-const categoryNames = ['Groceries', 'Housing', 'Utilities', 'Transport', 'Health', 'Eating out', 'Shopping', 'Entertainment', 'Income', 'Transfer', 'Savings', 'Debt'];
 function decimalString(minor: string, code: string): string { const value = BigInt(minor), digits = currencyDigits[currency(code)], unit = 10n ** BigInt(digits), absolute = value < 0n ? -value : value; return `${value < 0n ? '-' : ''}${absolute / unit}${digits ? '.' + (absolute % unit).toString().padStart(digits, '0') : ''}`; }
 type Review = Awaited<ReturnType<Repository['imports']['review']>>;
 /** Five, because he asked for five: a short list you step through beats a wall you scroll. */
@@ -60,6 +60,7 @@ export function ImportWorkspace({ accounts, request, consumed }: { accounts: Acc
   const [fileId, setFileId] = useState<string | null>(null), [reviewId, setReviewId] = useState<string | null>(null), [transaction, setTransaction] = useState<LedgerRow | null>(null), [undo, setUndo] = useState<BatchSummary | null>(null), [search, setSearch] = useState(''), [notice, setNotice] = useState(''), [updateReview, setUpdateReview] = useState<string[] | null>(null);
   const [backupSuggested, setBackupSuggested] = useState(false), [backupOpen, setBackupOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<ManualEntry | null>(null), [removeEntry, setRemoveEntry] = useState<ManualEntry | null>(null), [matchEntry, setMatchEntry] = useState<ManualEntry | null>(null), [removeError, setRemoveError] = useState(''), [entryError, setEntryError] = useState(''), [opening, setOpening] = useState(false);
+  const [removeNotice, setRemoveNotice] = useState<{id: string; description: string} | null>(null), [removeNoticeError, setRemoveNoticeError] = useState('');
   /**
    * READ THE ENTRY AT THE MOMENT OF ACTING ON IT, NOT FROM A CACHE.
    *
@@ -92,6 +93,15 @@ export function ImportWorkspace({ accounts, request, consumed }: { accounts: Acc
     finally { setOpening(false); }
   };
   const forget = useMutation({ mutationFn: (id: string) => session.run(repo => repo.manual.remove(id)), onSuccess: async () => { setRemoveEntry(null); await query.invalidateQueries(); }, onError: () => setRemoveError('The transaction could not be removed.') });
+  /**
+   * Removing an approved bank notification. There is no statement behind it to disagree with — only a
+   * notification the owner approved — so unlike an imported row, it stays revocable like a hand-recorded
+   * one. Deleting it clears the transaction it became, and every figure that reads the ledger (balances,
+   * the intelligence engine, the money band) simply stops seeing it on its next read.
+   */
+  const forgetNotice = useMutation({ mutationFn: (id: string) => session.run(repo => repo.notices.remove(id)),
+    onSuccess: async () => { setRemoveNotice(null); setTransaction(null); await query.invalidateQueries(); setNotice('That notification is off your ledger.'); },
+    onError: e => setRemoveNoticeError(e instanceof Error ? e.message : 'That could not be removed.') });
   // Matching is what stops the same purchase being counted twice once its statement arrives, so it kept
   // its place — it only moved off the list and into the one transaction it concerns.
   const candidates = useQuery({ queryKey: ['manual-matches', matchEntry?.id], queryFn: () => session.run(repo => repo.manual.candidates(matchEntry!.id)), enabled: !!matchEntry && session.state === 'ready' });
@@ -125,6 +135,7 @@ export function ImportWorkspace({ accounts, request, consumed }: { accounts: Acc
     {editEntry && <ManualSheet accounts={accounts} entry={editEntry} onClose={() => setEditEntry(null)}/>}
     {matchEntry && <Sheet title="Match with statement" onClose={() => { if (!link.isPending) setMatchEntry(null); }}><div className="stack"><p>Confirm only if these are the same purchase. Similar amounts can be different transactions.</p>{candidates.data?.map(c => <Row key={c.leg + c.batchId + c.sourceId} trailing={<Button disabled={link.isPending} onClick={() => link.mutate({leg: c.leg, transactionId: c.transactionId})}>Same transaction</Button>}>{c.description}<p>{c.date} · {c.leg === 'entry' ? 'Statement transaction' : c.leg === 'from' ? 'Transfer out' : 'Transfer in'}</p></Row>)}{candidates.data && !candidates.data.length && <p>No imported entry with the same account and amount within three days.</p>}{Object.keys(matchEntry.links).length > 0 && <Button disabled={link.isPending} onClick={() => link.mutate(null)}>Remove saved matches</Button>}{(link.error || candidates.error) && <p role="alert">Matches could not be read.</p>}</div></Sheet>}
     {removeEntry && <Sheet title="Delete this transaction?" onClose={() => { if (!forget.isPending) { setRemoveEntry(null); setRemoveError(''); } }}><div className="stack"><p>{removeEntry.description}. This removes the record you typed; anything imported from a statement stays.</p>{removeError && <p role="alert">{removeError}</p>}<Button variant="danger" disabled={forget.isPending} onClick={() => forget.mutate(removeEntry.id)}>Delete transaction</Button></div></Sheet>}
+    {removeNotice && <Sheet title="Delete this transaction?" onClose={() => { if (!forgetNotice.isPending) { setRemoveNotice(null); setRemoveNoticeError(''); } }}><div className="stack"><p>{removeNotice.description}. This removes the notification you approved; nothing here was ever confirmed by a statement.</p>{removeNoticeError && <p role="alert">{removeNoticeError}</p>}<Button variant="danger" disabled={forgetNotice.isPending} onClick={() => forgetNotice.mutate(removeNotice.id)}>Delete transaction</Button></div></Sheet>}
     
     {!accounts.length && <p className="meta">Add an account to import your statement. Transactions will be saved to that account.</p>}{notice && <p role="status" className="notice">{notice}</p>}{pick.error && <Failure error={pick.error}/>} {drop.error && <Failure error={drop.error}/>}{data.error && <Failure error={data.error}/>}
     {files.length > 0 && <section className="section-gap"><h2>Files waiting for review</h2><p>These files are encrypted on your device. Nothing enters your ledger until you confirm.</p>{files.map(file => <Row key={file.id} trailing={<Button onClick={() => setFileId(file.id)}>Read file</Button>}>{file.name}</Row>)}</section>}
@@ -149,8 +160,17 @@ export function ImportWorkspace({ accounts, request, consumed }: { accounts: Acc
     {fileId && <FileReview id={fileId} accounts={accounts} onClose={() => setFileId(null)} onStaged={id => { setFileId(null); setReviewId(id); }}/>} {reviewId && <BatchReview id={reviewId} onClose={() => setReviewId(null)} onResult={imported}/>}
     {transaction && <Sheet title="Source transaction" onClose={() => setTransaction(null)}><div className="stack"><Amount value={money(BigInt(transaction.minor), transaction.currency)} context={transaction.merchant}/><p>{transaction.date} · {accounts.find(a => a.id === transaction.accountId)?.name}</p><pre className="raw-excerpt">{transaction.description}</pre><p>{transaction.transferGroup ? 'Matched internal transfer. Excluded from income and spending.' : transaction.category ?? 'Uncategorised'}</p>{!transaction.transferGroup&&!transaction.pending&&BigInt(transaction.minor)<0n&&<TransactionSplits key={transaction.id} id={transaction.id} minor={transaction.minor} code={transaction.currency}/>}{!transaction.pending&&BigInt(transaction.minor)!==0n&&<ForeignCurrency key={'fx:'+transaction.id} id={transaction.id} code={transaction.currency}/>}{!transaction.pending&&!transaction.transferGroup&&BigInt(transaction.minor)!==0n&&<Refunds key={'refund:'+transaction.id} id={transaction.id} credit={BigInt(transaction.minor)>0n}/>}<TransactionAttachments target={transaction.id} recordedMinor={transaction.minor} code={transaction.currency}/><SettlementHistory id={transaction.id}/>{/* Edit and delete belong to something recorded by hand: there is no statement behind it to disagree
         with. An imported row is evidence of what a bank says happened, and editing that would be
-        rewriting the record rather than correcting it. */}
-      {transaction.manualId && entryError && <p role="alert">{entryError}</p>}{transaction.manualId && <div className="form-actions"><Button disabled={opening} onClick={() => void openManual(setEditEntry)}>Edit</Button><Button disabled={opening} onClick={() => void openManual(setMatchEntry)}>Match with statement</Button><Button variant="danger" disabled={opening} onClick={() => void openManual(setRemoveEntry)}>Delete</Button></div>}<h3>Supporting statements</h3>{transaction.sources.map(s => <p key={s.batchId + s.sourceId}>{batches.find(b => b.id === s.batchId)?.fileName} · row {s.sourceId}</p>)}</div></Sheet>}
+        rewriting the record rather than correcting it.
+
+        A bank NOTIFICATION is neither: nothing has confirmed it, so unlike an imported row it stays
+        revocable, but unlike a hand-recorded one there is no form behind it to edit — only the wording
+        the bank sent, which is not the owner's to rewrite. Delete is what fits it: gone means gone from
+        the balance and from the intelligence engine alike, both of which only ever read what is still
+        in the ledger. */}
+      {transaction.manualId && entryError && <p role="alert">{entryError}</p>}{transaction.manualId && <div className="form-actions"><Button disabled={opening} onClick={() => void openManual(setEditEntry)}>Edit</Button><Button disabled={opening} onClick={() => void openManual(setMatchEntry)}>Match with statement</Button><Button variant="danger" disabled={opening} onClick={() => void openManual(setRemoveEntry)}>Delete</Button></div>}{transaction.noticeId && <div className="form-actions"><Button variant="danger" disabled={forgetNotice.isPending} onClick={() => setRemoveNotice({id: transaction.noticeId!, description: transaction.merchant})}>Delete</Button></div>}{/* A real statement file backs this row: shown as evidence. A notification or a hand-typed entry
+          backs no file at all, and printing its internal row marker here was an implementation detail
+          leaking onto the screen rather than provenance worth reading. */}
+      {transaction.sources.some(s => batches.some(b => b.id === s.batchId)) && <><h3>Supporting statements</h3>{transaction.sources.filter(s => batches.some(b => b.id === s.batchId)).map(s => <p key={s.batchId + s.sourceId}>{batches.find(b => b.id === s.batchId)?.fileName} · row {s.sourceId}</p>)}</>}</div></Sheet>}
     {undo && <Sheet title="Roll back this import?" onClose={() => { if (!rollback.isPending) setUndo(null); }}><div className="stack"><p>{undo.fileName}</p><p>Remove this statement’s contribution. Transactions supported by other committed statements remain. Rules created by this import are removed with it.</p>{rollback.error && <Failure error={rollback.error}/>}<Button variant="danger" disabled={rollback.isPending} onClick={() => rollback.mutate(undo.id)}>Confirm rollback</Button></div></Sheet>}
   </section>;
 }

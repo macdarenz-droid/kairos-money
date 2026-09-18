@@ -155,10 +155,17 @@ export async function materializedPage(driver:Driver,search:string,offset:number
   sources.set(id,[...(sources.get(id)??[]),manualSource(record)]);
   if(record.manual_id!==null)entries.set(id,String(record.manual_id));
  }
+ // Approved from a bank notification: its own id, so it can be removed the way a hand-recorded entry
+ // can. There is no statement behind it to disagree with, only a notification the owner approved.
+ const notices=await driver.query(`SELECT s.transaction_id,json_extract(s.original_payload,'$.id') AS notice_id
+  FROM transaction_sources s JOIN import_batches b ON b.id=s.import_batch_id
+  WHERE b.status='committed' AND b.parser_version='notice-v1' AND b.id IN (${batches}) AND s.transaction_id IN (${keys})`,[...scoped,...ids]);
+ const noticeIds=new Map<string,string>();
+ for(const record of notices)if(record.notice_id!==null)noticeIds.set(String(record.transaction_id),String(record.notice_id));
  return {rows:transactions.map(record=>{
   const built=row(record,sources.get(String(record.id)));
-  const entry=entries.get(String(record.id));
-  return entry===undefined?built:{...built,manualId:entry};
+  const entry=entries.get(String(record.id)),noticeId=noticeIds.get(String(record.id));
+  return {...(entry===undefined?built:{...built,manualId:entry}),...(noticeId===undefined?{}:{noticeId})};
  }),total};
 }
 
@@ -231,9 +238,16 @@ export async function materializedBulk(driver:Driver,search:string,limit=1001):P
   sources.set(id,[...(sources.get(id)??[]),manualSource(record)]);
   if(record.manual_id!==null)entries.set(id,String(record.manual_id));
  }
+ // Approved from a bank notification: its own id, so it can be removed the way a hand-recorded entry
+ // can. There is no statement behind it to disagree with, only a notification the owner approved.
+ const notices=await driver.query(`SELECT s.transaction_id,json_extract(s.original_payload,'$.id') AS notice_id
+  FROM transaction_sources s JOIN import_batches b ON b.id=s.import_batch_id
+  WHERE b.status='committed' AND b.parser_version='notice-v1' AND b.id IN (${batches}) AND s.transaction_id IN (${keys})`,[...scoped,...ids]);
+ const noticeIds=new Map<string,string>();
+ for(const record of notices)if(record.notice_id!==null)noticeIds.set(String(record.transaction_id),String(record.notice_id));
  return {rows:transactions.map(record=>{
   const built=row(record,sources.get(String(record.id)));
-  const entry=entries.get(String(record.id));
-  return entry===undefined?built:{...built,manualId:entry};
+  const entry=entries.get(String(record.id)),noticeId=noticeIds.get(String(record.id));
+  return {...(entry===undefined?built:{...built,manualId:entry}),...(noticeId===undefined?{}:{noticeId})};
  }),total};
 }

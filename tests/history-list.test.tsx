@@ -191,7 +191,7 @@ it('says so when the entry behind a hand-recorded row cannot be read', async () 
   fireEvent.click(edit);
   await screen.findByText(/could not be read/);
   // The transaction stays open: closing it and showing nothing would be the silent failure again.
-  expect(screen.queryByText('Supporting statements')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Close Source transaction'})).toBeTruthy();
 });
 
 /** Read, but this row's entry is gone — a different situation, so a different sentence. */
@@ -256,4 +256,45 @@ it('opens a hand-recorded transaction recorded after the list was last read', as
   await waitFor(() => expect(second.disabled).toBe(false));
   fireEvent.click(second);
   expect(((await screen.findByLabelText('Amount')) as HTMLInputElement).value).toBe('6.40');
+});
+
+/**
+ * "notif txn to history is not deletable/editable. if i delete it. my balance should change too, and
+ * ofcourse the engine brain, brain should just read the data whats in the history."
+ *
+ * A notification is neither a statement nor something typed in by hand: there is no form to edit, but
+ * unlike an imported row it was never confirmed by anything and stays revocable. Delete, not Edit — and
+ * once it is gone, the balance and everything the intelligence engine reads has to agree it is gone,
+ * because both only ever read what is still in the ledger.
+ */
+it('offers delete, not edit, on an approved bank notification, and removing it clears the balance', async () => {
+  await state.repo!.notices.approve({id: 'notice-1', accountId: 'a', date: '2026-01-20', minor: '-1250',
+    merchant: 'Synthetic Bank', description: 'You spent $12.50 at SYNTHETIC.', source: 'app.synthetic.bank',
+    capturedAt: '2026-01-20T04:00:00Z'});
+  expect((await state.repo!.accountBalances()).find(b => b.accountId === 'a')?.minor).toBe('-1250');
+  await open();
+  await waitFor(() => expect(rows()).toHaveLength(1));
+  fireEvent.click(rows()[0]!);
+  // Nothing has confirmed it, so unlike a statement row there is nothing to show as evidence for it.
+  expect(screen.queryByText('Supporting statements')).toBeNull();
+  expect(screen.queryByRole('button', {name: 'Edit'})).toBeNull();
+  fireEvent.click(await screen.findByRole('button', {name: 'Delete'}));
+  fireEvent.click(await screen.findByRole('button', {name: 'Delete transaction'}));
+  await waitFor(async () => expect((await state.repo!.accountBalances()).find(b => b.accountId === 'a')?.minor).toBe('0'));
+  await waitFor(() => expect(rows()).toHaveLength(0));
+  // The engine brain reads the ledger, not a separate memory of what it once held.
+  const {snapshot} = await state.repo!.intelligence.analyse('2026-01-20', 'AUD');
+  expect(snapshot.transactions).toHaveLength(0);
+});
+
+/** A statement confirmed it: real evidence, worth showing, and nothing here is the owner's to delete. */
+it('still shows Supporting statements, and no delete, on a row a statement confirmed', async () => {
+  await importRows(1);
+  await open();
+  await waitFor(() => expect(rows()).toHaveLength(1));
+  fireEvent.click(rows()[0]!);
+  await screen.findByText('Supporting statements');
+  // The row identifies the statement it came from, not an internal marker like a notice's `__notice__`.
+  expect(screen.getByText(/row 0/)).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Delete'})).toBeNull();
 });
