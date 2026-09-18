@@ -3,6 +3,7 @@ import { currency, format, money, type Currency } from '../../core/money';
 import { convert, rateBetween, type Rate } from '../../core/fx';
 import { localDay } from '../../ingest/reminders';
 import { useSession } from '../session';
+import { useDisplayCurrency } from '../currency';
 
 /**
  * What every account comes to, in one currency.
@@ -24,16 +25,13 @@ export function CombinedTotal({ accounts, balances }: {
   balances: readonly { accountId: string; minor: string }[] | undefined;
 }) {
   const session = useSession();
-  const home = useQuery({ queryKey: ['display-currency'], enabled: session.state === 'ready',
-    queryFn: () => session.run(repo => repo.displayCurrency()) });
+  const display = useDisplayCurrency();
   const stored = useQuery({ queryKey: ['fx-rates'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.rates()) });
 
   const live = accounts.filter(a => !a.archived_at);
   const codes = [...new Set(live.map(a => a.currency))];
   if (session.state !== 'ready' || codes.length < 2 || !balances) return null;
-
-  const display = currency(home.data ?? codes[0] ?? 'AUD');
   const rates: Rate[] = (stored.data ?? []).map(r => ({
     asOf: r.asOf, base: currency(r.base), quote: currency(r.quote), rateE8: BigInt(r.rateE8), source: r.source }));
 

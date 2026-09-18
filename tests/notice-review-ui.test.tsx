@@ -31,7 +31,7 @@ afterEach(cleanup);
 const show = async () => {
   render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
     <NoticeReview accounts={accounts} onClose={() => undefined}/></QueryClientProvider>);
-  await screen.findByText('Did you spend this?');
+  await screen.findByText('Check these transactions');
 };
 
 it('lists every captured purchase in one sheet, not one prompt after another', async () => {

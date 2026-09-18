@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
-import { currency, currencyDigits, type Currency } from '../../core/money';
+import { currencyDigits, type Currency } from '../../core/money';
 import { asRates, decimalToE8, fetchRates } from '../../core/net/rates';
 import { rateDays } from '../../core/fx';
 import { Button, Input, Row } from '../design/primitives';
 import { localDay } from '../../ingest/reminders';
 import { useSession } from '../session';
+import { useDisplayCurrency } from '../currency';
 
 /**
  * Exchange rates, and the one thing the screen must never do: imply they are fresher than they are.
@@ -26,12 +27,15 @@ export function Rates({ accounts, notify }: {
   const [error, setError] = useState(''), [progress, setProgress] = useState(''), [typed, setTyped] = useState<Record<string, string>>({});
 
   const held = [...new Set(accounts.filter(a => !a.archived_at).map(a => a.currency))] as Currency[];
+  // Read again here, only for .isSuccess: pressed before this settles, Update fetched against whatever
+  // the picker was defaulting to rather than the setting itself. Same query key as useDisplayCurrency,
+  // so this costs nothing beyond the one request already in flight.
   const home = useQuery({ queryKey: ['display-currency'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.displayCurrency()) });
   const asOf = useQuery({ queryKey: ['rates-as-of'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.ratesAsOf()) });
 
-  const display = currency(home.data ?? held[0] ?? 'AUD');
+  const display = useDisplayCurrency();
   // Every currency the ledger holds, plus the one it is being shown in, so a refresh covers the whole
   // screen rather than whichever pair happened to be asked for first.
   const wanted = [...new Set([...held, display, ...(['USD', 'PHP', 'AUD'] as Currency[])])]

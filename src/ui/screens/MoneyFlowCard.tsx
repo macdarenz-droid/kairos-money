@@ -5,6 +5,7 @@ import {moneyFlow, type Amount} from '../../intelligence/visuals/flow';
 import type {Transaction} from '../../intelligence/model';
 import {MoneyFlow} from '../design/MoneyFlow';
 import {useSession} from '../session';
+import {useDisplayCurrency} from '../currency';
 
 const UNCATEGORISED = 'Uncategorised';
 
@@ -34,13 +35,11 @@ function group(rows: readonly Transaction[], key: (t: Transaction) => string): A
 export function MoneyFlowCard() {
   const session = useSession();
   const today = localDay();
-  const home = useQuery({queryKey: ['display-currency'], enabled: session.state === 'ready',
-    queryFn: () => session.run(repo => repo.displayCurrency())});
-  const code = home.data ?? 'AUD';
+  const code = useDisplayCurrency();
   const report = useQuery({
     queryKey: ['intelligence', today, code, {extra: '0', cut: 0}],
     queryFn: () => session.run(r => r.intelligence.analyse(today, code, '0', 0)),
-    enabled: session.state === 'ready' && home.isSuccess,
+    enabled: session.state === 'ready',
   });
   if (!report.data) return null;
   const snapshot = report.data.snapshot;

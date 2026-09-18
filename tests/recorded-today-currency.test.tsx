@@ -46,3 +46,25 @@ it('names money it could not convert rather than printing it in another currency
   await waitFor(() => expect(document.body.textContent).toContain('AUD not included'));
   expect(screen.getByText('Spent today').closest('.row')!.textContent).not.toContain('$100.00');
 });
+
+/**
+ * HIS ACTUAL PHONE: one peso account, and "Change display currency" never opened at all.
+ *
+ * "still in aud. even i used php." MoneyBand already inferred PHP from the account when no setting had
+ * been saved; this hook fell back to a literal 'AUD' regardless of what the account held, so the same
+ * screen, at the same moment, disagreed with itself about which money it was even showing.
+ */
+it('shows a peso account in pesos with no display currency ever chosen', async () => {
+  const {driver} = memoryDriver(); await migrate(driver); const repo = repository(driver);
+  await repo.addAccount({id: 'p', name: 'Wallet', institution: '', type: 'cash',
+    currency: 'PHP', mask_last4: null, opening_balance_minor: 0n});
+  await repo.manual.save({id: 'g', kind: 'expense', accountId: 'p', destinationId: null,
+    date: localDay(), minor: '2974', description: 'G', category: 'Eating out', notes: ''});
+  state.repo = repo;
+  render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+    <ManualHistory today/></QueryClientProvider>);
+  await waitFor(() => expect(document.body.textContent).toContain('29.74'));
+  // "PHP 29.74", never "$29.74" — a bare dollar sign under en-AU formatting is what AUD renders as, and
+  // that means the wrong currency, not a formatting choice.
+  expect(document.body.textContent).not.toContain('$29.74');
+});

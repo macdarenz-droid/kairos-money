@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
+import java.util.regex.Pattern;
 
 /**
  * Reads the notifications of the banking apps the owner named, and asks about each purchase in the shade.
@@ -26,6 +27,36 @@ import android.service.notification.StatusBarNotification;
 public class KairosNoticeListener extends NotificationListenerService {
     static final String CHANNEL = "kairos-purchase-check";
     private static final int BASE = 900;
+
+    /**
+     * Same two wordlists the ledger reads a captured notice against (src/ingest/notices/parse.ts), kept
+     * here only to choose which QUESTION to ask, never to decide what the answer means: that judgement
+     * still happens once, in the one place with the account's own currency and rules to check it against.
+     *
+     * "if i receive something, the notif should also ask not spend / instead, did you received money?"
+     * Every notice was asked "Did you spend this?", including one that said in its own words that money
+     * had arrived — so the one line the owner reads before answering was already wrong before he pressed
+     * anything. Getting the direction backwards here costs nothing that approving does: the wording is
+     * corrected on read, never the record, and a phrase this cannot place either way is asked plainly
+     * rather than guessed.
+     */
+    private static final Pattern INWARD = Pattern.compile(
+        "\\b(?:been paid|paid into|paid to you|received|deposit(?:ed)?|credited|refund(?:ed)?|transfer(?:red)? from|money in)\\b",
+        Pattern.CASE_INSENSITIVE);
+    private static final Pattern OUTWARD = Pattern.compile(
+        "\\b(?:you spent|spent|purchase(?:d)?|debited|withdrawn|withdrawal|paid from|paid to|payment to|charged|sent to|transfer(?:red)? to|money out)\\b",
+        Pattern.CASE_INSENSITIVE);
+
+    static final class Question {
+        final String title; final String yes;
+        Question(String title, String yes) { this.title = title; this.yes = yes; }
+    }
+    static Question questionFor(String body) {
+        boolean inward = INWARD.matcher(body).find(), outward = OUTWARD.matcher(body).find();
+        if (inward && !outward) return new Question("Did you receive this?", "Yes, I did");
+        if (outward && !inward) return new Question("Did you spend this?", "Yes, I did");
+        return new Question("Was this you?", "Yes, it was");
+    }
 
     @Override public void onNotificationPosted(StatusBarNotification posted) {
         if (posted == null || posted.getPackageName() == null) return;
@@ -58,23 +89,24 @@ public class KairosNoticeListener extends NotificationListenerService {
         if (manager == null || !manager.areNotificationsEnabled()) return;
         if (android.os.Build.VERSION.SDK_INT >= 33
             && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
-        manager.createNotificationChannel(new NotificationChannel(CHANNEL, "Check a purchase", NotificationManager.IMPORTANCE_DEFAULT));
+        manager.createNotificationChannel(new NotificationChannel(CHANNEL, "Check a transaction", NotificationManager.IMPORTANCE_DEFAULT));
 
+        Question question = questionFor(detail);
         int slot = BASE + Math.abs(id.hashCode() % 64);
         Notification.Builder builder = new Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.kairos_mark)
-            .setContentTitle("Did you spend this?")
+            .setContentTitle(question.title)
             .setContentText(detail)
             .setStyle(new Notification.BigTextStyle().bigText(detail))
             .setVisibility(Notification.VISIBILITY_PRIVATE)
             .setPublicVersion(new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.kairos_mark)
-                .setContentTitle("Kairos has a purchase to check")
+                .setContentTitle("Kairos has a transaction to check")
                 .setVisibility(Notification.VISIBILITY_PUBLIC).build())
             .setAutoCancel(true)
             .setContentIntent(PendingIntent.getActivity(this, slot,
                 new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE))
-            .addAction(answer(slot * 2, id, NoticeActionReceiver.APPROVE, "Yes, I did"))
+            .addAction(answer(slot * 2, id, NoticeActionReceiver.APPROVE, question.yes))
             .addAction(answer(slot * 2 + 1, id, NoticeActionReceiver.REJECT, "No"));
         manager.notify(slot, builder.build());
     }

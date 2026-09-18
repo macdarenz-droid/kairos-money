@@ -5,6 +5,7 @@ import {localDay} from '../../ingest/reminders';
 import {currencyExposure, type Holding} from '../../intelligence/visuals/exposure';
 import {CurrencyExposure} from '../design/CurrencyExposure';
 import {useSession} from '../session';
+import {useDisplayCurrency} from '../currency';
 
 /**
  * WHAT SHARE OF THE MONEY SITS IN EACH CURRENCY.
@@ -27,13 +28,13 @@ export function CurrencyExposureCard() {
   const balances = useQuery({queryKey: ['account-balances'], enabled: ready, queryFn: () => session.run(repo => repo.accountBalances())});
   const home = useQuery({queryKey: ['display-currency'], enabled: ready, queryFn: () => session.run(repo => repo.displayCurrency())});
   const stored = useQuery({queryKey: ['fx-rates'], enabled: ready, queryFn: () => session.run(repo => repo.rates())});
+  const display = useDisplayCurrency();
   if (!accounts.data || !balances.data || !home.isSuccess || !stored.isSuccess) return null;
 
   const live = accounts.data.filter(account => !account.archived_at);
   const codes = [...new Set(live.map(account => account.currency))];
   if (codes.length < 2) return null;
 
-  const display = currency(home.data ?? codes[0] ?? 'AUD');
   const rates: Rate[] = stored.data.map(rate => ({asOf: rate.asOf, base: currency(rate.base),
     quote: currency(rate.quote), rateE8: BigInt(rate.rateE8), source: rate.source}));
 

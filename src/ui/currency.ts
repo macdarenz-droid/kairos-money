@@ -13,13 +13,25 @@ import { useSession } from './session';
  * settings. A display currency is a property of the app, not of a card on it.
  *
  * One query key, so every screen reads the same stored setting and a change invalidates all of them
- * together.
+ * together. And one FALLBACK, for the screen before anyone has chosen a setting at all: "still in aud.
+ * even i used php" was this hook, on a phone that had never opened the currency picker, handing back a
+ * literal 'AUD' to eleven different screens because that was the one thing they all agreed to fall back
+ * to. His account holds pesos; the screens that happened to already know his accounts (MoneyBand,
+ * SpendRing) inferred PHP from them and were right, and everything reading this hook instead — Ledger,
+ * Insights, Recorded today — fell back to AUD and was wrong, on the same phone, at the same moment. The
+ * fallback is the account itself now: no explicit choice, no accounts yet, and 'AUD' is still what a
+ * blank ledger has to show something as — but the moment an account exists, its own currency is what
+ * "no choice made" means, everywhere this hook is asked.
  */
 export function useDisplayCurrency(): Currency {
   const session = useSession();
   const home = useQuery({ queryKey: ['display-currency'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.displayCurrency()) });
-  return currency(home.data ?? 'AUD');
+  const accounts = useQuery({ queryKey: ['accounts'], enabled: session.state === 'ready',
+    queryFn: () => session.run(repo => repo.accounts()) });
+  if (home.data) return currency(home.data);
+  const first = (accounts.data ?? []).find(account => !account.archived_at);
+  return currency(first?.currency ?? 'AUD');
 }
 
 /**

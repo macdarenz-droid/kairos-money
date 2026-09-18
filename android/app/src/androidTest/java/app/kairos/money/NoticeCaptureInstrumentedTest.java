@@ -82,6 +82,25 @@ public class NoticeCaptureInstrumentedTest {
         assertEquals(Collections.singletonList(kept), NoticeStore.ids(context));
     }
 
+    /**
+     * "if i receive something, the notif should also ask not spend / instead, did you received money?"
+     *
+     * Every captured notice was asked "Did you spend this?", including one that said in its own words
+     * money had arrived. The wording now follows what the text actually says, without deciding what the
+     * answer means — that is still read once, later, against the account's own currency.
+     */
+    @Test public void asksAccordingToWhatTheNotificationSaysHappened() {
+        assertEquals("Did you receive this?",
+            KairosNoticeListener.questionFor("You received P2970.00 from 7 Eleven Cl. New balance is P3146.31").title);
+        assertEquals("Did you spend this?",
+            KairosNoticeListener.questionFor("You spent $12.50 at SHOP").title);
+        assertEquals("Did you receive this?",
+            KairosNoticeListener.questionFor("CommBank You've been paid $3.00 into your account ending 407").title);
+        // Says both, or neither: asked plainly rather than guessed either way.
+        assertEquals("Was this you?", KairosNoticeListener.questionFor("Payment received and refund sent.").title);
+        assertEquals("Was this you?", KairosNoticeListener.questionFor("Your available balance is $431.20.").title);
+    }
+
     @Test public void storesNoNotificationTextBeforeAnyAppIsChosen() {
         // The state a fresh install is in: access may be granted, nothing is ticked, nothing is captured.
         assertEquals(0, NoticeStore.sources(context).length());

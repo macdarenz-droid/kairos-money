@@ -103,7 +103,7 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
       </label>;
   };
 
-  return <Sheet title="Did you spend this?" onClose={() => { if (!busy) onClose(); }}>
+  return <Sheet title="Check these transactions" onClose={() => { if (!busy) onClose(); }}>
     <div className="stack" aria-busy={busy || undefined}>
       {captured.isPending ? <p>Reading what your bank told you.</p> : !items.length
         ? <p>Nothing new from your bank to check.</p>

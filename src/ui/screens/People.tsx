@@ -7,6 +7,7 @@ import {localDay} from '../../ingest/reminders';
 import {Amount, Button, Input, Row, Sheet} from '../design/primitives';
 import {PersonBalance} from '../design/PersonBalance';
 import {useSession} from '../session';
+import {useDisplayCurrency} from '../currency';
 
 const blank = (code: string) => ({id: '', person: '', direction: 'owed_to_me' as Direction, currency: code,
   amount: '', reason: '', occurredOn: localDay()});
@@ -24,9 +25,7 @@ type Draft = ReturnType<typeof blank>;
  */
 export function People() {
   const session = useSession(), client = useQueryClient();
-  const home = useQuery({queryKey: ['display-currency'], enabled: session.state === 'ready',
-    queryFn: () => session.run(repo => repo.displayCurrency())});
-  const code = home.data ?? 'AUD';
+  const code = useDisplayCurrency();
   const entries = useQuery({queryKey: ['ious'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.people.list())});
   const stored = useQuery({queryKey: ['fx-rates'], enabled: session.state === 'ready',

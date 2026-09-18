@@ -1,10 +1,11 @@
 import {useQuery} from '@tanstack/react-query';
-import {currency, format, money} from '../../core/money';
+import {format, money} from '../../core/money';
 import {categoryAmounts} from '../../intelligence/allocations';
 import {displayRatio} from '../../intelligence/visuals';
 import {bandRows, moneyBand} from '../../intelligence/visuals/band';
 import {localDay} from '../../ingest/reminders';
 import {useSession} from '../session';
+import {useDisplayCurrency} from '../currency';
 
 /** Five named slices and a remainder. Past six the ring is stripes and the legend is a list again. */
 const SHOWN = 5;
@@ -33,19 +34,16 @@ export function SpendRing() {
 
   const accounts = useQuery({queryKey: ['accounts'], queryFn: () => session.run(repo => repo.accounts()), enabled: session.state === 'ready'});
   const live = (accounts.data ?? []).filter(account => !account.archived_at);
-  const codes = [...new Set(live.map(account => account.currency))];
   /**
    * THE CURRENCY HE CHOSE, like every other figure on this screen.
    *
    * This preferred AUD from the accounts while Surfaces and Intelligence followed the display setting,
    * so one screen gave two different answers to "whose money is this" — his was set to PHP and these
-   * two carried on in AUD. It also split the ['intelligence', day, code, …] key, which made Today read
-   * the whole ledger twice over. The snapshot converts now, so following the setting shows his money in
-   * the currency he asked for rather than emptying the chart.
+   * two carried on in AUD. Both now ask the one hook every screen shares, which is where that same
+   * disagreement — an explicit choice honoured everywhere, an unset one inferred from the account
+   * everywhere — actually lives, rather than each screen re-deciding it on its own.
    */
-  const home = useQuery({queryKey: ['display-currency'], enabled: session.state === 'ready',
-    queryFn: () => session.run(repo => repo.displayCurrency())});
-  const code = currency(home.data ?? (codes.includes('AUD') ? 'AUD' : codes[0] ?? 'AUD'));
+  const code = useDisplayCurrency();
   /**
    * THE SAME ANALYSIS THE REST OF THIS SCREEN IS ALREADY WAITING FOR.
    *

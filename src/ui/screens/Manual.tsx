@@ -11,6 +11,7 @@ import {Amount,Button,Input,Row,Sheet} from '../design/primitives';
 import {preferredCategories,repeatEntryProposals} from '../proposals/derive';
 import type {RepeatEntryPrefill} from '../proposals/model';
 import {expenseCategories as categories} from '../../ledger/categories';
+import {useDisplayCurrency} from '../currency';
 /**
  * WHAT HE ASKED FOR, IN HIS WORDS: "add transaction should be bigger and first thing you see when u open
  * the app. and when clicked, open its own tab like what kind of transaction, income, outcome, transfer.
@@ -86,9 +87,8 @@ export function ManualSheet({accounts,entry,prefill,kind:initialKind,onClose}:{a
 export function ManualHistory({today=false}:{today?:boolean}){
  const session=useSession();
  const day=localDay();
- const home=useQuery({queryKey:['display-currency'],enabled:session.state==='ready',queryFn:()=>session.run(r=>r.displayCurrency())});
  const stored=useQuery({queryKey:['fx-rates'],enabled:session.state==='ready',queryFn:()=>session.run(r=>r.rates())});
- const display=currency(home.data??'AUD');
+ const display=useDisplayCurrency();
  const rates:FxRate[]=(stored.data??[]).map(r=>({asOf:r.asOf,base:currency(r.base),quote:currency(r.quote),rateE8:BigInt(r.rateE8),source:r.source}));
  const data=useQuery({queryKey:['manual'],queryFn:()=>session.run(async r=>({entries:await r.manual.list(),totals:await r.manual.today(localDay()),unresolved:await r.manual.unresolved()})),enabled:session.state==='ready'});
  if(today)return <section className="section-gap"><h2>Recorded today</h2>

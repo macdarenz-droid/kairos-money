@@ -8,7 +8,7 @@ import {localDay} from '../../ingest/reminders';
 import {Amount, Button, Input, Row, Sheet} from '../design/primitives';
 import {DebtBurn} from '../design/DebtBurn';
 import {useSession} from '../session';
-import {useConverter} from '../currency';
+import {useConverter, useDisplayCurrency} from '../currency';
 
 const blank = (code: string) => ({id: '', name: '', accountId: '', currency: code, balance: '', rate: '', minimum: '', dueDay: '', openedAt: localDay()});
 type Draft = ReturnType<typeof blank>;
@@ -108,10 +108,7 @@ export function Debts({accounts}: {accounts: {id: string; name: string; currency
  * thing that actually changes the answer.
  */
 export function DebtShape() {
-  const session = useSession();
-  const home = useQuery({queryKey: ['display-currency'], enabled: session.state === 'ready',
-    queryFn: () => session.run(repo => repo.displayCurrency())});
-  const code = home.data ?? 'AUD';
+  const code = useDisplayCurrency();
   const debts = useDebts();
   const [extra, setExtra] = useState('');
   const rows = projectable(debts.data ?? [], code);

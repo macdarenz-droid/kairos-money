@@ -2,6 +2,7 @@ import {useQuery} from '@tanstack/react-query';
 import {localDay} from '../../ingest/reminders';
 import {Button} from './primitives';
 import {useSession} from '../session';
+import {useDisplayCurrency} from '../currency';
 
 /**
  * WHAT THE FIGURES ON THIS SCREEN HAD TO LEAVE OUT.
@@ -21,13 +22,11 @@ import {useSession} from '../session';
 export function Unconverted({onFix}: {onFix: () => void}) {
   const session = useSession();
   const today = localDay();
-  const home = useQuery({queryKey: ['display-currency'], enabled: session.state === 'ready',
-    queryFn: () => session.run(repo => repo.displayCurrency())});
-  const code = home.data ?? 'AUD';
+  const code = useDisplayCurrency();
   const report = useQuery({
     queryKey: ['intelligence', today, code, {extra: '0', cut: 0}],
     queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
-    enabled: session.state === 'ready' && home.isSuccess,
+    enabled: session.state === 'ready',
   });
 
   const missing = report.data?.snapshot.unconverted ?? [];
