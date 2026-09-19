@@ -240,6 +240,7 @@ export function importService(driver: Driver) {
         await driver.execute(`DELETE FROM ${table} WHERE import_batch_id=?`, [id]);
       }
       await driver.execute('DELETE FROM import_batches WHERE id=?', [id]);
+      await driver.execute('DELETE FROM app_settings WHERE key=?', [noteKey(id)]);
     });
   }
   async function ledger() {
@@ -257,7 +258,21 @@ export function importService(driver: Driver) {
   async function ledgerHealth() {
     return (await import('./materialized')).materializedHealth(driver);
   }
+  const noteKey = (id: string) => 'import-note:' + id;
+  /**
+   * A few words of the person's own about what a file is — "August everyday statement". It lives beside
+   * the batch, never inside it: the document payload is the evidence and stays exactly as extracted.
+   * An empty note removes the record rather than storing a blank one.
+   */
+  async function setNote(id: string, note: string) {
+    const text = note.trim();
+    if (text.length > 200) throw new Error('Keep the description within 200 characters.');
+    if (!(await driver.query('SELECT id FROM import_batches WHERE id=?', [id])).length) throw new Error('That import was not found.');
+    if (text) await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)', [noteKey(id), JSON.stringify(text)]);
+    else await driver.execute('DELETE FROM app_settings WHERE key=?', [noteKey(id)]);
+  }
   async function summaries(): Promise<BatchSummary[]> {
+    const notes = new Map((await driver.query("SELECT key,value FROM app_settings WHERE key LIKE 'import-note:%'")).flatMap(r => { const value: unknown = JSON.parse(String(r.value)); return typeof value === 'string' && value ? [[String(r.key).slice('import-note:'.length), value] as const] : []; }));
     const rows = await driver.query(`SELECT b.id,b.file_name,b.account_id,b.period_start,b.period_end,b.status,b.integrity_tier,
       CASE WHEN b.status IN ('staged','quarantined') THEN json_extract(d.payload,'$.sessionId') ELSE NULL END AS session_id,
       p.employer,p.pay_date,p.period_start AS pay_period_start,p.period_end AS pay_period_end,p.gross_minor,p.net_minor,p.tax_minor,p.super_minor,p.deductions,p.allowances,p.ytd,p.currency AS pay_currency
@@ -275,6 +290,7 @@ export function importService(driver: Driver) {
         context: { accountId: String(record.account_id), period: { start: String(record.period_start), end: String(record.period_end) } },
         ...(record.integrity_tier === null ? {} : { integrityTier: String(record.integrity_tier) as NonNullable<BatchSummary['integrityTier']> }),
         ...(record.session_id === null ? {} : { sessionId: String(record.session_id) }), payslip,
+        ...(notes.has(String(record.id)) ? { note: notes.get(String(record.id))! } : {}),
       };
     });
   }
@@ -304,5 +320,5 @@ export function importService(driver: Driver) {
   async function saveMapping(issuer: string, mapping: ExportMapping) { await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',['export-mapping:'+issuer,JSON.stringify(mapping)]); }
   async function audit(transactionId: string) { return (await driver.query("SELECT metadata FROM privacy_log WHERE action='transaction_superseded' ORDER BY created_at,id")).map(r=>JSON.parse(String(r.metadata)) as {transactionId:string;before:unknown;after:unknown}).filter(r=>r.transactionId===transactionId); }
   async function commitSession(ids: string[]) { return driver.transaction(async()=> { const results=[]; for(const id of ids) results.push(await commitUnlocked(id)); return results; }); }
-  return { workspace, keepSeparate, forget, ledgerPage, ledgerBulk, ledgerHealth, leaveCategoriesUnassigned, useSuggestedCategories, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
+  return { workspace, setNote, keepSeparate, forget, ledgerPage, ledgerBulk, ledgerHealth, leaveCategoriesUnassigned, useSuggestedCategories, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
 }

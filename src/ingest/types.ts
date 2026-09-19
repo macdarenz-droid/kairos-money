@@ -9,6 +9,8 @@ export type Document = { id: string; hash: string; fileName: string; parser: str
 export type Batch = Document & { status: 'staged' | 'committed' | 'rolled_back' | 'quarantined' };
 export type BatchSummary = Pick<Batch, 'id' | 'fileName' | 'status' | 'integrityTier' | 'sessionId' | 'payslip'> & {
   context: Pick<ImportContext, 'accountId' | 'period'>;
+  /** A few words of the owner's own about what the file is, when they gave any. Shown in place of the file name. */
+  note?: string;
 };
 export type LedgerRow = NormalizedRow & { id: string; owner: string; transferGroup: string | null;
   sources: { batchId: string; sourceId: string }[];
