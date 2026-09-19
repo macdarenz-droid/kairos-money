@@ -191,7 +191,8 @@ public class AcceptanceInstrumentedTest {
             assertTrue("The real document picker did not offer its Save action", saved);
             awaitJs("document.body.innerText.includes('Your JSON and CSV export was saved.')"); verifyExport();
             click("You"); click("Dark"); awaitJs("document.documentElement.dataset.theme==='dark'");verifyWidgetLaunch(scenario,"dark",false);
-            click("Light");awaitJs("document.documentElement.dataset.theme==='light'");click("Lock now");
+            // The widget check ends with the app recreated and unlocked, so it is back on Today.
+            click("You");click("Light");awaitJs("document.documentElement.dataset.theme==='light'");click("Lock now");
             awaitJs("document.body.innerText.includes('Welcome back')");verifyWidgetLaunch(scenario,"light",true);
             // A displayed/acknowledged request must not replay on the next resume.
             scenario.moveToState(Lifecycle.State.CREATED);scenario.moveToState(Lifecycle.State.RESUMED);
