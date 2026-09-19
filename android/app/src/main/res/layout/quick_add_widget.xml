@@ -4,11 +4,12 @@
   and four category chips. It shows no money. Everything on it is a tap that opens the quick-add sheet
   over the home screen; nothing here opens the app.
 
-  RemoteViews rules shape it: LinearLayout, TextView, ImageButton and ViewFlipper only. The flipper is
+  RemoteViews rules shape it: LinearLayout, TextView, ImageButton and ViewFlipper only. The launcher, not
+  AppCompat, inflates it, so the plus is tinted with the framework attribute; app:tint would be ignored there. The flipper is
   the one animation a widget can own — it fades between "Kairos · Add" and "Saved …" for a few seconds
   after the sheet saves, then fades back.
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical" android:gravity="center_vertical" android:paddingStart="16dp" android:paddingEnd="16dp"
     android:paddingTop="12dp" android:paddingBottom="12dp" android:background="@drawable/widget_card">
@@ -24,7 +25,8 @@
         </ViewFlipper>
         <ImageButton android:id="@+id/widget_add" android:layout_width="32dp" android:layout_height="32dp" android:layout_marginStart="8dp"
             android:background="@drawable/qa_ring_ripple" android:src="@drawable/ic_qa_plus" android:tint="@color/qa_accent"
-            android:scaleType="centerInside" android:padding="7dp" android:contentDescription="@string/widget_add"/>
+            android:scaleType="centerInside" android:padding="7dp" android:contentDescription="@string/widget_add"
+            tools:ignore="UseAppTint"/>
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="12dp">
         <TextView android:id="@+id/widget_chip_1" style="@style/Widget.Kairos.Chip"/>

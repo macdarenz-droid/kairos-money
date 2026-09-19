@@ -5,14 +5,14 @@
   same height on every phone, Save. It writes to the on-device outbox; the ledger takes it in when
   Kairos next opens.
 -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/qa_scrim" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/qa_scrim">
     <LinearLayout android:id="@+id/qa_sheet" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom"
         android:orientation="vertical" android:background="@drawable/qa_sheet" android:paddingStart="20dp" android:paddingEnd="20dp" android:paddingTop="10dp" android:paddingBottom="24dp" android:clickable="true" android:focusable="true">
         <LinearLayout android:layout_width="match_parent" android:layout_height="44dp" android:orientation="horizontal" android:gravity="center_vertical">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/qa_title" android:textSize="15sp" android:textColor="@color/qa_text" android:fontFamily="sans-serif-medium"/>
             <TextView android:id="@+id/qa_account" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:textSize="11sp" android:textColor="@color/qa_meta" android:maxLines="1" android:ellipsize="end"/>
-            <ImageButton android:id="@+id/qa_close" android:layout_width="36dp" android:layout_height="36dp" android:background="?android:attr/selectableItemBackgroundBorderless" android:src="@drawable/ic_qa_close" android:tint="@color/qa_text2" android:scaleType="centerInside" android:padding="9dp" android:contentDescription="@string/qa_close"/>
+            <ImageButton android:id="@+id/qa_close" android:layout_width="36dp" android:layout_height="36dp" android:background="?android:attr/selectableItemBackgroundBorderless" android:src="@drawable/ic_qa_close" app:tint="@color/qa_text2" android:scaleType="centerInside" android:padding="9dp" android:contentDescription="@string/qa_close"/>
         </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center" android:layout_marginTop="4dp">
             <TextView android:id="@+id/qa_symbol" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="$" android:textSize="24sp" android:textColor="@color/qa_meta" android:fontFamily="sans-serif-medium" android:layout_marginEnd="6dp" android:layout_gravity="bottom" android:paddingBottom="8dp"/>
@@ -38,7 +38,7 @@
         <Button android:id="@+id/qa_key_9" style="@style/Widget.Kairos.Key" android:text="9" android:tag="9"/>
         <Button android:id="@+id/qa_key_dot" style="@style/Widget.Kairos.Key" android:text="." android:tag="."/>
         <Button android:id="@+id/qa_key_0" style="@style/Widget.Kairos.Key" android:text="0" android:tag="0"/>
-        <ImageButton android:id="@+id/qa_key_back" style="@style/Widget.Kairos.Key" android:src="@drawable/ic_qa_backspace" android:tint="@color/qa_text" android:scaleType="centerInside" android:tag="back" android:contentDescription="@string/qa_delete"/>
+        <ImageButton android:id="@+id/qa_key_back" style="@style/Widget.Kairos.Key" android:src="@drawable/ic_qa_backspace" app:tint="@color/qa_text" android:scaleType="centerInside" android:tag="back" android:contentDescription="@string/qa_delete"/>
         </GridLayout>
         <Button android:id="@+id/qa_save" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="14dp" android:background="@drawable/qa_save_ripple" android:text="@string/qa_save" android:textAllCaps="false" android:textSize="13sp" android:textColor="@color/qa_accent" android:fontFamily="sans-serif-medium" android:stateListAnimator="@null"/>
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:gravity="center" android:text="@string/qa_footer" android:textSize="11sp" android:textColor="@color/qa_meta"/>
