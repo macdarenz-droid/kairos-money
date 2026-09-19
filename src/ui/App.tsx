@@ -2,7 +2,7 @@ import { ManualHistory, ManualSheet } from './screens/Manual';
 import { capturedNotices, forgetNotices, routeNotices } from '../ingest/notices';
 import { applyShadeDecisions, shadeBatch } from './notices';
 import { NoticeReview } from './screens/NoticeReview';
-import {useQuickAddLaunch} from './quick-add';
+import {useQuickAddLaunch, useQuickAddOutbox} from './quick-add';
 import { NotificationSync } from './screens/Notifications';
 import { Intelligence } from './screens/Intelligence';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -93,6 +93,9 @@ export default function App() {
   // Answers given in the shade are carried out here, on the first unlock after they were given: this is
   // the earliest moment the encrypted ledger can receive them. Remembered BY ID, not as one flag: an
   // answer given while the app sat in the background is as new as the first one was.
+  // What was typed into the home-screen widget while the app was closed: recorded now, and said once.
+  useQuickAddOutbox(session.state === 'ready', session.run, accounts.data, primaryAccount.isPending ? undefined : primaryAccount.data ?? null,
+    added => { setToast(added === 1 ? 'Recorded 1 transaction from the widget' : `Recorded ${added} transactions from the widget`); void queryClient.invalidateQueries(); });
   const handledShade = useRef(new Set<string>());
   useEffect(()=>{
     if(!firstAccount || !noticeQueue.data || primaryAccount.isPending)return;

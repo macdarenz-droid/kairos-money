@@ -57,6 +57,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(KairosReminderPlugin.class);
         registerPlugin(KairosLaunchPlugin.class);
         registerPlugin(KairosNoticesPlugin.class);
+        registerPlugin(KairosQuickAddPlugin.class);
         super.onCreate(savedInstanceState);
         applyAppearance(false);
     }
