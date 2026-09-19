@@ -23,7 +23,15 @@ export type Debt = {
   annualRateBp: string;
   /** The smallest payment the lender accepts each month. */
   minimumMinor: string;
+  /** The day the person wants it gone by, when they have said. */
+  targetDate?: string | null;
 };
+
+/** The open debts in one currency, as the planner sees them, from the records the ledger keeps. */
+export function openDebts(records: readonly {id: string; name: string; currency: string; balanceMinor: string; annualRateBp: string; minimumMinor: string; closedAt: string | null; targetDate?: string | null}[], code: string): Debt[] {
+  return records.filter(d => d.closedAt === null && d.currency === code && BigInt(d.balanceMinor) > 0n)
+    .map(d => ({id: d.id, name: d.name, balanceMinor: d.balanceMinor, annualRateBp: d.annualRateBp, minimumMinor: d.minimumMinor, targetDate: d.targetDate ?? null}));
+}
 
 export type Payoff = {
   /** null when the payment never clears it. */
@@ -217,4 +225,38 @@ export function ratePercent(annualRateBp: string): string {
   const whole = bp / 100n, rest = bp % 100n;
   if (rest === 0n) return `${whole}%`;
   return `${whole}.${rest.toString().padStart(2, '0').replace(/0$/, '')}%`;
+}
+
+/** Calendar months from one day to another, counting only months that have wholly passed. Never negative. */
+export function monthsUntil(from: string, to: string): number {
+  day(from); day(to);
+  const [y1, m1, d1] = from.split('-').map(Number) as [number, number, number];
+  const [y2, m2, d2] = to.split('-').map(Number) as [number, number, number];
+  return Math.max(0, (y2 - y1) * 12 + (m2 - m1) - (d2 < d1 ? 1 : 0));
+}
+/** The same day of the month, so many months on; the last day of the month when that day does not exist. */
+export function addMonths(date: string, months: number): string {
+  day(date);
+  const [y, m, d] = date.split('-').map(Number) as [number, number, number];
+  const total = y * 12 + (m - 1) + months, year = Math.floor(total / 12), month = total - year * 12;
+  const last = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(year, month, Math.min(d, last))).toISOString().slice(0, 10);
+}
+/**
+ * THE PAYMENT THAT CLEARS A DEBT BY A DATE. "I want to pay my debt in full amount, So im going to set the
+ * amount how much. Then the app ... will tell me something like: try to keep ($) amount of money."
+ *
+ * payoff() answers the other question — given a payment, how long — and it is exact, so this one is
+ * answered by searching it: the smallest whole-minor payment whose payoff lands inside the months
+ * available. Never below the minimum the lender takes; null when there is no month left to pay in.
+ */
+export function paymentFor(debt: Debt, months: number): string | null {
+  if (!Number.isInteger(months) || months < 1) return null;
+  const balance = BigInt(debt.balanceMinor), minimum = BigInt(debt.minimumMinor);
+  if (balance <= 0n) return '0';
+  const clears = (payment: bigint) => { const p = payoff(debt, payment.toString()); return p.months !== null && p.months <= months; };
+  // Paying the balance and one month's interest clears it in one month, so the answer lies below that.
+  let low = 0n, high = balance + monthlyInterest(balance, BigInt(debt.annualRateBp));
+  while (low < high) { const mid = (low + high) / 2n; if (clears(mid)) high = mid; else low = mid + 1n; }
+  return (low > minimum ? low : minimum).toString();
 }

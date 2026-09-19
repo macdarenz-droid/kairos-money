@@ -2,7 +2,7 @@ import {useQuery} from '@tanstack/react-query';
 import {format, money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {audit, type Purpose, type Step} from '../../intelligence/audit';
-import type {Debt} from '../../intelligence/debt';
+import {openDebts} from '../../intelligence/debt';
 import {displayRatio} from '../../intelligence/visuals';
 import {RankedBars} from '../design/RankedBars';
 import {useHoldings} from '../money';
@@ -39,14 +39,12 @@ export function MoneyAudit() {
   if (session.state !== 'ready' || !snapshot || !ready || !debts.isSuccess) return null;
 
   // Open debts in the currency on show, exactly as the debt shape reads them.
-  const open: Debt[] = debts.data.filter(d => d.closedAt === null && d.currency === code && BigInt(d.balanceMinor) > 0n)
-    .map(d => ({id: d.id, name: d.name, balanceMinor: d.balanceMinor, annualRateBp: d.annualRateBp, minimumMinor: d.minimumMinor}));
-  const result = audit(snapshot, {debts: open, spendableMinor});
+  const result = audit(snapshot, {debts: openDebts(debts.data, code), spendableMinor});
   // Not four weeks of history yet: a report about nothing is still a thing on the screen.
   if (result.status !== 'ok') return null;
 
   const show = (minor: string | bigint) => format(money(BigInt(minor), code));
-  const {cashFlow, debt, roadmap, findings} = result;
+  const {cashFlow, debt, roadmap, findings, targets} = result;
   const income = BigInt(cashFlow.incomeMinor);
   const kept = BigInt(cashFlow.essentialsMinor) + BigInt(cashFlow.minimumsMinor);
   // Dimensionless: millionths of the month's income, never money on the way to a width.
@@ -98,6 +96,19 @@ export function MoneyAudit() {
             <span className="amount">{plan.months === null ? 'never' : `${plan.months} mo`}</span>
           </div>
           <span className="meta">{show(plan.interestMinor)} interest{i === 1 && BigInt(debt.savedMinor) > 0n ? ` · ${show(debt.savedMinor)} more` : ''}</span>
+        </li>)}
+      </ul>
+    </>}
+
+    {targets.length > 0 && <>
+      <div className="list-heading"><h3>Pay off by</h3><span className="meta">keep this much</span></div>
+      <ul className="audit-steps">
+        {targets.map(t => <li key={t.id} className="audit-step" data-status={t.fits ? 'now' : 'later'}>
+          <div className="ranked-head">
+            <span className="ranked-name">{t.name}{t.fits && <span className="tag">fits</span>}</span>
+            <span className="amount">{t.perPayMinor !== null ? `${show(t.perPayMinor)} a pay` : `${show(t.paymentMinor)} a month`}</span>
+          </div>
+          <span className="meta">{stamp(t.date)} · {show(t.perDayMinor)} a day{t.status === 'past' ? ' · date has passed' : t.fits ? '' : t.earliest ? ` · ${stamp(t.earliest)} fits` : ' · more than is free'}</span>
         </li>)}
       </ul>
     </>}

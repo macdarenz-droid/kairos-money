@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {ChevronRight} from 'lucide-react';
 import {currency, currencyDigits, format, money, parseDecimal} from '../../core/money';
-import {compare, payoff, plan, ratePercent, type Debt} from '../../intelligence/debt';
+import {compare, openDebts, payoff, plan, ratePercent} from '../../intelligence/debt';
 import type {DebtRecord} from '../../ledger/debts';
 import {localDay} from '../../ingest/reminders';
 import {Amount, Button, Input, Row, Sheet} from '../design/primitives';
@@ -10,7 +10,7 @@ import {DebtBurn} from '../design/DebtBurn';
 import {useSession} from '../session';
 import {useConverter, useDisplayCurrency} from '../currency';
 
-const blank = (code: string) => ({id: '', name: '', accountId: '', currency: code, balance: '', rate: '', minimum: '', dueDay: '', openedAt: localDay()});
+const blank = (code: string) => ({id: '', name: '', accountId: '', currency: code, balance: '', rate: '', minimum: '', dueDay: '', openedAt: localDay(), targetDate: ''});
 type Draft = ReturnType<typeof blank>;
 
 function toDraft(debt: DebtRecord): Draft {
@@ -18,7 +18,7 @@ function toDraft(debt: DebtRecord): Draft {
     balance: format(money(BigInt(debt.balanceMinor), debt.currency)).replace(/[^\d.,-]/g, ''),
     rate: debt.annualRateBp,
     minimum: format(money(BigInt(debt.minimumMinor), debt.currency)).replace(/[^\d.,-]/g, ''),
-    dueDay: debt.dueDay === null ? '' : String(debt.dueDay), openedAt: debt.openedAt};
+    dueDay: debt.dueDay === null ? '' : String(debt.dueDay), openedAt: debt.openedAt, targetDate: debt.targetDate ?? ''};
 }
 
 function useDebts() {
@@ -27,11 +27,6 @@ function useDebts() {
     queryFn: () => session.run(repo => repo.debts.list())});
 }
 
-/** The open debts, as the planner sees them. */
-function projectable(debts: DebtRecord[], code: string): Debt[] {
-  return debts.filter(d => d.closedAt === null && d.currency === code && BigInt(d.balanceMinor) > 0n)
-    .map(d => ({id: d.id, name: d.name, balanceMinor: d.balanceMinor, annualRateBp: d.annualRateBp, minimumMinor: d.minimumMinor}));
-}
 
 /**
  * Debts in the Ledger, listed the way accounts are.
@@ -61,7 +56,7 @@ export function Debts({accounts}: {accounts: {id: string; name: string; currency
         id: entry.id || crypto.randomUUID(), name: entry.name, accountId: entry.accountId || null,
         currency: code, balanceMinor: balance.minor.toString(), annualRateBp: entry.rate,
         minimumMinor: minimum.minor.toString(), dueDay: entry.dueDay ? Number(entry.dueDay) : null,
-        openedAt: entry.openedAt}));
+        openedAt: entry.openedAt, targetDate: entry.targetDate || null}));
       await refresh(); setDraft(null);
     } catch (e) { setError(e instanceof Error ? e.message : 'The debt could not be saved.'); }
     finally { setBusy(false); }
@@ -72,7 +67,7 @@ export function Debts({accounts}: {accounts: {id: string; name: string; currency
     {open.map(debt => <Row key={debt.id}
       trailing={<Amount value={shown.into(debt.balanceMinor, debt.currency) ?? money(BigInt(debt.balanceMinor), debt.currency)} context={`${debt.name} owed`}/>}>
       <button type="button" className="account-open" onClick={() => { setError(''); setDraft(toDraft(debt)); }}>
-        <span className="account-summary"><span><h3>{debt.name}</h3><p className="account-meta">{ratePercent(debt.annualRateBp)}{debt.dueDay === null ? '' : ` · due the ${debt.dueDay}`}</p></span></span>
+        <span className="account-summary"><span><h3>{debt.name}</h3><p className="account-meta">{ratePercent(debt.annualRateBp)}{debt.dueDay === null ? '' : ` · due the ${debt.dueDay}`}{debt.targetDate === null ? '' : ` · by ${debt.targetDate}`}</p></span></span>
         <ChevronRight size={16}/>
       </button>
     </Row>)}
@@ -91,6 +86,9 @@ export function Debts({accounts}: {accounts: {id: string; name: string; currency
         <Input label="Minimum payment" inputMode="decimal" value={draft.minimum} onChange={e => setDraft({...draft, minimum: e.target.value})}/>
         <Input label="Due day of the month" hint="Leave blank when there is no set date." inputMode="numeric" value={draft.dueDay} onChange={e => setDraft({...draft, dueDay: e.target.value})}/>
         <Input label="Started" type="date" value={draft.openedAt} onChange={e => setDraft({...draft, openedAt: e.target.value})}/>
+        {/* The one thing the planner cannot work out: when the person wants this gone. Insights then
+            says what keeping to it takes each pay and each day, and whether that fits the month. */}
+        <Input label="Pay off by" type="date" hint="Leave blank for no target." value={draft.targetDate} onChange={e => setDraft({...draft, targetDate: e.target.value})}/>
         <label className="input-label">Held on<select value={draft.accountId} onChange={e => setDraft({...draft, accountId: e.target.value})}><option value="">No linked account</option>{accounts.filter(a => a.currency === draft.currency).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
         {error && <p role="alert">{error}</p>}
         <Button variant="primary" disabled={busy} onClick={() => void save(draft)}>Save debt</Button>
@@ -111,7 +109,7 @@ export function DebtShape() {
   const code = useDisplayCurrency();
   const debts = useDebts();
   const [extra, setExtra] = useState('');
-  const rows = projectable(debts.data ?? [], code);
+  const rows = openDebts(debts.data ?? [], code);
   if (!rows.length) return null;
   const minimums = rows.reduce((total, d) => total + BigInt(d.minimumMinor), 0n);
   let added = 0n;

@@ -1,8 +1,8 @@
 import {abs, day, ratio, shift, sum, type Snapshot, type Transaction} from '../model';
 import {kindAmount} from '../allocations';
 import {currencyDigits} from '../../core/money';
-import {payRise, recurrences} from '../forecast';
-import {compare, type Debt, type Plan} from '../debt';
+import {payCycle, payRise, recurrences} from '../forecast';
+import {addMonths, compare, monthsUntil, paymentFor, payoff, type Debt, type Plan} from '../debt';
 import {nextPayDate} from '../method';
 import {FIXED_BURDEN_BP} from '../surfaces';
 
@@ -108,6 +108,36 @@ export type DebtStrategy = {
   savedMonths: number | null;
 };
 
+/**
+ * A DEBT WITH A DATE ON IT. "I want to pay my debt in full amount, So im going to set the amount how
+ * much. Then the app will analyse my transaction, all of them ... Then it will tell me something like:
+ * try to keep ($) amount of money, to add to your savings for debt repayment."
+ *
+ * The payment is exact — the smallest that clears the balance by the date at its rate — and whether it
+ * FITS is read off the same month the cash flow is built from: what is free after essentials and the
+ * minimums. When it does not fit, the soonest date the free money would clear it is stated instead of
+ * a payment nobody can make.
+ */
+export type Target = {
+  id: string;
+  name: string;
+  date: string;
+  /** Whole months left to pay in. */
+  months: number;
+  /** Each month, never below the lender's minimum; and the part of it above the minimum. */
+  paymentMinor: string;
+  extraMinor: string;
+  /** The same payment as a share of each pay, when a pay cycle is known, and of each day. */
+  perPayMinor: string | null;
+  payInterval: number | null;
+  perDayMinor: string;
+  /** The extra sits inside the month's free money. */
+  fits: boolean;
+  /** When it does not fit: the soonest date the free money clears it, or null when even that never does. */
+  earliest: string | null;
+  status: 'ok' | 'past';
+};
+
 export type Audit = {
   status: 'ok' | 'not_yet';
   window: {start: string; end: string; days: number};
@@ -115,6 +145,8 @@ export type Audit = {
   leaks: Leak[];
   cashFlow: CashFlow;
   debt: DebtStrategy | null;
+  /** The debts the person put a date on, and what keeping to it takes. */
+  targets: Target[];
   roadmap: Step[];
   /** Whether pay has risen, held, or cannot be told: the "increase income" lever, stated not advised. */
   income: 'rising' | 'flat' | 'unknown';
@@ -156,7 +188,7 @@ export function audit(s: Snapshot, options: Options = {}): Audit {
     cashFlow: {status: 'no_income', incomeSource: 'none', incomeMinor: '0', essentialsMinor: '0', minimumsMinor: '0',
       discretionaryMinor: '0', savedMinor: '0', freeMinor: '0', saveMinor: '0', saveTo: 'buffer', spendMinor: '0',
       cutMinor: '0', automate: {minor: '0', date: null}},
-    debt: null, roadmap: [], income: 'unknown', evidence: [],
+    debt: null, targets: [], roadmap: [], income: 'unknown', evidence: [],
   };
   if (!first || days < MIN_DAYS) return blank;
 
@@ -262,7 +294,7 @@ export function audit(s: Snapshot, options: Options = {}): Audit {
     if (done) step.status = 'done';
     else if (!current) { step.status = 'now'; current = step; }
   }
-  const saveTo: Purpose = !current ? 'investing'
+  let saveTo: Purpose = !current ? 'investing'
     : current.id === 'high-interest' ? 'debt' : current.id === 'save-20' ? 'savings' : current.id === 'invest-10' ? 'investing' : 'buffer';
 
   // CASH FLOW: every unit of income with a purpose. Keep what must be kept; put a fifth aside, or as
@@ -270,7 +302,26 @@ export function audit(s: Snapshot, options: Options = {}): Audit {
   // published rule; where it goes is the roadmap's current step.
   const free = income - fixed;
   const target = share(income, SAVE_SHARE_BP);
-  const save = free <= 0n ? 0n : (target > saved ? target : saved) < free ? (target > saved ? target : saved) : free;
+  let save = free <= 0n ? 0n : (target > saved ? target : saved) < free ? (target > saved ? target : saved) : free;
+
+  // TARGETS: a date the person put on a debt outranks the roadmap's order, because it is the one thing
+  // on this screen they asked for by name. Each is costed exactly; what fits is kept for it.
+  const pays = payCycle(s);
+  const payEvery = pays.length ? Math.min(...pays.map(c => c.interval)) : null;
+  const room = free > 0n ? free : 0n;
+  const targets: Target[] = debts.filter(d => d.targetDate).map(d => {
+    const months = monthsUntil(s.asOf, d.targetDate!);
+    const payment = BigInt(paymentFor(d, months) ?? d.balanceMinor);
+    const extra = payment > BigInt(d.minimumMinor) ? payment - BigInt(d.minimumMinor) : 0n;
+    const fits = income > 0n && extra <= room;
+    const reach = fits ? null : payoff(d, (BigInt(d.minimumMinor) + room).toString()).months;
+    const target: Target = {id: d.id, name: d.name, date: d.targetDate!, months, paymentMinor: payment.toString(), extraMinor: extra.toString(),
+      perPayMinor: payEvery ? (payment * BigInt(payEvery) / 30n).toString() : null, payInterval: payEvery,
+      perDayMinor: (payment / 30n).toString(), fits, earliest: reach === null ? null : addMonths(s.asOf, reach), status: months < 1 ? 'past' : 'ok'};
+    return target;
+  }).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  const wanted = sum(targets.filter(t => t.fits).map(t => BigInt(t.extraMinor)));
+  if (wanted > 0n) { saveTo = 'debt'; if (wanted > save) save = wanted < room ? wanted : room; }
   const spend = free - save > 0n ? free - save : 0n;
   const cut = sum(leaks.filter(l => l.kind === 'small-purchases' || l.kind === 'bank-fees' || l.kind === 'lifestyle-creep').map(l => BigInt(l.monthlyMinor)));
   const payday = nextPayDate(s);
@@ -301,7 +352,7 @@ export function audit(s: Snapshot, options: Options = {}): Audit {
   const rises = payRise(s);
   const cycles = s.pays.filter(p => p.currency === s.currency && p.date <= s.asOf).length;
   return {
-    status: 'ok', window: {start, end: s.asOf, days}, findings, leaks, cashFlow, debt, roadmap: steps,
+    status: 'ok', window: {start, end: s.asOf, days}, findings, leaks, cashFlow, debt, targets, roadmap: steps,
     income: rises.length ? 'rising' : cycles >= 6 ? 'flat' : 'unknown',
     evidence: [...new Set(rows.map(t => t.id))],
   };

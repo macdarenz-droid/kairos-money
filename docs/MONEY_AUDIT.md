@@ -87,6 +87,22 @@ debt: the two are the same, and the app says so by showing no difference.
 The first step not yet done is *now*; it is where kept money goes. `income` says whether pay has risen,
 held, or cannot be told (from `payRise`), stated rather than advised.
 
+**Pay off by** (`targets`): a date the person puts on a debt, in the Ledger. *"I want to pay my debt in
+full amount, So im going to set the amount how much. Then the app will analyse my transaction, all of
+them ... tell me something like: try to keep ($) amount of money."* For each dated debt:
+
+- the payment is the smallest that clears the balance by the date at its rate (`paymentFor`, a search
+  over the exact `payoff`), never below the lender's minimum;
+- it is stated per pay, when the pay cycle is known, and per day;
+- it **fits** when the part above the minimum sits inside the month's free money (income less
+  essentials less minimums). A target that fits outranks the roadmap: kept money goes to the debt, and
+  at least that much is kept;
+- when it does not fit, the soonest date the free money would clear it is stated instead of a payment
+  nobody can make.
+
+The debt form takes the date; the audit card shows the row; the Today card repeats the per-day figure
+beside what is kept today, for the targets that fit.
+
 ## Sources for the rules of thumb
 
 - 50/30/20 and the 20% savings share, three to six months of expenses as the buffer:

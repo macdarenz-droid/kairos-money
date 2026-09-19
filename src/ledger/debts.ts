@@ -27,9 +27,11 @@ export type DebtRecord = {
   dueDay: number | null;
   openedAt: string;
   closedAt: string | null;
+  /** The day the person wants it gone by, or null when no target is set. */
+  targetDate: string | null;
 };
 
-export type DebtInput = Omit<DebtRecord, 'closedAt'>;
+export type DebtInput = Omit<DebtRecord, 'closedAt' | 'targetDate'> & {targetDate?: string | null};
 
 /**
  * A ceiling on the rate, so a typo cannot turn into a projection.
@@ -56,7 +58,9 @@ function validate(debt: DebtInput) {
   if (debt.dueDay !== null && (!Number.isInteger(debt.dueDay) || debt.dueDay < 1 || debt.dueDay > 31)) throw new Error('Choose a due day between 1 and 31, or leave it blank.');
   if (!validDate(debt.openedAt)) throw new Error('Choose a valid date for when this debt started.');
   if (debt.accountId !== null && !/^[a-zA-Z0-9-]{1,80}$/.test(debt.accountId)) throw new Error('Choose a valid linked account.');
-  return {...debt, name, currency: code};
+  const targetDate = debt.targetDate ?? null;
+  if (targetDate !== null && !validDate(targetDate)) throw new Error('Choose a valid date to pay this off by, or leave it blank.');
+  return {...debt, name, currency: code, targetDate};
 }
 
 function read(row: Record<string, unknown>): DebtRecord {
@@ -69,13 +73,29 @@ function read(row: Record<string, unknown>): DebtRecord {
     dueDay: row['due_day'] === null || row['due_day'] === undefined ? null : Number(row['due_day']),
     openedAt: String(row['opened_at']),
     closedAt: row['closed_at'] === null || row['closed_at'] === undefined ? null : String(row['closed_at']),
+    targetDate: null,
   };
 }
+/**
+ * THE TARGET LIVES BESIDE THE DEBT, in the encrypted settings, the way every later fact about a record
+ * does here. A debt is a standing fact the lender would recognise; the day the person wants it gone is
+ * their own, and it comes and goes without the debt changing.
+ */
+const targetKey = (id: string) => 'debt-target:' + id;
 
 export function debtRepository(driver: Driver) {
   /** Open debts first, then cleared ones, each by name — what is still owed is what is being asked about. */
   async function list(): Promise<DebtRecord[]> {
-    return (await driver.query('SELECT * FROM debts ORDER BY closed_at IS NOT NULL, name, id')).map(read);
+    const targets = new Map((await driver.query("SELECT key,value FROM app_settings WHERE key LIKE 'debt-target:%'")).flatMap(r => {
+      const value: unknown = JSON.parse(String(r['value']));
+      return typeof value === 'string' && validDate(value) ? [[String(r['key']).slice('debt-target:'.length), value] as const] : [];
+    }));
+    return (await driver.query('SELECT * FROM debts ORDER BY closed_at IS NOT NULL, name, id')).map(read)
+      .map(debt => ({...debt, targetDate: targets.get(debt.id) ?? null}));
+  }
+  async function writeTarget(id: string, target: string | null) {
+    if (target) await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)', [targetKey(id), JSON.stringify(target)]);
+    else await driver.execute('DELETE FROM app_settings WHERE key=?', [targetKey(id)]);
   }
   async function save(input: DebtInput) {
     const debt = validate(input);
@@ -97,6 +117,7 @@ export function debtRepository(driver: Driver) {
           toDatabase(money(BigInt(debt.balanceMinor), debt.currency)), Number(debt.annualRateBp),
           toDatabase(money(BigInt(debt.minimumMinor), debt.currency)), debt.dueDay,
           debt.openedAt, existing ? (existing['closed_at'] === null || existing['closed_at'] === undefined ? null : String(existing['closed_at'])) : null]);
+      await writeTarget(debt.id, debt.targetDate);
     });
   }
   /** Cleared, not deleted: what a debt cost is part of the record. */
@@ -107,10 +128,12 @@ export function debtRepository(driver: Driver) {
       if (!existing) throw new Error('That debt no longer exists.');
       if (on < String(existing['opened_at'])) throw new Error('A debt cannot be cleared before it started.');
       await driver.execute('UPDATE debts SET closed_at=?, balance_minor=0 WHERE id=?', [on, id]);
+      // Cleared is cleared: a target for a debt that is gone would only ever say "done".
+      await writeTarget(id, null);
     });
   }
   async function reopen(id: string) { await driver.execute('UPDATE debts SET closed_at=NULL WHERE id=?', [id]); }
   /** For a debt that was never real — a typo, a duplicate. Clearing one is close(), not this. */
-  async function remove(id: string) { await driver.execute('DELETE FROM debts WHERE id=?', [id]); }
+  async function remove(id: string) { await driver.transaction(async () => { await driver.execute('DELETE FROM debts WHERE id=?', [id]); await writeTarget(id, null); }); }
   return {list, save, close, reopen, remove};
 }

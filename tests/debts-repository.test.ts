@@ -16,7 +16,7 @@ describe('recording a debt', () => {
   it('reads back exactly what was written', async () => {
     const {repo} = await ledger();
     await repo.debts.save(card);
-    expect(await repo.debts.list()).toEqual([{...card, closedAt: null}]);
+    expect(await repo.debts.list()).toEqual([{...card, closedAt: null, targetDate: null}]);
   });
 
   it('trims the name and refuses an empty one', async () => {

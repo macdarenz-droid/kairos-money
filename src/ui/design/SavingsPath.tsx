@@ -3,6 +3,8 @@ import {format, money} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import {displayRatio} from '../../intelligence/visuals';
 import {keepToday, savingsPath} from '../../intelligence/savings';
+import {audit} from '../../intelligence/audit';
+import {openDebts} from '../../intelligence/debt';
 import {useSession} from '../session';
 import {useHoldings} from '../money';
 
@@ -32,10 +34,15 @@ export function SavingsPath() {
     enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
   });
+  const debts = useQuery({queryKey: ['debts'], enabled: session.state === 'ready',
+    queryFn: () => session.run(repo => repo.debts.list())});
   const snapshot = report.data?.snapshot;
   if (session.state !== 'ready' || !snapshot || !ready) return null;
 
   const keep = keepToday(snapshot, spendableMinor, report.data?.buffer ?? '0');
+  // A debt with a date on it, costed by the day, beside what is kept today. Only the ones that fit:
+  // a figure nobody can keep is not advice.
+  const targets = debts.data ? audit(snapshot, {debts: openDebts(debts.data, code), spendableMinor}).targets.filter(t => t.fits) : [];
   // Nothing recorded yet, or not a week of it: a chart of nothing is still a thing on the screen.
   if (keep.status !== 'ok') return null;
 
@@ -68,6 +75,7 @@ export function SavingsPath() {
     </div>
     {/* How he spends, and the method that follows. Two labels; the figures above are the advice. */}
     <p className="meta savings-method">{keep.reading.label} · {keep.reading.methodLabel}</p>
+    {targets.map(t => <p key={t.id} className="meta savings-debt">Keep {show(t.perDayMinor)} a day · {t.name} by {t.date}</p>)}
     <svg viewBox="0 0 1000 200" className="savings-plot" role="img"
       aria-label={`Savings. ${show(pot)} kept now; ${show(path.at(-1)?.plannedMinor ?? pot.toString())} in ${path.length - 1 - here} days if ${show(keep.keepTodayMinor)} is kept each day.`}>
       <line x1="0" y1="190" x2="1000" y2="190" stroke="var(--border-default)" vectorEffect="non-scaling-stroke"/>
