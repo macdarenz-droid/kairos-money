@@ -6,17 +6,31 @@ import {defaultNotices,noticeKinds,notificationPlan,type NoticePreferences} from
 import {localDay,Reminder} from '../../ingest/reminders';
 import {Button,Row} from '../design/primitives';
 import {useSession} from '../session';
+import {useDisplayCurrency} from '../currency';
 const labels={bill:'Upcoming bills',unusual:'Transactions to review',price:'Recurring price changes',digest:'Monthly review'};
+/**
+ * ONE READ OF THE LEDGER AT UNLOCK, NOT TWO.
+ *
+ * The reminder plan needs the same snapshot the Today cards analyse, and it used to take its own: on a
+ * 20,000-row ledger that is a second full pass over the table in 256-row pages, started at the same
+ * moment as the first, and the two together held the 20,000-row History load at the edge of its budget
+ * on the device gate. For the currency on display the plan now reads the analysis through the same query
+ * key Today uses, so the ledger is paged once and both wait on it; only an account in another currency
+ * still takes a snapshot of its own.
+ */
 export function NotificationSync(){
- const session=useSession(),[error,setError]=useState('');
- const plan=useQuery({queryKey:['money-notice-plan'],enabled:session.state==='ready'&&Capacitor.isNativePlatform(),queryFn:()=>session.run(async repo=>{
-  const preferences=await repo.notifications.preferences();
+ const session=useSession(),client=useQueryClient(),shown=useDisplayCurrency(),[error,setError]=useState('');
+ const plan=useQuery({queryKey:['money-notice-plan',shown],enabled:session.state==='ready'&&Capacitor.isNativePlatform(),queryFn:async()=>{
+  const {preferences,accounts}=await session.run(async repo=>({preferences:await repo.notifications.preferences(),accounts:await repo.accounts()}));
   if(!noticeKinds.some(k=>preferences[k]))return [];
-  const accounts=await repo.accounts(),today=localDay();
-  const plans=await Promise.all([...new Set(accounts.map(a=>a.currency))].map(async code=>notificationPlan(await repo.intelligence.snapshot(today,currency(code)),preferences)));
+  const today=localDay();
+  const snapshotFor=async(held:string)=>held===shown
+   ?(await client.ensureQueryData({queryKey:['intelligence',today,shown,{extra:'0',cut:0}],queryFn:()=>session.run(r=>r.intelligence.analyse(today,shown,'0',0))})).snapshot
+   :session.run(r=>r.intelligence.snapshot(today,currency(held)));
+  const plans=await Promise.all([...new Set(accounts.map(a=>a.currency))].map(async held=>notificationPlan(await snapshotFor(held),preferences)));
   const used=new Set<string>();
   return plans.flat().sort((a,b)=>a.date.localeCompare(b.date)||noticeKinds.indexOf(a.kind)-noticeKinds.indexOf(b.kind)||a.key.localeCompare(b.key)).filter(n=>{if(used.has(n.date))return false;used.add(n.date);return true;}).slice(0,4).map(n=>{const [y,m,d]=n.date.split('-').map(Number);return {...n,at:Math.max(new Date(y!,m!-1,d!,9).getTime(),Date.now()+60000)};});
- })});
+ }});
  useEffect(()=>{if(session.state==='ready'&&Capacitor.isNativePlatform()&&plan.data)void Promise.resolve().then(()=>Reminder.notices({queue:plan.data!})).then(()=>setError('')).catch(()=>setError('Notifications could not be scheduled. Open Kairos again to retry.'));},[session.state,plan.data]);
  return error||plan.error?<p role="status">{error||'Notification records could not be read. Open Kairos again to retry.'}</p>:null;
 }
