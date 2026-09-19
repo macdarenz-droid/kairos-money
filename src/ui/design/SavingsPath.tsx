@@ -1,12 +1,11 @@
 import {useQuery} from '@tanstack/react-query';
 import {format, money} from '../../core/money';
-import {localDay} from '../../ingest/reminders';
 import {displayRatio} from '../../intelligence/visuals';
 import {keepToday, savingsPath} from '../../intelligence/savings';
 import {audit} from '../../intelligence/audit';
 import {openDebts} from '../../intelligence/debt';
 import {useSession} from '../session';
-import {useHoldings} from '../money';
+import {useHoldings, useAnalysis} from '../money';
 
 /**
  * THE ADVICE, AS A SHAPE. "i want like a financial advisor app, but doesnt explain instead show me in
@@ -27,13 +26,8 @@ import {useHoldings} from '../money';
  */
 export function SavingsPath() {
   const session = useSession();
-  const today = localDay();
   const {code, spendableMinor, potMinor, ready} = useHoldings();
-  const report = useQuery({
-    queryKey: ['intelligence', today, code, {extra: '0', cut: 0}], staleTime: 0,
-    enabled: session.state === 'ready',
-    queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
-  });
+  const report = useAnalysis();
   const debts = useQuery({queryKey: ['debts'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.debts.list())});
   const snapshot = report.data?.snapshot;

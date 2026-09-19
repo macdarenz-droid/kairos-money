@@ -11,11 +11,11 @@ import {FlowBar} from '../design/FlowBar';
 import {MonthBalance} from '../design/MonthBalance';
 import {CategorySplit} from '../design/CategorySplit';
 import {useSession} from '../session';
-import {useDisplayCurrency} from '../currency';
+import {useDisplayCurrencyState} from '../currency';
 export function SpendingPatterns(){
- const session=useSession(),code=useDisplayCurrency(),[month,setMonth]=useState('all'),[account,setAccount]=useState('all'),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
+ const session=useSession(),{code,settled}=useDisplayCurrencyState(),[month,setMonth]=useState('all'),[account,setAccount]=useState('all'),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
  const accounts=useQuery({queryKey:['accounts'],queryFn:()=>session.run(r=>r.accounts()),enabled:session.state==='ready'});
- const today=localDay(),q=useQuery({queryKey:['spending-patterns',today,code],queryFn:()=>session.run(r=>r.intelligence.snapshot(today,code)),enabled:session.state==='ready'&&!!accounts.data,staleTime:0});
+ const today=localDay(),q=useQuery({queryKey:['spending-patterns',today,code],queryFn:()=>session.run(r=>r.intelligence.snapshot(today,code)),enabled:session.state==='ready'&&settled&&!!accounts.data,staleTime:0});
  if(session.state!=='ready')return null;
  if(accounts.error||q.error)return <p role="alert">Spending patterns could not be read. <Button onClick={()=>{void accounts.refetch();void q.refetch();}}>Retry</Button></p>;
  if(q.isPending)return <Skeleton label="Reading spending patterns"/>;

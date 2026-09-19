@@ -6,7 +6,7 @@ import {defaultNotices,noticeKinds,notificationPlan,type NoticePreferences} from
 import {localDay,Reminder} from '../../ingest/reminders';
 import {Button,Row} from '../design/primitives';
 import {useSession} from '../session';
-import {useDisplayCurrency} from '../currency';
+import {useDisplayCurrencyState} from '../currency';
 const labels={bill:'Upcoming bills',unusual:'Transactions to review',price:'Recurring price changes',digest:'Monthly review'};
 /**
  * ONE READ OF THE LEDGER AT UNLOCK, NOT TWO.
@@ -19,8 +19,8 @@ const labels={bill:'Upcoming bills',unusual:'Transactions to review',price:'Recu
  * still takes a snapshot of its own.
  */
 export function NotificationSync(){
- const session=useSession(),client=useQueryClient(),shown=useDisplayCurrency(),[error,setError]=useState('');
- const plan=useQuery({queryKey:['money-notice-plan',shown],enabled:session.state==='ready'&&Capacitor.isNativePlatform(),queryFn:async()=>{
+ const session=useSession(),client=useQueryClient(),{code:shown,settled}=useDisplayCurrencyState(),[error,setError]=useState('');
+ const plan=useQuery({queryKey:['money-notice-plan',shown],enabled:session.state==='ready'&&settled&&Capacitor.isNativePlatform(),queryFn:async()=>{
   const {preferences,accounts}=await session.run(async repo=>({preferences:await repo.notifications.preferences(),accounts:await repo.accounts()}));
   if(!noticeKinds.some(k=>preferences[k]))return [];
   const today=localDay();

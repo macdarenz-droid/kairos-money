@@ -1,11 +1,10 @@
 import {useQuery} from '@tanstack/react-query';
 import {format, money} from '../../core/money';
-import {localDay} from '../../ingest/reminders';
 import {audit, type Purpose, type Step} from '../../intelligence/audit';
 import {openDebts} from '../../intelligence/debt';
 import {displayRatio} from '../../intelligence/visuals';
 import {RankedBars} from '../design/RankedBars';
-import {useHoldings} from '../money';
+import {useHoldings, useAnalysis} from '../money';
 import {useSession} from '../session';
 
 const PURPOSE: Record<Purpose, string> = {buffer: 'Buffer', debt: 'Debt', savings: 'Savings', investing: 'Investing'};
@@ -26,13 +25,8 @@ const STRATEGY = {avalanche: 'Highest rate first', snowball: 'Smallest first'} a
  */
 export function MoneyAudit() {
   const session = useSession();
-  const today = localDay();
   const {code, spendableMinor, ready} = useHoldings();
-  const report = useQuery({
-    queryKey: ['intelligence', today, code, {extra: '0', cut: 0}], staleTime: 0,
-    enabled: session.state === 'ready',
-    queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
-  });
+  const report = useAnalysis();
   const debts = useQuery({queryKey: ['debts'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.debts.list())});
   const snapshot = report.data?.snapshot;

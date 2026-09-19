@@ -1,7 +1,5 @@
-import {useQuery} from '@tanstack/react-query';
-import {localDay} from '../../ingest/reminders';
 import {Button} from './primitives';
-import {useSession} from '../session';
+import {useAnalysis} from '../money';
 import {useDisplayCurrency} from '../currency';
 
 /**
@@ -20,14 +18,8 @@ import {useDisplayCurrency} from '../currency';
  * SpendRing and MoneyBand — so naming the gap costs no extra work.
  */
 export function Unconverted({onFix}: {onFix: () => void}) {
-  const session = useSession();
-  const today = localDay();
   const code = useDisplayCurrency();
-  const report = useQuery({
-    queryKey: ['intelligence', today, code, {extra: '0', cut: 0}],
-    queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
-    enabled: session.state === 'ready',
-  });
+  const report = useAnalysis();
 
   const missing = report.data?.snapshot.unconverted ?? [];
   if (!missing.length) return null;

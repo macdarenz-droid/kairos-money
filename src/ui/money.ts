@@ -3,7 +3,7 @@ import {convert, rateBetween, type Rate} from '../core/fx';
 import {currency, money} from '../core/money';
 import {localDay} from '../ingest/reminders';
 import {useSession} from './session';
-import {useDisplayCurrency} from './currency';
+import {useDisplayCurrency, useDisplayCurrencyState} from './currency';
 
 /**
  * WHAT IS HELD, SPLIT THE ONLY WAY THAT MATTERS: money to spend, and money being kept.
@@ -39,4 +39,22 @@ export function useHoldings() {
   return {code, live, spending, pots: live.filter(kept),
     spendableMinor: total(spending).toString(), potMinor: total(live.filter(kept)).toString(),
     ready: accounts.isSuccess && balances.isSuccess};
+}
+
+/**
+ * THE LEDGER ANALYSED ONCE, for every card that reads it.
+ *
+ * Seven cards on Today and Insights each declared this same query, and each started it as soon as the
+ * session was ready — on the display currency's fallback, then again on the real one. One hook, one
+ * key, and it waits for the currency to settle, so the ledger is paged once and every card waits on that.
+ */
+export function useAnalysis() {
+  const session = useSession();
+  const {code, settled} = useDisplayCurrencyState();
+  const today = localDay();
+  return useQuery({
+    queryKey: ['intelligence', today, code, {extra: '0', cut: 0}], staleTime: 0,
+    enabled: session.state === 'ready' && settled,
+    queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
+  });
 }

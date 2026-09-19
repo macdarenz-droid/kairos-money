@@ -23,15 +23,27 @@ import { useSession } from './session';
  * blank ledger has to show something as — but the moment an account exists, its own currency is what
  * "no choice made" means, everywhere this hook is asked.
  */
-export function useDisplayCurrency(): Currency {
+export function useDisplayCurrency(): Currency { return useDisplayCurrencyState().code; }
+
+/**
+ * The currency, and whether it is SETTLED: the stored choice and the accounts have both been read.
+ *
+ * Before they have, the hook can only answer with the fallback, and a screen that starts a full pass over
+ * the ledger on that answer starts it twice — once in the fallback currency, once more the moment the
+ * real one arrives. On the device gate that was the 20,000-row ledger paged twice at unlock, 160 reads
+ * where 80 would do, and the History load held at the edge of its budget. Anything that costs a pass over
+ * the ledger waits for `settled`; a label can show the fallback for the frame it takes.
+ */
+export function useDisplayCurrencyState(): { code: Currency; settled: boolean } {
   const session = useSession();
   const home = useQuery({ queryKey: ['display-currency'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.displayCurrency()) });
   const accounts = useQuery({ queryKey: ['accounts'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.accounts()) });
-  if (home.data) return currency(home.data);
+  const settled = !home.isPending && !accounts.isPending;
+  if (home.data) return { code: currency(home.data), settled };
   const first = (accounts.data ?? []).find(account => !account.archived_at);
-  return currency(first?.currency ?? 'AUD');
+  return { code: currency(first?.currency ?? 'AUD'), settled };
 }
 
 /**

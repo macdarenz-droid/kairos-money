@@ -1,7 +1,7 @@
 import {useMemo,useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {useSession} from '../session';
-import {useDisplayCurrency} from '../currency';
+import {useDisplayCurrencyState} from '../currency';
 import {Amount,Button,DataGrid,Row,Sheet,Skeleton,Surface} from '../design/primitives';
 import {MoneyAnswers, type MoneyAnswer} from '../design/MoneyAnswers';
 import {currency,format,money} from '../../core/money';
@@ -22,9 +22,9 @@ function reading(metric:Metric,code:string){
 
 export function Analysis(){
  const session=useSession();
- const code=useDisplayCurrency(),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
+ const {code,settled}=useDisplayCurrencyState(),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
  const today=localDay();
- const q=useQuery({queryKey:['analysis',today,code],queryFn:()=>session.run(r=>r.intelligence.snapshot(today,code)),enabled:session.state==='ready'});
+ const q=useQuery({queryKey:['analysis',today,code],queryFn:()=>session.run(r=>r.intelligence.snapshot(today,code)),enabled:session.state==='ready'&&settled});
  // Trailing 90 days ending on the last day the ledger covers, not on today. A month-to-date window is
  // below the 20-covered-day threshold for the first three weeks of every month; anchoring to today was
  // worse still, because someone who imports three months of statements ending three months ago has every

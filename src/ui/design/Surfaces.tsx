@@ -1,10 +1,10 @@
 import {useQuery} from '@tanstack/react-query';
 import {currency, format, money} from '../../core/money';
-import {localDay} from '../../ingest/reminders';
 import {surfaces} from '../../intelligence/surfaces';
 import {dueWindow} from '../../intelligence/visuals/due';
 import {DueStrip} from './DueStrip';
 import {useSession} from '../session';
+import {useAnalysis} from '../money';
 import {FixedFree, Runway} from './Runway';
 import {useDisplayCurrency} from '../currency';
 
@@ -20,17 +20,12 @@ import {useDisplayCurrency} from '../currency';
  */
 export function Surfaces() {
   const session = useSession();
-  const today = localDay();
   const code = useDisplayCurrency();
   // Debts are read separately and cheaply: the analysis is a heavy pass over the ledger, and a list of
   // standing facts the person typed in does not belong inside it.
   const debts = useQuery({queryKey: ['debts'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.debts.list())});
-  const report = useQuery({
-    queryKey: ['intelligence', today, code, {extra: '0', cut: 0}],
-    queryFn: () => session.run(r => r.intelligence.analyse(today, code, '0', 0)),
-    enabled: session.state === 'ready',
-  });
+  const report = useAnalysis();
   // Silence on error too. A failure to read the ledger is not a reason to shout on the home screen; the
   // screens that exist to show that evidence say so in their own words.
   if (!report.data) return null;

@@ -8,7 +8,7 @@ import {TimingCharts} from './TimingCharts';
 import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {useSession} from '../session';
-import {useDisplayCurrency} from '../currency';
+import {useDisplayCurrencyState} from '../currency';
 import {Amount,Button,Explain,Row,Sheet,Skeleton} from '../design/primitives';
 import {SourceLine} from '../design/SourceLine';
 import {currency,money} from '../../core/money';
@@ -24,8 +24,8 @@ function monthWindow(today:string,offset:number):Window {
 }
 function point(index:number,radius:number){const angle=index*Math.PI*2/5-Math.PI/2;return `${120+Math.cos(angle)*radius},${120+Math.sin(angle)*radius}`;}
 export function MoneyVisuals(){
- const session=useSession(),code=useDisplayCurrency(),[offset,setOffset]=useState(0),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
- const today=localDay();const q=useQuery({queryKey:['visual-snapshot',today,code],queryFn:()=>session.run(r=>r.intelligence.snapshot(today,code)),enabled:session.state==='ready'});
+ const session=useSession(),{code,settled}=useDisplayCurrencyState(),[offset,setOffset]=useState(0),[detail,setDetail]=useState<{title:string;ids:string[];text:string}|null>(null);
+ const today=localDay();const q=useQuery({queryKey:['visual-snapshot',today,code],queryFn:()=>session.run(r=>r.intelligence.snapshot(today,code)),enabled:session.state==='ready'&&settled});
  if(session.state!=='ready')return null;
  if(q.isPending)return <Skeleton label="Reading monthly history"/>;
  if(q.error)return <p role="alert">Monthly history could not be read. Reopen this screen to try again.</p>;

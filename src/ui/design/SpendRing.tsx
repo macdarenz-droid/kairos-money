@@ -5,6 +5,7 @@ import {displayRatio} from '../../intelligence/visuals';
 import {bandRows, moneyBand} from '../../intelligence/visuals/band';
 import {localDay} from '../../ingest/reminders';
 import {useSession} from '../session';
+import {useAnalysis} from '../money';
 import {useDisplayCurrency} from '../currency';
 
 /** Five named slices and a remainder. Past six the ring is stripes and the legend is a list again. */
@@ -57,11 +58,7 @@ export function SpendRing() {
    * One key, one pass. `analyse` returns the snapshot it built, which is what MoneyFlowCard already
    * reads, so nothing here needs its own copy.
    */
-  const report = useQuery({
-    queryKey: ['intelligence', today, code, {extra: '0', cut: 0}], staleTime: 0,
-    queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
-    enabled: session.state === 'ready' && !!accounts.data,
-  });
+  const report = useAnalysis();
   const snapshot = report.data?.snapshot;
 
   if (session.state !== 'ready' || report.isPending || accounts.isPending || report.error || !live.length || !snapshot) return null;

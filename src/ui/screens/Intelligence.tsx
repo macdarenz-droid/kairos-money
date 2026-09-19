@@ -2,7 +2,7 @@ import {AllocationBreakdown} from './AllocationBreakdown';
 import {useState} from 'react';
 import {useQuery,useQueryClient} from '@tanstack/react-query';
 import {useSession} from '../session';
-import {useDisplayCurrency} from '../currency';
+import {useDisplayCurrencyState} from '../currency';
 import {Amount,Button,Input,Row,Sheet,Skeleton,Surface} from '../design/primitives';
 import {SourceLine} from '../design/SourceLine';
 import {DayStrip} from '../design/DayStrip';
@@ -18,8 +18,8 @@ export function Intelligence({mode='insights'}:{mode?:'insights'|'today'}){
  // The analysis opened in Australian dollars for everybody, because 'AUD' was the initial state of a
  // picker. Someone whose money is in pesos got an empty screen and no clue why — and a picker of its own
  // meant this screen could disagree with every other one. There is one currency in this app now.
- const code=useDisplayCurrency();
- const today=localDay();const q=useQuery({queryKey:['intelligence',today,code,applied],queryFn:()=>session.run(r=>r.intelligence.analyse(today,code,applied.extra,applied.cut)),enabled:session.state==='ready',staleTime:0});
+ const {code,settled}=useDisplayCurrencyState();
+ const today=localDay();const q=useQuery({queryKey:['intelligence',today,code,applied],queryFn:()=>session.run(r=>r.intelligence.analyse(today,code,applied.extra,applied.cut)),enabled:session.state==='ready'&&settled,staleTime:0});
  const refresh=async()=>{await client.invalidateQueries({queryKey:['intelligence']});};
  const show=(title:string,ids:string[],text='')=>setDetail({title,ids,text});
  if(session.state==='preview')return <p>Intelligence reads your encrypted ledger in the Android app.</p>;
