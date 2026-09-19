@@ -11,7 +11,7 @@ def owned_files():
  return [line.strip() for line in (internal.stdout+'\n'+external.stdout).splitlines() if line.strip()]
 before=owned_files()
 assert any('kairos-moneySQLite.db' in name for name in before), 'Expected populated synthetic app database before deletion'
-result=adb('shell','am','instrument','-w','-e','class','app.kairos.money.DeleteInstrumentedTest','app.kairos.money.test/androidx.test.runner.AndroidJUnitRunner')
+result=adb('shell','am','instrument','-w','-e','class','app.kairos.money.DeleteInstrumentedTest','app.kairos.money.test/app.kairos.money.KairosTestRunner')
 (root/'docs/evidence/android-delete-instrumentation.log').write_text(result.stdout)
 for _ in range(30):
  after=owned_files()

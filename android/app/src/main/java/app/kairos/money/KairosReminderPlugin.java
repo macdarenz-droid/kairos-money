@@ -15,10 +15,5 @@ public class KairosReminderPlugin extends Plugin {
  @PermissionCallback private void permissionResult(PluginCall call) {
   JSObject result=new JSObject(); result.put("granted",getContext().getSystemService(NotificationManager.class).areNotificationsEnabled());call.resolve(result);
  }
- @PluginMethod public void schedule(PluginCall call) {
-  Long at=call.getLong("at");
-  if(at==null || at<=System.currentTimeMillis() || at>System.currentTimeMillis()+16L*86400000L) {call.reject("Choose a future reminder within the next two weeks.");return;}
-  ReminderReceiver.schedule(getContext(),at);call.resolve();
- }
- @PluginMethod public void cancel(PluginCall call) {ReminderReceiver.cancel(getContext());call.resolve();}
+ @PluginMethod public void notices(PluginCall call) {try{JSArray queue=call.getArray("queue");if(queue==null)throw new IllegalArgumentException("Choose a notification schedule.");MoneyNoticeReceiver.replace(getContext(),queue);call.resolve();}catch(Exception error){call.reject(error.getMessage());}}
 }

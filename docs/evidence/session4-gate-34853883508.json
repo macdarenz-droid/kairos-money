@@ -1,0 +1,30 @@
+{
+  "run_id": 34853883508,
+  "candidate_sha": "00d17fafb5f06bf3f83458ceac3009d0f95840df",
+  "result": "success",
+  "source_job": 104008335491,
+  "android_job": 104009102156,
+  "evidence_artifact_id": 10353127440,
+  "evidence_archive_sha256": "3d5fe1220398706cd2593ad58033c115bb62f272a8aebaf7a0774de676134965",
+  "debug_apk_artifact_id": 10353212221,
+  "debug_apk_archive_sha256": "6c11c429e3b08cfc01c7c8c7f0a6cb01504fe79fb4100af08675ed67d53c87d1",
+  "debug_apk_sha256": "ca8fe8c491de12bf0a54fcf53a97d9c8a42e78ea450e46d2364f556c16f1f1e6",
+  "startup_ms": { "raw": [1977, 1695, 1319], "median": 1695, "fresh_install": 1977 },
+  "forty_page_pdf_ms": 3972,
+  "ledger_20000": {
+    "load_ms": 58954,
+    "text_100": { "max_mounted": 16, "mean_frame_interval_ms": 97.6389, "p95_frame_interval_ms": 183.344 },
+    "text_200": { "max_mounted": 10, "mean_frame_interval_ms": 92.4999, "p95_frame_interval_ms": 166.667 },
+    "cleanup_operations": 237,
+    "cleanup_rows": 60001,
+    "cleanup_elapsed_ms": 125911
+  },
+  "native_status": "PASS",
+  "limitations": [
+    "The downloadable APK is development-signed, not the final privately signed release.",
+    "All screenshots still require a complete visual review before final acceptance.",
+    "Notification delivery policy passed; real Doze/alarm punctuality was not measured.",
+    "The passing large-ledger timings were functionally complete but not acceptable product performance."
+  ],
+  "acceptance": "Session 4 remains one integrated OPEN milestone pending replacement Android performance evidence, complete visual review, remaining physical/OS limitations and the privately signed final APK."
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="qa_surface1">#0E1011</color>
+    <color name="qa_surface2">#16191B</color>
+    <color name="qa_surface3">#1F2325</color>
+    <color name="qa_border">#1CFFFFFF</color>
+    <color name="qa_border_subtle">#0FFFFFFF</color>
+    <color name="qa_text">#EDEEF0</color>
+    <color name="qa_text2">#9BA1A6</color>
+    <color name="qa_meta">#969DA3</color>
+    <color name="qa_accent">#9BABFF</color>
+    <color name="qa_ripple">#1FFFFFFF</color>
+    <color name="qa_scrim">#8C000000</color>
+</resources>

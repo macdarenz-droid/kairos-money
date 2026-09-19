@@ -1,0 +1,738 @@
+{
+  "reviewed_at": "2026-09-14",
+  "run_id": 34839763247,
+  "run_url": "https://github.com/macdarenz-droid/kairos-money/actions/runs/34839763247",
+  "candidate_sha": "a6a9c41b16d85d8ea8ae0368c5aa1a25dbf6fbd3",
+  "tree_sha": "1fab078a5007d353317ad8ddc09dc715709d66ad",
+  "workflow_result": "success",
+  "session_4_acceptance": "OPEN",
+  "evidence_archive": {
+    "artifact_id": 10345998811,
+    "sha256": "b3c079adf599e916587e9011c3f210825cdf2a008fc3454808a0cdd9cbb6f342"
+  },
+  "apk_archive": {
+    "artifact_id": 10345859623,
+    "sha256": "cc6e72b3a51d3e91d5bc0851d6dcdd19c6b26d7bcee85ee6391d18c76dd79714",
+    "variant": "debug; not final private release"
+  },
+  "apk_files": [
+    {
+      "name": "app-debug.apk",
+      "sha256": "df2e9be6dabf59325fe148ec809b1fe8ca8c029a2e5090c35dcb9169ecd08381"
+    }
+  ],
+  "native_status": {
+    "status": "PASS",
+    "installed": true,
+    "instrumentation_executed": true,
+    "functional_complete": true,
+    "startup_variant": "benchmark",
+    "completed_instrumentation": [
+      "PinRecoveryInstrumentedTest",
+      "FoundationInstrumentedTest",
+      "KeyProtectionInstrumentedTest",
+      "HardeningInstrumentedTest",
+      "ImportInstrumentedTest",
+      "LargeImportInstrumentedTest",
+      "RevisionInstrumentedTest",
+      "IntelligenceInstrumentedTest",
+      "AccessibilityInstrumentedTest",
+      "AcceptanceInstrumentedTest",
+      "PostDeleteInstrumentedTest"
+    ],
+    "authentication_bound_key_tests": 1,
+    "pin_recovery_tests": 3,
+    "foundation_tests": 2,
+    "hardening_tests": 1,
+    "import_tests": 2,
+    "large_import_tests": 1,
+    "revision_tests": 2,
+    "intelligence_tests": 4,
+    "manual_entry_tests": 1,
+    "monthly_visual_tests": 1,
+    "spending_pattern_tests": 1,
+    "acceptance_tests": 1,
+    "forgot_pin_device_tests": 1,
+    "backup_before_reset_tests": 1,
+    "backup_after_reset_tests": 1,
+    "post_delete_tests": 1,
+    "native_encryption_proven": true,
+    "native_delete_proven": true,
+    "cold_start_under_2_seconds": true,
+    "text_zoom_200_percent_tests": 1,
+    "real_document_export_proven": true,
+    "background_unlock": "1 second retained; 61 seconds locked",
+    "runner": "Android 34 emulator; airplane mode enabled",
+    "screenshots_require_review": true
+  },
+  "startup": {
+    "status": "PASS",
+    "variant": "benchmark",
+    "debuggable": false,
+    "metric": "Android TotalTime to first activity frame; setup readiness checked separately",
+    "process_cold_limit_ms": 2000,
+    "fresh_install_limit_ms": 2500,
+    "samples": [
+      {
+        "total_time_ms": 1833,
+        "measurement": "Starting: Intent { cmp=app.kairos.money/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: app.kairos.money/.MainActivity\nTotalTime: 1833\nWaitTime: 1981\nComplete\n"
+      },
+      {
+        "total_time_ms": 1574,
+        "measurement": "Starting: Intent { cmp=app.kairos.money/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: app.kairos.money/.MainActivity\nTotalTime: 1574\nWaitTime: 2047\nComplete\n"
+      },
+      {
+        "total_time_ms": 1575,
+        "measurement": "Starting: Intent { cmp=app.kairos.money/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: app.kairos.money/.MainActivity\nTotalTime: 1575\nWaitTime: 2028\nComplete\n"
+      }
+    ],
+    "process_cold_median_ms": 1575,
+    "fresh_install_ms": 1833,
+    "failures": []
+  },
+  "large_pdf": {
+    "pages": 40,
+    "elapsed_ms": 2842,
+    "ui_responsive": true,
+    "progress_visible": true,
+    "survived_activity_recreation": true
+  },
+  "backup_reset_restore": {
+    "status": "PASS",
+    "forgot_pin": "Android device authentication -> mandatory replacement -> old PIN refused -> ledger digest retained -> original test PIN restored",
+    "backup": "Encrypted file saved through Android document picker",
+    "reset": "Locked Forgot PIN -> typed DELETE KAIROS -> Android clearApplicationUserData",
+    "files_before_reset": 212,
+    "app_owned_files_after_reset": 0,
+    "external_backup_survived_reset": true,
+    "wrong_code": "Refused with zero user ledger rows",
+    "restore": "Android picker; every typed table/column/row matched the pre-backup SHA-256 digest",
+    "synthetic_external_files_cleaned": true
+  },
+  "visual_review": {
+    "method": "All 151 current screenshots reviewed in 13 contact sheets; not a full-resolution or assistive-technology audit.",
+    "findings": [
+      "Widget touch, locked recreation, unlock and teardown now pass the full Acceptance journey. The widget is hosted inside the test activity, not the Android home-screen launcher.",
+      "Both-theme manual, chart, split, FX, net-worth, camera-review and recovery flows are present. Emulator camera images do not prove real receipt legibility.",
+      "Old 200% Insights and You captures show loading placeholders. Loaded content and light-theme large-text acceptance remain open.",
+      "Purchase-refund section is captured; actual native confirmation and removal of a refund link are not exercised.",
+      "40-page extraction took 2842 ms with visible progress and a responsive WebView. Activity recreation occurred before extraction; no process kill during extraction or commit was exercised."
+    ]
+  },
+  "remaining_acceptance": [
+    "Loaded-content accessibility in both themes (expanded native test prepared).",
+    "20,000-row Android ledger scrolling/frame review (native test prepared).",
+    "Native notification permission/delivery/cap/cancellation (native test prepared; OS alarm timing still unmeasured).",
+    "Real launcher widget placement and launch.",
+    "Process death during active import with no partial committed ledger.",
+    "Native refund confirmation/removal.",
+    "Final per-screen visual/accessibility review.",
+    "Continuous private signing identity, final release APK verification and release E2E."
+  ],
+  "screenshots": [
+    {
+      "file": "dark-backup-options.png",
+      "sha256": "fcf508bf08af6fcd19ef59d64287ac92fc05e5f502b0590f8cfc756abab55a90"
+    },
+    {
+      "file": "dark-backup-restore.png",
+      "sha256": "24b9c1fa5cd6f3caeb8eec8114fb6993a0a535a11deef7ee29963a0db9bebe26"
+    },
+    {
+      "file": "dark-backup-save-code.png",
+      "sha256": "efc2b68a25e06298d79bc47ebbdd4bf3d84222102668593b020354fe8f8b3944"
+    },
+    {
+      "file": "dark-backup-wrong-code.png",
+      "sha256": "92b0cd127d1fe673cfb00d3f0a0034ffa6542bda338062456fae0e60c2b001eb"
+    },
+    {
+      "file": "dark-bulk-categories.png",
+      "sha256": "0739a99e0bb12fdb40a5188dd8f2f7dea052ef19c1411ed5c929e1ba9bd2f5fe"
+    },
+    {
+      "file": "dark-cancellation-entry.png",
+      "sha256": "ffca84685d1a0ef8de1aeb0ebd0080edae9b46319221b201615ad9ea7991275e"
+    },
+    {
+      "file": "dark-cancellation-later-payment.png",
+      "sha256": "f50ed53d356cee9bcc6d9fa7b94a712caf62698642ce53d9f38156a61d22fe10"
+    },
+    {
+      "file": "dark-cold-launch-locked.png",
+      "sha256": "478906fca950571a7c5de6ed41a2e56dc9bddd276b1156106ae2f27682efef4c"
+    },
+    {
+      "file": "dark-forgot-pin-options.png",
+      "sha256": "faac3672c0bca6bb5e37fca89190b775c3539c5415bc93e3a691973ed6e32e31"
+    },
+    {
+      "file": "dark-forgot-pin-replacement.png",
+      "sha256": "63ebe3663fe8b1a6dd54e458e28dc91eee6599b77410bd1b4b876d9d9df76b96"
+    },
+    {
+      "file": "dark-import-correction.png",
+      "sha256": "1eb92d4457b7c8710a4bb0a4e48e570422f6383bd1187ff4303d4c9e2b0177d4"
+    },
+    {
+      "file": "dark-import-coverage.png",
+      "sha256": "180d827d15f5c84ade26a1f5992972912e18b9dad17b7becc0930e6988ed8d62"
+    },
+    {
+      "file": "dark-import-details.png",
+      "sha256": "b9b77403ec76489feed9b1daa424ae766d64d6b6bac6d895ff788e0a1f7924d8"
+    },
+    {
+      "file": "dark-import-ledger.png",
+      "sha256": "7510a446a739d2a1f24eb79f1d8193fa55c7ad501388ceed4b5b25dc6e02e0f8"
+    },
+    {
+      "file": "dark-import-quarantine.png",
+      "sha256": "ac6ae90511b5807e015ca2dcf41d7d8992d59f2c138dad8f924dabcb955c162d"
+    },
+    {
+      "file": "dark-import-review.png",
+      "sha256": "894308288fb51022ed56d6b0d5f4ed74e27ed6e945273e785653684b222ceb22"
+    },
+    {
+      "file": "dark-import-rollback.png",
+      "sha256": "41bba5ba45150726d27ec404992714fb005cea471dde576fce509b0bbcb8204c"
+    },
+    {
+      "file": "dark-insights.png",
+      "sha256": "b91b46908dc81e63b720c6aaaaa37b311e888e02dd8f894d8c277b424635778f"
+    },
+    {
+      "file": "dark-intelligence-context.png",
+      "sha256": "e965a385ad98c06a5fd0f02a210443ab6ff3090cae13e2918375687f376f0d14"
+    },
+    {
+      "file": "dark-intelligence-evidence.png",
+      "sha256": "dcee1262b1e40010bd8528d618a9b872c5e849602511640202216c117ed713aa"
+    },
+    {
+      "file": "dark-intelligence-forecast.png",
+      "sha256": "d1f962a037f51844c14d12f2ee9268068c515d3def0dd576ae151358daf6503b"
+    },
+    {
+      "file": "dark-intelligence-goal.png",
+      "sha256": "06cfe8bc7895d443dc9283124b141808edcad0aaa08330e93281ff4f61a21b91"
+    },
+    {
+      "file": "dark-intelligence-learning.png",
+      "sha256": "b7232d779f4802f71e7e05bc46c820096e1099db8d30902ece6e50ac00e87b84"
+    },
+    {
+      "file": "dark-intelligence-profile.png",
+      "sha256": "ed408e2a9e4d71c05be18835b739e9ba4da1b77d2fca054c751d195fcdab66ce"
+    },
+    {
+      "file": "dark-intelligence-reflections.png",
+      "sha256": "70fcb51e87b6cadcd542f652bd9f15876118c2555790fe6ebda99b45539f2964"
+    },
+    {
+      "file": "dark-intelligence-scenario.png",
+      "sha256": "2b6611ae62846f3e570b4ccea5efb1a13161fa696ac4eef4e025998867e09a92"
+    },
+    {
+      "file": "dark-intelligence-triage.png",
+      "sha256": "09b813f9de2c7b6978b3400df8cb2879713f464136a982f7af6f79fa48ade55a"
+    },
+    {
+      "file": "dark-launcher-widget.png",
+      "sha256": "6292c825f06a0793e1d977d9256d63c1a68fffbbf236e35b42601d31b6c20ee5"
+    },
+    {
+      "file": "dark-ledger.png",
+      "sha256": "b17a116da82d62a02916a38e5479a4766b17752bcd0d8b7d89becdbd1720d708"
+    },
+    {
+      "file": "dark-manual-category-split.png",
+      "sha256": "567beca20057883f82659439af3c9b56574132c36f89ef2773649f76cc21e181"
+    },
+    {
+      "file": "dark-manual-delete.png",
+      "sha256": "a8c5138dfeb0e2c1d1c5e39165d24102f37e4fb58ae155c835798d45342c1f53"
+    },
+    {
+      "file": "dark-manual-edit.png",
+      "sha256": "ba722262aa0a8d6be1895273b05db7b147e91e2b740251213cd84071bbf93a3c"
+    },
+    {
+      "file": "dark-manual-entry.png",
+      "sha256": "0dc8e0d9dddab3d3daf4660296c1fe9e153edba7b53b5e174c3a1c84fcb2c13d"
+    },
+    {
+      "file": "dark-manual-history.png",
+      "sha256": "c0d1ac6e9c65855cd8bc2f2e06b8af3af1d2f2b296d7ce851e1b20ee907c04b9"
+    },
+    {
+      "file": "dark-manual-match.png",
+      "sha256": "f3dfb2d3263b5bf6b79a6c70f4173e775b91ff2a4acc9df0ca78d5f83e874f70"
+    },
+    {
+      "file": "dark-monthly-comparison.png",
+      "sha256": "ee04b2afb44030a45cfb59a4a240053be8d708ee49924622626992da22945bb4"
+    },
+    {
+      "file": "dark-monthly-daily-cashflow.png",
+      "sha256": "bea09ff61abd3b4e839fb43c8974580412da25dd1f1cffed5f94bf3c495afa4a"
+    },
+    {
+      "file": "dark-monthly-merchant-history.png",
+      "sha256": "9f92a7f5b723f564fb7780ffa25d6ef6d75d90f074363430dd9cf72feb68f1fc"
+    },
+    {
+      "file": "dark-monthly-money-fingerprint.png",
+      "sha256": "9cc8bebda62623ee0f32ea12b4386f24a145fd0eda50e69111917cf66a1c9d5d"
+    },
+    {
+      "file": "dark-monthly-recorded-net-worth.png",
+      "sha256": "e90e65318c9499691b699bf6c98bc0b44dd82dbaa5b4360ce77ef098b216168c"
+    },
+    {
+      "file": "dark-monthly-recurring-costs.png",
+      "sha256": "8b42784ee2ea2bbea0540d720c65dc4edf7074625de4a0447269b9114919e26c"
+    },
+    {
+      "file": "dark-monthly-recurring-payment-timeline.png",
+      "sha256": "f1bb9edd59569828b4535c8413012927162f1b312b5f6d84bc1ef2ae63dbe68d"
+    },
+    {
+      "file": "dark-monthly-spending-after-payday.png",
+      "sha256": "d27870ab294b94ca4ef7eddadd0c669d57b2ee315bad221a81981fac8c395344"
+    },
+    {
+      "file": "dark-monthly-spending-by-category.png",
+      "sha256": "143a1d771a8ecba3a75ef47f0c1687df569c9759932d100b854dc98b43a4532b"
+    },
+    {
+      "file": "dark-monthly-upcoming-bills.png",
+      "sha256": "4e5963040e963894638a73a606d36e225c58e0c86269042cdd224a48b3113b00"
+    },
+    {
+      "file": "dark-monthly-what-changed.png",
+      "sha256": "3447584354ed61cd7f5bc7aa46b1e7e14bc9ecf458f55dd937f02f5105ff0f83"
+    },
+    {
+      "file": "dark-net-worth-account-ownership.png",
+      "sha256": "00fe29016dcf36f6d2614221fe872f766a2ea5b7182e43b3e6231a0c706b4e4e"
+    },
+    {
+      "file": "dark-net-worth-combined.png",
+      "sha256": "b9793e60ce3702aba890bcf5bc1abfc23de0b8904446c4e71f76aa374662df8a"
+    },
+    {
+      "file": "dark-original-currency.png",
+      "sha256": "0bf9b2e558247513f8e56064dacf8a77e409d5772375e72b325e344d97d05424"
+    },
+    {
+      "file": "dark-purchase-refunds.png",
+      "sha256": "fb6134ce2e3c75787b6d04a51fa94783c8aec7b2ce62e2e194b8f491d4232eda"
+    },
+    {
+      "file": "dark-quick.png",
+      "sha256": "adba5c835b92470a9902dd9631ba20fd729339f45438e0c818f9227aaf266438"
+    },
+    {
+      "file": "dark-receipt-camera-preview.png",
+      "sha256": "566399e8bf44ba092c182ded6d1e8fa9524d4bec28fa371d556c4bf8aaa83279"
+    },
+    {
+      "file": "dark-receipt-camera-review.png",
+      "sha256": "38d98a0626b40730ff2f3c0ea7e9c025eb49c4b9f61dc741e610c84f4c364a2f"
+    },
+    {
+      "file": "dark-recovery-reset-confirmation.png",
+      "sha256": "e8c5720b4dbc849d4b584b28e991926cacdef135eb5d429a28b8ce5926294e96"
+    },
+    {
+      "file": "dark-recovery-setup.png",
+      "sha256": "29a9723f82a06d3e767edbee0bb46fd5ded49731994290400831511f6d412add"
+    },
+    {
+      "file": "dark-revision-mapping.png",
+      "sha256": "338a3d0263c4a780caca7b2a0cbe158d33f6f1ca41a19ce8fcd6b792feb0db5a"
+    },
+    {
+      "file": "dark-revision-multi-review.png",
+      "sha256": "1e210e6f949287981c022c552715ecf3ffd7732e56de7b02ec058d0e67dda9ed"
+    },
+    {
+      "file": "dark-revision-result.png",
+      "sha256": "9fbec065262a942810c4257a8c0d3ace3bf4985a08035207d2339e0795182d4f"
+    },
+    {
+      "file": "dark-revision-stale.png",
+      "sha256": "34757dd4d4f99c9d3e113fb912ea6a2fdced756ffe58c337b7b550e640d2d82e"
+    },
+    {
+      "file": "dark-revision-tier-c.png",
+      "sha256": "081daf1c82b2da05e8c333478e27450ad0349af6bdb18e331cc7efe3ec90e55d"
+    },
+    {
+      "file": "dark-revision-update.png",
+      "sha256": "578e6bfd40ec6939cd4a2b8c221dd2b255c6785237e55bdf993a8fa126ae85ef"
+    },
+    {
+      "file": "dark-spending-evidence.png",
+      "sha256": "6161734ceb6d2cdf7e8656db3ab4449597ad8b0cb7e5dddb197df4113506a3e7"
+    },
+    {
+      "file": "dark-spending-months.png",
+      "sha256": "1ecb4598807a4b7ed954c0906fd730e012ee5f2bbe16a8768ee5d24b7902e7f5"
+    },
+    {
+      "file": "dark-spending-patterns.png",
+      "sha256": "71a503a414ed1ab549fd8f8fd4d8fa15a794cb981283878b7a77784c460e8d94"
+    },
+    {
+      "file": "dark-split-entry.png",
+      "sha256": "65ad07ea7836d8c379590f3f7673d6cfb48c94733321629156172d1b1bd22bd4"
+    },
+    {
+      "file": "dark-split-saved.png",
+      "sha256": "ba7cab1a6e7c2373129797f1522845bd03ecedcc0a6c2466577e54f557ea0bcc"
+    },
+    {
+      "file": "dark-today.png",
+      "sha256": "9f1c1c014c98154c169f8f6d6f8613f2729a18e1a73cc5cf334d9d5996b71212"
+    },
+    {
+      "file": "dark-valuation-entry.png",
+      "sha256": "8190256d1d3d65c4d1db9f9e9d7522e0a24703a77d47a58bba519f8f11af40eb"
+    },
+    {
+      "file": "dark-valuation-history.png",
+      "sha256": "d80b341f9dfb5070cae54ed66a06f434cea8be72aece5cab64cda4d86f1be247"
+    },
+    {
+      "file": "dark-valuation-two-dates.png",
+      "sha256": "b303fff17caed3f3540d71d38d33034192943984909a23affbd0397bd0c0a0af"
+    },
+    {
+      "file": "dark-widget-unlocked-entry.png",
+      "sha256": "228ad8bf42ec8ab060534b9418e9dfd7d99c22779075c4264be8fddf60eef753"
+    },
+    {
+      "file": "dark-you.png",
+      "sha256": "207491fdbc6c5db6f87a14e19cfa7e93e850bf743468f4903910ac9ca576f096"
+    },
+    {
+      "file": "forty-page-pdf-progress.png",
+      "sha256": "40a60735177e8d4bd887f3c37eb375887fbb8457ca7d981cf33f5df4d11a9924"
+    },
+    {
+      "file": "light-backup-options.png",
+      "sha256": "821eecf5d4eff52a5e3fc2ebdac21c5904375162ffd59765a1bd7b275a2c7302"
+    },
+    {
+      "file": "light-backup-restore.png",
+      "sha256": "a70212d89c33b5d2be6060e415cfdea963276b1d88a748a9778fff51e7c8624e"
+    },
+    {
+      "file": "light-backup-save-code.png",
+      "sha256": "9583020d8090635a94459159a537b4129520e434ee684408615283f95bafcc4a"
+    },
+    {
+      "file": "light-backup-wrong-code.png",
+      "sha256": "9cdb2354005e193cfdb5cc5a2ba49da77e2e8d81c502de52283bc76fc2246f4b"
+    },
+    {
+      "file": "light-bulk-categories.png",
+      "sha256": "e4dfd770725b3e852a67e8278486b4d7756a4ca08fee2742771436d92f2169ef"
+    },
+    {
+      "file": "light-cancellation-entry.png",
+      "sha256": "d2229663a3396192c1cb7fbe5f8a2bf1f2fe49f4fb5cf3ed7825b38ac255e3ed"
+    },
+    {
+      "file": "light-cancellation-later-payment.png",
+      "sha256": "f4a7077247ee1724dad0a5f71d1b3881cc9749f9ab4df094dc716d6ee968180a"
+    },
+    {
+      "file": "light-forgot-pin-options.png",
+      "sha256": "a3252b04608acf437204c10f570aa3841c07544f990754f970ab7ca06c3e30f5"
+    },
+    {
+      "file": "light-forgot-pin-replacement.png",
+      "sha256": "2cc8c92363cd84ad31050144473e567fef7f4ccbbcb51173694e43415719c851"
+    },
+    {
+      "file": "light-import-correction.png",
+      "sha256": "e00be9aa2f00ab789b1b1ed587730ab434d85ae3c7723182e052ce76b93de37f"
+    },
+    {
+      "file": "light-import-coverage.png",
+      "sha256": "cd0ba0c716bdd2bb9dd0f4cf98401800e4546fe2ffa3257c7a1ff6eaa9513af4"
+    },
+    {
+      "file": "light-import-details.png",
+      "sha256": "2c62a400c7c917de21b97a20390e87faefc2b447b5df3c9e0a9c57d084487189"
+    },
+    {
+      "file": "light-import-ledger.png",
+      "sha256": "4300cfa46c8476b58e3c9130809b508ac4683375e57e335e5ce011071afbea97"
+    },
+    {
+      "file": "light-import-quarantine.png",
+      "sha256": "2321c760473c840a3b2cba75cd24a575c3076f0d2b95690ff10e6fdad9da8149"
+    },
+    {
+      "file": "light-import-review.png",
+      "sha256": "c52367d489d0f662c8497cfd88bf307df5ac62a95b50ed2243c49bc6911f5cbe"
+    },
+    {
+      "file": "light-import-rollback.png",
+      "sha256": "36bebed6591b030bd18e2a84679783f5f61f49559bea00445c2bc6858e9bf347"
+    },
+    {
+      "file": "light-insights.png",
+      "sha256": "d248a6c1ceaf37765883d511dafc29414bbecc6589b0664e25576f3c3d86f689"
+    },
+    {
+      "file": "light-intelligence-context.png",
+      "sha256": "d093cd8d0cb9d40cb40a6b285d1122265a6c2bb10153539b9ba05c3a3ec5a0bd"
+    },
+    {
+      "file": "light-intelligence-evidence.png",
+      "sha256": "487714fedd1822270b77e885e19c26c29f35e2349a21bb3a041bab4bb4d1e3cf"
+    },
+    {
+      "file": "light-intelligence-forecast.png",
+      "sha256": "3c0a8032f68ab670bb244d8a6e7a57c6bf26144e5ec30107b372114fc809080a"
+    },
+    {
+      "file": "light-intelligence-goal.png",
+      "sha256": "627b595c432b8e122add8d102d913a598bac4abec0a75d4c637cad69d61d157c"
+    },
+    {
+      "file": "light-intelligence-learning.png",
+      "sha256": "dffebaa1af914540e49213548be3e5b405d01b833a96d86cb0a35fd82e57133c"
+    },
+    {
+      "file": "light-intelligence-profile.png",
+      "sha256": "f492f385d462f55021394dc964a951bb62a6475b63423532cfbaa2dda79092af"
+    },
+    {
+      "file": "light-intelligence-reflections.png",
+      "sha256": "ef66a45fd011c58a1b85a9e02b16cd186df3582deda7f2d0bc42676e834ed49b"
+    },
+    {
+      "file": "light-intelligence-scenario.png",
+      "sha256": "8bdfe75250531b2203eb8d0489c777675f9a2a37932a5a0a504c5a1509d1fd54"
+    },
+    {
+      "file": "light-intelligence-triage.png",
+      "sha256": "35c708a6e8bb41fd85f9463e99665e4f00d8e4de6039e1782cba1d857d2b724d"
+    },
+    {
+      "file": "light-launcher-widget.png",
+      "sha256": "02f9efd711a3a89f25e65465e79efb8ce7c4424601ffa41f97bcb7bfa950d855"
+    },
+    {
+      "file": "light-ledger.png",
+      "sha256": "d1d05547298ada8ef457bb7739625bc58c3936ac1a0ab54e2173c05792034b51"
+    },
+    {
+      "file": "light-manual-category-split.png",
+      "sha256": "412eca9392aced45e87dc5e1dce60fac106b1d70144cdc9015c08df328ee51ec"
+    },
+    {
+      "file": "light-manual-delete.png",
+      "sha256": "1db145e5ed1e2194a54de2a8121d2f3de8e033d5aca773e46e25ece13a246a19"
+    },
+    {
+      "file": "light-manual-edit.png",
+      "sha256": "067eeffcc3f580119ba8d4b741d85f7127d05661fc4f712acdee569f876c5b6f"
+    },
+    {
+      "file": "light-manual-entry.png",
+      "sha256": "f818b61b5d2cb4081ed0f2f19614501f6ff696610f56ba1ab2d45e3a0f7a54b7"
+    },
+    {
+      "file": "light-manual-history.png",
+      "sha256": "7593501c1961085259bd0640ce4a29a63a7c6e6cac240c1904efea9a15fda359"
+    },
+    {
+      "file": "light-manual-match.png",
+      "sha256": "8f037de653d1f371bee11a6eab1c95b0a2941a2123f78dcdb870e632a0784cde"
+    },
+    {
+      "file": "light-monthly-comparison.png",
+      "sha256": "aeede1bd2883b49f3c94a346935ca0944b5de6b055e0f438747232ddff03d492"
+    },
+    {
+      "file": "light-monthly-daily-cashflow.png",
+      "sha256": "c1ced7ba90c381ccea4b71576ddb540ca2d7f98a7c8fad9585e9708e07508f1d"
+    },
+    {
+      "file": "light-monthly-merchant-history.png",
+      "sha256": "66eb8fe6598884db530ef7b866132c8d6139559e8f04a5d72f0df26378296e50"
+    },
+    {
+      "file": "light-monthly-money-fingerprint.png",
+      "sha256": "83eed43f8ebe7231572ecd0f1e37576a5bb7dd04d7d83d35e73129a1c0e2bace"
+    },
+    {
+      "file": "light-monthly-recorded-net-worth.png",
+      "sha256": "cd8c960c2e14e4514e4f78c63161fa12aaff04084b7701a3dcc05e6e62ac1cee"
+    },
+    {
+      "file": "light-monthly-recurring-costs.png",
+      "sha256": "1ab491b5432b0d1437aa4ad8227746277b325cf176d14cb2353874eec1ead9f3"
+    },
+    {
+      "file": "light-monthly-recurring-payment-timeline.png",
+      "sha256": "ef55fd24b6a6ea6cbb93b3331e75e4e98ab1241fcac7377e58d887b05a89bd33"
+    },
+    {
+      "file": "light-monthly-spending-after-payday.png",
+      "sha256": "79c8bfeb3769d49c6a8157917d682ce50247834c2849c3c4fc6cf321e205f9cc"
+    },
+    {
+      "file": "light-monthly-spending-by-category.png",
+      "sha256": "bc0cc51a2a36c44b59b3d358561f25687fae777c6c1e02c9b28e24fa576d8170"
+    },
+    {
+      "file": "light-monthly-upcoming-bills.png",
+      "sha256": "fa29fbefd440e5688c806f241f525faf0b5cf79c432102b70391da8706399a39"
+    },
+    {
+      "file": "light-monthly-what-changed.png",
+      "sha256": "a5a3f71c5db3d3369875ac28724f730fa8207a9d043b43d9f329783f47f27acf"
+    },
+    {
+      "file": "light-net-worth-account-ownership.png",
+      "sha256": "f0b7a529f7745dbf3a588d005b8ab099e1f2a207f73d2f306ab28f0f615909a4"
+    },
+    {
+      "file": "light-net-worth-combined.png",
+      "sha256": "b6db91c038ac00ad75217c34023403f33f431206c583cd3527257d3e4e29e198"
+    },
+    {
+      "file": "light-original-currency.png",
+      "sha256": "f5f0816849271193f187076e86fa221559a57ae309d042fda3043b086ca4b01a"
+    },
+    {
+      "file": "light-purchase-refunds.png",
+      "sha256": "728c86b1c95e0c540a22496a11e3f9b96f136e90ae150e83ac77152c883c6249"
+    },
+    {
+      "file": "light-receipt-camera-preview.png",
+      "sha256": "1c1861c7f63edf75c9a0bdc486dd42b184fc5eef38f89b3ddd6791d5a31b21fa"
+    },
+    {
+      "file": "light-receipt-camera-review.png",
+      "sha256": "9342622ab86adeddb9a9b311e415452864ca360e7a39f805bb3d981a39524fd8"
+    },
+    {
+      "file": "light-recovery-reset-confirmation.png",
+      "sha256": "f1893e9e10b8d2b9e7185858fad80cc52bd12f98da8190bd8750aebb6cf44127"
+    },
+    {
+      "file": "light-recovery-setup.png",
+      "sha256": "fe4f657191643acfec8b727e74d4e77140c5536bc77b87c47a9617414bb34058"
+    },
+    {
+      "file": "light-recreated-locked.png",
+      "sha256": "abb9c17795c1151566a69dd188d8fe64b463d146adebfacc9963d34ac41be20e"
+    },
+    {
+      "file": "light-resume-locked.png",
+      "sha256": "904422a99fd2832e60684494ebd2b83b53c6dd48fdc11d4e344546a062b3a537"
+    },
+    {
+      "file": "light-revision-mapping.png",
+      "sha256": "468e4bd7a75aed794c12b16f64c2910f6e281bdf02eb2228a53babfc650d0d60"
+    },
+    {
+      "file": "light-revision-multi-review.png",
+      "sha256": "8d4fd2dcdd423de1c8f99d69bb08c97784638a6cc0f12bcee07f704c7105e7b1"
+    },
+    {
+      "file": "light-revision-result.png",
+      "sha256": "d80d868123ca10e8da7f65aac3b37675f080a93fb9b0320ea4ac4943b8abaac4"
+    },
+    {
+      "file": "light-revision-stale.png",
+      "sha256": "8bfa6068013e5f49fa4b5bc11b2a077a6f5fd2783a3986460d79d0bdbb625f4c"
+    },
+    {
+      "file": "light-revision-tier-c.png",
+      "sha256": "dcc104edc3b95af3ba837abf03b0a165e1bef5ab85b2aea91bc6c97f26bd6352"
+    },
+    {
+      "file": "light-revision-update.png",
+      "sha256": "11fe9ab9627e895f11fa7988001d7e3cb0e78bfafed8597ca02b691eefdda348"
+    },
+    {
+      "file": "light-spending-evidence.png",
+      "sha256": "8b84ec11fb961ee0e96d7f811399d34ad860950da9a6bef7e5f4b82265ec0fb7"
+    },
+    {
+      "file": "light-spending-months.png",
+      "sha256": "8553f472719c2f64e9a2580f76df30844b596cd8fd319f9c4295e2430ab3e081"
+    },
+    {
+      "file": "light-spending-patterns.png",
+      "sha256": "ec8e494615c671ea648c7fc8f3c68e0feb3af4955287a99905ade0404903f3b0"
+    },
+    {
+      "file": "light-split-entry.png",
+      "sha256": "7607b216ce8e366c6f00898335b16367983e079f0d389dbca729a650ea8137e0"
+    },
+    {
+      "file": "light-split-saved.png",
+      "sha256": "1025e672f4038e805d03d523e32182b156f1fbfb8e1760c584801ab57d7225ab"
+    },
+    {
+      "file": "light-today.png",
+      "sha256": "d3faa1a4755de95b821abf58e2f62319a6ff02d898fd5cd2ef0ceda1069302a4"
+    },
+    {
+      "file": "light-valuation-entry.png",
+      "sha256": "2b4ba2e5ea5c9a203f62be8ae1473aecde1f5ed3ff3b6a8e658211f8924acee5"
+    },
+    {
+      "file": "light-valuation-history.png",
+      "sha256": "f691c960907f5921214eb4ea0177d7153bccd5551813f2bd5451df04d9ae74d2"
+    },
+    {
+      "file": "light-valuation-two-dates.png",
+      "sha256": "b16c9117eaf5df3ad90f916c2018c9da3afb7417306bbef3bf4dd9c5ec138094"
+    },
+    {
+      "file": "light-widget-unlocked-entry.png",
+      "sha256": "7b05367bd2c08f48026cf3a0c76aef63c3397013b8ffc5929db9ec364fe1bcc6"
+    },
+    {
+      "file": "light-you.png",
+      "sha256": "30075bd934b0a56b9137d806c06fa8b50b3d4d08b091b73b4dfb39dd6bffa464"
+    },
+    {
+      "file": "text-200-insights.png",
+      "sha256": "ba9c109dd72d11ef197e687a474632d26125214e1a00661f48dd07558a40d076"
+    },
+    {
+      "file": "text-200-ledger.png",
+      "sha256": "e7c8c0f642db55104ea6f7d5496ba6db7538fafc7f953891a0c4b6ad913b7979"
+    },
+    {
+      "file": "text-200-quick.png",
+      "sha256": "2e64a7aa272e57e719394a67a0032d1cfe7f82acab5ac8feaac6d6a747b81704"
+    },
+    {
+      "file": "text-200-today.png",
+      "sha256": "8d34132f7401b96ed63253c140eaab4b99eb05796139496bc326a5359191ac7a"
+    },
+    {
+      "file": "text-200-you.png",
+      "sha256": "f04bf9722df1e854c542297c5312dab03c8d12939c6bec136a284815c0d1a798"
+    },
+    {
+      "file": "today-initial.png",
+      "sha256": "d32edbdcd5169c454fc918bd94af5fc0b521133532dee8efbcc5aaa0eef35e72"
+    }
+  ]
+}

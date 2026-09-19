@@ -1,5 +1,5 @@
 import { ImportFailure, type RawRow } from '../types';
-export type Columns = { date: number; description: number; amount: number | null; debit: number | null; credit: number | null; reference: number | null };
+export type Columns = { date: number; description: number; amount: number | null; debit: number | null; credit: number | null; reference: number | null; balance?: number | null };
 export function csvRows(text: string, delimiter?: string): string[][] {
   const first = text.replace(/^\uFEFF/, '').split(/\r?\n/)[0] ?? '';
   const separator = delimiter ?? [',', ';', '\t'].sort((a, b) => first.split(b).length - first.split(a).length)[0]!;
@@ -16,12 +16,37 @@ export function csvRows(text: string, delimiter?: string): string[][] {
   if (quoted) throw new Error('A CSV quoted field is unfinished. Export the complete file again.');
   row.push(cell.trim()); if (row.some(Boolean)) rows.push(row); return rows;
 }
+/**
+ * Column names, in order of preference rather than as one alternation.
+ *
+ * A single pattern has to match exactly one column or it gives up, which is right for "is this a header"
+ * but wrong when a bank prints BOTH "Transaction Date" and "Posting Date". Ordered patterns settle that:
+ * the first pattern matching exactly one column wins, so naming more synonyms can only ever read more
+ * statements, never make an already-readable one ambiguous.
+ */
+const NAMES = {
+  date: [/^(?:posted date|posting date|date posted|process(?:ed)? date)$/, /^(?:transaction date|date of transaction|txn date|tran date)$/, /^(?:value date|effective date)$/, /^date$/],
+  description: [/^(?:description|transaction description)$/, /^(?:details|transaction details|narrative|particulars|memo)$/, /^(?:merchant|payee|paid to|name)$/, /^(?:transaction|activity)$/],
+  amount: [/^(?:amount|transaction amount)$/, /^amount\s*\(?[a-z]{3}\)?$/, /^(?:value|amt)$/],
+  debit: [/^(?:debit|debits|debit amount)$/, /^(?:withdrawal|withdrawals|withdrawal amount)$/, /^(?:money out|paid out|out)$/, /^dr$/],
+  credit: [/^(?:credit|credits|credit amount)$/, /^(?:deposit|deposits|deposit amount)$/, /^(?:money in|paid in|in)$/, /^cr$/],
+  balance: [/^(?:balance|running balance|balance after|closing balance)$/, /^balance\s*\(?[a-z]{3}\)?$/],
+  reference: [/^(?:reference|reference id|transaction id|fitid|receipt)$/],
+} as const;
+
 export function inferColumns(header: readonly string[]): Columns {
-  const find = (pattern: RegExp) => { const found = header.map((h, i) => pattern.test(h.trim().toLowerCase()) ? i : -1).filter(i => i >= 0); return found.length === 1 ? found[0]! : null; };
-  const date = find(/^(?:date|posted date|posting date|transaction date)$/), description = find(/^(?:description|details|merchant|narrative|particulars)$/);
-  const amount = find(/^(?:amount|transaction amount|value)$/), debit = find(/^(?:debit|withdrawal|withdrawals|money out)$/), credit = find(/^(?:credit|deposit|deposits|money in)$/);
+  const cells = header.map(h => h.trim().toLowerCase());
+  const find = (patterns: readonly RegExp[]) => {
+    for (const pattern of patterns) {
+      const found = cells.map((h, i) => pattern.test(h) ? i : -1).filter(i => i >= 0);
+      if (found.length === 1) return found[0]!;
+    }
+    return null;
+  };
+  const date = find(NAMES.date), description = find(NAMES.description);
+  const amount = find(NAMES.amount), debit = find(NAMES.debit), credit = find(NAMES.credit);
   if (date === null || description === null || (amount === null && (debit === null || credit === null))) throw new ImportFailure('The table and its column labels were read.', 'Date, description or amount columns are unclear.', header.join(' | '), 'Map the date, description and amount (or debit and credit) columns.');
-  return { date, description, amount, debit, credit, reference: find(/^(?:reference|reference id|transaction id|fitid)$/) };
+  return { date, description, amount, debit, credit, reference: find(NAMES.reference), balance: find(NAMES.balance) };
 }
 export function parseTable(table: readonly string[][], mapping?: Columns, confidence = 9800): RawRow[] {
   const header = table[0]; if (!header) throw new ImportFailure('The file opened.', 'No table rows were found.', '', 'Choose a statement containing transactions.');
@@ -37,6 +62,7 @@ export function parseTable(table: readonly string[][], mapping?: Columns, confid
     const mccIndex = header.findIndex(h => /^(?:mcc|merchant category code)$/i.test(h.trim()));
     const mcc = mccIndex >= 0 && /^\d{4}$/.test(row[mccIndex] ?? '') ? row[mccIndex] : undefined;
     const amount = columns.amount === null ? (nonzero(debit) ? debit : credit || debit || '0') : row[columns.amount] ?? '';
-    return { ...(mcc ? { mcc } : {}), sourceId: String(i + 2), date: row[columns.date] ?? '', description: row[columns.description] ?? '', amount, ...(columns.amount === null ? { direction: nonzero(debit) ? 'debit' as const : 'credit' as const } : {}), ...(columns.reference === null ? {} : { reference: row[columns.reference] ?? '' }), confidence };
+    const balance = columns.balance === null || columns.balance === undefined ? '' : (row[columns.balance] ?? '').trim();
+    return { ...(mcc ? { mcc } : {}), ...(balance ? { runningBalance: balance } : {}), sourceId: String(i + 2), date: row[columns.date] ?? '', description: row[columns.description] ?? '', amount, ...(columns.amount === null ? { direction: nonzero(debit) ? 'debit' as const : 'credit' as const } : {}), ...(columns.reference === null ? {} : { reference: row[columns.reference] ?? '' }), confidence };
   });
 }

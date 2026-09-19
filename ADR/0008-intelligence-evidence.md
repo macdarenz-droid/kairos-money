@@ -1,0 +1,11 @@
+# Evidence-limited intelligence, version 1
+
+The complete Session 3 brief is supplied. Choose conservative, reproducible descriptive metrics, not inferred psychology. Monetary computation uses bigint; ratios are scaled integer basis points, volatility uses integer square root. No number coercion of money. Historical rows must be settled, non-transfer, in covered dates and the selected currency. Overlapping dates count once; portfolio coverage is the intersection of active accounts. At least 20 covered days and 80% window coverage are required for ordinary metrics; profiles require 60 covered days. Tier C reduces confidence and labels all dependent outputs unverified.
+
+Monthly and trailing-90 snapshots retain their inputs and algorithm version. Six-month metrics need six fully covered calendar months. Missing payment instrument, purchase-local hour, routine evidence, intent, planning horizon, adherence or enjoyment returns insufficient_data. Missing classification evidence never becomes zero. A profile can name a pattern only when that pattern's necessary inputs exist; axes may remain unknown. Four axes cannot mathematically form six quadrants; explicit precedence and thresholds implement the supplied six descriptive shapes instead.
+
+Thresholds are product heuristics: low buffer <5 days; small leaks >=10 sub-15-unit purchases and >=10% discretionary spend; low friction >=70% card/BNPL; recurring drag >=20% income; high volatility CV >=50%; control high >=70%. Distress wins precedence, then Collector, Sprinter, Drifter, Clencher, Anchor. Clencher needs explicit low-enjoyment input, Collector low-awareness input. Confidence is coverage × available-signal share, reduced for Tier C; it is not a validated probability.
+
+Dollar effects are scenarios: selected evidence total × disclosed fraction, no hardcoded dollar prediction. Dismissal counters live in app_settings and survive recomputation. Derived tables store results; intelligence must never mutate ledger tables. No schema migration is needed for the existing signals/profiles/insights/goals tables.
+
+Forecast cadence distinguishes calendar-month/end-of-month patterns from fixed four-week periods. Monthly dates clamp to the target month without accumulating February drift. Multiple-employer payday-decay attribution remains unknown rather than mixing overlapping income cycles.

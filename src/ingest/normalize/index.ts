@@ -1,7 +1,7 @@
 import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 import { currencyDigits, money, parseDecimal, type Currency } from '../../core/money';
-import { ImportFailure, type ImportContext, type NormalizedRow, type Period, type RawRow } from '../types';
+import { DateOutsidePeriod, ImportFailure, type ImportContext, type NormalizedRow, type Period, type RawRow } from '../types';
 export function hash(value: string | Uint8Array): string { return bytesToHex(sha256(typeof value === 'string' ? new TextEncoder().encode(value) : value)); }
 export function isoDay(input: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input) || !Number.isFinite(Date.parse(input)) || new Date(input).toISOString().slice(0, 10) !== input) throw new Error(`Invalid calendar date: ${input}.`);
@@ -9,27 +9,77 @@ export function isoDay(input: string): string {
 }
 export function dayNumber(day: string): number { return Date.parse(isoDay(day)) / 86400000; }
 export function shiftDay(day: string, days: number): string { return new Date((dayNumber(day) + days) * 86400000).toISOString().slice(0, 10); }
+const MONTH_NAMES = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 export function normalizeDate(value: string, period: Period, order: 'DMY' | 'MDY'): string {
   isoDay(period.start); isoDay(period.end);
   if (period.start > period.end) throw new Error('Statement end precedes its start.');
   const cleaned = value.trim(); let candidates: string[] = [];
+  const years = (given: string | undefined) => given
+    ? [Number(given.length === 2 ? `20${given}` : given)]
+    : Array.from({ length: Number(period.end.slice(0, 4)) - Number(period.start.slice(0, 4)) + 1 }, (_, i) => Number(period.start.slice(0, 4)) + i);
+  const build = (day: number, month: number, given: string | undefined) => years(given).flatMap(year => {
+    const s = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    try { return [isoDay(s)]; } catch { return []; }
+  });
+  // A written month is the one date format that carries no ambiguity: "15 Sep 2026" and "Sep 15, 2026"
+  // both mean the same day whichever way round the reader expects, so neither needs the DMY/MDY setting.
+  // Accepting them here is what lets a statement printed with month names be read at all.
+  const dayFirst = /^(\d{1,2})[\s.-]+([A-Za-z]{3,})\.?[\s.-]+(\d{2}|\d{4})$/.exec(cleaned);
+  const monthFirst = /^([A-Za-z]{3,})\.?[\s.-]+(\d{1,2}),?[\s.-]+(\d{2}|\d{4})$/.exec(cleaned);
+  const named = dayFirst ? { day: Number(dayFirst[1]), name: dayFirst[2]!, year: dayFirst[3] }
+    : monthFirst ? { day: Number(monthFirst[2]), name: monthFirst[1]!, year: monthFirst[3] } : null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) candidates = [isoDay(cleaned)];
+  else if (named) {
+    const month = MONTH_NAMES.indexOf(named.name.slice(0, 3).toLowerCase());
+    if (month < 0) throw new ImportFailure('Statement period is known.', 'The transaction date names a month that could not be read.', value, 'Use day/month/year or confirm the column mapping.');
+    candidates = build(named.day, month + 1, named.year);
+  }
   else {
     const m = /^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?$/.exec(cleaned);
     if (!m) throw new ImportFailure('Statement period is known.', 'The transaction date could not be read.', value, 'Use day/month/year or confirm the column mapping.');
     const month = Number(m[order === 'DMY' ? 2 : 1]), day = Number(m[order === 'DMY' ? 1 : 2]);
-    const years = m[3] ? [Number(m[3].length === 2 ? `20${m[3]}` : m[3])] : Array.from({ length: Number(period.end.slice(0, 4)) - Number(period.start.slice(0, 4)) + 1 }, (_, i) => Number(period.start.slice(0, 4)) + i);
-    candidates = years.flatMap(year => { const s = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`; try { return [isoDay(s)]; } catch { return []; } });
+    candidates = build(day, month, m[3]);
   }
-  candidates = candidates.filter(s => s >= period.start && s <= period.end);
-  if (candidates.length !== 1) throw new ImportFailure('The date format was read.', 'The date is ambiguous or outside the statement period.', value, 'Confirm the statement dates and date format.');
-  return candidates[0]!;
+  // THREE OUTCOMES, NOT ONE. The window is what disambiguates a date like 03/04, so it has to be
+  // applied — but failing it means three different things, and they had one message between them.
+  const inside = candidates.filter(s => s >= period.start && s <= period.end);
+  if (inside.length === 1) return inside[0]!;
+  if (inside.length > 1) throw new ImportFailure('The statement period is known.', 'This date reads as two different days inside the statement period.', value, 'Set the date format to day/month or month/day.');
+  // Read without doubt, just not inside the window. The remedy is the statement dates, so say so.
+  if (candidates.length) throw new DateOutsidePeriod([...candidates].sort()[0]!, period);
+  throw new ImportFailure('The statement period is known.', 'This date could not be read as a real day.', value, 'Confirm the date format and the column mapping.');
+}
+
+/**
+ * The first and last date a column actually contains, read against a deliberately wide window.
+ *
+ * Used only to tell somebody what to type when their statement period is too narrow. The wide window
+ * means a two-digit year can read as several years at once and this gives up rather than guess — an
+ * offer of the wrong dates is worse than no offer.
+ */
+export function dateSpan(values: readonly string[], period: Period, order: 'DMY' | 'MDY'): Period | null {
+  if (!values.length) return null;
+  const wide = { start: `${Number(period.start.slice(0, 4)) - 2}-01-01`, end: `${Number(period.end.slice(0, 4)) + 2}-12-31` };
+  const days: string[] = [];
+  for (const value of values) {
+    try { days.push(normalizeDate(value, wide, order)); } catch { return null; }
+  }
+  const sorted = [...days].sort();
+  return { start: sorted[0]!, end: sorted.at(-1)! };
 }
 export function normalizeAmount(value: string, code: Currency, decimal: '.' | ','): bigint {
   let s = value.trim().toUpperCase();
   const negative = /^\(.*\)$/.test(s) || /DR$/.test(s) || /-$/.test(s) || /^-/.test(s);
   if (/CR$/.test(s) && negative) throw new Error(`Conflicting amount signs: ${value}. Confirm the amount.`);
-  s = s.replace(/(?:DR|CR)$/, '').replace(/[()]/g, '').replace(/^-|-$|^\+/, '').trim().replace(/^(?:AUD|USD|PHP|EUR|GBP|NZD|CAD|SGD|JPY|KWD|A\$|\$|£|€|₱)\s*/, '');
+  // A currency marker can sit on either side of the figure: "PHP 1,200.00" and "1,200.00 PHP" are both
+  // ordinary export formats. Only the leading one was stripped, so the trailing form failed with an
+  // unreadable-fraction error — loud rather than wrong, but it still refused a perfectly good file.
+  // Uppercasing above means Php, php and PHP all arrive here as one spelling.
+  const MARKER = /AUD|USD|PHP|EUR|GBP|NZD|CAD|SGD|JPY|KWD|A\$|\$|£|€|₱/.source;
+  s = s.replace(/(?:DR|CR)$/, '').replace(/[()]/g, '').replace(/^-|-$|^\+/, '').trim()
+    .replace(new RegExp(`^(?:${MARKER})\\s*`), '')
+    .replace(new RegExp(`\\s*(?:${MARKER})$`), '')
+    .trim();
   const grouping = decimal === '.' ? ',' : '.';
   const parts = s.split(decimal);
   if (parts.length > 2 || (parts[1]?.length ?? 0) > currencyDigits[code]) throw new Error(`The decimal format in “${value}” is unclear. Confirm the decimal separator.`);

@@ -1,3 +1,4 @@
+import { isBalanceOccurrence } from '../normalize/statement-evidence';
 import { runningBalance } from '../integrity';
 import { dayNumber, hash, isoDay, shiftDay, similarity } from '../normalize';
 import type { Document, LedgerRow, Period } from '../types';
@@ -42,9 +43,14 @@ export function reconcile(documents: readonly Document[]): LedgerRow[] {
   const candidatesByKey = new Map<string, { doc: Document; row: Document['rows'][number] }>();
   for (const doc of [...documents].sort((a,b)=>a.id.localeCompare(b.id))) for (const row of doc.rows) if (doc.sourceRank) candidatesByKey.set(row.fingerprint, { doc, row });
   const sourceRows = [...candidatesByKey.values()];
-  const match = (a: typeof sourceRows[number], b: typeof sourceRows[number]) => a.row.fingerprint !== b.row.fingerprint && a.doc.id !== b.doc.id && a.row.accountId === b.row.accountId && a.row.currency === b.row.currency && !a.row.occurrence && !b.row.occurrence && Math.abs(dayNumber(a.row.date)-dayNumber(b.row.date)) <= 3 && similarity(a.row.merchant,b.row.merchant) >= 9000;
-  // Corroboration is only automatic across different source families with a unique reciprocal match.
-  const corroborates = (a: typeof sourceRows[number]) => sourceRows.filter(b=>match(a,b) && a.row.pending===b.row.pending && a.row.minor===b.row.minor && a.doc.sourceKind!==b.doc.sourceKind);
+  const match = (a: typeof sourceRows[number], b: typeof sourceRows[number]) => a.row.fingerprint !== b.row.fingerprint && a.doc.id !== b.doc.id && a.row.accountId === b.row.accountId && a.row.currency === b.row.currency && (!a.row.occurrence || isBalanceOccurrence(a.row.occurrence)) && (!b.row.occurrence || isBalanceOccurrence(b.row.occurrence)) && Math.abs(dayNumber(a.row.date)-dayNumber(b.row.date)) <= 3 && similarity(a.row.merchant,b.row.merchant) >= 9000;
+  // Corroboration requires a unique reciprocal match across source families,
+  // or matching statement balance evidence. Conflicting balances stay separate.
+  const sourceIndex=new Map<string,typeof sourceRows>();
+  const sourceKey=(row:Document['rows'][number],date:string)=>JSON.stringify([row.accountId,row.currency,date,row.minor,row.pending]);
+  for(const value of sourceRows){const key=sourceKey(value.row,value.row.date),list=sourceIndex.get(key)??[];list.push(value);sourceIndex.set(key,list);}
+  const candidatesFor=(a:typeof sourceRows[number])=>{const result:typeof sourceRows=[];for(let delta=-3;delta<=3;delta++)for(const b of sourceIndex.get(sourceKey(a.row,shiftDay(a.row.date,delta)))??[])if(b.doc.id!==a.doc.id)result.push(b);return result;};
+  const corroborates = (a: typeof sourceRows[number]) => candidatesFor(a).filter(b=>match(a,b) && a.row.pending===b.row.pending && a.row.minor===b.row.minor && (a.doc.sourceKind!==b.doc.sourceKind || ((isBalanceOccurrence(a.row.occurrence) || isBalanceOccurrence(b.row.occurrence)) && a.row.date===b.row.date && a.row.runningBalance!==undefined && a.row.runningBalance===b.row.runningBalance)) && (!(isBalanceOccurrence(a.row.occurrence) || isBalanceOccurrence(b.row.occurrence)) || a.row.runningBalance===undefined || b.row.runningBalance===undefined || a.row.runningBalance===b.row.runningBalance));
   for(const a of sourceRows) { const matches=corroborates(a); if(matches.length===1 && corroborates(matches[0]!).length===1) { const x=root(a.row.fingerprint),y=root(matches[0]!.row.fingerprint); if(x!==y) parent.set(x>y?x:y,x>y?y:x); } }
   // Match logical transactions after corroboration, so two sources for one
   // settlement do not make that settlement look ambiguous.
@@ -68,7 +74,11 @@ export function reconcile(documents: readonly Document[]): LedgerRow[] {
     const chosen = group[0]!;
     return { ...chosen.row, id, owner: group.map(g => g.doc.id).sort()[0]!, transferGroup: null, sources: group.map(g => ({ batchId: g.doc.id, sourceId: g.row.sourceId })).sort((a, b) => a.batchId.localeCompare(b.batchId) || a.sourceId.localeCompare(b.sourceId)) };
   }).sort((a, b) => a.id.localeCompare(b.id));
-  const candidates = (row: LedgerRow) => ledger.filter(other => row.accountId !== other.accountId && row.currency === other.currency && BigInt(row.minor) !== 0n && BigInt(row.minor) === -BigInt(other.minor) && Math.abs(dayNumber(row.date) - dayNumber(other.date)) <= 3 && /\b(?:TRANSFER|TFR|XFER|PAYMENT THANK YOU)\b/i.test(row.description + ' ' + other.description));
+  const transferIndex=new Map<string,LedgerRow[]>();
+  const transferKey=(code:string,minor:string,date:string)=>JSON.stringify([code,minor,date]);
+  for(const row of ledger){const key=transferKey(row.currency,BigInt(row.minor).toString(),row.date),list=transferIndex.get(key)??[];list.push(row);transferIndex.set(key,list);}
+  const transferPool=(row:LedgerRow)=>{const result:LedgerRow[]=[];for(let delta=-3;delta<=3;delta++)result.push(...transferIndex.get(transferKey(row.currency,(-BigInt(row.minor)).toString(),shiftDay(row.date,delta)))??[]);return result;};
+  const candidates = (row: LedgerRow) => transferPool(row).filter(other => row.accountId !== other.accountId && row.currency === other.currency && BigInt(row.minor) !== 0n && BigInt(row.minor) === -BigInt(other.minor) && Math.abs(dayNumber(row.date) - dayNumber(other.date)) <= 3 && /\b(?:TRANSFER|TFR|XFER|PAYMENT THANK YOU)\b/i.test(row.description + ' ' + other.description));
   for (const row of ledger) { const matches = candidates(row); if (matches.length === 1 && candidates(matches[0]!).length === 1) row.transferGroup = hash([row.id, matches[0]!.id].sort().join('|')); }
   return ledger;
 }
@@ -79,9 +89,13 @@ export function totals(rows: readonly LedgerRow[], code: string): { income: bigi
   return rows.filter(row => row.currency === code && !row.transferGroup && !row.pending).reduce((sum, row) => { const minor = BigInt(row.minor); return minor >= 0n ? { ...sum, income: sum.income + minor } : { ...sum, spending: sum.spending - minor }; }, { income: 0n, spending: 0n });
 }
 export function dataHealth(rows: readonly LedgerRow[], ranges: readonly Period[], window: Period, tiers: readonly ('A' | 'B' | 'C')[] = []) {
+  return dataHealthCounts({ total: rows.length, uncategorized: rows.filter(r => !r.category).length, unmatchedTransfers: rows.filter(r => /\b(?:TRANSFER|TFR|XFER)\b/i.test(r.description) && !r.transferGroup).length }, ranges, window, tiers);
+}
+
+/** The same health from counts, so a 20,000-row ledger is aggregated rather than transferred. */
+export function dataHealthCounts(counts: { total: number; uncategorized: number; unmatchedTransfers: number }, ranges: readonly Period[], window: Period, tiers: readonly ('A' | 'B' | 'C')[] = []) {
   const available = coveredDays(coverage(ranges).map(r => ({ start: r.start < window.start ? window.start : r.start, end: r.end > window.end ? window.end : r.end })).filter(r => r.start <= r.end));
-  const days = coveredDays([window]); const uncategorized = rows.filter(r => !r.category).length;
-  const unmatched = rows.filter(r => /\b(?:TRANSFER|TFR|XFER)\b/i.test(r.description) && !r.transferGroup).length;
+  const days = coveredDays([window]); const uncategorized = counts.uncategorized, rows = { length: counts.total }, unmatched = counts.unmatchedTransfers;
   const coveragePercent = Math.floor(100 * available / days);
   const integrityConfidence = tiers.length ? Math.floor(tiers.reduce((sum,t)=>sum+(t==='A'?100:t==='B'?90:50),0)/tiers.length) : 100;
   return { integrityConfidence, coveragePercent, uncategorized, unmatchedTransfers: unmatched, score: rows.length ? Math.floor(integrityConfidence / 100 * (coveragePercent + 100 * (rows.length - uncategorized) / rows.length + 100 * (rows.length - unmatched) / rows.length) / 3) : null };

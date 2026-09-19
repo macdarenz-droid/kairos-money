@@ -18,5 +18,5 @@ export async function exportArchive(repo: Repository): Promise<Uint8Array> {
   return zipSync(files);
 }
 export function base64(data: Uint8Array): string {
-  let binary = ''; for (const byte of data) binary += String.fromCharCode(byte); return btoa(binary);
+  let binary = ''; for (let offset = 0; offset < data.length; offset += 8192) binary += String.fromCharCode(...data.subarray(offset, offset + 8192)); return btoa(binary);
 }

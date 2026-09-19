@@ -1,5 +1,26 @@
 apply plugin: 'com.android.application'
 
+def releaseStorePath = System.getenv('KAIROS_RELEASE_STORE_FILE')
+def releaseStorePassword = System.getenv('KAIROS_RELEASE_STORE_PASSWORD')
+def releaseKeyAlias = System.getenv('KAIROS_RELEASE_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('KAIROS_RELEASE_KEY_PASSWORD')
+def releaseSigningConfigured = [releaseStorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword]
+    .every { value -> value != null && !value.trim().isEmpty() }
+
+// WHERE THE DEBUG KEY COMES FROM, STATED RATHER THAN GUESSED.
+//
+// Left to itself the Android plugin picks the debug keystore's location on its own, from ANDROID_SDK_HOME
+// or the user's home directory, and CI could not confirm which file it landed on. It did not land on the
+// one being cached: a build whose cache RESTORED the keystore still produced a different signing
+// certificate from the build that created it. An identity that moves is exactly why an update is refused
+// by a phone that already has the app.
+//
+// So CI names the file. The password and alias are the published Android debug values — the whole point
+// of a debug key is that it is not a secret — and no key material is in this repository. Unset, which is
+// every ordinary local build, nothing changes.
+def debugStorePath = System.getenv('KAIROS_DEBUG_STORE_FILE')
+def debugStoreConfigured = debugStorePath != null && !debugStorePath.trim().isEmpty() && file(debugStorePath).exists()
+
 android {
     namespace "app.kairos.money"
     compileSdk rootProject.ext.compileSdkVersion
@@ -7,9 +28,9 @@ android {
         applicationId "app.kairos.money"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "0.2.5"
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        versionCode 4
+        versionName "1.0.0-rc.1"
+        testInstrumentationRunner "app.kairos.money.KairosTestRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
@@ -17,6 +38,27 @@ android {
         }
     }
     sourceSets { androidTest.assets.srcDirs += ['../../fixtures/ingest'] }
+    signingConfigs {
+        if (debugStoreConfigured) {
+            debug {
+                storeFile file(debugStorePath)
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }
+        if (releaseSigningConfigured) {
+            release {
+                storeFile file(releaseStorePath)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+                enableV1Signing false
+                enableV2Signing true
+                enableV3Signing true
+            }
+        }
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -25,8 +67,34 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (releaseSigningConfigured) {
+                signingConfig signingConfigs.release
+            }
+        }
+        // Performance evidence must not include the debug runtime's overhead.
+        // This local/CI-only variant is not the privately signed release artifact.
+        benchmark {
+            initWith release
+            debuggable false
+            signingConfig signingConfigs.getByName('debug')
+            matchingFallbacks = ['release']
         }
     }
+}
+
+tasks.register('verifyPrivateReleaseSigning') {
+    doLast {
+        if (!releaseSigningConfigured) {
+            throw new GradleException('Private release signing is not configured. Set KAIROS_RELEASE_STORE_FILE, KAIROS_RELEASE_STORE_PASSWORD, KAIROS_RELEASE_KEY_ALIAS and KAIROS_RELEASE_KEY_PASSWORD.')
+        }
+        if (!file(releaseStorePath).isFile()) {
+            throw new GradleException('KAIROS_RELEASE_STORE_FILE does not point to a readable keystore file.')
+        }
+    }
+}
+
+tasks.matching { task -> task.name == 'preReleaseBuild' }.configureEach {
+    dependsOn tasks.named('verifyPrivateReleaseSigning')
 }
 
 repositories {

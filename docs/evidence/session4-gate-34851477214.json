@@ -1,0 +1,69 @@
+{
+  "run_id": 34851477214,
+  "candidate": "c09fb8166fd1e4e39b29c7c3326e538d77aba608",
+  "url": "https://github.com/macdarenz-droid/kairos-money/actions/runs/34851477214",
+  "result": "FAIL",
+  "artifact_id": 10351309735,
+  "archive_sha256": "7ecd666397e34f1128f1173a3b6b7e9dd51dd59632c59cd3ff0e7984b60b79bf",
+  "sha256": {
+    "LargeImportInstrumentedTest.log": "0276156a6bbacbd70bdda29783f36ff37f42b266c9228e5cc065808aeb3e58cd",
+    "native-run-status.json": "2b127463b39ff5ef3cf3eb0d718658eea172df2cb0beeaaef5aa5047c5074f5f",
+    "android-cold-start.json": "508a09907dfe24ff8b7e061fc62e3e707d39c3c357108fd820036abd0ee08f06",
+    "android-logcat-full.log": "d4e9bf0ea7db7be71e3a287073f6f35036384d797441978f5acde45815b135fb"
+  },
+  "startup": {
+    "status": "PASS",
+    "variant": "benchmark",
+    "debuggable": false,
+    "metric": "Android TotalTime to first activity frame; setup readiness checked separately",
+    "process_cold_limit_ms": 2000,
+    "fresh_install_limit_ms": 2500,
+    "samples": [
+      {
+        "total_time_ms": 1681,
+        "measurement": "Starting: Intent { cmp=app.kairos.money/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: app.kairos.money/.MainActivity\nTotalTime: 1681\nWaitTime: 1723\nComplete\n"
+      },
+      {
+        "total_time_ms": 1510,
+        "measurement": "Starting: Intent { cmp=app.kairos.money/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: app.kairos.money/.MainActivity\nTotalTime: 1510\nWaitTime: 2008\nComplete\n"
+      },
+      {
+        "total_time_ms": 1767,
+        "measurement": "Starting: Intent { cmp=app.kairos.money/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: app.kairos.money/.MainActivity\nTotalTime: 1767\nWaitTime: 1883\nComplete\n"
+      }
+    ],
+    "process_cold_median_ms": 1681,
+    "fresh_install_ms": 1681,
+    "failures": []
+  },
+  "native_status": {
+    "status": "FAIL",
+    "reason": "LargeImportInstrumentedTest did not pass; see its instrumentation log",
+    "functional_complete": false,
+    "completed_instrumentation": [
+      "PinRecoveryInstrumentedTest",
+      "FoundationInstrumentedTest",
+      "KeyProtectionInstrumentedTest",
+      "HardeningInstrumentedTest",
+      "ImportInstrumentedTest"
+    ],
+    "performance_failures": [],
+    "runner": "Android 34 emulator",
+    "evidence": "Read the individual instrumentation logs for completed assertions; the full native gate did not pass."
+  },
+  "failure": "\napp.kairos.money.LargeImportInstrumentedTest:\nProcess crashed while executing fortyPagePdfUsesVisibleResponsiveProgressAfterRecreation(app.kairos.money.LargeImportInstrumentedTest):\njava.lang.RuntimeException: java.lang.reflect.InvocationTargetException\n\tat com.getcapacitor.Bridge.lambda$callPluginMethod$0(Bridge.java:836)\n\tat com.getcapacitor.Bridge.$r8$lambda$ehFTi5f4HhVNFKTbCKAYDkpQYRA(Unknown Source:0)\n\tat com.getcapacitor.Bridge$$ExternalSyntheticLambda3.run(Unknown Source:8)\n\tat android.os.Handler.handleCallback(Handler.java:958)\n\tat android.os.Handler.dispatchMessage(Handler.java:99)\n\tat android.os.Looper.loopOnce(Looper.java:205)\n\tat android.os.Looper.loop(Looper.java:294)\n\tat android.os.HandlerThread.run(HandlerThread.java:67)\nCaused by: java.lang.reflect.InvocationTargetException\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat com.getcapacitor.PluginHandle.invoke(PluginHandle.java:138)\n\tat com.getcapacitor.Bridge.lambda$callPluginMethod$0(Bridge.java:827)\n\t... 7 more\nCaused by: java.util.concurrent.RejectedExecutionException: Task app.kairos.money.KairosVaultPlugin$$ExternalSyntheticLambda20@a38c59c rejected from java.util.concurrent.ThreadPoolExecutor@909dba5[Shutting down, pool size = 1, active threads = 0, queued tasks = 0, completed tasks = 21]\n\tat java.util.concurrent.ThreadPoolExecutor$AbortPolicy.rejectedExecution(ThreadPoolExecutor.java:2082)\n\tat java.util.concurrent.ThreadPoolExecutor.reject(ThreadPoolExecutor.java:842)\n\tat java.util.concurrent.ThreadPoolExecutor.execute(ThreadPoolExecutor.java:1374)\n\tat java.util.concurrent.Executors$DelegatedExecutorService.execute(Executors.java:678)\n\tat app.kairos.money.KairosVaultPlugin.perform(KairosVaultPlugin.java:38)\n\tat app.kairos.money.KairosVaultPlugin.status(KairosVaultPlugin.java:47)\n\t... 10 more\nINSTRUMENTATION_RESULT: shortMsg=Process crashed.\nINSTRUMENTATION_CODE: 0\n",
+  "observations": [
+    "Source gate, Android benchmark/debug/instrumentation compilation, lint and APK signature checks passed.",
+    "Startup passed unchanged limits: 1681 / 1510 / 1767 ms, median 1681 ms and fresh install 1681 ms. The readiness retry repair handled transient null-root/nonzero UI Automator attempts and required a later valid setup hierarchy.",
+    "Pin recovery, foundation, key protection, hardening and frozen import instrumentation passed.",
+    "LargeImportInstrumentedTest crashed during its deliberate ActivityScenario recreation. A status call from the obsolete WebView reached KairosVaultPlugin.perform after that plugin instance worker began shutdown; unhandled RejectedExecutionException killed the process.",
+    "The 40-page extraction assertions, notifications, 20,000-row ledger and downstream accessibility/acceptance/backup/delete were not reached. The preceding run\u2019s ledger result and older green evidence remain separate.",
+    "No product data corruption, encryption failure, or failed APK compile is inferred from this lifecycle crash."
+  ],
+  "repair": [
+    "Each vault plugin instance marks itself destroyed before worker shutdown. Calls observed before enqueue and again on the worker reject when obsolete.",
+    "A submission racing ExecutorService shutdown catches RejectedExecutionException and rejects the obsolete Capacitor call instead of escaping through reflection and crashing Android.",
+    "The replacement activity still constructs a distinct plugin and executor. Queued accepted operations remain gracefully drained; no retry or cross-activity transfer of secure operations is introduced."
+  ],
+  "acceptance": "Session 4 remains one integrated OPEN milestone. The lifecycle repair and all unreached native work require combined replacement evidence. Automation disabled; no replacement polling."
+}

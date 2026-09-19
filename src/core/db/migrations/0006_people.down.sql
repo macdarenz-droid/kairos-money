@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS ious_open;
+DROP TABLE IF EXISTS ious;

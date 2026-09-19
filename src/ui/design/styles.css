@@ -1,5 +1,5 @@
 @import './tokens.css';
-*{box-sizing:border-box}html{font-family:'Inter Variable',Inter,sans-serif;font-size:16px;background:var(--surface-0);color:var(--text-primary);font-variant-numeric:tabular-nums}body{min-width:280px}button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.6}button,a,input,select{touch-action:manipulation}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent-text);outline-offset:3px}button svg{flex-shrink:0}h1,h2,h3,p{margin:0}h1{font-size:28px;line-height:34px;font-weight:600;letter-spacing:-.8px}h2{font-size:20px;line-height:26px;font-weight:600;letter-spacing:-.4px}h3{font-size:15px;line-height:22px;font-weight:500}p{font-size:13px;line-height:20px;color:var(--text-secondary)}a{color:var(--accent-text)}svg{vertical-align:middle}button{color:inherit}input,select{min-width:0;width:100%;min-height:44px;border:1px solid var(--border-control);border-radius:6px;padding:10px 12px;background:var(--surface-2);color:var(--text-primary);font-size:13px;line-height:20px}input::placeholder{color:var(--text-meta)}input[type=checkbox]{width:20px;min-height:20px;accent-color:var(--accent)}.app{max-width:600px;margin:0 auto;padding:env(safe-area-inset-top) 20px calc(108px + env(safe-area-inset-bottom));min-height:100dvh}.brand-bar{height:72px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-subtle);font-size:15px;font-weight:500;letter-spacing:-.3px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--border-default);border-radius:6px;background:var(--surface-2)}.privacy-status{display:flex;align-items:center;gap:6px;font-size:11px;line-height:16px;color:var(--text-meta);font-weight:400;letter-spacing:0}.screen-header{padding:28px 0 24px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.screen-header p{margin-top:6px}.surface{border:1px solid var(--border-default);border-radius:10px;background:var(--surface-1);padding:16px}.section-gap{margin-top:24px}.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--border-subtle);min-height:56px;font-size:13px;line-height:20px}.row:last-child{border-bottom:0}.row-trailing{text-align:right;flex-shrink:0;max-width:50%}.row p{font-size:11px;line-height:16px;color:var(--text-meta);margin-top:3px}.row-actions{display:flex;align-items:center;gap:8px}.amount{font-size:15px;line-height:22px;font-weight:600;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.hero-amount{display:block;font-size:40px;line-height:44px;font-weight:600;letter-spacing:-1.3px}.label{font-size:13px;line-height:20px;color:var(--text-secondary)}.muted,.meta{font-size:11px;line-height:16px;color:var(--text-meta)}.button{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--border-control);border-radius:6px;background:var(--surface-2);padding:10px 14px;font-size:13px;line-height:20px;font-weight:500;transition:background 160ms ease-out,transform 120ms ease-out}.button:active{transform:translateY(1px);background:var(--surface-3)}.button-primary{background:var(--accent-solid);border-color:var(--accent-solid);color:var(--on-accent)}.button-primary:active{background:var(--accent-solid)}.button-danger{color:var(--negative-text)}.button-quiet{border-color:transparent;background:transparent}.icon-button{width:44px;padding:0;flex-shrink:0}.empty-state{padding:32px 4px 36px;border-top:1px solid var(--border-default);border-bottom:1px solid var(--border-default)}.empty-icon{color:var(--text-secondary);margin-bottom:20px}.empty-state h2{margin-bottom:8px;max-width:340px}.empty-state p{max-width:360px}.empty-action{margin-top:24px}.information{display:flex;gap:10px;align-items:flex-start;margin-top:24px;padding:0 4px;color:var(--text-meta)}.information svg{margin-top:2px;flex-shrink:0}.information p{color:var(--text-meta);font-size:11px;line-height:16px}.tabs{position:fixed;bottom:0;left:0;width:100%;border-top:1px solid var(--border-default);background:var(--surface-1);padding:8px 12px calc(8px + env(safe-area-inset-bottom));z-index:10}.tabs-inner{max-width:600px;margin:auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:44px;min-height:56px;font-size:11px;line-height:16px;font-weight:500;border:0;background:transparent;color:var(--text-meta);border-radius:6px}.tab-icon{height:24px;display:grid;place-items:center}.tab[aria-current=page]{color:var(--text-primary);background:var(--surface-2)}.tab[aria-current=page] .tab-icon{color:var(--accent-text)}.tab-quick .tab-icon{height:28px;width:38px;border:1px solid var(--border-control);border-radius:6px;background:var(--surface-2);color:var(--text-primary)}.sheet{position:fixed;inset:auto 0 0;max-width:600px;width:100%;max-height:90dvh;margin:0 auto;padding:0;border:1px solid var(--border-default);border-bottom:0;border-radius:16px 16px 0 0;background:var(--surface-1);color:var(--text-primary);overflow:auto;animation:sheet-enter 160ms ease-out}.sheet::backdrop{background:oklch(0% 0 0 / .65)}.sheet-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border-subtle);position:sticky;top:0;background:var(--surface-1);z-index:1}.sheet-header h2{font-size:20px;line-height:26px}.sheet-content{padding:20px 20px calc(24px + env(safe-area-inset-bottom))}.stack{display:flex;flex-direction:column;gap:16px}.input-label{display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:20px}.form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}.error{color:var(--negative-text);font-size:13px;line-height:20px;border-left:2px solid var(--negative-text);padding-left:12px}.notice{padding:12px 0;border-bottom:1px solid var(--border-subtle);font-size:11px;line-height:16px;color:var(--text-meta)}.theme-choices{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.theme-choices .button[aria-pressed=true]{border-color:var(--accent-text);color:var(--accent-text);background:var(--surface-2)}.settings-section{padding:24px 0;border-top:1px solid var(--border-default)}.settings-section h2{font-size:15px;line-height:22px;margin-bottom:6px}.full-width{width:100%}.action-list{display:flex;flex-direction:column;margin-top:12px}.action-list .button{justify-content:flex-start;border:0;border-radius:0;border-bottom:1px solid var(--border-subtle);padding:14px 0;background:transparent;min-height:52px}.action-list .button:last-child{border-bottom:0}.toast{position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));left:20px;right:20px;max-width:560px;margin:auto;padding:4px 8px 4px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border-control);border-radius:10px;background:var(--surface-3);color:var(--text-primary);font-size:13px;line-height:20px;z-index:30}.lock-screen{max-width:440px;min-height:100dvh;margin:auto;padding:calc(56px + env(safe-area-inset-top)) 20px 36px;display:flex;flex-direction:column}.lock-screen .brand{margin-bottom:56px}.lock-screen h1{margin-bottom:12px}.lock-screen form{margin-top:28px}.lock-footer{margin-top:auto;padding-top:48px}.lock-screen input{font-size:20px;letter-spacing:6px}.account-summary{display:flex;align-items:center;gap:12px}.account-symbol{display:grid;place-items:center;width:36px;height:36px;background:var(--surface-2);border:1px solid var(--border-default);border-radius:6px}.list-heading{display:flex;justify-content:space-between;align-items:center;margin-top:24px}.list-heading h2{font-size:15px;line-height:22px}.skeleton{display:flex;flex-direction:column;gap:12px;padding:20px 0}.skeleton span{display:block;height:16px;width:80%;background:var(--surface-3);border-radius:4px}.skeleton span:last-child{width:55%}.kitchen-section{padding:24px 0;border-bottom:1px solid var(--border-default)}.kitchen-section h2{margin-bottom:16px}.kitchen-buttons{display:flex;gap:8px;flex-wrap:wrap}.session-obscured #root{visibility:hidden}.session-obscured:after{content:'Kairos is locked';position:fixed;inset:0;display:grid;place-items:center;background:var(--surface-0);color:var(--text-secondary);font-size:15px}.check-row{display:flex;align-items:center;gap:12px;min-height:44px;font-size:13px;line-height:20px}.check-row input{flex-shrink:0}.split-field{display:grid;grid-template-columns:1fr 1fr;gap:12px}@keyframes sheet-enter{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}@media(min-width:700px){.app{padding-top:16px}.brand-bar{height:80px}.screen-header{padding:36px 0 28px}.empty-state{padding:40px 4px 44px}.sheet{bottom:24px;border-bottom:1px solid var(--border-default);border-radius:16px}.tabs{padding-top:10px;padding-bottom:10px}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}@media(max-width:340px){.privacy-status span{display:none}.app{padding-left:16px;padding-right:16px}.row{gap:8px}.row-trailing{max-width:55%}.split-field{grid-template-columns:1fr}}
+*{box-sizing:border-box}html{font-family:'Inter Variable',Inter,sans-serif;font-size:16px;background:var(--surface-0);color:var(--text-primary);font-variant-numeric:tabular-nums}body{min-width:280px}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.6}button,a,input,select,textarea{touch-action:manipulation}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent-text);outline-offset:3px}button svg{flex-shrink:0}h1,h2,h3,p{margin:0}h1{font-size:28px;line-height:34px;font-weight:600;letter-spacing:-.8px}h2{font-size:20px;line-height:26px;font-weight:600;letter-spacing:-.4px}h3{font-size:15px;line-height:22px;font-weight:500}p{font-size:13px;line-height:20px;color:var(--text-secondary)}a{color:var(--accent-text)}svg{vertical-align:middle}button{color:inherit}input,select,textarea{min-width:0;width:100%;min-height:44px;border:1px solid var(--border-control);border-radius:6px;padding:10px 12px;background:var(--surface-2);color:var(--text-primary);font-size:13px;line-height:20px}input::placeholder{color:var(--text-meta)}input[type=checkbox]{width:20px;min-height:20px;accent-color:var(--accent)}.app{max-width:600px;margin:0 auto;padding:env(safe-area-inset-top) 20px calc(108px + env(safe-area-inset-bottom));min-height:100dvh}.brand-bar{height:72px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-subtle);font-size:15px;font-weight:500;letter-spacing:-.3px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--border-default);border-radius:6px;background:var(--surface-2)}.privacy-status{display:flex;align-items:center;gap:6px;font-size:11px;line-height:16px;color:var(--text-meta);font-weight:400;letter-spacing:0}.screen-header{padding:20px 0 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.screen-header p{margin-top:6px}.surface{border:1px solid var(--border-default);border-radius:10px;background:var(--surface-1);padding:16px}.section-gap{margin-top:24px}.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--border-subtle);min-height:56px;font-size:13px;line-height:20px}.row:last-child{border-bottom:0}.row-trailing{text-align:right;flex-shrink:0;max-width:50%}.row p{font-size:11px;line-height:16px;color:var(--text-meta);margin-top:3px}.row-actions{display:flex;align-items:center;gap:8px}.amount{font-size:15px;line-height:22px;font-weight:600;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.hero-amount{display:block;font-size:40px;line-height:44px;font-weight:600;letter-spacing:-1.3px}.label{font-size:13px;line-height:20px;color:var(--text-secondary)}.muted,.meta{font-size:11px;line-height:16px;color:var(--text-meta)}.button{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--border-control);border-radius:6px;background:var(--surface-2);padding:10px 14px;font-size:13px;line-height:20px;font-weight:500;}.button:active{background:var(--surface-3)}.button-primary{background:transparent;border-color:var(--accent-text);color:var(--accent-text);font-weight:500}.button-primary:active{background:var(--surface-2)}.button-danger{color:var(--negative-text)}.button-quiet{border-color:transparent;background:transparent}.icon-button{width:44px;padding:0;flex-shrink:0}.empty-state{padding:32px 4px 36px;border-top:1px solid var(--border-default);border-bottom:1px solid var(--border-default)}.empty-icon{color:var(--text-secondary);margin-bottom:20px}.empty-state h2{margin-bottom:8px;max-width:340px}.empty-state p{max-width:360px}.empty-action{margin-top:24px}.information{display:flex;gap:10px;align-items:flex-start;margin-top:24px;padding:0 4px;color:var(--text-meta)}.information svg{margin-top:2px;flex-shrink:0}.information p{color:var(--text-meta);font-size:11px;line-height:16px}.tabs{position:fixed;bottom:0;left:0;width:100%;border-top:1px solid var(--border-default);background:var(--surface-1);padding:8px 12px calc(8px + env(safe-area-inset-bottom));z-index:10}.tabs-inner{max-width:600px;margin:auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:44px;min-height:56px;font-size:11px;line-height:16px;font-weight:500;border:0;background:transparent;color:var(--text-meta);border-radius:6px}.tab-icon{height:24px;display:grid;place-items:center}.tab[aria-current=page]{color:var(--text-primary);background:var(--surface-2)}.tab[aria-current=page] .tab-icon{color:var(--accent-text)}.tab-quick .tab-icon{height:28px;width:38px;border:1px solid var(--border-control);border-radius:6px;background:var(--surface-2);color:var(--text-primary)}.sheet{position:fixed;inset:auto 0 0;max-width:600px;width:100%;max-height:90dvh;margin:0 auto;padding:0;border:1px solid var(--border-default);border-bottom:0;border-radius:16px 16px 0 0;background:var(--surface-1);color:var(--text-primary);overflow:auto;}.sheet::backdrop{background:oklch(0% 0 0 / .65)}.sheet-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border-subtle);position:sticky;top:0;background:var(--surface-1);z-index:1}.sheet-header h2{font-size:20px;line-height:26px}.sheet-content{padding:20px 20px calc(24px + env(safe-area-inset-bottom))}.stack{display:flex;flex-direction:column;gap:16px}.input-label{display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:20px}.form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}.error{color:var(--negative-text);font-size:13px;line-height:20px;border-left:2px solid var(--negative-text);padding-left:12px}.notice{padding:12px 0;border-bottom:1px solid var(--border-subtle);font-size:11px;line-height:16px;color:var(--text-meta)}.theme-choices{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.button[aria-pressed=true]{border-color:var(--accent-text);color:var(--accent-text);background:var(--surface-2)}.settings-section{padding:24px 0;border-top:1px solid var(--border-default)}.settings-section h2{font-size:15px;line-height:22px;margin-bottom:6px}.full-width{width:100%}.action-list{display:flex;flex-direction:column;margin-top:12px}.action-list .button{justify-content:flex-start;border:0;border-radius:0;border-bottom:1px solid var(--border-subtle);padding:14px 0;background:transparent;min-height:52px}.action-list .button:last-child{border-bottom:0}.toast{position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));left:20px;right:20px;max-width:560px;margin:auto;padding:4px 8px 4px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border-control);border-radius:10px;background:var(--surface-3);color:var(--text-primary);font-size:13px;line-height:20px;z-index:30}.lock-screen{max-width:440px;min-height:100dvh;margin:auto;padding:calc(56px + env(safe-area-inset-top)) 20px 36px;display:flex;flex-direction:column}.lock-screen .brand{margin-bottom:56px}.lock-screen h1{margin-bottom:12px}.lock-screen form{margin-top:28px}.lock-footer{margin-top:auto;padding-top:48px}.lock-screen input{font-size:20px;letter-spacing:6px}.account-summary{display:flex;align-items:center;gap:12px}.account-symbol{display:grid;place-items:center;width:36px;height:36px;background:var(--surface-2);border:1px solid var(--border-default);border-radius:6px}.list-heading{display:flex;justify-content:space-between;align-items:center;margin-top:24px}.list-heading h2{font-size:15px;line-height:22px}.skeleton{display:flex;flex-direction:column;gap:12px;padding:20px 0}.skeleton span{display:block;height:16px;width:80%;background:var(--surface-3);border-radius:4px}.skeleton span:last-child{width:55%}.kitchen-section{padding:24px 0;border-bottom:1px solid var(--border-default)}.kitchen-section h2{margin-bottom:16px}.kitchen-buttons{display:flex;gap:8px;flex-wrap:wrap}.session-obscured #root{visibility:hidden}.session-obscured:after{content:'Kairos is locked';position:fixed;inset:0;display:grid;place-items:center;background:var(--surface-0);color:var(--text-secondary);font-size:15px}.check-row{display:flex;align-items:center;gap:12px;min-height:44px;font-size:13px;line-height:20px}.check-row input{flex-shrink:0}.split-field{display:grid;grid-template-columns:1fr 1fr;gap:12px}@keyframes sheet-enter{from{transform:translateY(32px);opacity:0}to{transform:translateY(0);opacity:1}}@media(min-width:700px){.app{padding-top:16px}.brand-bar{height:80px}.screen-header{padding:26px 0 20px}.empty-state{padding:40px 4px 44px}.sheet{bottom:24px;border-bottom:1px solid var(--border-default);border-radius:16px}.tabs{padding-top:10px;padding-bottom:10px}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}@media(max-width:340px){.privacy-status span{display:none}.app{padding-left:16px;padding-right:16px}.row{gap:8px}.row-trailing{max-width:55%}.split-field{grid-template-columns:1fr}}
 
 .import-workspace { margin-top: 24px; }
 .transaction-row { width: 100%; min-height: 56px; display: flex; gap: 16px; justify-content: space-between; align-items: center; background: transparent; color: var(--text-primary); border: 0; border-bottom: 1px solid var(--border-subtle); padding: 12px 0; text-align: left; cursor: pointer; }
@@ -17,3 +17,675 @@ details > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
 .data-grid-scroll{max-width:100%;overflow:auto}.data-grid{border-collapse:collapse;width:100%;font-size:13px;line-height:20px;font-variant-numeric:tabular-nums}.data-grid th,.data-grid td{border-bottom:1px solid var(--border-subtle);padding:10px 12px;text-align:left;min-width:120px}.data-grid th{font-weight:500;background:var(--surface-2)}.data-grid td.amount{text-align:right}.surface-muted{background:var(--surface-1);color:var(--text-secondary)}.surface-muted h2{color:var(--text-secondary)}.export-range{user-select:all;overflow-wrap:anywhere}.drop-surface{border:1px dashed var(--border-control);padding:16px;background:var(--surface-1)}
 
 .brand-mark{overflow:hidden}.brand-mark img{display:block;width:100%;height:100%;object-fit:cover}
+
+.import-progress { display:flex; align-items:center; gap:12px; padding:16px; border:1px solid var(--border-default); border-radius:10px; background:var(--surface-1); }
+.money-visuals svg { display:block; width:100%; overflow:visible; }
+.money-visuals .fingerprint { max-width:280px; align-self:center; }
+.recovery-groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(5ch,1fr)); gap:8px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.recovery-groups span { border:1px solid var(--border-default); padding:8px; text-align:center; }
+.import-progress-mark { width:40px; height:40px; flex:none; fill:none; stroke:var(--text-secondary); stroke-width:1; }
+.import-progress-line { stroke:var(--accent); animation:import-ledger-read 1.2s var(--ease-out) infinite; }
+.import-progress-line:nth-of-type(2) { animation-delay:160ms; }
+.import-progress-line:nth-of-type(3) { animation-delay:320ms; }
+@keyframes import-ledger-read { 0%,100% { opacity:.3; } 40%,65% { opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .import-progress-line { animation:none; opacity:1; } }
+
+textarea{resize:vertical;min-height:88px}.cancellation-records .row>div:first-child{min-width:0;overflow-wrap:anywhere}.cancellation-records .button{overflow-wrap:anywhere;white-space:normal}
+
+.spending-bar{height:10px;background:var(--surface-2);border-radius:4px;overflow:hidden}.spending-bar span{display:block;height:100%;background:var(--accent)}.spending-patterns .row>div:first-child{min-width:0;overflow-wrap:anywhere}.spending-patterns .button{overflow-wrap:anywhere;white-space:normal}
+
+/* Disclosure rows read as a control, not a video player.
+   The native marker is a filled triangle that looks like Play; these are things that open, so they get a
+   chevron and a target big enough to press without aiming. */
+details > summary { list-style: none; cursor: pointer; padding: 12px 0; display: flex; align-items: center; gap: 10px; min-height: 44px; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before {
+  content: ""; width: 9px; height: 9px; flex: none; margin-left: 2px;
+  border-right: 2px solid var(--text-secondary); border-bottom: 2px solid var(--text-secondary);
+  transform: rotate(-45deg); transition: transform var(--motion-tap) var(--ease-out);
+}
+details[open] > summary::before { transform: rotate(45deg); }
+
+/* Spending calendar — a month of days as one shape.
+   Cells are square, gapped by 2px of surface so adjacent days read as separate marks rather than a block,
+   and sized to stay a real touch target on a phone. */
+.calendar-head { text-align: center; }
+.calendar-nav { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; }
+.calendar-head h3 { margin: 0; }
+.calendar-head .hero-amount { margin-top: 4px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.calendar-weekday { text-align: center; font-size: 12px; color: var(--text-tertiary); padding-bottom: 4px; }
+.calendar-pad { aspect-ratio: 1; }
+.calendar-day {
+  aspect-ratio: 1; min-height: 40px; border: 1px solid var(--border-subtle); border-radius: 6px;
+  background: transparent; color: var(--text-tertiary); font-size: 12px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.calendar-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.calendar-day.level-1 { background: var(--heat-1); color: var(--heat-ink-1); }
+.calendar-day.level-2 { background: var(--heat-2); color: var(--heat-ink-2); }
+.calendar-day.level-3 { background: var(--heat-3); color: var(--heat-ink-3); }
+.calendar-day.level-4 { background: var(--heat-4); color: var(--heat-ink-4); }
+.calendar-day.level-5 { background: var(--heat-5); color: var(--heat-ink-5); }
+.calendar-legend { display: flex; align-items: center; gap: 6px; }
+.calendar-key { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border-subtle); }
+.calendar-key.level-1 { background: var(--heat-1); } .calendar-key.level-2 { background: var(--heat-2); }
+.calendar-key.level-3 { background: var(--heat-3); } .calendar-key.level-4 { background: var(--heat-4); }
+.calendar-key.level-5 { background: var(--heat-5); }
+.calendar-table { width: 100%; border-collapse: collapse; }
+.calendar-table th, .calendar-table td { text-align: left; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-weight: 400; }
+.calendar-table td { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* A single in-flight action gets a spinner sized to the text beside it, centred over the region it blocks.
+   Respects reduced motion by holding still rather than spinning. */
+/* Named "overlay" and positioned like a paragraph: it had no position at all, so it rendered inline at
+   the bottom of whatever it was inside. Fixed to the viewport, not absolute inside the sheet — the sheet
+   scrolls, and an absolute child would centre itself in the middle of the scrolled content. */
+.busy-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+  padding: 32px; background: oklch(0% 0 0 / .65); }
+.busy-card { display: grid; justify-items: center; gap: 14px; padding: 28px 32px; text-align: center;
+  border: 1px solid var(--border-default); border-radius: 14px; background: var(--surface-1);
+  color: var(--text-primary); max-width: 300px; }
+.busy-card p { color: var(--text-primary); }
+.kairos-mark { display: block; color: var(--accent-text); }
+.kairos-mark path { fill: currentColor; }
+/* The step sweeps; the disc never breaks. Both halves ride the same transform, so what changes is where
+   the staircase between them sits, not how much disc there is. */
+@keyframes kairos-step { 0%, 100% { transform: translateX(-9px); } 50% { transform: translateX(9px); } }
+.kairos-halves-moving { animation: kairos-step 1800ms var(--ease-in-out) infinite; }
+@media (prefers-reduced-motion: reduce) { .kairos-halves-moving { animation: none; } }
+@media (forced-colors: active) { .kairos-mark path { fill: CanvasText; } }
+.spinner { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border-default);
+  border-top-color: var(--accent); animation: spin 700ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; border-top-color: var(--text-secondary); } }
+
+/* Money movement: two bars on one scale, and the gap between their ends drawn as the answer. */
+.flow, .balance { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.flow figcaption h3, .balance figcaption h3 { margin-bottom: 4px; }
+.flow-track { display: flex; flex-direction: column; gap: 10px; }
+.flow-line { display: grid; grid-template-columns: 10px 72px 1fr auto; align-items: center; gap: 8px; }
+.flow-key { width: 10px; height: 10px; border-radius: 3px; }
+.flow-key-in { background: var(--flow-in); }
+.flow-key-out { background: var(--flow-out); }
+.flow-name { font-size: 11px; line-height: 16px; color: var(--text-secondary); }
+.flow-bar { position: relative; height: 14px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.flow-fill { position: absolute; inset-block: 0; inset-inline-start: 0; border-radius: 4px; min-width: 2px; }
+.flow-fill-in { background: var(--flow-in-fill); }
+.flow-fill-out { background: var(--flow-out-fill); }
+.flow-gap-line .flow-bar { background: transparent; }
+.flow-gap { position: absolute; inset-block: 3px; border-radius: 3px; min-width: 2px;
+  border: 1px dashed var(--text-tertiary); background: transparent; }
+.flow-gap-short { border-style: solid; border-color: var(--negative-text); }
+.flow-line .amount { font-size: 13px; line-height: 20px; }
+
+/* What each month left: one column per month, growing out of a shared zero line. */
+.balance-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 11px; line-height: 16px; color: var(--text-secondary); }
+.balance-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.balance-plot { position: relative; display: flex; justify-content: center; gap: 2px; height: 148px; padding-bottom: 20px; }
+.balance-zero { position: absolute; inset-inline: 0; height: 1px; background: var(--border-control); }
+.balance-column { position: relative; flex: 1 1 0; min-width: 0; max-width: 76px; min-height: 44px; border: 0; background: transparent; padding: 0; border-radius: 6px; overflow: visible; }
+.balance-column:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.balance-bar { position: absolute; inset-inline: 3px; min-height: 3px; }
+.balance-bar-kept { background: var(--flow-in-fill); border-radius: 4px 4px 0 0; }
+.balance-bar-short { background: var(--flow-out-fill); border-radius: 0 0 4px 4px; }
+.balance-tick { position: absolute; inset-inline: 0; bottom: -20px; font-size: 11px; line-height: 16px; text-align: center;
+  color: var(--text-meta); font-variant-numeric: tabular-nums; }
+/* The selected month is marked under the axis, never inside the plot. An outline around the whole column
+   straddles the zero line, and in a chart whose language is "above the line stayed, below it went out" a
+   drawn region below the line reads as an amount — so the affordance contradicted the data it sat on. */
+.balance-column[aria-pressed=true] .balance-tick { color: var(--text-primary); }
+.balance-column[aria-pressed=true] .balance-tick::after { content: ''; display: block; width: 20px;
+  height: 2px; margin: 2px auto 0; border-radius: 1px; background: var(--accent-text); }
+.balance-readout { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center;
+  font-size: 12px; line-height: 18px; color: var(--text-secondary); }
+.balance-readout span { display: inline-flex; align-items: center; gap: 6px; }
+.balance-readout strong { color: var(--text-primary); font-weight: 500; }
+@media (forced-colors: active) {
+  .flow-fill, .flow-key, .balance-bar { forced-color-adjust: none; }
+}
+@media (max-width: 340px) {
+  .flow-line { grid-template-columns: 10px 1fr auto; }
+  .flow-line .flow-bar { grid-column: 1 / -1; }
+}
+
+/* The last fortnight, so today's figure has something to be big or small against. */
+.strip { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.strip-plot { display: flex; gap: 2px; align-items: flex-end; height: 110px; padding-bottom: 20px; }
+.strip-column { position: relative; flex: 1 1 0; min-width: 0; height: 100%; display: flex; align-items: flex-end; }
+.strip-column[data-today] .strip-bar { background: var(--flow-out); }
+.strip-bar { flex: 1 1 auto; margin: 0 1px; min-height: 3px; border-radius: 4px 4px 0 0; background: var(--heat-3); }
+.strip-tick { position: absolute; inset-inline: 0; bottom: -20px; font-size: 11px; line-height: 16px;
+  color: var(--text-meta); text-align: center; }
+.strip-column[data-today] .strip-tick { color: var(--text-primary); font-weight: 600; }
+/* Same idiom as the month chart: today is marked under the axis, never by altering the bar's own shape. */
+.strip-column[data-today] .strip-tick::after { content: ''; display: block; width: 16px; height: 2px;
+  margin: 2px auto 0; border-radius: 1px; background: var(--accent-text); }
+.balance-pager { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; text-align: center; }
+/* A table may be wider than the phone; the page may not. Each one scrolls inside its own box. */
+.table-scroll { overflow-x: auto; }
+
+/* One notification awaiting an answer. Stacked rather than laid out in a row, so the two answers keep a
+   full-width 44px target at any text size instead of being squeezed beside the amount. */
+.notice-card { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
+.notice-card:last-of-type { border-bottom: 0; }
+.notice-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.notice-head strong { font-size: 13px; line-height: 20px; font-weight: 500; overflow-wrap: anywhere; }
+.notice-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+
+/* Spending by kind. Area is the amount; shade repeats it, on the same blue ramp the calendar uses. */
+.split { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.split figcaption h3 { margin-bottom: 4px; }
+.split-plot { width: 100%; height: auto; display: block; border-radius: 8px; overflow: hidden; }
+.split-tile { stroke: var(--surface-1); stroke-width: 3; }
+.split-tile.level-1 { fill: var(--tile-1); } .split-tile.level-2 { fill: var(--tile-2); }
+.split-tile.level-3 { fill: var(--tile-3); } .split-tile.level-4 { fill: var(--tile-4); }
+.split-tile.level-5 { fill: var(--tile-5); }
+.split-label { font-size: 30px; fill: var(--tile-ink); }
+.split-name { min-height: 44px; border: 0; background: transparent; padding: 0; color: var(--accent-text);
+  font: inherit; text-align: left; overflow-wrap: anywhere; }
+.split-name:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+
+/* Four descriptive axes, as positions on a track. Never filled from the left: a filled bar reads as a
+   score out of a hundred, and these describe a pattern rather than rank anybody. */
+.axes { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.axes-grid { display: flex; flex-direction: column; gap: 10px; }
+.axis-row { display: grid; grid-template-columns: 80px 1fr 56px; align-items: center; gap: 10px; }
+.axis-name { font-size: 12px; line-height: 18px; color: var(--text-secondary); }
+.axis-track { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2);
+  border: 1px solid var(--border-subtle); }
+.axis-mark { position: absolute; top: 50%; width: 10px; height: 10px; margin-inline-start: -5px;
+  transform: translateY(-50%); border-radius: 50%; background: var(--flow-out);
+  box-shadow: 0 0 0 2px var(--surface-1); }
+.axis-value { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 340px) { .axis-row { grid-template-columns: 68px 1fr 48px; } }
+
+/* Consecutive paragraphs in a settings block had nothing between them, because the reset zeroes p margins
+   and this container is not a flex stack. The notification disclosure is two paragraphs — what the app
+   reads, and what granting the access actually costs — and they ran together as one eight-line wall, on
+   the most consequential text in the app. */
+.settings-section p + p { margin-top: 10px; }
+
+/* The number that ties each fingerprint spoke to its row underneath. Set outside the outer ring so it
+   never sits on a drawn edge, and in meta ink so the shape stays the thing being read. */
+.fingerprint-index { font-size: 11px; fill: var(--text-meta); }
+
+/* The pressed rule above used to be scoped to .theme-choices, so of the eight aria-pressed toggles in the
+   app only the theme picker showed which option was chosen. The Add Transaction sheet's "Today" and
+   category chips, the notification kinds, the refund selection and the cancellation dates all announced
+   their state to a screen reader and showed a sighted person nothing at all. Same declarations, applied
+   wherever the Button primitive is a toggle. Not .balance-column: that is a raw button, and its selected
+   month is marked under the axis instead — an outline there would read as data. */
+
+/* Which account a captured notification will hit, shown on the row itself rather than once for the whole
+   sheet. Tighter than a form field: it is an answer the app has already worked out, offered for
+   correction, not a question the person has to fill in. */
+.notice-account { margin-top: 10px; font-size: 11px; line-height: 16px; color: var(--text-meta); }
+
+/* The (i) beside a heading. A 44px target as every control must be, drawn as a small mark so a screen
+   carrying several of them still reads as money rather than as a form. Sits on the text baseline of the
+   heading it belongs to, and never takes the heading's own space: headings that hold one become a flex
+   row so the rule is the heading, not the button. */
+.explain { width: 44px; height: 44px; margin: -14px -12px; padding: 0; flex-shrink: 0;
+  display: inline-grid; place-items: center; border: 0; background: transparent;
+  color: var(--text-meta); border-radius: 50%; vertical-align: middle; }
+.explain:active { color: var(--text-primary); }
+.heading-row { display: flex; align-items: center; gap: 2px; }
+.heading-row h2, .heading-row h3 { flex: 0 1 auto; }
+
+/* A one-word claim the app is making about a row, where a sentence used to sit. */
+.tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--surface-3);
+  color: var(--text-secondary); font-size: 11px; line-height: 16px; font-weight: 500; }
+/* The one account money defaults to. Same pill, same surface — only the ink changes, to the accent the
+   theme already validates for text, so it reads as a live status rather than as another note. No new
+   colour enters the app for it. */
+.tag-primary { color: var(--accent-text); }
+/* Currency, mask and status on one line, so a tag never crowds the text beside it. */
+.account-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+/* The category mark at the head of a transaction row. One neutral chip, one line glyph, in the ink the
+   rest of the screen already uses — the icon carries the identity, so no colour is spent on it. Colour in
+   this app means an amount, and a list of tinted chips would compete with the one place it means something.
+   The unknown mark is dimmer again: a row the app cannot read should not be the loudest thing in the list. */
+.category-mark { flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; display: grid;
+  place-items: center; background: var(--surface-2); border: 1px solid var(--border-subtle);
+  color: var(--text-secondary); }
+.category-mark[data-kind="unknown"] { color: var(--text-tertiary); }
+/* The mark sits beside the row's text, so the row becomes icon + text + amount. */
+.transaction-row { gap: 12px; }
+.transaction-row > .row-lead { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+.transaction-row > .row-lead > span { min-width: 0; overflow-wrap: anywhere; }
+
+/* The notice card's head carries the same mark as a ledger row, so a purchase looks the same wherever
+   it is being read. Baseline alignment is wrong here: the mark is a block, not a word. */
+.notice-head .row-lead { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.notice-head .row-lead strong { min-width: 0; overflow-wrap: anywhere; }
+
+/* The four answers the thirty-six measures add up to. Cards rather than rows, because each one is a
+   finding to be looked at rather than a line to be read down; two to a row on a phone so the block reads
+   as a shape. Pressable ones carry the evidence behind them and are 44px by construction. */
+.answers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.answer-card { display: flex; flex-direction: column; gap: 4px; min-height: 84px; padding: 12px;
+  text-align: left; border: 1px solid var(--border-subtle); border-radius: 10px;
+  background: var(--surface-1); color: var(--text-primary); }
+.answer-question { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+.answer-value { font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -.3px;
+  overflow-wrap: anywhere; }
+@media (max-width: 340px) { .answers { grid-template-columns: 1fr; } }
+
+/* The four figures the home screen leads with. Same tile language as the answer cards on Analysis — one
+   surface, one hairline, one radius — because they are siblings rather than two separate design ideas. */
+.money-band { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.band-tile { display: flex; flex-direction: column; gap: 3px; min-height: 104px; padding: 12px;
+  border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-1); }
+.band-label { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+.band-figure { font-size: 19px; line-height: 26px; font-weight: 600; letter-spacing: -.4px;
+  color: var(--text-primary); overflow-wrap: anywhere; }
+/* The change and the account count sit in the same slot and read the same: a quiet second line, never a
+   verdict. No colour on either — the arrow says the direction, and whether that direction is good depends
+   on which tile it is under. */
+.band-note { display: flex; align-items: center; gap: 3px; font-size: 11px; line-height: 16px;
+  color: var(--text-secondary); overflow-wrap: anywhere; }
+.band-note svg { flex-shrink: 0; }
+/* Pushed to the floor of the tile so every shape shares a baseline across the row. */
+.band-spark { margin-top: auto; width: 100%; height: 26px; display: block; overflow: visible; }
+/* A line and nothing else. The usual version washes the area under it in the series colour, and here that
+   broke the one thing the palette is for: copper sits lighter than blue at the same opacity, so an
+   identical fill made money arriving look louder than money leaving. The stroke is the data; the wash was
+   only ever decoration, and decoration that says something false is worse than none. */
+.band-spark-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.band-spark-in { stroke: var(--flow-in); }
+.band-spark-out { stroke: var(--flow-out); }
+@media (forced-colors: active) { .band-spark-line { stroke: CanvasText; } }
+@media (max-width: 340px) { .money-band { grid-template-columns: 1fr; } }
+
+/* A finding, stated. Replaces a chart someone had to read in order to arrive at the one line it was
+   drawing — which weekday costs most. The shape of the other six days was never the question. */
+.fact { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%;
+  padding: 14px 16px; text-align: left; border: 1px solid var(--border-subtle); border-radius: 10px;
+  background: var(--surface-1); color: var(--text-primary); min-height: 56px; }
+.fact-line { font-size: 13px; line-height: 20px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.fact-line strong { color: var(--text-primary); font-weight: 600; }
+.fact-value { font-size: 15px; line-height: 22px; font-weight: 600; white-space: nowrap;
+  font-variant-numeric: tabular-nums; }
+
+/* Where the month went, as one thin ring. Slices are steps of the single blue ramp, largest first, so
+   ordering carries magnitude and the legend carries identity — colour never has to do both. */
+.ring { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.ring-body { display: flex; align-items: center; gap: 16px; }
+.ring-plot { width: 124px; height: 124px; flex-shrink: 0; transform: rotate(-90deg); }
+/* Thin, because the ring is not the subject — the proportion is. A fat donut invites comparing areas,
+   which nobody does accurately; a hairline reads as share. */
+.ring-arc { fill: none; stroke-width: 5; stroke-linecap: butt; }
+/* The heat ramp rather than the tile ramp: same single hue, but it spans 31%–71% lightness instead of
+   30%–55%, and the first version lost its three smallest slices into the background. This ramp already
+   means magnitude everywhere else in the app, which is exactly what a slice size is. */
+.ring-arc[data-slice="0"], .ring-key[data-slice="0"] { stroke: var(--heat-5); background: var(--heat-5); }
+.ring-arc[data-slice="1"], .ring-key[data-slice="1"] { stroke: var(--heat-4); background: var(--heat-4); }
+.ring-arc[data-slice="2"], .ring-key[data-slice="2"] { stroke: var(--heat-3); background: var(--heat-3); }
+.ring-arc[data-slice="3"], .ring-key[data-slice="3"] { stroke: var(--heat-2); background: var(--heat-2); }
+.ring-arc[data-slice="4"], .ring-key[data-slice="4"] { stroke: var(--heat-1); background: var(--heat-1); }
+.ring-arc[data-slice="5"], .ring-key[data-slice="5"] { stroke: var(--border-control); background: var(--border-control); }
+.ring-legend { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 6px; }
+.ring-legend li { display: flex; align-items: baseline; gap: 8px; font-size: 12px; line-height: 18px; }
+.ring-key { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.ring-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--text-secondary); }
+.ring-legend .amount { font-size: 12px; line-height: 18px; }
+@media (forced-colors: active) { .ring-arc { stroke: CanvasText; } }
+@media (max-width: 340px) { .ring-body { flex-direction: column; align-items: stretch; }
+  .ring-plot { align-self: center; } }
+
+/* Confirm was the last thing in a sheet holding forty rows, so reaching it meant scrolling past all of
+   them. The sheet is its own scroll container, so sticky pins to its visible bottom edge with no
+   JavaScript — and this bar takes over the safe-area padding the content used to carry, or it floats
+   over the gesture bar. */
+.sheet-actions { position: sticky; bottom: 0; z-index: 2; margin-top: 16px;
+  padding: 12px 0 calc(4px + env(safe-area-inset-bottom));
+  background: var(--surface-1); border-top: 1px solid var(--border-subtle); }
+
+/* One chart, a lane per recurring merchant, sharing one axis and one scale. The lane numbers are drawn in
+   the plot because these labels are bank strings sixty characters long; the list underneath ties each
+   number to its merchant. */
+.timeline { width: 100%; height: auto; display: block; }
+.timeline-index { fill: var(--text-meta); font-size: 30px; text-anchor: middle; }
+
+/* An account row opens. It was a caption with an amount beside it, which is the one thing on the Ledger
+   a person most expects to press. */
+.account-open { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; min-height: 44px; padding: 0; border: 0; background: transparent; color: inherit;
+  text-align: left; }
+.account-open .account-summary { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.account-open h3 { overflow-wrap: anywhere; }
+.account-open svg:last-child { color: var(--text-meta); flex-shrink: 0; }
+.account-open:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; border-radius: 6px; }
+
+/* What every account comes to, once they are not all in one currency. */
+.combined-total { align-items: flex-start; padding-top: 14px; border-top: 1px solid var(--border-default); }
+.combined-total .amount { font-size: 17px; line-height: 24px; }
+
+/* ────────────────────────────────────────────────────────────────────────────────────────────────
+   MOTION
+
+   One vocabulary, so the app moves like one thing. Every duration and every curve below is a token;
+   nothing hard-codes a number. That is what makes a tab change, a sheet, a toast and a button press
+   feel related instead of four people's ideas of 200ms.
+
+   THE RULE FOR HOW FAR THINGS TRAVEL: the same distance, always (--motion-rise). Movement says
+   "this is new", not "this is important" — size and colour already say that. A screen that flies in
+   from off the edge is a slideshow; ten pixels is a breath.
+
+   DIRECTION CARRIES MEANING. Moving right along the tab bar brings content in from the right, and
+   moving back brings it from the left, so the gesture and the picture agree. Content rises; it never
+   falls, because falling reads as dismissal.
+
+   Everything here is switched off wholesale by the prefers-reduced-motion block further up — it is a
+   blanket !important rule, and tests/motion.test.ts fails the build if it stops being one. Motion is
+   the first thing to become nausea for somebody, so that off switch is not negotiable. */
+:root {
+  --motion-tap: 90ms;      /* a press answering under the finger */
+  --motion-quick: 180ms;   /* a state change: colour, a tab becoming current */
+  --motion-settle: 260ms;  /* something arriving on screen */
+  --motion-sweep: 380ms;   /* the largest move the app makes — a sheet coming up */
+  --motion-rise: 10px;     /* how far anything ever travels while appearing */
+  --motion-slide: 16px;    /* how far a whole screen slides sideways */
+  --motion-stagger: 28ms;  /* between one section and the next */
+  --ease-out: cubic-bezier(.22, .68, .32, 1);      /* arriving: fast, then easing into place */
+  --ease-in-out: cubic-bezier(.45, .05, .25, 1);   /* moving between two states */
+  --ease-emphasis: cubic-bezier(.34, 1.16, .64, 1);/* a slight overshoot, for the few things that earn it */
+}
+
+html { scroll-behavior: smooth; }
+
+/* A tab change. The screen slides the way you travelled; its sections then rise in sequence. Two
+   different animations on two levels, because one element cannot both slide sideways and stagger. */
+.screen { animation: screen-slide var(--motion-settle) var(--ease-out) both; }
+.screen[data-direction="back"] { animation-name: screen-slide-back; }
+@keyframes screen-slide { from { transform: translateX(var(--motion-slide)); } to { transform: none; } }
+@keyframes screen-slide-back { from { transform: translateX(calc(-1 * var(--motion-slide))); } to { transform: none; } }
+
+/* The cascade. Capped at eight: past that the delay is longer than anyone waits, and the ninth
+   section arriving a quarter-second late reads as a stall rather than as choreography. */
+.screen > * { animation: rise-in var(--motion-settle) var(--ease-out) both; }
+.screen > *:nth-child(1) { animation-delay: 0ms; }
+.screen > *:nth-child(2) { animation-delay: calc(1 * var(--motion-stagger)); }
+.screen > *:nth-child(3) { animation-delay: calc(2 * var(--motion-stagger)); }
+.screen > *:nth-child(4) { animation-delay: calc(3 * var(--motion-stagger)); }
+.screen > *:nth-child(5) { animation-delay: calc(4 * var(--motion-stagger)); }
+.screen > *:nth-child(6) { animation-delay: calc(5 * var(--motion-stagger)); }
+.screen > *:nth-child(7) { animation-delay: calc(6 * var(--motion-stagger)); }
+.screen > *:nth-child(n+8) { animation-delay: calc(7 * var(--motion-stagger)); }
+@keyframes rise-in { from { opacity: 0; transform: translateY(var(--motion-rise)); } to { opacity: 1; transform: none; } }
+
+/* The tab bar. The pill, the icon and the rule under the label all move on the same token, so the
+   current tab changes as one gesture rather than three. */
+.tab { transition: background var(--motion-quick) var(--ease-out), color var(--motion-quick) var(--ease-out); }
+.tab .tab-icon { transition: transform var(--motion-quick) var(--ease-emphasis); }
+.tab[aria-current=page] .tab-icon { transform: translateY(-2px); }
+.tab::after { content: ''; display: block; width: 18px; height: 2px; border-radius: 1px;
+  background: var(--accent-text); opacity: 0; transform: scaleX(.3);
+  transition: transform var(--motion-quick) var(--ease-emphasis), opacity var(--motion-quick) var(--ease-out); }
+.tab[aria-current=page]::after { opacity: 1; transform: scaleX(1); }
+.tab:active .tab-icon { transform: scale(.92); }
+
+/* A press has to answer within a tenth of a second or the button feels broken, which is why the tap
+   token is the shortest one here and is the only thing using it. */
+.button { transition: background var(--motion-quick) var(--ease-out), border-color var(--motion-quick) var(--ease-out),
+  color var(--motion-quick) var(--ease-out), transform var(--motion-tap) var(--ease-out); }
+.button:active { transform: translateY(1px) scale(.985); }
+.account-open { transition: transform var(--motion-tap) var(--ease-out), opacity var(--motion-quick) var(--ease-out); }
+.account-open:active { transform: scale(.99); opacity: .75; }
+.row { transition: background var(--motion-quick) var(--ease-out); }
+
+/* A sheet is the biggest move the app makes, and the one place a little overshoot is earned: it is a
+   surface being pushed up from the bottom edge, and a surface with mass does not stop dead. */
+.sheet { animation: sheet-enter var(--motion-sweep) var(--ease-emphasis); }
+.sheet::backdrop { animation: fade-in var(--motion-quick) var(--ease-out); }
+.toast { animation: toast-enter var(--motion-settle) var(--ease-emphasis); }
+@keyframes toast-enter { from { opacity: 0; transform: translateY(var(--motion-rise)); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* An opened disclosure is new content arriving, so it arrives the same way everything else does. */
+details > summary { transition: color var(--motion-quick) var(--ease-out); }
+details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease-out) both; }
+
+/* Scrolling, where the engine supports driving an animation by scroll position rather than by a
+   clock. Rows fade up as they come into view and hold once they are in it. This is the one block
+   here that is pure enhancement: where it is unsupported nothing animates and nothing is missing,
+   which is why it is allowed to be the ambitious one.
+
+   THE BOUNDARY BETWEEN THE TWO SYSTEMS, and it is not cosmetic. The cascade owns what arrives WITH
+   the screen; the scroll timeline owns what arrives as you scroll to it. So these selectors are
+   nested-only — `.screen > * .row`, never `.screen .row`. Written the loose way, a row that happens
+   to be a direct child of the screen matches both, the scroll rule wins on specificity, and that row
+   appears instantly while the heading above it is still fading in. I wrote it the loose way first and
+   the filmstrip showed exactly that. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .screen > * .row, .screen > * .notice-card, .screen > * .surface {
+      animation: rise-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 28%;
+    }
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────────────────────────
+   SURFACES — the things the app shows only when they are true.
+
+   Deliberately plain: a surface earns attention by being RARE, not by being loud. If these needed a
+   border, an icon and a colour to be noticed, they would be appearing too often. */
+.surfaces { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
+.surface-card { display: flex; flex-direction: column; gap: 8px; }
+.surface-card p { color: var(--text-meta); }
+
+/* A length, not a sentence. The track is one month wide; the fill is what is left of it. */
+.runway, .fixed-free { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.runway-plot, .fixed-free-plot { width: 100%; height: 10px; display: block; border-radius: 5px; overflow: hidden; }
+.runway-track { fill: var(--surface-3); }
+.runway-fill { fill: var(--accent-text); }
+/* Under a week takes the warning ink — but the LENGTH already said it, and the caption says it in
+   words. Colour is never the only thing carrying the message. */
+.runway-fill-short { fill: var(--warning-text); }
+.fixed-free-committed { fill: var(--text-tertiary); }
+.fixed-free-left { fill: var(--accent-text); }
+.runway figcaption, .fixed-free figcaption { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+.runway figcaption strong, .fixed-free figcaption strong { font-size: 15px; line-height: 22px; color: var(--text-primary); font-weight: 600; }
+
+/* The fill grows from nothing on arrival, once, on the same tokens as everything else. A bar that
+   snaps to length reads as a static picture; one that grows reads as a measurement being taken. */
+@media (prefers-reduced-motion: no-preference) {
+  .runway-fill, .fixed-free-committed, .fixed-free-left { animation: measure var(--motion-sweep) var(--ease-out) both; transform-origin: left center; }
+}
+@keyframes measure { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* The next thirty days. Ticks on a baseline, one vertical rule for payday, nothing else — the strip is
+   about WHEN, and a second colour dimension would start it arguing about what. */
+.due-strip { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.due-plot { width: 100%; height: 44px; display: block; overflow: visible; }
+.due-axis { stroke: var(--border-default); stroke-width: 1; }
+/* Payday is a rule behind the ticks, not a tick itself: it is a boundary, not an amount. */
+.due-payday { stroke: var(--accent-text); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
+.due-tick { stroke: var(--text-tertiary); stroke-width: 3; stroke-linecap: round; }
+/* Due before the next pay — these have to come out of what you hold now. */
+.due-tick-before { stroke: var(--flow-out); }
+.due-strip figcaption { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+@media (prefers-reduced-motion: no-preference) {
+  .due-tick { animation: measure-up var(--motion-settle) var(--ease-out) both; transform-origin: bottom; transform-box: fill-box; }
+}
+@keyframes measure-up { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+
+/* A debt falling to zero. One line, one hue, a floor that is literally zero — nothing else, because the
+   only two facts are how steep it is and where it lands. */
+.debt-burn { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.debt-burn-plot { width: 100%; height: 96px; display: block; overflow: visible; }
+.debt-burn-floor { stroke: var(--border-default); stroke-width: 1; }
+.debt-burn-line { fill: none; stroke: var(--accent-text); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.debt-burn figcaption { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+/* No line at all when the payment does not cover the interest. The caption carries it alone, so it takes
+   the warning ink — and it has to out-specify `.debt-burn figcaption` above, which is a class AND a type
+   and therefore beats a lone class. The same specificity trap silently disabled a scroll animation
+   earlier in this project; it is written out here so the next reader does not have to rediscover it. */
+.debt-burn figcaption.debt-burn-none { color: var(--warning-text); }
+/* The line draws itself from the balance you hold to the month it is gone, once, on the shared tokens. */
+@media (prefers-reduced-motion: no-preference) {
+  .debt-burn-line { stroke-dasharray: 1; animation: draw-down var(--motion-sweep) var(--ease-out) both; }
+}
+@keyframes draw-down { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+/* In on the left, out on the right, one scale between them. The band that joins the two stacks is the
+   picture: where it pinches, less went out than came in. The tile ramp, because these are large blocks
+   and the ramp already means "bigger" everywhere else in the app. */
+.money-flow { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.money-flow-plot { width: 100%; height: auto; display: block; }
+/* The band is the subject, not a backdrop: present enough to follow its edges across the plot. */
+.flow-link { fill: var(--tile-2); opacity: .55; }
+.flow-band { stroke: var(--surface-1); stroke-width: 2; }
+.flow-band.level-1 { fill: var(--tile-1); } .flow-band.level-2 { fill: var(--tile-2); }
+.flow-band.level-3 { fill: var(--tile-3); } .flow-band.level-4 { fill: var(--tile-4); }
+.flow-band.level-5 { fill: var(--tile-5); }
+/* Text wears text ink, never a series colour; the block beside it carries the identity. */
+.flow-label { font-size: 30px; fill: var(--text-secondary); dominant-baseline: middle; }
+.flow-label-end { text-anchor: end; }
+.money-flow figcaption { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+@media (prefers-reduced-motion: no-preference) {
+  .flow-link { animation: measure var(--motion-sweep) var(--ease-out) both; transform-origin: left center; }
+}
+
+/* A cleared debt is kept, not deleted — what it cost is part of the record — but it is no longer news. */
+.debt-cleared { opacity: .6; }
+
+/* Why the confirm will not move. It sits directly above the button it is about, because a reason printed
+   anywhere else is a reason nobody reads. */
+.import-blocked { color: var(--warning-text); font-size: 13px; line-height: 20px; }
+
+/* Money between people. A centre line with bars either side of it: right is coming back to you, left is
+   money you are holding that is not yours. The warm/cool pair is the same one money in and money out
+   already use, and it only ever reinforces a side the position has already stated. */
+.person-balance { width: 100%; height: 8px; display: block; border-radius: 4px; overflow: hidden; }
+.person-bar-to-me { fill: var(--flow-in); }
+.person-bar-by-me { fill: var(--flow-out); }
+/* A track behind both bars, so the plot is a full-width scale and its middle means something. Without
+   it there is nothing for the centre to be the centre OF. */
+.person-track { fill: var(--surface-3); }
+.person-plot { position: relative; display: block; width: 100%; }
+.person-plot::after { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px;
+  background: var(--text-meta); }
+.person-line { display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 100%;
+  border: 0; background: transparent; padding: 14px 0; text-align: left; min-height: 56px;
+  border-bottom: 1px solid var(--border-subtle); }
+.person-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.person-line:active { opacity: .75; }
+.person-settled { opacity: .6; }
+@media (prefers-reduced-motion: no-preference) {
+  .person-bar-to-me { animation: measure var(--motion-sweep) var(--ease-out) both; transform-origin: left center; }
+  .person-bar-by-me { animation: measure var(--motion-sweep) var(--ease-out) both; transform-origin: right center; }
+}
+
+/* What share of the money is in which currency. One bar, largest first, one hue — a currency is not a
+   category with a personality, so the code carries the identity and the shade only repeats size. The
+   key names every band whatever its width, which is also how identity survives colour blindness. */
+.currency-exposure { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.currency-exposure-plot { width: 100%; height: auto; display: block; }
+.currency-exposure-key { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px;
+  font-size: 13px; line-height: 20px; color: var(--text-secondary); }
+.currency-exposure-key li { display: flex; align-items: center; gap: 6px; }
+.currency-exposure-key .meta { color: var(--text-meta); }
+/* The swatch is a block of the same ramp, sized to read at a glance without competing with the bar. */
+.exposure-key-mark { width: 10px; height: 10px; border-radius: 2px; }
+.exposure-key-mark.level-1 { background: var(--tile-1); } .exposure-key-mark.level-2 { background: var(--tile-2); }
+.exposure-key-mark.level-3 { background: var(--tile-3); } .exposure-key-mark.level-4 { background: var(--tile-4); }
+.exposure-key-mark.level-5 { background: var(--tile-5); }
+/* Text ON a band wears that ramp's ink, never the page's: the page's came out barely legible on a
+   mid-blue block, which is exactly what a direct label exists to prevent. */
+.exposure-label { font-size: 30px; fill: var(--tile-ink); dominant-baseline: middle; }
+.currency-exposure figcaption { font-size: 11px; line-height: 16px; color: var(--text-meta); }
+
+/* A figure that might be counting one purchase twice says so where the figure is. Warning ink, because
+   it is about the numbers being wrong, not about something the person did. */
+.double-counted { margin-top: 24px; padding: 12px 0; border-top: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-default); display: flex; flex-direction: column;
+  align-items: flex-start; gap: 12px; }
+.double-counted p { color: var(--warning-text); }
+
+/* Money the figures had to leave out, said where the figures are. Warning ink: it is about the numbers
+   being incomplete, not about anything the person did wrong. */
+.unconverted { margin-top: 24px; padding: 12px 0; border-top: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-default); display: flex; flex-direction: column;
+  align-items: flex-start; gap: 12px; }
+.unconverted p { color: var(--warning-text); }
+
+/* A rate typed in by hand, when the published one cannot be reached. The field and its button sit
+   together because they are one action. */
+.own-rate { display: flex; align-items: flex-end; gap: 12px; margin-top: 16px; }
+.own-rate .input-label { flex: 1; }
+
+/* THE ADD-TRANSACTION SHEET, after his review. The amount is what someone opened the sheet to type, so
+   it is set at the size of a figure rather than of a form field; the type is three buttons side by side
+   because a closed select hides the very choice it is asking about (M3 puts two-to-five options in a
+   segmented control); and Cancel/Save ride the bottom of the sheet where a thumb already is, instead of
+   being scrolled to. */
+.segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
+.segmented .button { width: 100%; padding: 10px 6px; }
+input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -.6px; }
+.sheet-actions { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  padding: 12px 0 calc(4px + env(safe-area-inset-bottom)); background: var(--surface-1); }
+.sheet-actions .button { width: 100%; min-height: 48px; }
+/* The one primary action on Today. It sat under four other things and was the same size as a filter
+   chip; it is now the first thing the screen offers after the figures it is about. */
+.button.add-primary { width: 100%; min-height: 52px; font-size: 15px; margin-top: 20px; }
+
+.load-more { margin-top: 16px; display: grid; gap: 8px; justify-items: center; }
+.list-heading > div > .meta { margin-top: 2px; }
+
+/* Bars for "which of these is the big one": one hue stepped by magnitude, 8px tall with rounded ends
+   anchored to a shared left edge, and every bar still carries its own figure. */
+.ranked { margin: 24px 0 0; }
+.ranked-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 14px; }
+.ranked-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ranked-name { font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
+.ranked-amount { min-height: 44px; min-width: 44px; padding: 4px 0; font-size: 15px; font-weight: 600;
+  justify-content: flex-end; }
+.ranked-track { display: block; height: 8px; margin-top: 6px; border-radius: 4px; background: var(--surface-2); }
+.ranked-fill { display: block; height: 100%; border-radius: 4px; min-width: 4px; }
+.ranked-fill[data-rank="0"] { background: var(--heat-5); }
+.ranked-fill[data-rank="1"] { background: var(--heat-4); }
+.ranked-fill[data-rank="2"] { background: var(--heat-3); }
+.ranked-fill[data-rank="3"] { background: var(--heat-2); }
+.ranked-fill[data-rank="4"] { background: var(--heat-1); }
+.ranked-fill[data-rank="5"] { background: var(--border-control); }
+
+/* Quiet maintenance, not an action: the rate refresh sits beside the date it fetched rather than
+   shouting over it, while keeping the 44px target every control in this app has. */
+.button.rate-update { font-size: 12px; font-weight: 400; color: var(--text-secondary); padding: 6px 8px; gap: 6px; }
+
+/* The savings path: his record behind today in the accent, the offer ahead of it dashed and quiet. One
+   hue, because colour in this app means an amount and nothing else. */
+.savings-path { margin-top: 24px; }
+.savings-figures { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.savings-figures .band-label { display: block; }
+.savings-plot { width: 100%; height: 140px; overflow: visible; }
+.savings-kept { stroke: var(--accent); }
+.savings-planned { stroke: var(--text-meta); }
+.savings-now { fill: var(--accent); stroke: var(--surface-1); stroke-width: 2; }
+.savings-ends { display: flex; justify-content: space-between; }
+
+/* Money audit: a month as one bar, the roadmap as tracks. Same blue ramp as every other length. */
+.audit-tiles { grid-template-columns: repeat(2, 1fr); }
+.audit-tiles .band-tile { min-height: 84px; }
+.audit-bar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; background: var(--surface-2); }
+.audit-bar > span { display: block; height: 100%; }
+.audit-keep { background: var(--heat-2); }
+.audit-debt { background: var(--heat-4); }
+.audit-save { background: var(--heat-5); }
+.audit-spend { background: var(--border-control); }
+.audit-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; }
+.audit-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.audit-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.audit-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.audit-step[data-status="done"] .ranked-name, .audit-step[data-status="done"] .amount { color: var(--text-meta); }
+.audit-step[data-status="now"] .ranked-name { font-weight: 600; }
+.audit-step .tag { margin-left: 8px; }
+.audit-fill { background: var(--heat-3); }
+.audit-step[data-status="done"] .audit-fill { background: var(--heat-1); }

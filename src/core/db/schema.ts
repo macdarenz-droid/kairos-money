@@ -173,10 +173,50 @@ export const privacy_log = sqliteTable('privacy_log', {
   metadata: text('metadata').notNull(),
 });
 
+/** Mirrors migration 0005. balance_minor is what is OWED, held positive; see that migration for why. */
+export const debts = sqliteTable('debts', {
+  id: text('id').primaryKey().notNull(),
+  name: text('name').notNull(),
+  account_id: text('account_id'),
+  currency: text('currency').notNull(),
+  balance_minor: integer('balance_minor').notNull(),
+  annual_rate_bp: integer('annual_rate_bp').notNull(),
+  minimum_minor: integer('minimum_minor').notNull(),
+  due_day: integer('due_day'),
+  opened_at: text('opened_at').notNull(),
+  closed_at: text('closed_at'),
+});
+
+/** Mirrors migration 0006. amount_minor is always positive; `direction` says who is holding it. */
+export const ious = sqliteTable('ious', {
+  id: text('id').primaryKey().notNull(),
+  person: text('person').notNull(),
+  direction: text('direction').notNull(),
+  currency: text('currency').notNull(),
+  amount_minor: integer('amount_minor').notNull(),
+  reason: text('reason').notNull(),
+  occurred_on: text('occurred_on').notNull(),
+  transaction_id: text('transaction_id'),
+  settled_at: text('settled_at'),
+});
+
 export const app_settings = sqliteTable('app_settings', {
   key: text('key').primaryKey().notNull(),
   value: text('value').notNull(),
 });
 
-export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings };
-export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings'] as const;
+export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings, debts, ious };
+/**
+ * The migration each table first appeared in.
+ *
+ * Restoring needs this to tell two different things apart that look identical in a backup file: a table
+ * MISSING because the app that wrote it did not have that table yet, and a table missing because the
+ * backup is damaged. The first must restore empty; the second must refuse. Without the distinction you
+ * have to choose one, and either choice is wrong half the time — silently losing a ledger, or rejecting
+ * every backup taken before the newest feature.
+ *
+ * Add a row here whenever a migration creates a table. A table absent from this map is assumed to have
+ * been there from the beginning, which is true of the sixteen from migration 1.
+ */
+export const tableIntroduced: Partial<Record<(typeof tableNames)[number], number>> = { debts: 5, ious: 6 };
+export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings', 'debts', 'ious'] as const;

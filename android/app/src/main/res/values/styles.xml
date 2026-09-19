@@ -32,4 +32,59 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:colorAccent">#3B5BDB</item>
     </style>
+    <!-- THE QUICK-ADD SHEET's window: see-through, no title, so the sheet sits over the home screen. -->
+    <style name="Theme.Kairos.QuickAdd" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@style/Animation.Kairos.QuickAdd</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <style name="Animation.Kairos.QuickAdd" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/qa_fade_in</item>
+        <item name="android:activityOpenExitAnimation">@null</item>
+        <item name="android:activityCloseEnterAnimation">@null</item>
+        <item name="android:activityCloseExitAnimation">@anim/qa_fade_out</item>
+    </style>
+    <!-- A category chip on the widget and in the sheet. Height 32, a pill, an icon before the word. -->
+    <style name="Widget.Kairos.Chip" parent="android:Widget.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">32dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@drawable/qa_chip_ripple</item>
+        <item name="android:textColor">@color/qa_text</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:drawablePadding">6dp</item>
+        <item name="android:drawableTint">@color/qa_text</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+    <style name="Widget.Kairos.Pill" parent="android:Widget.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">30dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@drawable/qa_chip_ripple</item>
+        <item name="android:textColor">@color/qa_text2</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+    <style name="Widget.Kairos.Key" parent="android:Widget.Button">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">56dp</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:background">@drawable/qa_key_ripple</item>
+        <item name="android:textColor">@color/qa_text</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
 </resources>
