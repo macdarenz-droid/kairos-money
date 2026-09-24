@@ -7,6 +7,7 @@ import {localDay,Reminder} from '../../ingest/reminders';
 import {Button,Row} from '../design/primitives';
 import {useSession} from '../session';
 import {useDisplayCurrencyState} from '../currency';
+import {brainQuery} from '../money';
 const labels={bill:'Upcoming bills',unusual:'Transactions to review',price:'Recurring price changes',digest:'Monthly review'};
 /**
  * ONE READ OF THE LEDGER AT UNLOCK, NOT TWO.
@@ -25,7 +26,7 @@ export function NotificationSync(){
   if(!noticeKinds.some(k=>preferences[k]))return [];
   const today=localDay();
   const snapshotFor=async(held:string)=>held===shown
-   ?(await client.ensureQueryData({queryKey:['intelligence',today,shown,{extra:'0',cut:0}],queryFn:()=>session.run(r=>r.intelligence.analyse(today,shown,'0',0))})).snapshot
+   ?(await client.ensureQueryData(brainQuery(session.run,today,shown))).snapshot
    :session.run(r=>r.intelligence.snapshot(today,currency(held)));
   const plans=await Promise.all([...new Set(accounts.map(a=>a.currency))].map(async held=>notificationPlan(await snapshotFor(held),preferences)));
   const used=new Set<string>();

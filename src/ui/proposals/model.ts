@@ -1,4 +1,5 @@
-import type {MetricKey} from '../../analysis/model';
+/** The only metric a proposal cites now that the analysis engine is gone (ADR 0046). */
+type MetricKey = 'merchant_breakdown';
 
 /**
  * A typing-free prefill offered from what the user already entered or imported.

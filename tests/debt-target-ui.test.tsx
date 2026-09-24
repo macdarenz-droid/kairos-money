@@ -2,7 +2,7 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {cleanup, render, screen, within} from '@testing-library/react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {MoneyAudit} from '../src/ui/screens/MoneyAudit';
+import {Insights} from '../src/ui/screens/Insights';
 import {SavingsPath} from '../src/ui/design/SavingsPath';
 import {currency} from '../src/core/money';
 import {localDay} from '../src/ingest/reminders';
@@ -48,13 +48,11 @@ it('shows a dated debt as an amount to keep each day, on Insights and on Today',
   ];
   const date = addMonths(today, 10);
   ledger.debts = [{id: 'loan', name: 'Synthetic loan', currency: 'AUD', balanceMinor: '700000', annualRateBp: '0', minimumMinor: '0', closedAt: null, targetDate: date}];
-  render(<QueryClientProvider client={client()}><MoneyAudit/></QueryClientProvider>);
-  const card = await screen.findByLabelText('Money audit');
-  expect(within(card).getByText('Pay off by')).toBeTruthy();
-  const step = within(card).getByText('Synthetic loan').closest('.audit-step')!;
-  expect(step.getAttribute('data-status')).toBe('now');
-  expect(within(step as HTMLElement).getByText('$700.00 a month')).toBeTruthy();
-  expect(within(step as HTMLElement).getByText(/\$23\.33 a day/)).toBeTruthy();
+  render(<QueryClientProvider client={client()}><Insights/></QueryClientProvider>);
+  const plan = await screen.findByLabelText('Plan');
+  const step = within(plan).getByText('Synthetic loan').closest('.row')! as HTMLElement;
+  expect(within(step).getByText('$700.00 a month')).toBeTruthy();
+  expect(within(step).getByText(new RegExp(`Pay off by ${date} · \\$23\\.33 a day`))).toBeTruthy();
   cleanup();
   render(<QueryClientProvider client={client()}><SavingsPath/></QueryClientProvider>);
   await screen.findByLabelText('Savings');

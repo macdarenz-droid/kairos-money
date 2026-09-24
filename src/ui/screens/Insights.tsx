@@ -11,6 +11,7 @@ import {Button, Input, Row, Sheet, Skeleton, Surface} from '../design/primitives
 import {FlowBar} from '../design/FlowBar';
 import {CategorySplit} from '../design/CategorySplit';
 import {DebtBurn} from '../design/DebtBurn';
+import {Cancellations} from './Cancellations';
 
 /** What each advice rule says. The figures come from the brain; the words live here. */
 const ADVICE: Record<AdviceRule, string> = {
@@ -42,7 +43,7 @@ export function Insights() {
     {b.plan.status !== 'ok' && <h2>Still learning</h2>}
     <Month brain={b} code={currency(code)} show={show}/>
     <WhereItWent brain={b} code={currency(code)} show={show}/>
-    <Bills brain={b} show={show}/>
+    <Bills brain={b} show={show} code={currency(code)}/>
     <Advice brain={b} show={show}/>
     <div className="advisor-slot" data-slot="advisor"/>
     <Plan brain={b} show={show}/>
@@ -71,13 +72,14 @@ function WhereItWent({brain, code, show}: Part & {code: Currency}) {
   </section>;
 }
 
-function Bills({brain, show}: Part) {
+function Bills({brain, show, code}: Part & {code: Currency}) {
   const bills = brain.spending.bills;
   if (!bills.length) return null;
   return <section className="stack" aria-label="Bills and subscriptions">
     <h2>Bills and subscriptions</h2>
     <div>{bills.map(bill => <Row key={bill.merchant} trailing={`${show(bill.yearlyMinor)} a year`}>{bill.merchant}
       <p className="meta">{bill.cancelled ? <span className="tag">Cancelled</span> : bill.nextDate ? `Next ${bill.nextDate}` : ''}</p></Row>)}</div>
+    <Cancellations code={code} merchants={bills.map(bill => bill.merchant)}/>
   </section>;
 }
 
@@ -104,6 +106,8 @@ function Plan({brain, show}: Part) {
       <Row trailing={show(p.split.keepMinor)}>Keep each month</Row>
       <Row trailing={show(p.split.spendMinor)}>Free to spend each month</Row>
     </div>}
+    {p.targets.map(t => <Row key={t.id} trailing={`${show(t.paymentMinor)} a month`}>{t.name}
+      <p className="meta">Pay off by {t.date} · {show(t.perDayMinor)} a day{t.fits ? '' : ' · does not fit yet'}</p></Row>)}
     {p.leaks.length > 0 && <div>{p.leaks.map(l => <Row key={l.kind} trailing={`${show(l.annualMinor)} a year`}>{LEAKS[l.kind] ?? l.kind}</Row>)}</div>}
     {p.debt && <DebtBurn balances={p.debt.cheaper.balances} startMinor={p.debt.owedMinor} growing={p.debt.cheaper.growing}
       label={p.debt.cheaper.months === null ? 'Not cleared at this payment' : `Debt clear in ${p.debt.cheaper.months} months`}/>}

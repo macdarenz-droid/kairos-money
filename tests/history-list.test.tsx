@@ -283,7 +283,7 @@ it('offers delete, not edit, on an approved bank notification, and removing it c
   await waitFor(async () => expect((await state.repo!.accountBalances()).find(b => b.accountId === 'a')?.minor).toBe('0'));
   await waitFor(() => expect(rows()).toHaveLength(0));
   // The engine brain reads the ledger, not a separate memory of what it once held.
-  const {snapshot} = await state.repo!.intelligence.analyse('2026-01-20', 'AUD');
+  const snapshot = await state.repo!.intelligence.snapshot('2026-01-20', 'AUD');
   expect(snapshot.transactions).toHaveLength(0);
 });
 

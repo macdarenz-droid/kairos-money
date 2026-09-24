@@ -42,22 +42,12 @@ export function useHoldings() {
     ready: accounts.isSuccess && balances.isSuccess};
 }
 
-/**
- * THE LEDGER ANALYSED ONCE, for every card that reads it.
- *
- * Seven cards on Today and Insights each declared this same query, and each started it as soon as the
- * session was ready — on the display currency's fallback, then again on the real one. One hook, one
- * key, and it waits for the currency to settle, so the ledger is paged once and every card waits on that.
- */
-export function useAnalysis() {
-  const session = useSession();
-  const {code, settled} = useDisplayCurrencyState();
-  const today = localDay();
-  return useQuery({
-    queryKey: ['intelligence', today, code, {extra: '0', cut: 0}], staleTime: 0,
-    enabled: session.state === 'ready' && settled,
-    queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
-  });
+/** The brain and the snapshot it was built from, under one key, so a pure caller can reuse the read. */
+export function brainQuery(run: ReturnType<typeof useSession>['run'], today: string, code: string) {
+  return {
+    queryKey: ['intelligence', today, code], staleTime: 60000,
+    queryFn: async () => { const inputs = await run(repo => repo.intelligence.inputs(today, code)); return {brain: think(inputs), snapshot: inputs.snapshot}; },
+  };
 }
 
 /**
@@ -67,10 +57,5 @@ export function useAnalysis() {
 export function useBrain() {
   const session = useSession();
   const {code, settled} = useDisplayCurrencyState();
-  const today = localDay();
-  return useQuery({
-    queryKey: ['intelligence', today, code, 'brain'], staleTime: 60000,
-    enabled: session.state === 'ready' && settled,
-    queryFn: async () => think(await session.run(repo => repo.intelligence.inputs(today, code))),
-  });
+  return useQuery({...brainQuery(session.run, localDay(), code), enabled: session.state === 'ready' && settled, select: data => data.brain});
 }

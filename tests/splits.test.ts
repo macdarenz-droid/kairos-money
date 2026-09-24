@@ -3,7 +3,7 @@ import {memoryDriver} from './db-helper';
 import {migrate} from '../src/core/db/migrate';
 import {repository} from '../src/core/db/repository';
 import {hash,normalizeRow} from '../src/ingest/normalize';
-import {computeSignals} from '../src/intelligence/signals';
+import {think} from '../src/brain';
 import {spendingPatterns} from '../src/intelligence/visuals/spending-patterns';
 import type {Document,ImportContext} from '../src/ingest/types';
 const context:ImportContext={accountId:'a',accountKind:'checking',currency:'AUD',period:{start:'2026-01-01',end:'2026-01-31'},dateOrder:'DMY',decimal:'.',creditPositivePurchases:false};
@@ -14,7 +14,7 @@ it('allocates exactly without changing payment, sources, coverage or purchase co
  const {repo,doc,id}=await setup();const original=await repo.exportAll();await repo.splits.save(id,parts);
  for(const table of ['transactions','transaction_sources','coverage_ranges'] as const)expect((await repo.exportAll()).tables[table]).toEqual(original.tables[table]);
  const snapshot=await repo.intelligence.snapshot('2026-01-31','AUD');expect(snapshot.transactions).toHaveLength(1);expect(snapshot.transactions[0]!.allocations?.map(p=>p.minor)).toEqual(['600','400']);expect(spendingPatterns(snapshot)).toMatchObject({total:'1000'});expect(spendingPatterns(snapshot).merchants[0]?.count).toBe(1);
- const concentration=computeSignals(snapshot,{start:'2026-01-01',end:'2026-01-31',label:'January'}).find(s=>s.key==='category_concentration');expect(concentration?.value).toBe('5200');
+ const parts2=think(await repo.intelligence.inputs('2026-01-31','AUD')).spending.categories.map(c=>c.minor).sort();expect(parts2).toEqual(['400','600']);
  const fresh=memoryDriver();await migrate(fresh.driver);const restored=repository(fresh.driver);await restored.restoreBackup(await repo.exportAll());expect(await restored.splits.get(id)).toEqual(await repo.splits.get(id));
  await repo.imports.rollback(doc.id);expect((await repo.intelligence.snapshot('2026-01-31','AUD')).transactions).toEqual([]);await repo.imports.stage(doc);await repo.imports.commit(doc.id);expect((await repo.intelligence.snapshot('2026-01-31','AUD')).transactions[0]!.allocations).toHaveLength(2);
  await repo.splits.remove(id);expect((await repo.intelligence.snapshot('2026-01-31','AUD')).transactions[0]!.allocations).toBeUndefined();

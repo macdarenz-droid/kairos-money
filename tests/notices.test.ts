@@ -243,7 +243,7 @@ it('money received and approved in the shade reaches the balance, today, and the
  const today = localDay(new Date(postedAt));
  expect((await repo.manual.today(today)).find(t => t.currency === 'PHP')).toMatchObject({awaitingIncome:'50000', income:'0'});
  // Money in, on the home screen's band, marked as not yet on a statement.
- const {snapshot} = await repo.intelligence.analyse(today, 'PHP');
+ const snapshot = await repo.intelligence.snapshot(today, 'PHP');
  const band = moneyBand(snapshot, today);
  expect(band.now.inMinor).toBe('50000');
  expect(band.now.unconfirmed).toBe(true);
