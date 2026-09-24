@@ -3,6 +3,7 @@ import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {editableCategories} from '../../ledger/categories';
 import type {AiRun} from '../../ledger/ai-categories';
 import {Button, Row, Sheet} from '../design/primitives';
+import {ClaudeWorking} from '../design/Motion';
 import {useSession} from '../session';
 import {usd} from './cost';
 import {estimateMicros, REASONS, sortMerchants, type SortReason} from './sort';
@@ -36,14 +37,15 @@ export function SortCategories({onClose}: {onClose: () => void}) {
       <p className="meta">{count} {count === 1 ? 'merchant' : 'merchants'} · about {usd(estimateMicros(data.payload, data.settings.model))}, estimated</p>
       <Button onClick={() => setShown(open => !open)} aria-expanded={shown}>See exactly what is sent</Button>
       {shown && <pre className="payload" aria-label="What is sent">{JSON.stringify({categories: editableCategories, examples: data.payload.sent.examples, merchants: data.payload.sent.merchants}, null, 2)}</pre>}
-      <Button variant="primary" disabled={busy || !!pending || !count} onClick={() => void start()}>{busy ? 'Sorting…' : 'Start sorting'}</Button>
+      <Button variant="primary" disabled={busy || !!pending || !count} onClick={() => void start()} busy={busy} busyLabel="Sorting…">Start sorting</Button>
+      {busy && <ClaudeWorking kind="sort"/>}
     </>}
     {failure && <p role="alert">{REASONS[failure]} {latest ? 'The rest were not sorted.' : 'Nothing was changed.'}</p>}
     {error && <p role="alert">{error}</p>}
     {latest && <p role="status">Sorted {latest.applied.length} {latest.applied.length === 1 ? 'merchant' : 'merchants'}.</p>}
     {check.length > 0 && <section className="stack" aria-label="Check these"><h3>Check these</h3>
-      {check.map(p => <Row key={p.key} trailing={<Button disabled={busy || !!pending} onClick={() => use(p.key, p.category)}>{pending === 'use:' + p.key ? 'Saving…' : `Use ${p.category}`}</Button>}>{p.key}</Row>)}</section>}
+      {check.map(p => <Row key={p.key} trailing={<Button disabled={busy || !!pending} onClick={() => use(p.key, p.category)} busy={pending === 'use:' + p.key} busyLabel="Saving…">{`Use ${p.category}`}</Button>}>{p.key}</Row>)}</section>}
     {runs.length > 0 && <section className="stack" aria-label="Earlier runs"><h3>Earlier runs</h3>
-      {runs.map(r => <Row key={r.id} trailing={<Button disabled={busy || !!pending} onClick={() => undo(r.id)}>{pending === 'undo:' + r.id ? 'Undoing…' : 'Undo'}</Button>}>{r.at.slice(0, 10)} · {r.applied.length} {r.applied.length === 1 ? 'merchant' : 'merchants'}</Row>)}</section>}
+      {runs.map(r => <Row key={r.id} trailing={<Button disabled={busy || !!pending} onClick={() => undo(r.id)} busy={pending === 'undo:' + r.id} busyLabel="Undoing…">Undo</Button>}>{r.at.slice(0, 10)} · {r.applied.length} {r.applied.length === 1 ? 'merchant' : 'merchants'}</Row>)}</section>}
   </div></Sheet>;
 }

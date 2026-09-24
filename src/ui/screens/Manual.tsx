@@ -84,7 +84,7 @@ export function ManualSheet({accounts:all,entry,prefill,kind:initialKind,onClose
   <label className="input-label">Category<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">Uncategorised</option>{categories.map(c=><option key={c}>{c}</option>)}</select></label>
  </>}
  <Input label="Note (optional)" maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/>{error&&<p role="alert">{error}</p>}
- <div className="sheet-actions"><Button type="button" onClick={busyClose}>Cancel</Button><Button type="submit" variant="primary" disabled={busy||!accounts.length}>{busy?'Saving…':'Save transaction'}</Button></div></form></Sheet>;
+ <div className="sheet-actions"><Button type="button" onClick={busyClose}>Cancel</Button><Button type="submit" variant="primary" disabled={busy||!accounts.length} busy={busy} busyLabel="Saving…">Save transaction</Button></div></form></Sheet>;
 }
 export function ManualHistory({today=false}:{today?:boolean}){
  const session=useSession();

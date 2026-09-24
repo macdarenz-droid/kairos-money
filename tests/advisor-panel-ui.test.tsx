@@ -59,3 +59,17 @@ it('shows exactly what is sent, with no ids, accounts or descriptions', async ()
   expect(sent).toContain('"facts"');
   for (const secret of ['secret-account', 'tx-secret', 'Private Clinic', 'PRIVATE CLINIC']) expect(sent).not.toContain(secret);
 });
+
+it('shows Claude working during a slow call and removes it after', async () => {
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const reply = answer({points: [{text: 'You spent less this month.', facts: [summary(brain).facts[0]!.fact]}]});
+  vi.stubGlobal('fetch', vi.fn(async () => { await gate; return reply(); }));
+  mount();
+  fireEvent.click(await screen.findByRole('button', {name: 'Money review'}));
+  expect(await screen.findByRole('status', {name: 'Claude is writing your answer'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Asking Claude…'}).getAttribute('aria-busy')).toBe('true');
+  release();
+  await screen.findByText('You spent less this month.');
+  expect(screen.queryByRole('status', {name: 'Claude is writing your answer'})).toBeNull();
+});

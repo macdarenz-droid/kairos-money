@@ -7,7 +7,8 @@ import {changePercent} from '../../intelligence/visuals/band';
 import {useBrain} from '../money';
 import {useSession} from '../session';
 import {useDisplayCurrency} from '../currency';
-import {Button, Input, Row, Sheet, Skeleton, Surface} from '../design/primitives';
+import {Button, Input, Row, Sheet, Surface} from '../design/primitives';
+import {Loader} from '../design/Motion';
 import {FlowBar} from '../design/FlowBar';
 import {CategorySplit} from '../design/CategorySplit';
 import {DebtBurn} from '../design/DebtBurn';
@@ -36,7 +37,7 @@ export function Insights() {
   const brain = useBrain();
   const code = useDisplayCurrency();
   if (brain.error && !brain.data) return <p role="alert">Insights could not be read.</p>;
-  if (!brain.data) return <><h2>Still learning</h2><Skeleton label="Reading your money"/></>;
+  if (!brain.data) return <><h2>Still learning</h2><Loader label="Reading your money"/></>;
   const b = brain.data;
   const show = (minor: string | bigint) => format(money(BigInt(minor), currency(code)));
   if (b.triage.active) return <Triage brain={b} show={show}/>;
