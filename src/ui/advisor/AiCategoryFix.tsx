@@ -3,6 +3,7 @@ import {useQueryClient} from '@tanstack/react-query';
 import {editableCategories} from '../../ledger/categories';
 import type {LedgerRow} from '../../ingest/types';
 import {Button} from '../design/primitives';
+import {KairosAiMark} from '../design/Motion';
 import {useSession} from '../session';
 
 /** On a row Claude sorted: pick the right category once and it applies to every row from that merchant. */
@@ -15,8 +16,8 @@ export function AiCategoryFix({row}: {row: LedgerRow}) {
     try { await session.run(repo => repo.merchantRules.set(row.merchant, category)); setDone(true); await client.invalidateQueries(); }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   }
-  return <div className="stack" aria-label="Sorted by Claude">
-    <p className="meta"><span className="tag">AI</span> Sorted by Claude. Wrong? Choose the right one.</p>
+  return <div className="stack" aria-label="Sorted by Kairos AI">
+    <p className="meta heading-mark"><KairosAiMark size={12}/> Sorted by Kairos AI. Wrong? Choose the right one.</p>
     <label className="input-label">Category<select value={category} onChange={e => setCategory(e.target.value)}>
       {editableCategories.map(c => <option key={c} value={c}>{c}</option>)}</select></label>
     <Button disabled={busy || done} onClick={() => void apply()}>{done ? 'Saved for this merchant' : 'All from this merchant'}</Button>

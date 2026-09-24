@@ -28,7 +28,7 @@ it('stays hidden while the advisor is off', async () => {
   state.enabled = false;
   mount();
   await new Promise(r => setTimeout(r, 50));
-  expect(screen.queryByLabelText('Claude advisor')).toBeNull();
+  expect(screen.queryByLabelText('Kairos AI')).toBeNull();
 });
 
 it('shows a cited money review as AI wording and logs the call', async () => {
@@ -48,7 +48,7 @@ it('falls back to local advice on a refusal', async () => {
   mount();
   fireEvent.change(await screen.findByLabelText('Ask Kairos'), {target: {value: 'Can I afford a holiday?'}});
   fireEvent.click(screen.getByRole('button', {name: 'Ask'}));
-  await screen.findByText('Claude declined this request. The advice above is from your own figures.');
+  await screen.findByText('Kairos AI declined this request. The advice above is from your own figures.');
   expect(state.calls.map(c => c.result)).toEqual(['refused']);
 });
 
@@ -58,4 +58,18 @@ it('shows exactly what is sent, with no ids, accounts or descriptions', async ()
   const sent = (await screen.findByLabelText('What is sent')).textContent ?? '';
   expect(sent).toContain('"facts"');
   for (const secret of ['secret-account', 'tx-secret', 'Private Clinic', 'PRIVATE CLINIC']) expect(sent).not.toContain(secret);
+});
+
+it('shows Kairos AI working during a slow call and removes it after', async () => {
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const reply = answer({points: [{text: 'You spent less this month.', facts: [summary(brain).facts[0]!.fact]}]});
+  vi.stubGlobal('fetch', vi.fn(async () => { await gate; return reply(); }));
+  mount();
+  fireEvent.click(await screen.findByRole('button', {name: 'Money review'}));
+  expect(await screen.findByRole('status', {name: 'Kairos AI is writing your answer'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Asking Kairos AI…'}).getAttribute('aria-busy')).toBe('true');
+  release();
+  await screen.findByText('You spent less this month.');
+  expect(screen.queryByRole('status', {name: 'Kairos AI is writing your answer'})).toBeNull();
 });

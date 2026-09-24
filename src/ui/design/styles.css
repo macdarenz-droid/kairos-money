@@ -1,12 +1,12 @@
 @import './tokens.css';
-*{box-sizing:border-box}html{font-family:'Inter Variable',Inter,sans-serif;font-size:16px;background:var(--surface-0);color:var(--text-primary);font-variant-numeric:tabular-nums}body{min-width:280px}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.6}button,a,input,select,textarea{touch-action:manipulation}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent-text);outline-offset:3px}button svg{flex-shrink:0}h1,h2,h3,p{margin:0}h1{font-size:28px;line-height:34px;font-weight:600;letter-spacing:-.8px}h2{font-size:20px;line-height:26px;font-weight:600;letter-spacing:-.4px}h3{font-size:15px;line-height:22px;font-weight:500}p{font-size:13px;line-height:20px;color:var(--text-secondary)}a{color:var(--accent-text)}svg{vertical-align:middle}button{color:inherit}input,select,textarea{min-width:0;width:100%;min-height:44px;border:1px solid var(--border-control);border-radius:6px;padding:10px 12px;background:var(--surface-2);color:var(--text-primary);font-size:13px;line-height:20px}input::placeholder{color:var(--text-meta)}input[type=checkbox]{width:20px;min-height:20px;accent-color:var(--accent)}.app{max-width:600px;margin:0 auto;padding:env(safe-area-inset-top) 20px calc(108px + env(safe-area-inset-bottom));min-height:100dvh}.brand-bar{height:72px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-subtle);font-size:15px;font-weight:500;letter-spacing:-.3px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--border-default);border-radius:6px;background:var(--surface-2)}.privacy-status{display:flex;align-items:center;gap:6px;font-size:11px;line-height:16px;color:var(--text-meta);font-weight:400;letter-spacing:0}.screen-header{padding:20px 0 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.screen-header p{margin-top:6px}.surface{border:1px solid var(--border-default);border-radius:10px;background:var(--surface-1);padding:16px}.section-gap{margin-top:24px}.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--border-subtle);min-height:56px;font-size:13px;line-height:20px}.row:last-child{border-bottom:0}.row-trailing{text-align:right;flex-shrink:0;max-width:50%}.row p{font-size:11px;line-height:16px;color:var(--text-meta);margin-top:3px}.row-actions{display:flex;align-items:center;gap:8px}.amount{font-size:15px;line-height:22px;font-weight:600;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.hero-amount{display:block;font-size:40px;line-height:44px;font-weight:600;letter-spacing:-1.3px}.label{font-size:13px;line-height:20px;color:var(--text-secondary)}.muted,.meta{font-size:11px;line-height:16px;color:var(--text-meta)}.button{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--border-control);border-radius:6px;background:var(--surface-2);padding:10px 14px;font-size:13px;line-height:20px;font-weight:500;}.button:active{background:var(--surface-3)}.button-primary{background:transparent;border-color:var(--accent-text);color:var(--accent-text);font-weight:500}.button-primary:active{background:var(--surface-2)}.button-danger{color:var(--negative-text)}.button-quiet{border-color:transparent;background:transparent}.icon-button{width:44px;padding:0;flex-shrink:0}.empty-state{padding:32px 4px 36px;border-top:1px solid var(--border-default);border-bottom:1px solid var(--border-default)}.empty-icon{color:var(--text-secondary);margin-bottom:20px}.empty-state h2{margin-bottom:8px;max-width:340px}.empty-state p{max-width:360px}.empty-action{margin-top:24px}.information{display:flex;gap:10px;align-items:flex-start;margin-top:24px;padding:0 4px;color:var(--text-meta)}.information svg{margin-top:2px;flex-shrink:0}.information p{color:var(--text-meta);font-size:11px;line-height:16px}.tabs{position:fixed;bottom:0;left:0;width:100%;border-top:1px solid var(--border-default);background:var(--surface-1);padding:8px 12px calc(8px + env(safe-area-inset-bottom));z-index:10}.tabs-inner{max-width:600px;margin:auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:44px;min-height:56px;font-size:11px;line-height:16px;font-weight:500;border:0;background:transparent;color:var(--text-meta);border-radius:6px}.tab-icon{height:24px;display:grid;place-items:center}.tab[aria-current=page]{color:var(--text-primary);background:var(--surface-2)}.tab[aria-current=page] .tab-icon{color:var(--accent-text)}.tab-quick .tab-icon{height:28px;width:38px;border:1px solid var(--border-control);border-radius:6px;background:var(--surface-2);color:var(--text-primary)}.sheet{position:fixed;inset:auto 0 0;max-width:600px;width:100%;max-height:90dvh;margin:0 auto;padding:0;border:1px solid var(--border-default);border-bottom:0;border-radius:16px 16px 0 0;background:var(--surface-1);color:var(--text-primary);overflow:auto;}.sheet::backdrop{background:oklch(0% 0 0 / .65)}.sheet-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border-subtle);position:sticky;top:0;background:var(--surface-1);z-index:1}.sheet-header h2{font-size:20px;line-height:26px}.sheet-content{padding:20px 20px calc(24px + env(safe-area-inset-bottom))}.stack{display:flex;flex-direction:column;gap:16px}.input-label{display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:20px}.form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}.error{color:var(--negative-text);font-size:13px;line-height:20px;border-left:2px solid var(--negative-text);padding-left:12px}.notice{padding:12px 0;border-bottom:1px solid var(--border-subtle);font-size:11px;line-height:16px;color:var(--text-meta)}.theme-choices{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.button[aria-pressed=true]{border-color:var(--accent-text);color:var(--accent-text);background:var(--surface-2)}.settings-section{padding:24px 0;border-top:1px solid var(--border-default)}.settings-section h2{font-size:15px;line-height:22px;margin-bottom:6px}.full-width{width:100%}.action-list{display:flex;flex-direction:column;margin-top:12px}.action-list .button{justify-content:flex-start;border:0;border-radius:0;border-bottom:1px solid var(--border-subtle);padding:14px 0;background:transparent;min-height:52px}.action-list .button:last-child{border-bottom:0}.toast{position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));left:20px;right:20px;max-width:560px;margin:auto;padding:4px 8px 4px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border-control);border-radius:10px;background:var(--surface-3);color:var(--text-primary);font-size:13px;line-height:20px;z-index:30}.lock-screen{max-width:440px;min-height:100dvh;margin:auto;padding:calc(56px + env(safe-area-inset-top)) 20px 36px;display:flex;flex-direction:column}.lock-screen .brand{margin-bottom:56px}.lock-screen h1{margin-bottom:12px}.lock-screen form{margin-top:28px}.lock-footer{margin-top:auto;padding-top:48px}.lock-screen input{font-size:20px;letter-spacing:6px}.account-summary{display:flex;align-items:center;gap:12px}.account-symbol{display:grid;place-items:center;width:36px;height:36px;background:var(--surface-2);border:1px solid var(--border-default);border-radius:6px}.list-heading{display:flex;justify-content:space-between;align-items:center;margin-top:24px}.list-heading h2{font-size:15px;line-height:22px}.skeleton{display:flex;flex-direction:column;gap:12px;padding:20px 0}.skeleton span{display:block;height:16px;width:80%;background:var(--surface-3);border-radius:4px}.skeleton span:last-child{width:55%}.kitchen-section{padding:24px 0;border-bottom:1px solid var(--border-default)}.kitchen-section h2{margin-bottom:16px}.kitchen-buttons{display:flex;gap:8px;flex-wrap:wrap}.session-obscured #root{visibility:hidden}.session-obscured:after{content:'Kairos is locked';position:fixed;inset:0;display:grid;place-items:center;background:var(--surface-0);color:var(--text-secondary);font-size:15px}.check-row{display:flex;align-items:center;gap:12px;min-height:44px;font-size:13px;line-height:20px}.check-row input{flex-shrink:0}.split-field{display:grid;grid-template-columns:1fr 1fr;gap:12px}@keyframes sheet-enter{from{transform:translateY(32px);opacity:0}to{transform:translateY(0);opacity:1}}@media(min-width:700px){.app{padding-top:16px}.brand-bar{height:80px}.screen-header{padding:26px 0 20px}.empty-state{padding:40px 4px 44px}.sheet{bottom:24px;border-bottom:1px solid var(--border-default);border-radius:16px}.tabs{padding-top:10px;padding-bottom:10px}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}@media(max-width:340px){.privacy-status span{display:none}.app{padding-left:16px;padding-right:16px}.row{gap:8px}.row-trailing{max-width:55%}.split-field{grid-template-columns:1fr}}
+*{box-sizing:border-box}html{font-family:'Inter Variable',Inter,sans-serif;font-size:16px;background:var(--surface-0);color:var(--text-primary);font-variant-numeric:tabular-nums}body{min-width:280px}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.6}button,a,input,select,textarea{touch-action:manipulation}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent-text);outline-offset:3px}button svg{flex-shrink:0}h1,h2,h3,p{margin:0}h1{font-size:28px;line-height:34px;font-weight:600;letter-spacing:-.8px}h2{font-size:20px;line-height:26px;font-weight:600;letter-spacing:-.4px}h3{font-size:15px;line-height:22px;font-weight:500}p{font-size:13px;line-height:20px;color:var(--text-secondary)}a{color:var(--accent-text)}svg{vertical-align:middle}button{color:inherit}input,select,textarea{min-width:0;width:100%;min-height:44px;border:1px solid var(--border-control);border-radius:6px;padding:10px 12px;background:var(--surface-2);color:var(--text-primary);font-size:13px;line-height:20px}input::placeholder{color:var(--text-meta)}input[type=checkbox]{width:20px;min-height:20px;accent-color:var(--accent)}.app{max-width:600px;margin:0 auto;padding:env(safe-area-inset-top) 20px calc(164px + env(safe-area-inset-bottom));min-height:100dvh}.brand-bar{height:72px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border-subtle);font-size:15px;font-weight:500;letter-spacing:-.3px}.brand{display:flex;align-items:center;gap:10px}.brand-mark{width:26px;height:26px;display:grid;place-items:center}.privacy-status{display:flex;align-items:center;gap:6px;font-size:11px;line-height:16px;color:var(--text-meta);font-weight:400;letter-spacing:0}.screen-header{padding:20px 0 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.screen-header p{margin-top:6px}.card{border-radius:10px;background:var(--surface-1);padding:16px}.section-gap{margin-top:24px}.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--border-subtle);min-height:56px;font-size:13px;line-height:20px}.row:last-child{border-bottom:0}.row-trailing{text-align:right;flex-shrink:0;max-width:50%}.row p{font-size:11px;line-height:16px;color:var(--text-meta);margin-top:3px}.amount{font-size:15px;line-height:22px;font-weight:600;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}.hero-amount{display:block;font-size:40px;line-height:44px;font-weight:600;letter-spacing:-1.3px}.label{font-size:13px;line-height:20px;color:var(--text-secondary)}.muted,.meta{font-size:11px;line-height:16px;color:var(--text-meta)}.button{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--border-control);border-radius:6px;background:var(--surface-2);padding:10px 14px;font-size:13px;line-height:20px;font-weight:500;}.button:active{background:var(--surface-3)}.button-primary{background:var(--accent-solid);border-color:var(--accent-solid);color:var(--on-accent);font-weight:600}.button-primary:active{background:var(--accent-solid);opacity:.85}.button-danger{border-color:var(--negative-text);color:var(--negative-text)}.button-quiet{border-color:transparent;background:transparent;color:var(--accent-text)}.button-quiet.icon-button{color:var(--text-secondary)}.icon-button{width:44px;padding:0;flex-shrink:0}.empty-state{padding:32px 4px 36px;border-top:1px solid var(--border-default);border-bottom:1px solid var(--border-default)}.empty-icon{color:var(--text-secondary);margin-bottom:20px}.empty-state h2{margin-bottom:8px;max-width:340px}.empty-state p{max-width:360px}.empty-action{margin-top:24px}.information{display:flex;gap:10px;align-items:flex-start;margin-top:24px;padding:0 4px;color:var(--text-meta)}.information svg{margin-top:2px;flex-shrink:0}.information p{color:var(--text-meta);font-size:11px;line-height:16px}.tabs{position:fixed;bottom:0;left:0;width:100%;border-top:1px solid var(--border-default);background:var(--surface-1);padding:8px 12px calc(8px + env(safe-area-inset-bottom));z-index:var(--z-tabbar)}.tabs-inner{max-width:600px;margin:auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:44px;min-height:56px;font-size:11px;line-height:16px;font-weight:500;border:0;background:transparent;color:var(--text-meta);border-radius:6px}.tab-icon{height:24px;display:grid;place-items:center}.tab[aria-current=page]{color:var(--text-primary);background:var(--surface-2)}.tab[aria-current=page] .tab-icon{color:var(--accent-text)}.tab-quick .tab-icon{height:36px;width:36px;border-radius:999px;background:var(--accent-solid);color:var(--on-accent)}.sheet{position:fixed;inset:auto 0 0;max-width:600px;width:100%;max-height:90dvh;margin:0 auto;padding:0;border:1px solid var(--border-default);border-bottom:0;border-radius:16px 16px 0 0;background:var(--surface-1);color:var(--text-primary);overflow:auto;}.sheet::backdrop{background:oklch(0% 0 0 / .65)}.sheet-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border-subtle);position:sticky;top:0;background:var(--surface-1);z-index:var(--z-sticky)}.sheet-header h2{font-size:20px;line-height:26px}.sheet-content{padding:20px 20px calc(24px + env(safe-area-inset-bottom))}.stack{display:flex;flex-direction:column;gap:16px}.input-label{display:flex;flex-direction:column;gap:6px;font-size:13px;line-height:20px}.form-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:8px}.error{color:var(--negative-text);font-size:13px;line-height:20px;border-left:2px solid var(--negative-text);padding-left:12px}.notice{padding:12px 0;border-bottom:1px solid var(--border-subtle);font-size:11px;line-height:16px;color:var(--text-meta)}.theme-choices{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.button[aria-pressed=true]{border-color:var(--accent-text);color:var(--accent-text);background:var(--surface-2)}.settings-section{padding:24px 0;border-top:1px solid var(--border-default)}.settings-section h2{font-size:15px;line-height:22px;margin-bottom:6px}.full-width{width:100%}.action-list{display:flex;flex-direction:column;margin-top:12px}.action-list .button{justify-content:flex-start;border:0;border-radius:0;border-bottom:1px solid var(--border-subtle);padding:14px 0;background:transparent;min-height:52px}.action-list .button:last-child{border-bottom:0}.toast{position:fixed;bottom:calc(96px + env(safe-area-inset-bottom));left:20px;right:20px;max-width:560px;margin:auto;padding:4px 8px 4px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border-control);border-radius:10px;background:var(--surface-3);color:var(--text-primary);font-size:13px;line-height:20px;z-index:var(--z-toast)}.lock-screen{max-width:440px;min-height:100dvh;margin:auto;padding:calc(56px + env(safe-area-inset-top)) 20px 36px;display:flex;flex-direction:column}.lock-screen .brand{margin-bottom:56px}.lock-screen h1{margin-bottom:12px}.lock-screen form{margin-top:28px}.lock-footer{margin-top:auto;padding-top:48px}.lock-screen input{font-size:20px;letter-spacing:6px}.account-summary{display:flex;align-items:center;gap:12px}.account-symbol{display:grid;place-items:center;width:36px;height:36px;background:var(--surface-2);border:1px solid var(--border-default);border-radius:6px}.list-heading{display:flex;justify-content:space-between;align-items:center;margin-top:24px}.list-heading h2{font-size:15px;line-height:22px}.skeleton{display:flex;flex-direction:column;gap:12px;padding:20px 0}.skeleton span{display:block;height:16px;width:80%;background:var(--surface-3);border-radius:4px}.skeleton span:last-child{width:55%}.kitchen-section{padding:24px 0;border-bottom:1px solid var(--border-default)}.kitchen-section h2{margin-bottom:16px}.kitchen-buttons{display:flex;gap:8px;flex-wrap:wrap}.session-obscured #root{visibility:hidden}.session-obscured:after{content:'Kairos is locked';position:fixed;inset:0;display:grid;place-items:center;background:var(--surface-0);color:var(--text-secondary);font-size:15px}.check-row{display:flex;align-items:center;gap:12px;min-height:44px;font-size:13px;line-height:20px}.check-row input{flex-shrink:0}.split-field{display:grid;grid-template-columns:1fr 1fr;gap:12px}@keyframes sheet-enter{from{transform:translateY(32px);opacity:0}to{transform:translateY(0);opacity:1}}@media(min-width:700px){.app{padding-top:16px}.brand-bar{height:80px}.screen-header{padding:26px 0 20px}.empty-state{padding:40px 4px 44px}.sheet{bottom:24px;border-bottom:1px solid var(--border-default);border-radius:16px}.tabs{padding-top:10px;padding-bottom:10px}}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}@media(max-width:340px){.privacy-status span{display:none}.app{padding-left:16px;padding-right:16px}.row{gap:8px}.row-trailing{max-width:55%}.split-field{grid-template-columns:1fr}}
 
 .import-workspace { margin-top: 24px; }
 .transaction-row { width: 100%; min-height: 56px; display: flex; gap: 16px; justify-content: space-between; align-items: center; background: transparent; color: var(--text-primary); border: 0; border-bottom: 1px solid var(--border-subtle); padding: 12px 0; text-align: left; cursor: pointer; }
 .transaction-row > span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .transaction-row strong { font-size: 13px; font-weight: 500; display: block; }
 .transaction-row .meta { display: block; margin-top: 4px; }
-.transaction-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.transaction-row:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 .import-failure { padding: 12px; border: 1px solid var(--border-default); border-radius: 6px; }
 .import-failure pre, .raw-excerpt, .payload { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; max-height: 200px; overflow: auto; }
 .review-counts { display: flex; flex-wrap: wrap; gap: 12px; font-variant-numeric: tabular-nums; }
@@ -14,13 +14,12 @@
 .covered-range { background: var(--accent); border: 1px solid var(--accent); }
 .missing-range { background: repeating-linear-gradient(135deg, transparent, transparent 3px, var(--border-default) 3px, var(--border-default) 5px); border: 1px dashed var(--text-secondary); }
 details > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
-.data-grid-scroll{max-width:100%;overflow:auto}.data-grid{border-collapse:collapse;width:100%;font-size:13px;line-height:20px;font-variant-numeric:tabular-nums}.data-grid th,.data-grid td{border-bottom:1px solid var(--border-subtle);padding:10px 12px;text-align:left;min-width:120px}.data-grid th{font-weight:500;background:var(--surface-2)}.data-grid td.amount{text-align:right}.surface-muted{background:var(--surface-1);color:var(--text-secondary)}.surface-muted h2{color:var(--text-secondary)}.export-range{user-select:all;overflow-wrap:anywhere}.drop-surface{border:1px dashed var(--border-control);padding:16px;background:var(--surface-1)}
+.data-grid-scroll{max-width:100%;overflow:auto}.data-grid{border-collapse:collapse;width:100%;font-size:13px;line-height:20px;font-variant-numeric:tabular-nums}.data-grid th,.data-grid td{border-bottom:1px solid var(--border-subtle);padding:10px 12px;text-align:left;min-width:120px}.data-grid th{font-weight:500;background:var(--surface-2)}.data-grid td.amount{text-align:right}.surface-muted{background:var(--surface-1);color:var(--text-secondary)}.surface-muted h2{color:var(--text-secondary)}
 
 .brand-mark{overflow:hidden}.brand-mark img{display:block;width:100%;height:100%;object-fit:cover}
 
 .import-progress { display:flex; align-items:center; gap:12px; padding:16px; border:1px solid var(--border-default); border-radius:10px; background:var(--surface-1); }
-.money-visuals svg { display:block; width:100%; overflow:visible; }
-.money-visuals .fingerprint { max-width:280px; align-self:center; }
+
 .recovery-groups { display:grid; grid-template-columns:repeat(auto-fit,minmax(5ch,1fr)); gap:8px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .recovery-groups span { border:1px solid var(--border-default); padding:8px; text-align:center; }
 .import-progress-mark { width:40px; height:40px; flex:none; fill:none; stroke:var(--text-secondary); stroke-width:1; }
@@ -31,8 +30,6 @@ details > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
 @media (prefers-reduced-motion:reduce) { .import-progress-line { animation:none; opacity:1; } }
 
 textarea{resize:vertical;min-height:88px}.cancellation-records .row>div:first-child{min-width:0;overflow-wrap:anywhere}.cancellation-records .button{overflow-wrap:anywhere;white-space:normal}
-
-.spending-bar{height:10px;background:var(--surface-2);border-radius:4px;overflow:hidden}.spending-bar span{display:block;height:100%;background:var(--accent)}.spending-patterns .row>div:first-child{min-width:0;overflow-wrap:anywhere}.spending-patterns .button{overflow-wrap:anywhere;white-space:normal}
 
 /* Disclosure rows read as a control, not a video player.
    The native marker is a filled triangle that looks like Play; these are things that open, so they get a
@@ -61,7 +58,7 @@ details[open] > summary::before { transform: rotate(45deg); }
   background: transparent; color: var(--text-tertiary); font-size: 12px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; padding: 0;
 }
-.calendar-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.calendar-day:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
 .calendar-day.level-1 { background: var(--heat-1); color: var(--heat-ink-1); }
 .calendar-day.level-2 { background: var(--heat-2); color: var(--heat-ink-2); }
 .calendar-day.level-3 { background: var(--heat-3); color: var(--heat-ink-3); }
@@ -81,20 +78,14 @@ details[open] > summary::before { transform: rotate(45deg); }
 /* Named "overlay" and positioned like a paragraph: it had no position at all, so it rendered inline at
    the bottom of whatever it was inside. Fixed to the viewport, not absolute inside the sheet — the sheet
    scrolls, and an absolute child would centre itself in the middle of the scrolled content. */
-.busy-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center;
+.busy-dialog { margin: 0; padding: 0; border: 0; width: 100%; height: 100%; max-width: none; max-height: none; background: transparent; }
+.busy-dialog::backdrop { background: transparent; }
+.busy-overlay { position: fixed; inset: 0; display: grid; place-items: center;
   padding: 32px; background: oklch(0% 0 0 / .65); }
 .busy-card { display: grid; justify-items: center; gap: 14px; padding: 28px 32px; text-align: center;
-  border: 1px solid var(--border-default); border-radius: 14px; background: var(--surface-1);
+  border: 1px solid var(--border-default); border-radius: 16px; background: var(--surface-1);
   color: var(--text-primary); max-width: 300px; }
 .busy-card p { color: var(--text-primary); }
-.kairos-mark { display: block; color: var(--accent-text); }
-.kairos-mark path { fill: currentColor; }
-/* The step sweeps; the disc never breaks. Both halves ride the same transform, so what changes is where
-   the staircase between them sits, not how much disc there is. */
-@keyframes kairos-step { 0%, 100% { transform: translateX(-9px); } 50% { transform: translateX(9px); } }
-.kairos-halves-moving { animation: kairos-step 1800ms var(--ease-in-out) infinite; }
-@media (prefers-reduced-motion: reduce) { .kairos-halves-moving { animation: none; } }
-@media (forced-colors: active) { .kairos-mark path { fill: CanvasText; } }
 .spinner { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border-default);
   border-top-color: var(--accent); animation: spin 700ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -105,7 +96,7 @@ details[open] > summary::before { transform: rotate(45deg); }
 .flow figcaption h3, .balance figcaption h3 { margin-bottom: 4px; }
 .flow-track { display: flex; flex-direction: column; gap: 10px; }
 .flow-line { display: grid; grid-template-columns: 10px 72px 1fr auto; align-items: center; gap: 8px; }
-.flow-key { width: 10px; height: 10px; border-radius: 3px; }
+.flow-key { width: 10px; height: 10px; border-radius: 4px; }
 .flow-key-in { background: var(--flow-in); }
 .flow-key-out { background: var(--flow-out); }
 .flow-name { font-size: 11px; line-height: 16px; color: var(--text-secondary); }
@@ -114,35 +105,13 @@ details[open] > summary::before { transform: rotate(45deg); }
 .flow-fill-in { background: var(--flow-in-fill); }
 .flow-fill-out { background: var(--flow-out-fill); }
 .flow-gap-line .flow-bar { background: transparent; }
-.flow-gap { position: absolute; inset-block: 3px; border-radius: 3px; min-width: 2px;
+.flow-gap { position: absolute; inset-block: 3px; border-radius: 4px; min-width: 2px;
   border: 1px dashed var(--text-tertiary); background: transparent; }
 .flow-gap-short { border-style: solid; border-color: var(--negative-text); }
 .flow-line .amount { font-size: 13px; line-height: 20px; }
 
-/* What each month left: one column per month, growing out of a shared zero line. */
-.balance-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 11px; line-height: 16px; color: var(--text-secondary); }
-.balance-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.balance-plot { position: relative; display: flex; justify-content: center; gap: 2px; height: 148px; padding-bottom: 20px; }
-.balance-zero { position: absolute; inset-inline: 0; height: 1px; background: var(--border-control); }
-.balance-column { position: relative; flex: 1 1 0; min-width: 0; max-width: 76px; min-height: 44px; border: 0; background: transparent; padding: 0; border-radius: 6px; overflow: visible; }
-.balance-column:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
-.balance-bar { position: absolute; inset-inline: 3px; min-height: 3px; }
-.balance-bar-kept { background: var(--flow-in-fill); border-radius: 4px 4px 0 0; }
-.balance-bar-short { background: var(--flow-out-fill); border-radius: 0 0 4px 4px; }
-.balance-tick { position: absolute; inset-inline: 0; bottom: -20px; font-size: 11px; line-height: 16px; text-align: center;
-  color: var(--text-meta); font-variant-numeric: tabular-nums; }
-/* The selected month is marked under the axis, never inside the plot. An outline around the whole column
-   straddles the zero line, and in a chart whose language is "above the line stayed, below it went out" a
-   drawn region below the line reads as an amount — so the affordance contradicted the data it sat on. */
-.balance-column[aria-pressed=true] .balance-tick { color: var(--text-primary); }
-.balance-column[aria-pressed=true] .balance-tick::after { content: ''; display: block; width: 20px;
-  height: 2px; margin: 2px auto 0; border-radius: 1px; background: var(--accent-text); }
-.balance-readout { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center;
-  font-size: 12px; line-height: 18px; color: var(--text-secondary); }
-.balance-readout span { display: inline-flex; align-items: center; gap: 6px; }
-.balance-readout strong { color: var(--text-primary); font-weight: 500; }
 @media (forced-colors: active) {
-  .flow-fill, .flow-key, .balance-bar { forced-color-adjust: none; }
+  .flow-fill, .flow-key { forced-color-adjust: none; }
 }
 @media (max-width: 340px) {
   .flow-line { grid-template-columns: 10px 1fr auto; }
@@ -160,15 +129,13 @@ details[open] > summary::before { transform: rotate(45deg); }
 .strip-column[data-today] .strip-tick { color: var(--text-primary); font-weight: 600; }
 /* Same idiom as the month chart: today is marked under the axis, never by altering the bar's own shape. */
 .strip-column[data-today] .strip-tick::after { content: ''; display: block; width: 16px; height: 2px;
-  margin: 2px auto 0; border-radius: 1px; background: var(--accent-text); }
-.balance-pager { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; text-align: center; }
+  margin: 2px auto 0; border-radius: 999px; background: var(--accent-text); }
+
 /* A table may be wider than the phone; the page may not. Each one scrolls inside its own box. */
 .table-scroll { overflow-x: auto; }
 
 /* One notification awaiting an answer. Stacked rather than laid out in a row, so the two answers keep a
    full-width 44px target at any text size instead of being squeezed beside the amount. */
-.notice-card { padding: 14px 0; border-bottom: 1px solid var(--border-subtle); }
-.notice-card:last-of-type { border-bottom: 0; }
 .notice-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .notice-head strong { font-size: 13px; line-height: 20px; font-weight: 500; overflow-wrap: anywhere; }
 .notice-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
@@ -176,7 +143,7 @@ details[open] > summary::before { transform: rotate(45deg); }
 /* Spending by kind. Area is the amount; shade repeats it, on the same blue ramp the calendar uses. */
 .split { margin: 0; display: flex; flex-direction: column; gap: 12px; }
 .split figcaption h3 { margin-bottom: 4px; }
-.split-plot { width: 100%; height: auto; display: block; border-radius: 8px; overflow: hidden; }
+.split-plot { width: 100%; height: auto; display: block; border-radius: 10px; overflow: hidden; }
 .split-tile { stroke: var(--surface-1); stroke-width: 3; }
 .split-tile.level-1 { fill: var(--tile-1); } .split-tile.level-2 { fill: var(--tile-2); }
 .split-tile.level-3 { fill: var(--tile-3); } .split-tile.level-4 { fill: var(--tile-4); }
@@ -190,25 +157,12 @@ details[open] > summary::before { transform: rotate(45deg); }
    score out of a hundred, and these describe a pattern rather than rank anybody. */
 .axes { margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .axes-grid { display: flex; flex-direction: column; gap: 10px; }
-.axis-row { display: grid; grid-template-columns: 80px 1fr 56px; align-items: center; gap: 10px; }
-.axis-name { font-size: 12px; line-height: 18px; color: var(--text-secondary); }
-.axis-track { position: relative; height: 6px; border-radius: 3px; background: var(--surface-2);
-  border: 1px solid var(--border-subtle); }
-.axis-mark { position: absolute; top: 50%; width: 10px; height: 10px; margin-inline-start: -5px;
-  transform: translateY(-50%); border-radius: 50%; background: var(--flow-out);
-  box-shadow: 0 0 0 2px var(--surface-1); }
-.axis-value { text-align: right; font-variant-numeric: tabular-nums; }
-@media (max-width: 340px) { .axis-row { grid-template-columns: 68px 1fr 48px; } }
 
 /* Consecutive paragraphs in a settings block had nothing between them, because the reset zeroes p margins
    and this container is not a flex stack. The notification disclosure is two paragraphs — what the app
    reads, and what granting the access actually costs — and they ran together as one eight-line wall, on
    the most consequential text in the app. */
 .settings-section p + p { margin-top: 10px; }
-
-/* The number that ties each fingerprint spoke to its row underneath. Set outside the outer ring so it
-   never sits on a drawn edge, and in meta ink so the shape stays the thing being read. */
-.fingerprint-index { font-size: 11px; fill: var(--text-meta); }
 
 /* The pressed rule above used to be scoped to .theme-choices, so of the eight aria-pressed toggles in the
    app only the theme picker showed which option was chosen. The Add Transaction sheet's "Today" and
@@ -265,19 +219,13 @@ details[open] > summary::before { transform: rotate(45deg); }
    finding to be looked at rather than a line to be read down; two to a row on a phone so the block reads
    as a shape. Pressable ones carry the evidence behind them and are 44px by construction. */
 .answers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-.answer-card { display: flex; flex-direction: column; gap: 4px; min-height: 84px; padding: 12px;
-  text-align: left; border: 1px solid var(--border-subtle); border-radius: 10px;
-  background: var(--surface-1); color: var(--text-primary); }
-.answer-question { font-size: 11px; line-height: 16px; color: var(--text-meta); }
-.answer-value { font-size: 17px; line-height: 24px; font-weight: 600; letter-spacing: -.3px;
-  overflow-wrap: anywhere; }
+
 @media (max-width: 340px) { .answers { grid-template-columns: 1fr; } }
 
 /* The four figures the home screen leads with. Same tile language as the answer cards on Analysis — one
    surface, one hairline, one radius — because they are siblings rather than two separate design ideas. */
 .money-band { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.band-tile { display: flex; flex-direction: column; gap: 3px; min-height: 104px; padding: 12px;
-  border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-1); }
+.band-tile { display: flex; flex-direction: column; gap: 3px; min-height: 104px; padding: 12px; }
 .band-label { font-size: 11px; line-height: 16px; color: var(--text-meta); }
 .band-figure { font-size: 19px; line-height: 26px; font-weight: 600; letter-spacing: -.4px;
   color: var(--text-primary); overflow-wrap: anywhere; }
@@ -304,52 +252,15 @@ details[open] > summary::before { transform: rotate(45deg); }
 .fact { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; width: 100%;
   padding: 14px 16px; text-align: left; border: 1px solid var(--border-subtle); border-radius: 10px;
   background: var(--surface-1); color: var(--text-primary); min-height: 56px; }
-.fact-line { font-size: 13px; line-height: 20px; color: var(--text-secondary); overflow-wrap: anywhere; }
-.fact-line strong { color: var(--text-primary); font-weight: 600; }
-.fact-value { font-size: 15px; line-height: 22px; font-weight: 600; white-space: nowrap;
-  font-variant-numeric: tabular-nums; }
-
-/* Where the month went, as one thin ring. Slices are steps of the single blue ramp, largest first, so
-   ordering carries magnitude and the legend carries identity — colour never has to do both. */
-.ring { margin: 0; display: flex; flex-direction: column; gap: 12px; }
-.ring-body { display: flex; align-items: center; gap: 16px; }
-.ring-plot { width: 124px; height: 124px; flex-shrink: 0; transform: rotate(-90deg); }
-/* Thin, because the ring is not the subject — the proportion is. A fat donut invites comparing areas,
-   which nobody does accurately; a hairline reads as share. */
-.ring-arc { fill: none; stroke-width: 5; stroke-linecap: butt; }
-/* The heat ramp rather than the tile ramp: same single hue, but it spans 31%–71% lightness instead of
-   30%–55%, and the first version lost its three smallest slices into the background. This ramp already
-   means magnitude everywhere else in the app, which is exactly what a slice size is. */
-.ring-arc[data-slice="0"], .ring-key[data-slice="0"] { stroke: var(--heat-5); background: var(--heat-5); }
-.ring-arc[data-slice="1"], .ring-key[data-slice="1"] { stroke: var(--heat-4); background: var(--heat-4); }
-.ring-arc[data-slice="2"], .ring-key[data-slice="2"] { stroke: var(--heat-3); background: var(--heat-3); }
-.ring-arc[data-slice="3"], .ring-key[data-slice="3"] { stroke: var(--heat-2); background: var(--heat-2); }
-.ring-arc[data-slice="4"], .ring-key[data-slice="4"] { stroke: var(--heat-1); background: var(--heat-1); }
-.ring-arc[data-slice="5"], .ring-key[data-slice="5"] { stroke: var(--border-control); background: var(--border-control); }
-.ring-legend { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 0;
-  display: flex; flex-direction: column; gap: 6px; }
-.ring-legend li { display: flex; align-items: baseline; gap: 8px; font-size: 12px; line-height: 18px; }
-.ring-key { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-.ring-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: var(--text-secondary); }
-.ring-legend .amount { font-size: 12px; line-height: 18px; }
-@media (forced-colors: active) { .ring-arc { stroke: CanvasText; } }
-@media (max-width: 340px) { .ring-body { flex-direction: column; align-items: stretch; }
-  .ring-plot { align-self: center; } }
 
 /* Confirm was the last thing in a sheet holding forty rows, so reaching it meant scrolling past all of
    them. The sheet is its own scroll container, so sticky pins to its visible bottom edge with no
    JavaScript — and this bar takes over the safe-area padding the content used to carry, or it floats
    over the gesture bar. */
-.sheet-actions { position: sticky; bottom: 0; z-index: 2; margin-top: 16px;
+.sheet-actions { position: sticky; bottom: 0; z-index: var(--z-sticky); margin-top: 16px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
   padding: 12px 0 calc(4px + env(safe-area-inset-bottom));
   background: var(--surface-1); border-top: 1px solid var(--border-subtle); }
-
-/* One chart, a lane per recurring merchant, sharing one axis and one scale. The lane numbers are drawn in
-   the plot because these labels are bank strings sixty characters long; the list underneath ties each
-   number to its merchant. */
-.timeline { width: 100%; height: auto; display: block; }
-.timeline-index { fill: var(--text-meta); font-size: 30px; text-anchor: middle; }
 
 /* An account row opens. It was a caption with an amount beside it, which is the one thing on the Ledger
    a person most expects to press. */
@@ -391,12 +302,73 @@ details[open] > summary::before { transform: rotate(45deg); }
   --motion-rise: 10px;     /* how far anything ever travels while appearing */
   --motion-slide: 16px;    /* how far a whole screen slides sideways */
   --motion-stagger: 28ms;  /* between one section and the next */
+  --motion-grow: 500ms;    /* a chart growing in, once per mount */
+  --motion-stagger-bar: 20ms; /* between one bar and the next */
+  --motion-flip: 900ms;    /* one turn of a busy button's coin */
+  --motion-loop: 1600ms;   /* one cycle of a waiting animation */
+  --motion-orbit: 2400ms;  /* one turn of the Kairos AI ring */
+  --z-sticky: 2;           /* headers and action bars pinned inside a sheet */
+  --z-tabbar: 10;
+  --z-toast: 30;
   --ease-out: cubic-bezier(.22, .68, .32, 1);      /* arriving: fast, then easing into place */
   --ease-in-out: cubic-bezier(.45, .05, .25, 1);   /* moving between two states */
   --ease-emphasis: cubic-bezier(.34, 1.16, .64, 1);/* a slight overshoot, for the few things that earn it */
 }
 
 html { scroll-behavior: smooth; }
+
+/* Waits and feedback. Loops live only while their element is mounted, and every base state is the
+   finished picture, so the reduced-motion blanket rule leaves something sensible behind. */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.button[aria-busy="true"] { opacity: 1; cursor: progress; }
+.coin { display: inline-block; width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid currentColor; background: var(--surface-3);
+  animation: coin-flip var(--motion-flip) linear infinite; }
+@keyframes coin-flip { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.12); } }
+.loader { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 0; }
+.coin-stack { position: relative; display: block; width: 36px; height: 36px; }
+.coin-stack > span { position: absolute; left: 4px; bottom: 0; width: 28px; height: 9px; border-radius: 50%;
+  background: var(--accent); border: 1px solid var(--accent-text);
+  animation: coin-drop var(--motion-loop) var(--ease-out) infinite backwards; }
+.coin-stack > span:nth-child(2) { bottom: 9px; animation-delay: calc(var(--motion-loop) / 8); }
+.coin-stack > span:nth-child(3) { bottom: 18px; animation-delay: calc(var(--motion-loop) / 4); }
+@keyframes coin-drop { 0% { opacity: 0; transform: translateY(-18px); } 15%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; transform: none; } }
+.skeleton span { position: relative; overflow: hidden; }
+.skeleton span::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--surface-2), transparent);
+  animation: shimmer var(--motion-loop) var(--ease-in-out) infinite; }
+@keyframes shimmer { to { transform: translateX(100%); } }
+.kai-working { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+.kai-mark { display: inline-block; flex-shrink: 0; vertical-align: middle; }
+.kai-mark .kai-orbit, .kai-mark .kai-spark { transform-box: view-box; transform-origin: 50px 50px; }
+.kai-thinking .kai-orbit { animation: kai-orbit var(--motion-orbit) linear infinite; }
+/* Alternating, so the four-point sparkle never jumps back from 45°. */
+.kai-thinking .kai-spark { animation: kai-spark calc(var(--motion-orbit) / 2) var(--ease-in-out) infinite alternate; }
+@keyframes kai-orbit { to { transform: rotate(360deg); } }
+@keyframes kai-spark { 0% { transform: rotate(0) scale(.82); } 50% { transform: rotate(22.5deg) scale(1.04); } 100% { transform: rotate(45deg) scale(.82); } }
+.heading-mark { display: flex; align-items: center; gap: 8px; }
+.toast-message { display: flex; align-items: center; gap: 8px; }
+.success-drop { position: relative; display: inline-grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; color: var(--accent-text); }
+.success-coin { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); opacity: 0;
+  animation: coin-into-check var(--motion-sweep) var(--ease-out); }
+.success-drop svg { animation: check-pop var(--motion-settle) var(--ease-emphasis) var(--motion-sweep) backwards; }
+@keyframes coin-into-check { from { opacity: 1; transform: translateY(-14px); } to { opacity: 0; transform: none; } }
+@keyframes check-pop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: none; } }
+/* Charts grow in once per mount; the numbers are already right underneath. */
+@media (prefers-reduced-motion: no-preference) {
+  .flow-fill, .flow-gap { animation: measure var(--motion-grow) var(--ease-out) both; transform-origin: left center; }
+  .split-tile { animation: tile-in var(--motion-grow) var(--ease-out) both; transform-box: fill-box; transform-origin: center; }
+  .strip-bar { animation: measure-up var(--motion-grow) var(--ease-out) both; transform-origin: bottom; }
+  .strip-column:nth-child(2) .strip-bar { animation-delay: var(--motion-stagger-bar); }
+  .strip-column:nth-child(3) .strip-bar { animation-delay: calc(2 * var(--motion-stagger-bar)); }
+  .strip-column:nth-child(4) .strip-bar { animation-delay: calc(3 * var(--motion-stagger-bar)); }
+  .strip-column:nth-child(5) .strip-bar { animation-delay: calc(4 * var(--motion-stagger-bar)); }
+  .strip-column:nth-child(6) .strip-bar { animation-delay: calc(5 * var(--motion-stagger-bar)); }
+  .strip-column:nth-child(n+7) .strip-bar { animation-delay: calc(6 * var(--motion-stagger-bar)); }
+  .savings-kept, .savings-planned { animation: measure var(--motion-grow) var(--ease-out) both; transform-box: fill-box; transform-origin: left center; }
+  .savings-planned { animation-delay: calc(var(--motion-grow) / 2); }
+}
+@keyframes tile-in { from { opacity: 0; transform: scale(0); } to { opacity: 1; transform: none; } }
 
 /* A tab change. The screen slides the way you travelled; its sections then rise in sequence. Two
    different animations on two levels, because one element cannot both slide sideways and stagger. */
@@ -423,7 +395,7 @@ html { scroll-behavior: smooth; }
 .tab { transition: background var(--motion-quick) var(--ease-out), color var(--motion-quick) var(--ease-out); }
 .tab .tab-icon { transition: transform var(--motion-quick) var(--ease-emphasis); }
 .tab[aria-current=page] .tab-icon { transform: translateY(-2px); }
-.tab::after { content: ''; display: block; width: 18px; height: 2px; border-radius: 1px;
+.tab::after { content: ''; display: block; width: 18px; height: 2px; border-radius: 999px;
   background: var(--accent-text); opacity: 0; transform: scaleX(.3);
   transition: transform var(--motion-quick) var(--ease-emphasis), opacity var(--motion-quick) var(--ease-out); }
 .tab[aria-current=page]::after { opacity: 1; transform: scaleX(1); }
@@ -463,7 +435,7 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
    the filmstrip showed exactly that. */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
-    .screen > * .row, .screen > * .notice-card, .screen > * .surface {
+    .screen > * .row, .screen > * .card {
       animation: rise-in linear both;
       animation-timeline: view();
       animation-range: entry 0% entry 28%;
@@ -482,7 +454,7 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
 
 /* A length, not a sentence. The track is one month wide; the fill is what is left of it. */
 .runway, .fixed-free { margin: 0; display: flex; flex-direction: column; gap: 8px; }
-.runway-plot, .fixed-free-plot { width: 100%; height: 10px; display: block; border-radius: 5px; overflow: hidden; }
+.runway-plot, .fixed-free-plot { width: 100%; height: 10px; display: block; border-radius: 999px; overflow: hidden; }
 .runway-track { fill: var(--surface-3); }
 .runway-fill { fill: var(--accent-text); }
 /* Under a week takes the warning ink — but the LENGTH already said it, and the caption says it in
@@ -530,28 +502,12 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
 .debt-burn figcaption.debt-burn-none { color: var(--warning-text); }
 /* The line draws itself from the balance you hold to the month it is gone, once, on the shared tokens. */
 @media (prefers-reduced-motion: no-preference) {
-  .debt-burn-line { stroke-dasharray: 1; animation: draw-down var(--motion-sweep) var(--ease-out) both; }
+  .debt-burn-line { stroke-dasharray: 1; animation: draw-down var(--motion-grow) var(--ease-out) both; }
 }
 @keyframes draw-down { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 
-/* In on the left, out on the right, one scale between them. The band that joins the two stacks is the
-   picture: where it pinches, less went out than came in. The tile ramp, because these are large blocks
-   and the ramp already means "bigger" everywhere else in the app. */
-.money-flow { margin: 0; display: flex; flex-direction: column; gap: 8px; }
-.money-flow-plot { width: 100%; height: auto; display: block; }
-/* The band is the subject, not a backdrop: present enough to follow its edges across the plot. */
-.flow-link { fill: var(--tile-2); opacity: .55; }
-.flow-band { stroke: var(--surface-1); stroke-width: 2; }
-.flow-band.level-1 { fill: var(--tile-1); } .flow-band.level-2 { fill: var(--tile-2); }
-.flow-band.level-3 { fill: var(--tile-3); } .flow-band.level-4 { fill: var(--tile-4); }
-.flow-band.level-5 { fill: var(--tile-5); }
-/* Text wears text ink, never a series colour; the block beside it carries the identity. */
-.flow-label { font-size: 30px; fill: var(--text-secondary); dominant-baseline: middle; }
-.flow-label-end { text-anchor: end; }
-.money-flow figcaption { font-size: 11px; line-height: 16px; color: var(--text-meta); }
-@media (prefers-reduced-motion: no-preference) {
-  .flow-link { animation: measure var(--motion-sweep) var(--ease-out) both; transform-origin: left center; }
-}
+ 
+ 
 
 /* A cleared debt is kept, not deleted — what it cost is part of the record — but it is no longer news. */
 .debt-cleared { opacity: .6; }
@@ -592,14 +548,10 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
   font-size: 13px; line-height: 20px; color: var(--text-secondary); }
 .currency-exposure-key li { display: flex; align-items: center; gap: 6px; }
 .currency-exposure-key .meta { color: var(--text-meta); }
-/* The swatch is a block of the same ramp, sized to read at a glance without competing with the bar. */
-.exposure-key-mark { width: 10px; height: 10px; border-radius: 2px; }
-.exposure-key-mark.level-1 { background: var(--tile-1); } .exposure-key-mark.level-2 { background: var(--tile-2); }
-.exposure-key-mark.level-3 { background: var(--tile-3); } .exposure-key-mark.level-4 { background: var(--tile-4); }
-.exposure-key-mark.level-5 { background: var(--tile-5); }
-/* Text ON a band wears that ramp's ink, never the page's: the page's came out barely legible on a
-   mid-blue block, which is exactly what a direct label exists to prevent. */
-.exposure-label { font-size: 30px; fill: var(--tile-ink); dominant-baseline: middle; }
+
+ 
+ 
+
 .currency-exposure figcaption { font-size: 11px; line-height: 16px; color: var(--text-meta); }
 
 /* A figure that might be counting one purchase twice says so where the figure is. Warning ink, because
@@ -629,8 +581,6 @@ details[open] > summary ~ * { animation: rise-in var(--motion-settle) var(--ease
 .segmented { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; }
 .segmented .button { width: 100%; padding: 10px 6px; }
 input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -.6px; }
-.sheet-actions { position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
-  padding: 12px 0 calc(4px + env(safe-area-inset-bottom)); background: var(--surface-1); }
 .sheet-actions .button { width: 100%; min-height: 48px; }
 /* The one primary action on Today. It sat under four other things and was the same size as a filter
    chip; it is now the first thing the screen offers after the figures it is about. */
@@ -642,19 +592,6 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 /* Bars for "which of these is the big one": one hue stepped by magnitude, 8px tall with rounded ends
    anchored to a shared left edge, and every bar still carries its own figure. */
 .ranked { margin: 24px 0 0; }
-.ranked-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 14px; }
-.ranked-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.ranked-name { font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
-.ranked-amount { min-height: 44px; min-width: 44px; padding: 4px 0; font-size: 15px; font-weight: 600;
-  justify-content: flex-end; }
-.ranked-track { display: block; height: 8px; margin-top: 6px; border-radius: 4px; background: var(--surface-2); }
-.ranked-fill { display: block; height: 100%; border-radius: 4px; min-width: 4px; }
-.ranked-fill[data-rank="0"] { background: var(--heat-5); }
-.ranked-fill[data-rank="1"] { background: var(--heat-4); }
-.ranked-fill[data-rank="2"] { background: var(--heat-3); }
-.ranked-fill[data-rank="3"] { background: var(--heat-2); }
-.ranked-fill[data-rank="4"] { background: var(--heat-1); }
-.ranked-fill[data-rank="5"] { background: var(--border-control); }
 
 /* Quiet maintenance, not an action: the rate refresh sits beside the date it fetched rather than
    shouting over it, while keeping the 44px target every control in this app has. */
@@ -671,23 +608,27 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 .savings-now { fill: var(--accent); stroke: var(--surface-1); stroke-width: 2; }
 .savings-ends { display: flex; justify-content: space-between; }
 
-/* Money audit: a month as one bar, the roadmap as tracks. Same blue ramp as every other length. */
-.audit-tiles { grid-template-columns: repeat(2, 1fr); }
-.audit-tiles .band-tile { min-height: 84px; }
-.audit-bar { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; background: var(--surface-2); }
-.audit-bar > span { display: block; height: 100%; }
-.audit-keep { background: var(--heat-2); }
-.audit-debt { background: var(--heat-4); }
-.audit-save { background: var(--heat-5); }
-.audit-spend { background: var(--border-control); }
-.audit-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; }
-.audit-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.audit-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
-.audit-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-.audit-step[data-status="done"] .ranked-name, .audit-step[data-status="done"] .amount { color: var(--text-meta); }
-.audit-step[data-status="now"] .ranked-name { font-weight: 600; }
-.audit-step .tag { margin-left: 8px; }
-.audit-fill { background: var(--heat-3); }
-.audit-step[data-status="done"] .audit-fill { background: var(--heat-1); }
 /* A theme's own surface, ink and accent, so each choice shows what it looks like. */
 .theme-swatch{width:16px;height:16px;border-radius:50%;border:1px solid var(--border-control);background:linear-gradient(135deg,var(--swatch-surface) 0 50%,var(--swatch-accent) 50% 100%);box-shadow:inset 0 0 0 3px var(--swatch-surface),inset 0 0 0 4px var(--swatch-ink)}
+
+/* On/Off settings as switches; the button keeps aria-pressed and its name. */
+/* The button is the full 44px touch target; the 32px track is drawn inside it. */
+.switch { position: relative; flex-shrink: 0; width: 52px; height: 44px; padding: 0; border: 0; background: transparent; }
+.switch::before { content: ''; position: absolute; inset: 6px 0; border-radius: 999px;
+  background: var(--border-control); transition: background var(--motion-quick) var(--ease-out); }
+.switch[aria-pressed="true"]::before { background: var(--accent-solid); }
+.switch-thumb { position: absolute; top: 10px; left: 4px; width: 24px; height: 24px; border-radius: 999px; background: var(--on-accent);
+  transition: transform var(--motion-quick) var(--ease-out); }
+.switch[aria-pressed="true"] .switch-thumb { transform: translateX(20px); }
+@media (forced-colors: active) { .switch::before { border: 1px solid ButtonText; } .switch-thumb { background: ButtonText; } }
+.explain-inline { padding: 12px; border-radius: 6px; background: var(--surface-2); }
+.today > .surfaces, .today > .savings-path, .today > .button.add-primary { margin-top: 0; }
+.today-start { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.still .coin-stack > span { animation: none; }
+.savings-hero .hero-amount { margin-top: 2px; }
+.savings-hero { grid-column: 1 / -1; }
+.button.row-action { padding: 0; justify-content: flex-start; }
+.ledger-accounts .row { min-height: 48px; padding: 8px 0; }
+.history-heading { margin-bottom: 12px; }
+.danger-zone { margin-top: 48px; }
+.row-lead { display: inline-flex; align-items: center; gap: 8px; }

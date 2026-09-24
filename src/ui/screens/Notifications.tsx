@@ -4,7 +4,7 @@ import {Capacitor} from '@capacitor/core';
 import {currency} from '../../core/money';
 import {defaultNotices,noticeKinds,notificationPlan,type NoticePreferences} from '../../intelligence/notifications';
 import {localDay,Reminder} from '../../ingest/reminders';
-import {Button,Row} from '../design/primitives';
+import {Row,Switch} from '../design/primitives';
 import {useSession} from '../session';
 import {useDisplayCurrencyState} from '../currency';
 import {brainQuery} from '../money';
@@ -49,5 +49,5 @@ export function NotificationSettings(){
    setMessage(`${labels[kind]} ${next[kind]?'enabled':'turned off'}.`);
   }catch(e){setMessage(e instanceof Error?e.message:'The preference could not be saved. Try again.');}finally{setBusy(false);}
  }
- return <section className="settings-section"><h2>Notifications</h2><p>Off by default. Based on imported records; refreshed when you open Kairos. At most one money review per day. Lock-screen messages contain no amounts or merchant names.</p>{noticeKinds.map(kind=><Row key={kind} trailing={<Button aria-pressed={saved.data?.[kind]??false} disabled={busy||!saved.data||!Capacitor.isNativePlatform()} onClick={()=>void toggle(kind)}>{saved.data?.[kind]?'On':'Off'}</Button>}>{labels[kind]}</Row>)}<p className="meta">These do not read your bank’s notifications. Delivery depends on Android notification settings.</p>{(message||saved.error)&&<p role="status">{message||'Notification preferences could not be read. Lock and reopen Kairos.'}</p>}</section>;
+ return <section className="settings-section"><h2>Notifications</h2><p>Off by default. Based on imported records; refreshed when you open Kairos. At most one money review per day. Lock-screen messages contain no amounts or merchant names.</p>{noticeKinds.map(kind=><Row key={kind} trailing={<Switch label={labels[kind]} on={saved.data?.[kind]??false} disabled={busy||!saved.data||!Capacitor.isNativePlatform()} onChange={()=>void toggle(kind)}/>}>{labels[kind]}</Row>)}<p className="meta">These do not read your bank’s notifications. Delivery depends on Android notification settings.</p>{(message||saved.error)&&<p role="status">{message||'Notification preferences could not be read. Lock and reopen Kairos.'}</p>}</section>;
 }

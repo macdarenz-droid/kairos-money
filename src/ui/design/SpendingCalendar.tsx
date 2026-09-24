@@ -1,6 +1,7 @@
 import {useMemo, useState} from 'react';
 import {format, money, type Currency} from '../../core/money';
 import {Button, Explain} from './primitives';
+import {CountUp} from './Motion';
 
 export type DaySpend = {date: string; minor: string};
 
@@ -67,7 +68,7 @@ export function SpendingCalendar({days, code, onDay}: {days: DaySpend[]; code: C
             stay empty rather than being left out.</p>
         </Explain>
       </div>
-      <p className="hero-amount">{label(monthTotal)}</p>
+      <p className="hero-amount"><CountUp value={money(monthTotal, code)}/></p>
       <p className="meta">spent this month</p>
     </div>
 

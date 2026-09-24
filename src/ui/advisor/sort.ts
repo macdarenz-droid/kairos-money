@@ -10,11 +10,11 @@ export type SortResult = {ok: true; run: AiRun; usage: Usage} | {ok: false; reas
 
 /** Plain words for every way a call can fail; nothing is changed in any of them. */
 export const REASONS: Record<SortReason, string> = {
-  key: 'Claude did not accept the key. Check it in Settings.',
-  busy: 'Claude is busy. Try again in a minute.',
+  key: 'Anthropic did not accept the key. Check it in Settings.',
+  busy: 'Kairos AI is busy. Try again in a minute.',
   offline: 'No connection. Try again when you are online.',
-  refused: 'Claude declined this request.',
-  invalid: 'Claude’s answer could not be read.',
+  refused: 'Kairos AI declined this request.',
+  invalid: 'Kairos AI’s answer could not be read.',
   setup: 'Turn on the advisor, add a key and allow sorting first.',
   nothing: 'Every merchant is already sorted.',
 };
@@ -58,8 +58,8 @@ export async function sortAfterImport(run: Run, options: Options = {}): Promise<
   const settings = await run(repo => repo.advisor.settings());
   if (!settings.enabled || !settings.sortConsent || !settings.autoSort) return '';
   const result = await sortMerchants(run, true, options);
-  if (result.ok) return result.run.applied.length ? `Claude sorted ${result.run.applied.length} new ${result.run.applied.length === 1 ? 'merchant' : 'merchants'}.` : '';
+  if (result.ok) return result.run.applied.length ? `Kairos AI sorted ${result.run.applied.length} new ${result.run.applied.length === 1 ? 'merchant' : 'merchants'}.` : '';
   if (result.reason === 'nothing' || result.reason === 'setup') return '';
   const done = result.run?.applied.length ?? 0;
-  return done ? `Claude sorted ${done} new ${done === 1 ? 'merchant' : 'merchants'}; the rest were not: ${REASONS[result.reason]}` : `New merchants were not sorted: ${REASONS[result.reason]}`;
+  return done ? `Kairos AI sorted ${done} new ${done === 1 ? 'merchant' : 'merchants'}; the rest were not: ${REASONS[result.reason]}` : `New merchants were not sorted: ${REASONS[result.reason]}`;
 }

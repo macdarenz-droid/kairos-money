@@ -29,10 +29,11 @@ const COMPOSED = new Map([
   ['Added 2 new transactions', 'template: as above'],
   ['Amount 1', 'template: split rows are `Amount ${i}`'],
   ['Amount 2', 'template: as above'],
-  ['Record cancellation · Synthetic fortnightly membership', 'template: `Record cancellation · ${merchant}`; the test names the fixture rows'],
+  ['Track cancellation · Synthetic fortnightly membership', 'template: `Track cancellation · ${bill.merchant}`; the test names the fixture rows'],
   ['Review 1 later payment', 'template: `Review ${n} later payment${…}`'],
   ['Synthetic everyday', 'synthetic fixture the test seeds itself'],
   ['That PIN did not match', 'thrown by the native Vault plugin, not the web source'],
+  ['Type DELETE KAIROS to confirm', 'template: DeleteConfirm renders `Type ${phrase} to confirm`; Lock passes DELETE KAIROS'],
 ]);
 
 function walk(dir) {
@@ -47,6 +48,7 @@ const PATTERNS = [
   /innerText\.includes\('([^']+)'\)/g,
   /startsWith\('([^']+)'\)/g,
   /\bclick\("([^"]+)"\)/g,
+  /\bclickLabel\("([^"]+)"\)/g,
   /\binput\("([^"]+)"/g,
 ];
 

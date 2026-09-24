@@ -1,23 +1,24 @@
-import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type PropsWithChildren, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type PropsWithChildren, type ReactNode } from 'react';
 import { X, Home, List, Sparkles, UserRound, Search, Info } from 'lucide-react';
 import { format, type Money } from '../../core/money';
-export function Surface({ children, className = '' }: PropsWithChildren<{ className?: string }>) { return <section className={`surface ${className}`}>{children}</section>; }
+import { Coin, SuccessDrop, useModal } from './Motion';
+export function Surface({ children, className = '' }: PropsWithChildren<{ className?: string }>) { return <section className={`card ${className}`}>{children}</section>; }
 export function Row({ children, trailing }: PropsWithChildren<{ trailing?: ReactNode }>) { return <div className="row"><div>{children}</div>{trailing && <div className="row-trailing">{trailing}</div>}</div>; }
 export function Label({ children, muted = false }: PropsWithChildren<{ muted?: boolean }>) { return <span className={muted ? 'label muted' : 'label'}>{children}</span>; }
 export function Amount({ value, context, hero = false }: { value: Money; context: string; hero?: boolean }) {
   return <span className={`amount ${hero ? 'hero-amount' : ''}`} aria-label={`${value.minor < 0n ? 'Negative ' : ''}${format({ ...value, minor: value.minor < 0n ? -value.minor : value.minor })} ${value.currency}, ${context}`}>{format(value)}</span>;
 }
-export function Button({ children, variant = 'default', className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'default' | 'primary' | 'danger' | 'quiet' }) {
-  return <button type="button" className={`button button-${variant} ${className}`} {...props}>{children}</button>;
+export function Button({ children, variant = 'default', className = '', busy = false, busyLabel, disabled, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'default' | 'primary' | 'danger' | 'quiet'; busy?: boolean; busyLabel?: ReactNode }) {
+  return <button type="button" className={`button button-${variant} ${className}`} disabled={disabled || busy} aria-busy={busy || undefined} {...props}>{busy ? <><Coin/>{busyLabel ?? children}</> : children}</button>;
 }
 export function Input({ label, hint, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string | undefined }) {
   const id = useId(); return <label className="input-label" htmlFor={id}><span id={`${id}-label`}>{label}</span><input id={id} aria-labelledby={`${id}-label`} aria-describedby={hint ? `${id}-hint` : undefined} {...props}/>{hint && <span id={`${id}-hint`} className="meta">{hint}</span>}</label>;
 }
+const InSheet = createContext(false);
 export function Sheet({ title, children, onClose }: PropsWithChildren<{ title: string; onClose: () => void }>) {
-  const ref = useRef<HTMLDialogElement>(null); const id = useId();
-  useEffect(() => { const dialog = ref.current; const previous = document.body.style.overflow; dialog?.showModal(); document.body.style.overflow = 'hidden'; return () => { dialog?.close(); document.body.style.overflow = previous; }; }, []);
+  const ref = useModal(); const id = useId();
   return <dialog className="sheet" ref={ref} aria-labelledby={id} onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientY < rect.top || event.clientX < rect.left || event.clientX > rect.right) onClose(); } }}>
-    <header className="sheet-header"><h2 id={id}>{title}</h2><Button variant="quiet" className="icon-button" aria-label={`Close ${title}`} onClick={onClose}><X size={20}/></Button></header><div className="sheet-content">{children}</div>
+    <header className="sheet-header"><h2 id={id}>{title}</h2><Button variant="quiet" className="icon-button" aria-label={`Close ${title}`} onClick={onClose}><X size={20}/></Button></header><div className="sheet-content"><InSheet.Provider value={true}>{children}</InSheet.Provider></div>
   </dialog>;
 }
 /**
@@ -34,13 +35,26 @@ export function Sheet({ title, children, onClose }: PropsWithChildren<{ title: s
  * reading it; this is a real control with a real sheet behind it.
  */
 export function Explain({ title, children }: PropsWithChildren<{ title: string }>) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false); const inSheet = useContext(InSheet); const id = useId();
+  // Inside a sheet a second sheet would stack two modals; the answer opens in place instead.
   return <>
-    <button type="button" className="explain" aria-label={`What ${title} means`} onClick={() => setOpen(true)}>
+    <button type="button" className="explain" aria-label={`What ${title} means`} aria-expanded={inSheet ? open : undefined} aria-controls={inSheet && open ? id : undefined} onClick={() => setOpen(value => inSheet ? !value : true)}>
       <Info size={15} strokeWidth={1.8} aria-hidden="true"/>
     </button>
-    {open && <Sheet title={title} onClose={() => setOpen(false)}><div className="stack">{children}</div></Sheet>}
+    {open && (inSheet ? <div className="explain-inline stack" id={id}>{children}</div> : <Sheet title={title} onClose={() => setOpen(false)}><div className="stack">{children}</div></Sheet>)}
   </>;
+}
+/** The one confirmation for deleting everything, the same in Settings and on the lock screen. */
+export function DeleteConfirm({ checked, onChange, phrase, typed = '', onTyped }: { checked: boolean; onChange: (checked: boolean) => void; phrase?: string; typed?: string; onTyped?: (value: string) => void }) {
+  return <>
+    <p>This permanently removes your ledger, accounts, files, settings and PIN from this device. Exported copies must be deleted separately.</p>
+    <label className="check-row"><input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}/>I understand that my data will be removed.</label>
+    {phrase && <Input label={`Type ${phrase} to confirm`} autoComplete="off" spellCheck={false} value={typed} onChange={e => onTyped?.(e.target.value)}/>}
+  </>;
+}
+/** An On/Off setting drawn as a switch; the setting's label is its name. */
+export function Switch({ label, on, onChange, disabled }: { label: string; on: boolean; onChange: () => void; disabled?: boolean | undefined }) {
+  return <button type="button" className="switch" aria-pressed={on} aria-label={label} disabled={disabled} onClick={onChange}><span className="switch-thumb" aria-hidden="true"/><span className="sr-only">{on ? 'On' : 'Off'}</span></button>;
 }
 
 export type Tab = 'Today' | 'Ledger' | 'Insights' | 'You';
@@ -51,9 +65,9 @@ export function Tabs({ current, onChange, onQuick }: { current: Tab; onChange: (
     return <button className={tab === 'Quick' ? 'tab tab-quick' : 'tab'} key={tab} aria-current={current === tab ? 'page' : undefined} onClick={() => tab === 'Quick' ? onQuick() : onChange(tab)}><span className="tab-icon"><Icon size={20} strokeWidth={1.65}/></span><span>{tab}</span></button>;
   })}</div></nav>;
 }
-export function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+export function Toast({ message, onDismiss, saved = false }: { message: string; onDismiss: () => void; saved?: boolean }) {
   useEffect(() => { const timer = setTimeout(onDismiss, 6000); return () => clearTimeout(timer); }, [onDismiss]);
-  return <div className="toast" role="status"><span>{message}</span><Button variant="quiet" className="icon-button" aria-label="Dismiss notification" onClick={onDismiss}><X size={16}/></Button></div>;
+  return <div className="toast" role="status"><span className="toast-message">{saved && <SuccessDrop/>}{message}</span><Button variant="quiet" className="icon-button" aria-label="Dismiss notification" onClick={onDismiss}><X size={16}/></Button></div>;
 }
 export function EmptyState({ icon, title, children, action }: PropsWithChildren<{ icon: ReactNode; title: string; action: ReactNode }>) {
   return <section className="empty-state"><div className="empty-icon" aria-hidden="true">{icon}</div><h2>{title}</h2><p>{children}</p><div className="empty-action">{action}</div></section>;

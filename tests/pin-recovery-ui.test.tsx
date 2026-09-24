@@ -50,14 +50,17 @@ for (const theme of ['dark', 'light'] as const) it(`requires a replacement PIN a
   fireEvent.click(screen.getByRole('button', { name: 'Save new PIN' }));
   await screen.findByRole('navigation'); expect(native.replaced).toBe(true);
 });
-it('requires the exact destructive confirmation while locked', async () => {
+it('needs the Settings tick box and the exact phrase before resetting while locked', async () => {
   native.configured = true; mount();
   fireEvent.click(await screen.findByRole('button', { name: 'Forgot PIN?' }));
   fireEvent.click(screen.getByRole('button', { name: 'Reset app' }));
   const reset = screen.getByRole('button', { name: 'Permanently reset app' });
   expect(reset.hasAttribute('disabled')).toBe(true);
-  fireEvent.change(screen.getByLabelText('Type DELETE KAIROS'), { target: { value: 'delete kairos' } });
+  fireEvent.click(screen.getByRole('checkbox', { name: 'I understand that my data will be removed.' }));
+  // No PIN guards this screen, so the tick box alone is not enough.
+  expect(reset.hasAttribute('disabled')).toBe(true);
+  fireEvent.change(screen.getByLabelText('Type DELETE KAIROS to confirm'), { target: { value: 'delete kairos' } });
   expect(reset.hasAttribute('disabled')).toBe(true); expect(native.erased).toBe(false);
-  fireEvent.change(screen.getByLabelText('Type DELETE KAIROS'), { target: { value: 'DELETE KAIROS' } });
+  fireEvent.change(screen.getByLabelText('Type DELETE KAIROS to confirm'), { target: { value: 'DELETE KAIROS' } });
   fireEvent.click(reset); await waitFor(() => expect(native.erased).toBe(true));
 });

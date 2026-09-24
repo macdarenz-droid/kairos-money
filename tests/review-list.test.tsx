@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import {afterEach, describe, expect, it} from 'vitest';
 import {cleanup, render, screen} from '@testing-library/react';
-import {BusyOverlay, KairosMark} from '../src/ui/design/KairosMark';
+import {BusyOverlay} from '../src/ui/design/Motion';
 
 /**
  * The ordering and paging rules the review sheet now follows, exercised on the same shape of data the
@@ -52,20 +52,4 @@ describe('the wait', () => {
     expect(screen.getByText('Adding these transactions to your ledger…')).toBeTruthy();
   });
 
-  it('animates the brand mark, and holds it still when asked to', () => {
-    const {container, rerender} = render(<KairosMark/>);
-    expect(container.querySelector('.kairos-halves-moving')).toBeTruthy();
-    rerender(<KairosMark still/>);
-    expect(container.querySelector('.kairos-halves-moving')).toBeNull();
-    expect(container.querySelector('.kairos-halves')).toBeTruthy();
-  });
-
-  it('draws the disc whole, with both halves of the aperture', () => {
-    const {container} = render(<KairosMark/>);
-    // Two paths behind one circular clip: that is what makes the staircase between them separable, which
-    // an 869KB PNG of the same mark could never be.
-    expect(container.querySelectorAll('path')).toHaveLength(2);
-    expect(container.querySelector('clipPath circle')).toBeTruthy();
-    expect(container.querySelector('svg')!.getAttribute('aria-hidden')).toBe('true');
-  });
 });

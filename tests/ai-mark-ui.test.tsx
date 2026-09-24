@@ -32,8 +32,8 @@ it('marks rows Claude sorted, and one correction covers the whole merchant', asy
   const cafe = (await state.repo!.imports.ledger()).find(r => r.description === 'CAFE LUNA')!;
   await state.repo!.aiCategories.applyRun([{key: cafe.merchant, category: 'Coffee & snacks', confidence: 'high'}], 'claude-opus-5');
   render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}><ImportWorkspace accounts={await state.repo!.accounts()} request={0} consumed={() => undefined}/></QueryClientProvider>);
-  const marks = await screen.findAllByLabelText('Sorted by Claude');
-  expect(marks.filter(m => m.textContent === 'AI')).toHaveLength(1);
+  const marks = await screen.findAllByLabelText('Sorted by Kairos AI');
+  expect(marks.filter(m => m.matches('svg.kai-mark'))).toHaveLength(1);
   fireEvent.click(screen.getAllByRole('button').find(b => b.classList.contains('transaction-row') && b.textContent?.includes('CAFE LUNA'))!);
   fireEvent.change(await screen.findByLabelText('Category'), {target: {value: 'Eating out'}});
   fireEvent.click(screen.getByRole('button', {name: 'All from this merchant'}));

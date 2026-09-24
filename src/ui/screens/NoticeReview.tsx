@@ -109,7 +109,7 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
         ? <p>Nothing new from your bank to check.</p>
         : <>
           {items.map(entry => entry.kind === 'transfer'
-            ? <div key={entry.out.notice.id} className="notice-card">
+            ? <div key={entry.out.notice.id} className="card">
                 <div className="notice-head">
                   <span className="row-lead">
                     <CategoryMark description="transfer"/>
@@ -133,11 +133,11 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
                 {picker(entry.out.notice.id, entry.fromId, 'Money left', entry.out.currency)}
                 {picker(entry.in.notice.id, entry.toId, 'Money arrived in', entry.in.currency)}
                 <div className="notice-actions">
-                  <Button variant="primary" disabled={busy} onClick={() => decide([entry], true)}>Approve</Button>
+                  <Button disabled={busy} onClick={() => decide([entry], true)}>Approve</Button>
                   <Button disabled={busy} onClick={() => decide([entry], false)}>Reject</Button>
                 </div>
               </div>
-            : <div key={entry.item.notice.id} className="notice-card">
+            : <div key={entry.item.notice.id} className="card">
                 <div className="notice-head">
                   <span className="row-lead">
                     <CategoryMark description={`${entry.item.merchant} ${entry.item.notice.title}`}/>
@@ -149,7 +149,7 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
                 {picker(entry.item.notice.id, entry.accountId,
                   BigInt(entry.item.minor) < 0n ? 'Taken from' : 'Paid into', entry.item.currency)}
                 <div className="notice-actions">
-                  <Button variant="primary" disabled={busy} onClick={() => decide([entry], true)}>Approve</Button>
+                  <Button disabled={busy} onClick={() => decide([entry], true)}>Approve</Button>
                   <Button disabled={busy} onClick={() => decide([entry], false)}>Reject</Button>
                 </div>
               </div>)}

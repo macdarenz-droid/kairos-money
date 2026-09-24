@@ -1,5 +1,5 @@
-import {useState} from 'react';
-import {useQueryClient} from '@tanstack/react-query';
+import {useCallback, useState} from 'react';
+import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {currency, format, money, parseDecimal, type Currency} from '../../core/money';
 import {localDay} from '../../ingest/reminders';
 import type {AdviceRule, Brain} from '../../brain/types';
@@ -7,7 +7,8 @@ import {changePercent} from '../../intelligence/visuals/band';
 import {useBrain} from '../money';
 import {useSession} from '../session';
 import {useDisplayCurrency} from '../currency';
-import {Button, Input, Row, Sheet, Skeleton, Surface} from '../design/primitives';
+import {Button, Explain, Input, Row, Sheet, Surface} from '../design/primitives';
+import {Loader} from '../design/Motion';
 import {FlowBar} from '../design/FlowBar';
 import {CategorySplit} from '../design/CategorySplit';
 import {DebtBurn} from '../design/DebtBurn';
@@ -36,7 +37,7 @@ export function Insights() {
   const brain = useBrain();
   const code = useDisplayCurrency();
   if (brain.error && !brain.data) return <p role="alert">Insights could not be read.</p>;
-  if (!brain.data) return <><h2>Still learning</h2><Skeleton label="Reading your money"/></>;
+  if (!brain.data) return <><h2>Still learning</h2><Loader label="Reading your money"/></>;
   const b = brain.data;
   const show = (minor: string | bigint) => format(money(BigInt(minor), currency(code)));
   if (b.triage.active) return <Triage brain={b} show={show}/>;
@@ -59,7 +60,7 @@ function Month({brain, code, show}: Part & {code: Currency}) {
   const change = changePercent(m.outMinor, last.outMinor);
   return <section className="stack" aria-label="This month">
     <h2>This month</h2>
-    <FlowBar flow={{inMinor: m.inMinor, outMinor: m.outMinor}} code={code} label={`${show(m.leftMinor)} left`}/>
+    <FlowBar flow={{inMinor: m.inMinor, outMinor: m.outMinor}} code={code} label={`${show(m.leftMinor)} left`} titled={false}/>
     {change !== null && <p className="meta">Spending {change.startsWith('-') ? 'down' : 'up'} {change.replace('-', '')}% on last month</p>}
   </section>;
 }
@@ -69,20 +70,26 @@ function WhereItWent({brain, code, show}: Part & {code: Currency}) {
   if (!s.categories.length) return null;
   return <section className="stack" aria-label="Where it went">
     <CategorySplit heading="Where it went" code={code} slices={s.categories.map(c => ({name: c.category, minor: c.minor, ids: [...c.evidence]}))}/>
+    {s.merchants.length > 0 && <h3>Top merchants</h3>}
     <div>{s.merchants.map(m => <Row key={m.merchant} trailing={show(m.minor)}>{m.merchant}<p className="meta">{m.count} {m.count === 1 ? 'purchase' : 'purchases'}</p></Row>)}</div>
   </section>;
 }
 
 function Bills({brain, show, code}: Part & {code: Currency}) {
   const bills = brain.spending.bills;
-  const [later, setLater] = useState<{merchant: string; dates: string[]} | null>(null);
+  const [later, setLater] = useState<{merchant: string; dates: string[]} | null>(null), [track, setTrack] = useState<string | null>(null);
+  const session = useSession(), clearTrack = useCallback(() => setTrack(null), []);
+  const records = useQuery({queryKey: ['cancellations'], enabled: session.state === 'ready', queryFn: () => session.run(r => r.cancellations.list())});
+  const recorded = new Set((records.data ?? []).filter(r => r.currency === code).map(r => r.merchant));
   if (!bills.length) return null;
   const payments = bills.flatMap(bill => bill.charges.map(c => ({merchant: bill.merchant, date: c.date, id: c.id})));
   return <section className="stack" aria-label="Bills and subscriptions">
-    <h2>Bills and subscriptions</h2>
+    <span className="heading-row"><h2>Bills and subscriptions</h2><Explain title="Track a cancellation">
+      <p>Tracking records your progress with the provider; it does not cancel anything. Keep their confirmation and check for a final charge.</p></Explain></span>
     <div>{bills.map(bill => <Row key={bill.merchant} trailing={`${show(bill.yearlyMinor)} a year`}>{bill.merchant}
-      <p className="meta">{bill.cancelled ? <span className="tag">Cancelled</span> : bill.nextDate ? `Next ${bill.nextDate}` : ''}</p></Row>)}</div>
-    <Cancellations code={code} merchants={bills.map(bill => bill.merchant)} payments={payments}
+      <p className="meta">{bill.cancelled ? <span className="tag">Cancelled</span> : bill.nextDate ? `Next ${bill.nextDate}` : ''}</p>
+      {!bill.cancelled && !recorded.has(bill.merchant.trim().toLowerCase()) && <Button variant="quiet" className="row-action" aria-label={`Track cancellation · ${bill.merchant}`} onClick={() => setTrack(bill.merchant)}>Track cancellation</Button>}</Row>)}</div>
+    <Cancellations code={code} payments={payments} track={track} onTrack={clearTrack}
       review={(merchant, ids) => setLater({merchant, dates: payments.filter(p => ids.includes(p.id)).map(p => p.date).sort()})}/>
     {later && <Sheet title={later.merchant} onClose={() => setLater(null)}>
       <p>These may be final charges. Check them with the provider.</p>
@@ -97,11 +104,8 @@ function Advice({brain, show}: Part) {
   const dismiss = async (rule: AdviceRule) => { await session.run(repo => repo.intelligence.dismissAdvice(rule, localDay())); await client.invalidateQueries({queryKey: ['intelligence']}); };
   return <section className="stack" aria-label="Advice">
     <h2>Advice</h2>
-    {brain.advice.map(a => <Surface key={a.rule} className="advice-card">
-      <p>{ADVICE[a.rule]}</p>
-      <p className="meta">About {show(a.yearlyMinor)} a year</p>
-      <Button variant="quiet" onClick={() => void dismiss(a.rule)}>Dismiss</Button>
-    </Surface>)}
+    <Surface className="advice-list">{brain.advice.map(a => <Row key={a.rule} trailing={<Button variant="quiet" onClick={() => void dismiss(a.rule)}>Dismiss</Button>}>
+      {ADVICE[a.rule]}<p className="meta">About {show(a.yearlyMinor)} a year</p></Row>)}</Surface>
   </section>;
 }
 
@@ -130,7 +134,7 @@ function SetAside({brain, code, show}: Part & {code: string}) {
     <Row trailing={show(g.bufferMinor)}>Kept untouched</Row>
     {g.items.map(goal => <Row key={goal.id} trailing={goal.perPayMinor === null ? `${show(goal.fundedMinor)} of ${show(goal.targetMinor)}` : `${show(goal.perPayMinor)} a pay`}>
       {goal.name}<p className="meta">by {goal.targetDate}</p></Row>)}
-    <Button onClick={() => setOpen(true)}>Money set aside</Button>
+    <Button aria-label="Edit money set aside" onClick={() => setOpen(true)}>Edit</Button>
     {open && <GoalSheet code={code} bufferMinor={g.bufferMinor} onClose={() => setOpen(false)}/>}
   </section>;
 }

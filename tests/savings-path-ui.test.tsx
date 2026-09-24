@@ -56,7 +56,7 @@ it('shows what can be spent today, what to keep, and where keeping it leads', as
   ledger.transactions = Array.from({length: 10}, (_, i) => spend(`s${i}`, back(2 + i * 2), '-100000'));
   show();
   await screen.findByLabelText('Savings');
-  expect(screen.getByText('Spend today')).toBeTruthy();
+  expect(screen.getByText('Left for today')).toBeTruthy();
   expect(screen.getByText('Keep today')).toBeTruthy();
   // The pot is where the line stands today, and it is the savings account rather than the everyday one.
   expect(document.querySelector('.savings-path')!.textContent).toContain('10,000.00');

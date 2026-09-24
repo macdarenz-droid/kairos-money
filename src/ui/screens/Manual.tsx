@@ -84,7 +84,7 @@ export function ManualSheet({accounts:all,entry,prefill,kind:initialKind,onClose
   <label className="input-label">Category<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">Uncategorised</option>{categories.map(c=><option key={c}>{c}</option>)}</select></label>
  </>}
  <Input label="Note (optional)" maxLength={2000} value={notes} onChange={e=>setNotes(e.target.value)}/>{error&&<p role="alert">{error}</p>}
- <div className="sheet-actions"><Button type="button" onClick={busyClose}>Cancel</Button><Button type="submit" variant="primary" disabled={busy||!accounts.length}>{busy?'Saving…':'Save transaction'}</Button></div></form></Sheet>;
+ <div className="sheet-actions"><Button type="button" onClick={busyClose}>Cancel</Button><Button type="submit" variant="primary" disabled={busy||!accounts.length} busy={busy} busyLabel="Saving…">Save transaction</Button></div></form></Sheet>;
 }
 export function ManualHistory({today=false}:{today?:boolean}){
  const session=useSession();
@@ -93,7 +93,7 @@ export function ManualHistory({today=false}:{today?:boolean}){
  const display=useDisplayCurrency();
  const rates:FxRate[]=(stored.data??[]).map(r=>({asOf:r.asOf,base:currency(r.base),quote:currency(r.quote),rateE8:BigInt(r.rateE8),source:r.source}));
  const data=useQuery({queryKey:['manual'],queryFn:()=>session.run(async r=>({entries:await r.manual.list(),totals:await r.manual.today(localDay()),unresolved:await r.manual.unresolved()})),enabled:session.state==='ready'});
- if(today)return <section className="section-gap"><h2>Recorded today</h2>
+ if(today)return <section><h2>Recorded today</h2>
  {/* The money comes first. Someone opening this screen is asking what they spent, not what the app can do. */}
  {/*
    * ONE SCREEN, ONE CURRENCY.
@@ -112,7 +112,7 @@ export function ManualHistory({today=false}:{today?:boolean}){
    spent+=into(t.spending)+into(t.awaitingSpending);received+=into(t.income)+into(t.awaitingIncome);
    loose+=into(t.awaitingSpending)+into(t.awaitingIncome);
   }
-  return <><Row trailing={<Amount value={money(spent,display)} context="spent today" hero/>}>Spent today</Row>
+  return <><Row trailing={<Amount value={money(spent,display)} context="spent today"/>}>Spent today</Row>
   {received>0n&&<Row trailing={<Amount value={money(received,display)} context="received today"/>}>Received today</Row>}
   {/* Money your bank announced counts here. It is marked, not withheld: a balance that waits weeks for a
       statement before it moves is a balance nobody can use, and confirmation changes how much the app

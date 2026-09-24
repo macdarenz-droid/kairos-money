@@ -38,7 +38,7 @@ public class AccessibilityInstrumentedTest {
         // Navigation changes synchronously; lazy modules and encrypted queries do not.
         // Require stable loaded content, including before/after the committed capture.
         for (int stable=0; stable<3; stable++) {
-            awaitJs(content+" && !document.querySelector('main .skeleton,dialog[open] .skeleton')");
+            awaitJs(content+" && !document.querySelector('main .skeleton,dialog[open] .skeleton,main .loader,dialog[open] .loader')");
             Thread.sleep(150);
         }
     }

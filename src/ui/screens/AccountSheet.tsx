@@ -77,6 +77,6 @@ export function AccountSheet({ account, onClose, onSaved }: { account?: Account;
         {account.archived_at ? 'Reopen this account' : 'Close this account'}</Button>
       {(setPrimary.error || archive.error) && <p role="alert">{(setPrimary.error ?? archive.error)!.message}</p>}
     </div>}
-    <div className="form-actions"><Button onClick={onClose} disabled={mutation.isPending}>Cancel</Button><Button variant="primary" type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Saving…' : 'Save account'}</Button></div>
+    <div className="form-actions"><Button onClick={onClose} disabled={mutation.isPending}>Cancel</Button><Button variant="primary" type="submit" busy={mutation.isPending} busyLabel="Saving…">Save account</Button></div>
   </form>}</Sheet>;
 }

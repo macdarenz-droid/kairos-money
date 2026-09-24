@@ -56,3 +56,16 @@ it('flags charges after a cancellation as possible final charges', async () => {
   expect(screen.getByText(back(28))).toBeTruthy();
   ledger.cancellations = [];
 });
+
+it('puts tracking on each bill row, names top merchants, and edits money set aside', async () => {
+  ledger.transactions = month(); ledger.spendable = '500000'; ledger.cancellations = [];
+  mount();
+  const track = await screen.findByRole('button', {name: 'Track cancellation · Landlord'});
+  expect(track.className).toContain('button-quiet');
+  expect(track.closest('.row')?.textContent).toContain('Landlord');
+  expect(screen.getByRole('heading', {name: 'Top merchants'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Edit money set aside'}).textContent).toBe('Edit');
+  expect(screen.getByLabelText('This month').querySelectorAll('h2, h3')).toHaveLength(1);
+  fireEvent.click(track);
+  expect(await screen.findByRole('dialog', {name: 'Cancellation record'})).toBeTruthy();
+});

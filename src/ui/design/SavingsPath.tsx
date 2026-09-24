@@ -3,8 +3,10 @@ import {displayRatio} from '../../intelligence/visuals';
 import {useBrain} from '../money';
 import {useDisplayCurrency} from '../currency';
 import {methodWords} from './method-words';
+import {Explain} from './primitives';
+import {CountUp} from './Motion';
 
-/** Spend today, keep today, and the savings line: behind today what was kept, ahead where keeping leads. */
+/** Left for today, keep today, and the savings line: behind today what was kept, ahead where keeping leads. */
 export function SavingsPath() {
   const code = useDisplayCurrency();
   const brain = useBrain();
@@ -34,7 +36,9 @@ export function SavingsPath() {
 
   return <section className="stack savings-path" aria-label="Savings">
     <div className="savings-figures">
-      <div><span className="band-label">Spend today</span><span className="band-figure">{show(keep.spendTodayMinor)}</span></div>
+      <div className="savings-hero"><span className="heading-row"><span className="band-label">Left for today</span>
+        <Explain title="Left for today"><p>What you can spend today and still keep the amount beside it. The line shows what you kept and where keeping leads.</p></Explain></span>
+        <span className="hero-amount"><CountUp value={money(BigInt(keep.spendTodayMinor), code)}/></span></div>
       <div><span className="band-label">{keep.when === 'payday' ? 'Keep on payday' : keep.when === 'paid' ? 'Keep when paid' : 'Keep today'}</span><span className="band-figure">{show(keep.keepTodayMinor)}</span></div>
     </div>
     {/* How he spends, and the method that follows. Two labels; the figures above are the advice. */}

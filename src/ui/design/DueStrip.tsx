@@ -1,5 +1,6 @@
 import type {DueWindow} from '../../brain/types';
 import {displayRatio} from '../../intelligence/visuals';
+import {Explain} from './primitives';
 
 /**
  * The next thirty days as a shape.
@@ -30,6 +31,6 @@ export function DueStrip({window: due, label}: {window: DueWindow; label: string
         y1={(118000 - Number(heights[i]) * 110000 / 1000000).toString()} y2="118000"
         className={d.beforePay ? 'due-tick due-tick-before' : 'due-tick'} vectorEffect="non-scaling-stroke"/>)}
     </svg>
-    <figcaption>{label}</figcaption>
+    <figcaption>{label} <Explain title="Bills due"><p>Each line is a bill due in this window, taller when larger. The dashed line marks payday.</p></Explain></figcaption>
   </figure>;
 }

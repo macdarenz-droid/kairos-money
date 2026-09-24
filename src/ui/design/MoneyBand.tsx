@@ -1,13 +1,15 @@
+import type {ReactNode} from 'react';
 import {ArrowDown, ArrowUp} from 'lucide-react';
 import {useQuery} from '@tanstack/react-query';
-import {format, money} from '../../core/money';
+import {money} from '../../core/money';
 import {displayRatio} from '../../intelligence/visuals';
 import {changePercent} from '../../intelligence/visuals/band';
 import type {Band} from '../../brain/types';
 import {useSession} from '../session';
 import {useBrain} from '../money';
 import {useDisplayCurrency} from '../currency';
-import {Explain, Skeleton} from './primitives';
+import {Explain} from './primitives';
+import {CountUp, Loader} from './Motion';
 
 /**
  * The four figures a person opens a money app to see, before they have asked anything.
@@ -46,7 +48,7 @@ export function MoneyBand() {
 
   if (session.state !== 'ready') return null;
   if (accounts.error || brain.error) return <p role="alert">Your money summary could not be read.</p>;
-  if (brain.isPending || accounts.isPending || !brain.data) return <Skeleton label="Reading your money"/>;
+  if (brain.isPending || accounts.isPending || !brain.data) return <Loader label="Reading your money"/>;
   // Absent rather than empty: with no accounts the screen that asks for one should be the only thing on it.
   if (!live.length) return null;
   const missing: readonly string[] = brain.data.coverage.unconverted;
@@ -58,7 +60,7 @@ export function MoneyBand() {
   const held = brain.data.today.holdings.spendableMinor;
   // Savings accounts plus money set aside with no savings account to set it in; nothing is doubled.
   const saved = brain.data.today.savingsPath.potMinor;
-  const show = (minor: string | bigint) => format(money(BigInt(minor), code));
+  const show = (minor: string | bigint) => <CountUp value={money(BigInt(minor), code)}/>;
 
   // A change is printed only against a block that had movement, so a first month never reports a rise
   // from nothing, and the change beside a figure is always a change in the same thing over the same
@@ -105,10 +107,10 @@ const stamp = (date: string) =>
   new Date(`${date}T00:00:00Z`).toLocaleDateString('en-AU', {day: 'numeric', month: 'short', timeZone: 'UTC'});
 
 function Tile({label, figure, percent, note, spark}: {
-  label: string; figure: string; percent?: string | null; note?: string;
+  label: string; figure: ReactNode; percent?: string | null; note?: string;
   spark?: {values: string[]; tone: 'in' | 'out'} | null;
 }) {
-  return <div className="band-tile">
+  return <div className="card band-tile">
     <span className="band-label">{label}</span>
     <span className="band-figure">{figure}</span>
     {percent !== null && percent !== undefined ? <Change percent={percent}/> : note ? <span className="band-note">{note}</span> : null}
