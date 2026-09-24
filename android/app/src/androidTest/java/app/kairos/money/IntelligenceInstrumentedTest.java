@@ -349,7 +349,7 @@ public class IntelligenceInstrumentedTest {
                 clickLabel("Edit money set aside");input("What are you saving for?","Synthetic rego "+theme);input("Target amount","500");input("Target date",java.time.LocalDate.now().plusDays(90).toString());NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-goal");click("Save goal");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Synthetic rego "+theme+"')");
             }
             // Dismiss hides the card at once.
-            js("Array.from(document.querySelectorAll('.advice-card')).find(e=>e.textContent.includes('Small buys add up')).querySelector('button').click()");
+            js("Array.from(document.querySelectorAll('.advice-list .row')).find(e=>e.textContent.includes('Small buys add up')).querySelector('button').click()");
             awaitJs("!document.body.innerText.includes('Small buys add up. Try one fewer a week.')");
         }
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
