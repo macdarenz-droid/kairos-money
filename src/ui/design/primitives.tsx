@@ -1,14 +1,15 @@
 import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type PropsWithChildren, type ReactNode } from 'react';
 import { X, Home, List, Sparkles, UserRound, Search, Info } from 'lucide-react';
 import { format, type Money } from '../../core/money';
+import { Coin, SuccessDrop } from './Motion';
 export function Surface({ children, className = '' }: PropsWithChildren<{ className?: string }>) { return <section className={`surface ${className}`}>{children}</section>; }
 export function Row({ children, trailing }: PropsWithChildren<{ trailing?: ReactNode }>) { return <div className="row"><div>{children}</div>{trailing && <div className="row-trailing">{trailing}</div>}</div>; }
 export function Label({ children, muted = false }: PropsWithChildren<{ muted?: boolean }>) { return <span className={muted ? 'label muted' : 'label'}>{children}</span>; }
 export function Amount({ value, context, hero = false }: { value: Money; context: string; hero?: boolean }) {
   return <span className={`amount ${hero ? 'hero-amount' : ''}`} aria-label={`${value.minor < 0n ? 'Negative ' : ''}${format({ ...value, minor: value.minor < 0n ? -value.minor : value.minor })} ${value.currency}, ${context}`}>{format(value)}</span>;
 }
-export function Button({ children, variant = 'default', className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'default' | 'primary' | 'danger' | 'quiet' }) {
-  return <button type="button" className={`button button-${variant} ${className}`} {...props}>{children}</button>;
+export function Button({ children, variant = 'default', className = '', busy = false, busyLabel, disabled, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'default' | 'primary' | 'danger' | 'quiet'; busy?: boolean; busyLabel?: ReactNode }) {
+  return <button type="button" className={`button button-${variant} ${className}`} disabled={disabled || busy} aria-busy={busy || undefined} {...props}>{busy ? <><Coin/>{busyLabel ?? children}</> : children}</button>;
 }
 export function Input({ label, hint, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string | undefined }) {
   const id = useId(); return <label className="input-label" htmlFor={id}><span id={`${id}-label`}>{label}</span><input id={id} aria-labelledby={`${id}-label`} aria-describedby={hint ? `${id}-hint` : undefined} {...props}/>{hint && <span id={`${id}-hint`} className="meta">{hint}</span>}</label>;
@@ -51,9 +52,9 @@ export function Tabs({ current, onChange, onQuick }: { current: Tab; onChange: (
     return <button className={tab === 'Quick' ? 'tab tab-quick' : 'tab'} key={tab} aria-current={current === tab ? 'page' : undefined} onClick={() => tab === 'Quick' ? onQuick() : onChange(tab)}><span className="tab-icon"><Icon size={20} strokeWidth={1.65}/></span><span>{tab}</span></button>;
   })}</div></nav>;
 }
-export function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+export function Toast({ message, onDismiss, saved = false }: { message: string; onDismiss: () => void; saved?: boolean }) {
   useEffect(() => { const timer = setTimeout(onDismiss, 6000); return () => clearTimeout(timer); }, [onDismiss]);
-  return <div className="toast" role="status"><span>{message}</span><Button variant="quiet" className="icon-button" aria-label="Dismiss notification" onClick={onDismiss}><X size={16}/></Button></div>;
+  return <div className="toast" role="status"><span className="toast-message">{saved && <SuccessDrop/>}{message}</span><Button variant="quiet" className="icon-button" aria-label="Dismiss notification" onClick={onDismiss}><X size={16}/></Button></div>;
 }
 export function EmptyState({ icon, title, children, action }: PropsWithChildren<{ icon: ReactNode; title: string; action: ReactNode }>) {
   return <section className="empty-state"><div className="empty-icon" aria-hidden="true">{icon}</div><h2>{title}</h2><p>{children}</p><div className="empty-action">{action}</div></section>;

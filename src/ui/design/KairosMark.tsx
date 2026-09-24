@@ -1,3 +1,5 @@
+import { CoinStack } from './Motion';
+
 /**
  * The Kairos aperture, in motion.
  *
@@ -54,6 +56,6 @@ export function KairosMark({size = 44, still = false}: {size?: number; still?: b
  */
 export function BusyOverlay({message}: {message: string}) {
   return <div className="busy-overlay" role="status" aria-live="polite" aria-atomic="true">
-    <div className="busy-card"><KairosMark size={52}/><p>{message}</p></div>
+    <div className="busy-card"><CoinStack/><p>{message}</p></div>
   </div>;
 }
