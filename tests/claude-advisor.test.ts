@@ -165,3 +165,13 @@ describe('a slow or busy Claude', () => {
     expect(TIMEOUT_MS).toBeGreaterThanOrEqual(60_000 + 16_000 * 20);
   });
 });
+
+describe('what the advisor is told about the app', () => {
+  it('knows data arrives only by imports, hand entries and bank notices, and never suggests linking accounts', async () => {
+    const net = server(() => message(points([{text: 'x', facts: ['today.spend']}])));
+    await review(summary, 'sk', 'claude-opus-5', {fetch: net.fetch, maxRetries: 0});
+    const system = String(net.sent[0]!.body['system']);
+    for (const phrase of ['statement imports', 'manual entries', 'bank notifications', 'Never suggest linking', 'import a statement'])
+      expect(system).toContain(phrase);
+  });
+});

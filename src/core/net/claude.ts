@@ -97,7 +97,9 @@ const POINTS_SCHEMA = {type: 'object', additionalProperties: false, required: ['
     properties: {text: {type: 'string'}, facts: {type: 'array', items: {type: 'string'}}}}}}};
 const ADVISOR = 'You write short, plain money advice for one person from a summary of their own figures. '
   + 'Use only the figures given. Every point must cite the fact ids it rests on. Amounts are integer minor units '
-  + 'of the stated currency. Do not invent figures, merchants or accounts. At most five points, one or two sentences each.';
+  + 'of the stated currency. Do not invent figures, merchants or accounts. At most five points, one or two sentences each. '
+  + 'The app has no bank connections: money data arrives only by statement imports, manual entries and bank notifications the owner approves. '
+  + 'Never suggest linking accounts or any feature the app lacks. When history is thin, suggest they import a statement or add entries by hand.';
 
 /** Keeps only points that cite facts the summary actually holds. */
 export function validPoints(value: unknown, summary: BrainSummary): Point[] | null {

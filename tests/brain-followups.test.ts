@@ -89,3 +89,16 @@ describe('(i) one small-purchase line', () => {
       expect(readFileSync(f, 'utf8'), f).not.toMatch(/\b(?:15|20)n\s*\*\s*10n/);
   });
 });
+
+describe('(c, rest) spend today', () => {
+  it('does not hold money back for a bill the owner cancelled', () => {
+    const stream = [0, 1, 2].map(n => row(`st${n}`, day(-89 + n * 30), '-40000', {description: 'Streamy', category: 'Entertainment', kind: 'discretionary'}));
+    const s = snapshot(base(stream));
+    const key = recurrences(s, {requireCoverage: false}).find(r => r.evidence.includes('st0'))!.merchant;
+    const open = think(inputs(s)).today, cancelled = think(inputs(s, {cancelled: new Set([key])})).today;
+    expect(BigInt(open.committedMinor)).toBeGreaterThan(BigInt(cancelled.committedMinor));
+    // The money freed goes to spending or keeping, whichever the method says; together they rise.
+    const free = (t: typeof open) => BigInt(t.spendTodayMinor) + BigInt(t.keepTodayMinor);
+    expect(free(cancelled)).toBeGreaterThan(free(open));
+  });
+});

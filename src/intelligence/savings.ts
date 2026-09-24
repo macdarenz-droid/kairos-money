@@ -58,7 +58,7 @@ const WINDOW = 60;
  * @param spendableMinor what is held in accounts that are not savings, already in the snapshot's currency
  * @param bufferMinor money he has asked to keep untouched, which is never suggested away
  */
-export function keepToday(s: Snapshot, spendableMinor: string, bufferMinor = '0'): Keep {
+export function keepToday(s: Snapshot, spendableMinor: string, bufferMinor = '0', cancelled: ReadonlySet<string> = new Set()): Keep {
   const reading = spendingPattern(s);
   const blank: Keep = {status: 'not_yet', tier: 'month', days: 0, spendableMinor,
     committedMinor: '0', typicalDayMinor: '0', keepTodayMinor: '0', spendTodayMinor: '0',
@@ -80,7 +80,7 @@ export function keepToday(s: Snapshot, spendableMinor: string, bufferMinor = '0'
   const tier: Keep['tier'] = nextPay ? 'payday' : 'month';
 
   // Bills that fall inside the horizon, from payments that have already repeated three times or more.
-  const bills = recurrences(s, {requireCoverage: false});
+  const bills = recurrences(s, {requireCoverage: false}).filter(bill => !cancelled.has(bill.merchant));
   const committed = bills.reduce((total, bill) =>
     total + BigInt(bill.minor) * BigInt(scheduledDates({next: bill.next, interval: bill.interval,
       ...(bill.monthly ? {monthly: bill.monthly} : {})}, horizon).filter(d => d > s.asOf).length), 0n);

@@ -31,15 +31,15 @@ const mount = () => render(<QueryClientProvider client={new QueryClient({default
 it('stays off until turned on, keeps the key on the phone and asks before sorting', async () => {
   mount();
   const sort = await screen.findByRole('button', {name: 'Sort my categories'});
-  expect(screen.getByRole('button', {name: 'Use the Claude advisor: Off'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Use the Claude advisor'}).getAttribute('aria-pressed')).toBe('false');
   expect((sort as HTMLButtonElement).disabled).toBe(true);
-  expect((screen.getByRole('button', {name: 'Sort new merchants after each import: Off'}) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole('button', {name: 'Sort new merchants after each import'}) as HTMLButtonElement).disabled).toBe(true);
   fireEvent.change(screen.getByLabelText('Anthropic API key'), {target: {value: 'sk-ant-synthetic-0123456789abcdef'}});
   fireEvent.click(screen.getByRole('button', {name: 'Save key'}));
   await screen.findByText('Key saved on this phone');
-  fireEvent.click(screen.getByRole('button', {name: 'Use the Claude advisor: Off'}));
-  await screen.findByRole('button', {name: 'Use the Claude advisor: On'});
-  fireEvent.click(screen.getByRole('button', {name: 'Send merchant names to Claude for sorting: Off'}));
+  fireEvent.click(screen.getByRole('button', {name: 'Use the Claude advisor'}));
+  await waitFor(() => expect(screen.getByRole('button', {name: 'Use the Claude advisor'}).getAttribute('aria-pressed')).toBe('true'));
+  fireEvent.click(screen.getByRole('button', {name: 'Send merchant names to Claude for sorting'}));
   await waitFor(() => expect((screen.getByRole('button', {name: 'Sort my categories'}) as HTMLButtonElement).disabled).toBe(false));
   expect(await state.repo!.advisor.key()).toBe('sk-ant-synthetic-0123456789abcdef');
 });
@@ -67,4 +67,16 @@ it('shows what is sent, sorts, and offers unsure answers to check', async () => 
   const categories = (await state.repo!.imports.ledger()).map(r => [r.description, r.category]).sort();
   expect(categories).toEqual([['CAFE LUNA', 'Coffee & snacks'], ['MYSTERY CO', 'Shopping']]);
   expect(await screen.findByRole('button', {name: 'Undo'})).toBeTruthy();
+});
+
+it('lays each switch out as a row with a small On/Off button, and sorting as one full-width action', async () => {
+  mount();
+  await screen.findByRole('button', {name: 'Sort my categories'});
+  for (const name of ['Use the Claude advisor', 'Include merchant names in reviews', 'Send merchant names to Claude for sorting', 'Sort new merchants after each import']) {
+    const button = screen.getByRole('button', {name});
+    expect(button.textContent).toBe('Off');
+    expect(button.closest('.row-trailing')?.parentElement?.textContent).toContain(name);
+  }
+  expect(screen.getByLabelText('Model').closest('.row-trailing')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Sort my categories'}).parentElement?.className).toBe('action-list');
 });
