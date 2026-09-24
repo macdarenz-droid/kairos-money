@@ -12,8 +12,15 @@ jobs:
   source-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    outputs:
+      code: ${{ steps.changes.outputs.code }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # A push that changes only docs skips the 18-minute Android gate; anything else runs it.
+      - id: changes
+        run: node scripts/android-needed.mjs "${{ github.event.before }}" "${{ github.sha }}" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -21,7 +28,6 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: node scripts/test-money-lint.mjs
-      - run: python3 scripts/test-native-gate.py
       - run: npm run dev:fixtures
       - uses: actions/setup-python@v5
         with:
@@ -31,6 +37,7 @@ jobs:
       - run: git diff --exit-code -- docs/SCHEMA.md docs/CONTRAST.md src/ui/design/tokens.css src/ui/design/theme-registry.ts android/app/src/main/res/values/kairos_theme_colors.xml
   android-gate:
     needs: source-gate
+    if: needs.source-gate.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

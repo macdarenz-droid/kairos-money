@@ -1,5 +1,7 @@
 # 0039 — A virtualized list has to know how tall it is, at the size it is drawn
 
+Superseded: `WindowedList` was removed. History now loads one short page at a time, so nothing is virtualized.
+
 Accepted 15 September 2026. Arises from two consecutive red gates, runs 34931811111 and 34933317701.
 
 ## Context

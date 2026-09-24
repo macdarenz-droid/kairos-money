@@ -8,6 +8,7 @@ import { Button, Input, Row } from '../design/primitives';
 import { localDay } from '../../ingest/reminders';
 import { useSession } from '../session';
 import { useDisplayCurrency } from '../currency';
+import { CurrencyShare } from './CurrencyShare';
 
 /**
  * Exchange rates, and the one thing the screen must never do: imply they are fresher than they are.
@@ -135,6 +136,7 @@ export function Rates({ accounts, notify }: {
       {/* The day the rates belong to, not the moment they were downloaded. */}
       <p>{asOf.data ? `From ${asOf.data}` : 'None yet'}</p>
     </Row>
+    <CurrencyShare/>
     {/*
       * Amounts now CONVERT into whatever is chosen here, so holding no account in it is fine. What is
       * not fine is choosing a currency with no stored rate: nothing can be converted into it, and every

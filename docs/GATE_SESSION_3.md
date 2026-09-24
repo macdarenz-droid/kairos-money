@@ -31,7 +31,7 @@ The full brief is now supplied. Sessions 1–2.5 remain PASS. Implementation and
 
 | Criterion | State | Evidence |
 |---|---|---|
-| Research before code | PASS | docs/RESEARCH.md covers all 13 mechanisms; 14 claim mappings in CLAIM_AUDIT.md. App thresholds and projections explicitly unvalidated. |
+| Research before code | PASS | docs/RESEARCH.md covers all 13 mechanisms. App thresholds and projections explicitly unvalidated. |
 | Twelve versioned signals, monthly and trailing 90 | PASS source | signal tests retain source inputs, exclude pending/transfers, respect gaps/currencies and expose Tier C uncertainty. |
 | Insight five-part contract and derived dollars | PASS source | All four shipped rules tested; integer conditional projections, ranking/cap and dismissal counters. |
 | 20-day learning state | PASS source; native OPEN | No archetype before 60 covered days. Native short-history screenshot assertion added. |

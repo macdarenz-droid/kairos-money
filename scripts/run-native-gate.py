@@ -10,6 +10,8 @@ import time
 import xml.etree.ElementTree as ET
 
 completed_instrumentation = []
+# Tests each class actually passed, so the status file reports what ran.
+passed_counts = {}
 performance_failures = []
 functional_complete = False
 
@@ -97,6 +99,7 @@ def instrumentation(name, count):
         print(summary, flush=True)
         raise RuntimeError(name + ' did not pass; see its instrumentation log')
     completed_instrumentation.append(name)
+    passed_counts[name] = count
 
 
 def install_apk(name):
@@ -265,7 +268,7 @@ try:
         'status': 'PASS', 'installed': True, 'instrumentation_executed': True,
         'functional_complete': True, 'startup_variant': 'benchmark',
         'completed_instrumentation': completed_instrumentation,
-        'authentication_bound_key_tests': 1, 'pin_recovery_tests': 3, 'foundation_tests': 2, 'hardening_tests': 1, 'import_tests': 2, 'large_import_tests': 1, 'revision_tests': 2, 'intelligence_tests': 4, 'manual_entry_tests': 1, 'monthly_visual_tests': 1, 'spending_pattern_tests': 1, 'acceptance_tests': 1,
+        'authentication_bound_key_tests': passed_counts['KeyProtectionInstrumentedTest'], 'pin_recovery_tests': passed_counts['PinRecoveryInstrumentedTest'], 'foundation_tests': passed_counts['FoundationInstrumentedTest'], 'hardening_tests': passed_counts['HardeningInstrumentedTest'], 'import_tests': passed_counts['ImportInstrumentedTest'], 'large_import_tests': passed_counts['LargeImportInstrumentedTest'], 'revision_tests': passed_counts['RevisionInstrumentedTest'], 'intelligence_tests': passed_counts['IntelligenceInstrumentedTest'], 'manual_entry_tests': 1, 'monthly_visual_tests': 1, 'spending_pattern_tests': 1, 'acceptance_tests': passed_counts['AcceptanceInstrumentedTest'],
         'forgot_pin_device_tests': 1, 'backup_before_reset_tests': 1, 'backup_after_reset_tests': 1, 'post_delete_tests': 1,
         'native_encryption_proven': True, 'native_delete_proven': True, 'cold_start_under_2_seconds': True, 'usability_baseline_tests': 1, 'text_zoom_200_percent_tests': 1, 'text_zoom_themes': ['light', 'dark'],
         'native_notification_tests': 1, 'large_ledger_tests': 1,

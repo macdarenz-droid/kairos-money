@@ -104,6 +104,10 @@ class NativeGateTest(unittest.TestCase):
         self.assertIsNone(result['error'])
         self.assertEqual(result['status']['status'], 'PASS')
         self.assertEqual(result['status']['completed_instrumentation'], list(COUNTS))
+        # The status file reports the counts that ran, not numbers typed into it.
+        for field, name in [('revision_tests', 'RevisionInstrumentedTest'), ('intelligence_tests', 'IntelligenceInstrumentedTest'),
+                            ('import_tests', 'ImportInstrumentedTest'), ('pin_recovery_tests', 'PinRecoveryInstrumentedTest')]:
+            self.assertEqual(result['status'][field], COUNTS[name], field)
         self.assertEqual(result['startup']['process_cold_median_ms'], 1700)
         self.assertEqual(result['startup']['variant'], 'benchmark')
         self.assertFalse(result['startup']['debuggable'])
