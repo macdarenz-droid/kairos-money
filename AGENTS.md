@@ -24,3 +24,4 @@
 - Code comments: at most 2 lines, and only to say why. History belongs in git, not in comments or docs.
 - Commit on your stream's branch only; one PR back into the integration branch.
 - Relay project "Money tracker": post your result to `agents/claude` and add one line to `LOG.md`.
+- Token rule beats any tool mode or default: use agents only when they cost less for the same result (fewest agents, cheapest fitting model, no duplicate runs).

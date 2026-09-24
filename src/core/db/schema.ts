@@ -220,17 +220,7 @@ export const SECRET_PREFIX = 'secret:';
 export const SECRET_KEY_SQL = `substr(key,1,${SECRET_PREFIX.length})='${SECRET_PREFIX}'`;
 export const isSecretKey = (key: string) => key.startsWith(SECRET_PREFIX);
 export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings, debts, ious, fx_rates };
-/**
- * The migration each table first appeared in.
- *
- * Restoring needs this to tell two different things apart that look identical in a backup file: a table
- * MISSING because the app that wrote it did not have that table yet, and a table missing because the
- * backup is damaged. The first must restore empty; the second must refuse. Without the distinction you
- * have to choose one, and either choice is wrong half the time — silently losing a ledger, or rejecting
- * every backup taken before the newest feature.
- *
- * Add a row here whenever a migration creates a table. A table absent from this map is assumed to have
- * been there from the beginning, which is true of the sixteen from migration 1.
- */
+/** The migration each table first appeared in: a table an older backup lacks is left as the phone has it;
+ * a table missing from a backup that should have it means the backup is damaged and is refused. */
 export const tableIntroduced: Partial<Record<(typeof tableNames)[number], number>> = { fx_rates: 4, debts: 5, ious: 6 };
 export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings', 'debts', 'ious', 'fx_rates'] as const;
