@@ -57,6 +57,11 @@ public class IntelligenceInstrumentedTest {
         String button = "Array.from(document.querySelectorAll('button')).find(b=>b.textContent.trim()===" + JSONObject.quote(name) + ")";
         awaitJs("Boolean(" + button + ") && !" + button + ".disabled"); js(button + ".click()");
     }
+    /** For a short visible word shared by many rows, such as "Edit", the button's label says which one. */
+    private void clickLabel(String label) throws Exception {
+        String button = "Array.from(document.querySelectorAll('button')).find(b=>b.getAttribute('aria-label')===" + JSONObject.quote(label) + ")";
+        awaitJs("Boolean(" + button + ") && !" + button + ".disabled"); js(button + ".click()");
+    }
     /** Open one row of History by what it says, which is the only way to reach a transaction now. */
     private void openRow(String text) throws Exception {
         String row = "Array.from(document.querySelectorAll('button.transaction-row')).find(b=>b.textContent.includes(" + JSONObject.quote(text) + "))";
@@ -242,7 +247,7 @@ public class IntelligenceInstrumentedTest {
                 for(String heading:new String[]{"This month","Where it went","Bills and subscriptions","Plan"}) {
                     captureHeading(heading,theme.toLowerCase()+"-insights-"+heading.toLowerCase().replace(' ','-'));
                 }
-                click("Record cancellation · Synthetic fortnightly membership");
+                clickLabel("Track cancellation · Synthetic fortnightly membership");
                 input("Contact or confirmation date",java.time.LocalDate.now().minusDays(1).toString());
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-cancellation-entry");click("Save cancellation record");
                 awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Cancellation requested')");
@@ -341,7 +346,7 @@ public class IntelligenceInstrumentedTest {
             for(String theme:new String[]{"Light","Dark"}) {
                 click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('Small buys add up. Try one fewer a week.')");
                 captureHeading("Advice",theme.toLowerCase()+"-intelligence-advice");captureHeading("Plan",theme.toLowerCase()+"-intelligence-plan");
-                click("Money set aside");input("What are you saving for?","Synthetic rego "+theme);input("Target amount","500");input("Target date",java.time.LocalDate.now().plusDays(90).toString());NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-goal");click("Save goal");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Synthetic rego "+theme+"')");
+                clickLabel("Edit money set aside");input("What are you saving for?","Synthetic rego "+theme);input("Target amount","500");input("Target date",java.time.LocalDate.now().plusDays(90).toString());NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-goal");click("Save goal");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Synthetic rego "+theme+"')");
             }
             // Dismiss hides the card at once.
             js("Array.from(document.querySelectorAll('.advice-card')).find(e=>e.textContent.includes('Small buys add up')).querySelector('button').click()");

@@ -633,3 +633,4 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 .still .coin-stack > span { animation: none; }
 .savings-hero .hero-amount { margin-top: 2px; }
 .savings-hero { grid-column: 1 / -1; }
+.button.row-action { padding: 0; justify-content: flex-start; }

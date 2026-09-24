@@ -12,10 +12,10 @@ beforeEach(async()=>{const {driver}=memoryDriver();await migrate(driver);state.r
 afterEach(cleanup);
 it.each(['dark','light'])('records provider confirmation and retains it when the pattern disappears in %s',async theme=>{
  document.documentElement.dataset.theme=theme;const q=new QueryClient({defaultOptions:{queries:{retry:false}}});
- const review=vi.fn();
- const view=(merchants:string[])=><QueryClientProvider client={q}><Cancellations code="AUD" merchants={merchants} payments={[{merchant:"Synthetic membership",date:"2026-02-01",id:"later"},{merchant:"Another merchant",date:"2026-02-01",id:"other"}]} review={review}/></QueryClientProvider>;
- const rendered=render(view(['Synthetic membership']));
- fireEvent.click(await screen.findByRole('button',{name:'Record cancellation · Synthetic membership'}));
+ const review=vi.fn(),onTrack=vi.fn();
+ const view=(track:string|null)=><QueryClientProvider client={q}><Cancellations code="AUD" track={track} onTrack={onTrack} payments={[{merchant:"Synthetic membership",date:"2026-02-01",id:"later"},{merchant:"Another merchant",date:"2026-02-01",id:"other"}]} review={review}/></QueryClientProvider>;
+ const rendered=render(view('Synthetic membership'));
+ await screen.findByRole('dialog',{name:'Cancellation record'});expect(onTrack).toHaveBeenCalled();
  fireEvent.change(screen.getByLabelText('Contact or confirmation date'),{target:{value:'2026-01-01'}});
  fireEvent.change(screen.getByLabelText('Progress'),{target:{value:'confirmed'}});
  fireEvent.click(screen.getByRole('button',{name:'Save cancellation record'}));
@@ -24,7 +24,7 @@ it.each(['dark','light'])('records provider confirmation and retains it when the
  fireEvent.click(screen.getByRole('button',{name:'Save cancellation record'}));
  await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());
  expect((await state.repo!.cancellations.list())[0]).toMatchObject({status:'confirmed',note:'Provider reference ABC'});
- rendered.rerender(view([]));await screen.findByText('Provider reference ABC');
+ rendered.rerender(view(null));await screen.findByText('Provider reference ABC');
  fireEvent.click(screen.getByRole('button',{name:'Review 1 later payment'}));expect(review).toHaveBeenCalledWith('synthetic membership',['later']);
  fireEvent.click(screen.getByRole('button',{name:'Edit record'}));fireEvent.change(screen.getByLabelText('Progress'),{target:{value:'requested'}});fireEvent.click(screen.getByRole('button',{name:'Save cancellation record'}));
  await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());expect((await state.repo!.cancellations.list())[0]!.status).toBe('requested');

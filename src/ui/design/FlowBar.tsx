@@ -15,7 +15,7 @@ export type Flow = {inMinor: string; outMinor: string};
  *
  * One axis, one currency, no second scale. The hero line says which way the gap goes in three words.
  */
-export function FlowBar({flow, code, label}: {flow: Flow; code: Currency; label: string}) {
+export function FlowBar({flow, code, label, titled = true}: {flow: Flow; code: Currency; label: string; titled?: boolean}) {
   const received = BigInt(flow.inMinor) > 0n ? BigInt(flow.inMinor) : 0n;
   const spent = BigInt(flow.outMinor) > 0n ? BigInt(flow.outMinor) : 0n;
   const ceiling = received > spent ? received : spent;
@@ -31,7 +31,7 @@ export function FlowBar({flow, code, label}: {flow: Flow; code: Currency; label:
 
   return <figure className="flow">
     <figcaption>
-      <span className="heading-row"><h3>Money movement</h3>
+      <span className="heading-row">{titled && <h3>Money movement</h3>}
         <Explain title="Money movement">
           <p>Both bars use the same scale, so their lengths can be compared directly. The marked span is the
             difference between them — what stayed, or what had to come from somewhere else.</p>

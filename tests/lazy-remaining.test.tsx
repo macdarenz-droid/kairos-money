@@ -18,8 +18,8 @@ const wrap=(node:React.ReactNode)=>render(<QueryClientProvider client={new Query
 it('offers Today and Yesterday when recording a cancellation, without removing the date field',async()=>{
  const saved:unknown[]=[];
  state.repo={cancellations:{list:async()=>[],save:async(v:unknown)=>{saved.push(v);},remove:async()=>{}}} as unknown as Repository;
- wrap(<Cancellations code={currency('AUD')} merchants={['Streaming Co']}/>);
- fireEvent.click(await screen.findByRole('button',{name:'Record cancellation · Streaming Co'}));
+ wrap(<Cancellations code={currency('AUD')} track="Streaming Co"/>);
+ await screen.findByRole('dialog',{name:'Cancellation record'});
 
  const today=screen.getByRole('button',{name:/Set the contact date to today/});
  const yesterday=screen.getByRole('button',{name:/Set the contact date to yesterday/});
