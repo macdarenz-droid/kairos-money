@@ -41,6 +41,11 @@ describe('switch', () => {
     rerender(<Switch label="Upcoming bills" on onChange={flip}/>);
     expect(screen.getByRole('button', {name: 'Upcoming bills'}).getAttribute('aria-pressed')).toBe('true');
   });
+
+  it('keeps the whole switch a 44px touch target', () => {
+    const rule = /\.switch \{([^}]*)\}/.exec(css)![1]!;
+    expect(rule).toMatch(/width: 52px; height: 44px/);
+  });
 });
 
 describe('layering', () => {

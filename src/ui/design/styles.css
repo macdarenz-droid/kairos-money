@@ -620,13 +620,15 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 .theme-swatch{width:16px;height:16px;border-radius:50%;border:1px solid var(--border-control);background:linear-gradient(135deg,var(--swatch-surface) 0 50%,var(--swatch-accent) 50% 100%);box-shadow:inset 0 0 0 3px var(--swatch-surface),inset 0 0 0 4px var(--swatch-ink)}
 
 /* On/Off settings as switches; the button keeps aria-pressed and its name. */
-.switch { position: relative; flex-shrink: 0; width: 52px; height: 32px; padding: 0; border: 0; border-radius: 999px;
+/* The button is the full 44px touch target; the 32px track is drawn inside it. */
+.switch { position: relative; flex-shrink: 0; width: 52px; height: 44px; padding: 0; border: 0; background: transparent; }
+.switch::before { content: ''; position: absolute; inset: 6px 0; border-radius: 999px;
   background: var(--border-control); transition: background var(--motion-quick) var(--ease-out); }
-.switch[aria-pressed="true"] { background: var(--accent-solid); }
-.switch-thumb { position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 999px; background: var(--on-accent);
+.switch[aria-pressed="true"]::before { background: var(--accent-solid); }
+.switch-thumb { position: absolute; top: 10px; left: 4px; width: 24px; height: 24px; border-radius: 999px; background: var(--on-accent);
   transition: transform var(--motion-quick) var(--ease-out); }
 .switch[aria-pressed="true"] .switch-thumb { transform: translateX(20px); }
-@media (forced-colors: active) { .switch { border: 1px solid ButtonText; } .switch-thumb { background: ButtonText; } }
+@media (forced-colors: active) { .switch::before { border: 1px solid ButtonText; } .switch-thumb { background: ButtonText; } }
 .explain-inline { padding: 12px; border-radius: 6px; background: var(--surface-2); }
 .today > .surfaces, .today > .savings-path, .today > .button.add-primary { margin-top: 0; }
 .today-start { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
