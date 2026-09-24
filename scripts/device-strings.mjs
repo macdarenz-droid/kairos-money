@@ -33,6 +33,7 @@ const COMPOSED = new Map([
   ['Review 1 later payment', 'template: `Review ${n} later payment${…}`'],
   ['Synthetic everyday', 'synthetic fixture the test seeds itself'],
   ['That PIN did not match', 'thrown by the native Vault plugin, not the web source'],
+  ['Type DELETE KAIROS to confirm', 'template: DeleteConfirm renders `Type ${phrase} to confirm`; Lock passes DELETE KAIROS'],
 ]);
 
 function walk(dir) {

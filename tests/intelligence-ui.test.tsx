@@ -64,6 +64,17 @@ it('orders the Ledger: import first, then accounts, then history', async () => {
   const all = [...document.querySelectorAll('main *')];
   expect([importButton, accounts, history].map(node => all.indexOf(node))).toEqual([importButton, accounts, history].map(node => all.indexOf(node)).sort((x, y) => x - y));
   expect(importButton.className).toContain('button-primary');
+  expect(importButton.className).toContain('add-primary');
+  expect(importButton.closest('.form-actions')).toBeNull();
+});
+it('shows one empty state and one primary on an empty Ledger', async () => {
+  await setup(); fireEvent.click(screen.getByRole('button', {name: 'Ledger'}));
+  await screen.findByRole('heading', {name: 'Add an account to import your statement'}, {timeout: 5000});
+  await screen.findByRole('heading', {name: 'History'});
+  expect(screen.queryByRole('button', {name: 'Import statements'})).toBeNull();
+  expect(screen.queryByText('No transactions yet')).toBeNull();
+  expect(document.querySelectorAll('main .empty-state')).toHaveLength(1);
+  expect([...document.querySelectorAll('main .button-primary')].map(b => b.textContent)).toEqual(['Set up an account']);
 });
 it('orders You: currency, appearance, Kairos AI, notifications, privacy, data, then delete last', async () => {
   await setup(); fireEvent.click(screen.getByRole('button', {name: 'You'}));

@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Fingerprint, LockKeyhole } from 'lucide-react';
 import { Vault } from '../../core/crypto/native';
 import { Button, DeleteConfirm, Input, Sheet } from '../design/primitives';
-// The native plugin refuses a reset without this token; the box ticked above is the person's consent.
+// No PIN guards the lock screen, so a wipe there needs this typed phrase too; the plugin checks it again.
 const RESET_CONFIRMATION = 'DELETE KAIROS';
 import { Loader } from '../design/Motion';
 import { useSession } from '../session';
@@ -12,11 +12,11 @@ export function LockScreen() {
   const session = useSession(); const setup = session.state === 'setup';
   const [pin, setPin] = useState(''); const [confirm, setConfirm] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
   const [recovery, setRecovery] = useState<'options' | 'replace' | 'reset' | null>(null);
-  const [understood, setUnderstood] = useState(false); const [written, setWritten] = useState(false);
+  const [understood, setUnderstood] = useState(false); const [typed, setTyped] = useState(''); const [written, setWritten] = useState(false);
   useEffect(() => { setWritten(false); }, [session.recoveryCode]);
   async function acknowledge() { setBusy(true); setError(''); try { await session.acknowledgeRecovery(); } catch (e) { setError(e instanceof Error ? e.message : 'Confirmation could not be saved. Try again.'); } finally { setBusy(false); } }
   async function recover() { setBusy(true); setError(''); try { await session.recoverPin(); setRecovery('replace'); } catch (e) { setError(e instanceof Error ? e.message : 'Device authentication did not complete.'); } finally { setBusy(false); } }
-  async function reset() { setBusy(true); setError(''); try { if (!understood) return; await Vault.resetLockedApp({ confirmation: RESET_CONFIRMATION }); } catch (e) { setError(e instanceof Error ? e.message : 'Android could not reset Kairos.'); } finally { setBusy(false); } }
+  async function reset() { setBusy(true); setError(''); try { if (!understood || typed !== RESET_CONFIRMATION) return; await Vault.resetLockedApp({ confirmation: typed }); } catch (e) { setError(e instanceof Error ? e.message : 'Android could not reset Kairos.'); } finally { setBusy(false); } }
   async function submit(event?: FormEvent, biometrics = false) {
     event?.preventDefault(); setBusy(true); setError('');
     const entered = pin; const repeated = confirm; setPin(''); setConfirm('');
@@ -32,8 +32,8 @@ export function LockScreen() {
       {!setup && recovery !== 'replace' && session.biometric && session.biometricEnabled && <Button disabled={busy} onClick={() => void submit(undefined, true)}><Fingerprint size={18}/>Use biometrics</Button>}
       {recovery === 'replace' && <Button disabled={busy} onClick={() => void recover()}>Verify device again</Button>}
     </form>{!setup && recovery !== 'replace' && <Button variant="quiet" disabled={busy} onClick={() => { setError(''); setRecovery('options'); }}>Forgot PIN?</Button>}</>}
-    {(recovery === 'options' || recovery === 'reset') && <Sheet title={recovery === 'reset' ? 'Reset Kairos' : 'Forgot PIN?'} onClose={() => { if (!busy) { setRecovery(null); setUnderstood(false); setError(''); } }}>
-      <div className="stack">{recovery === 'options' ? <><p>Use your Android screen lock or biometrics to choose a new Kairos PIN. If you cannot authenticate, resetting permanently deletes this installation.</p><Button disabled={busy} onClick={() => void recover()}>Use device authentication</Button><Button disabled={busy} onClick={() => { setError(''); setRecovery('reset'); }}>Reset app</Button></> : <><DeleteConfirm checked={understood} onChange={setUnderstood}/><Button variant="danger" disabled={busy || !understood} onClick={() => void reset()}>Permanently reset app</Button></>}{error && <p role="alert">{error}</p>}</div>
+    {(recovery === 'options' || recovery === 'reset') && <Sheet title={recovery === 'reset' ? 'Reset Kairos' : 'Forgot PIN?'} onClose={() => { if (!busy) { setRecovery(null); setUnderstood(false); setTyped(''); setError(''); } }}>
+      <div className="stack">{recovery === 'options' ? <><p>Use your Android screen lock or biometrics to choose a new Kairos PIN. If you cannot authenticate, resetting permanently deletes this installation.</p><Button disabled={busy} onClick={() => void recover()}>Use device authentication</Button><Button disabled={busy} onClick={() => { setError(''); setRecovery('reset'); }}>Reset app</Button></> : <><DeleteConfirm checked={understood} onChange={setUnderstood} phrase={RESET_CONFIRMATION} typed={typed} onTyped={setTyped}/><Button variant="danger" disabled={busy || !understood || typed !== RESET_CONFIRMATION} onClick={() => void reset()}>Permanently reset app</Button></>}{error && <p role="alert">{error}</p>}</div>
     </Sheet>}
     <div className="lock-footer information"><LockKeyhole size={15}/><p>No account. No analytics. Encrypted storage on your device.</p></div>
   </main>;

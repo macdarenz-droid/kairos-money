@@ -50,13 +50,17 @@ for (const theme of ['dark', 'light'] as const) it(`requires a replacement PIN a
   fireEvent.click(screen.getByRole('button', { name: 'Save new PIN' }));
   await screen.findByRole('navigation'); expect(native.replaced).toBe(true);
 });
-it('asks for the same confirmation as Settings before resetting while locked', async () => {
+it('needs the Settings tick box and the exact phrase before resetting while locked', async () => {
   native.configured = true; mount();
   fireEvent.click(await screen.findByRole('button', { name: 'Forgot PIN?' }));
   fireEvent.click(screen.getByRole('button', { name: 'Reset app' }));
   const reset = screen.getByRole('button', { name: 'Permanently reset app' });
-  expect(reset.hasAttribute('disabled')).toBe(true); expect(native.erased).toBe(false);
+  expect(reset.hasAttribute('disabled')).toBe(true);
   fireEvent.click(screen.getByRole('checkbox', { name: 'I understand that my data will be removed.' }));
-  // The native plugin still receives its exact token, so it keeps refusing any other caller.
+  // No PIN guards this screen, so the tick box alone is not enough.
+  expect(reset.hasAttribute('disabled')).toBe(true);
+  fireEvent.change(screen.getByLabelText('Type DELETE KAIROS to confirm'), { target: { value: 'delete kairos' } });
+  expect(reset.hasAttribute('disabled')).toBe(true); expect(native.erased).toBe(false);
+  fireEvent.change(screen.getByLabelText('Type DELETE KAIROS to confirm'), { target: { value: 'DELETE KAIROS' } });
   fireEvent.click(reset); await waitFor(() => expect(native.erased).toBe(true));
 });

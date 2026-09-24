@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { FileText } from 'lucide-react';
-import { Amount, Button, EmptyState, Input, Label, Row, Sheet, Skeleton, Surface, Tabs, Toast, type Tab } from '../design/primitives';
+import { Amount, Button, EmptyState, Input, Label, Row, Sheet, Skeleton, Surface, Switch, Tabs, Toast, type Tab } from '../design/primitives';
 import { followSystem, useTheme } from '../design/theme';
 import { ThemeChoices } from '../design/ThemeChoices';
 import { money } from '../../core/money';
 import { Coin, CountUp, KairosAiMark, KairosAiWorking, Loader } from '../design/Motion';
 import { FlowBar } from '../design/FlowBar';
 export default function KitchenSink() {
-  const theme = useTheme(); const [sheet, setSheet] = useState(false); const [toast, setToast] = useState(false); const [tab, setTab] = useState<Tab>('Today'); const [busy, setBusy] = useState(false); const [minor, setMinor] = useState(125090n); const [saved, setSaved] = useState(false);
+  const theme = useTheme(); const [sheet, setSheet] = useState(false); const [toast, setToast] = useState(false); const [tab, setTab] = useState<Tab>('Today'); const [busy, setBusy] = useState(false); const [minor, setMinor] = useState(125090n); const [saved, setSaved] = useState(false); const [on, setOn] = useState(true); const [off, setOff] = useState(false);
   useEffect(followSystem, []);
   return <div className="app"><header className="screen-header"><div><h1>Design system</h1><p>Development only · synthetic amounts below</p></div></header><ThemeChoices preference={theme.preference} choose={theme.set}/>
     <section className="kitchen-section"><h2>Surface, row, label and amount</h2><Surface><Label>Example balance</Label><Amount value={money(125090n, 'AUD')} hero context="Synthetic example balance"/><Row trailing={<Amount value={money(-4200n, 'AUD')} context="Synthetic groceries"/>}>Synthetic groceries<p>Raw reference is not financial data.</p></Row><Row trailing={<Label muted>11 / 16</Label>}>Metadata</Row></Surface></section>
     <section className="kitchen-section"><h2>Buttons</h2><div className="kitchen-buttons"><Button variant="primary" onClick={() => setToast(true)}>Primary action</Button><Button onClick={() => setSheet(true)}>Open sheet</Button><Button variant="quiet" onClick={() => setToast(true)}>Quiet action</Button><Button variant="danger" onClick={() => setToast(true)}>Destructive action</Button><Button disabled>Unavailable</Button></div></section>
+    <section className="kitchen-section"><h2>Switch</h2><Row trailing={<Switch label="Example switch, on" on={on} onChange={() => setOn(v => !v)}/>}>Example switch, on</Row><Row trailing={<Switch label="Example switch, off" on={off} onChange={() => setOff(v => !v)}/>}>Example switch, off</Row></section>
     <section className="kitchen-section"><h2>Input</h2><Input label="Example account name" hint="This field does not save anything." placeholder="Everyday account"/></section>
     <section className="kitchen-section"><h2>Empty state</h2><EmptyState icon={<FileText size={24}/>} title="No statements yet" action={<Button onClick={() => setSheet(true)}>View example</Button>}>This example contains no imported financial data.</EmptyState></section>
     <section className="kitchen-section"><h2>Motion</h2><div className="stack">
