@@ -74,6 +74,19 @@ public class NoticeCaptureInstrumentedTest {
         assertEquals(id, stored.getString("id"));
     }
 
+    /** Sixty-five waiting questions: the old slot, a hash modulo 64, had to give two of them the same one. */
+    @Test public void givesEveryWaitingNoticeItsOwnSlot() throws Exception {
+        NoticeStore.setSources(context, new JSONArray(Collections.singletonList("app.synthetic.bank")));
+        java.util.Set<Integer> slots = new java.util.HashSet<>();
+        for (int i = 0; i < 65; i++) {
+            String id = NoticeStore.capture(context, "app.synthetic.bank", "Bank", "You spent $" + i + ".00 at SHOP", 1000L * (i + 1));
+            assertNotNull(id);
+            int slot = NoticeStore.slot(context, id);
+            assertTrue("slot in range: " + slot, slot >= 0 && slot < 100);
+            assertTrue("slot reused: " + slot, slots.add(slot));
+        }
+    }
+
     @Test public void forgetsOnlyWhatItWasTold() throws Exception {
         NoticeStore.setSources(context, new JSONArray(Collections.singletonList("app.synthetic.bank")));
         String kept = NoticeStore.capture(context, "app.synthetic.bank", "Bank", "You spent $1.00 at ONE", 1000L);

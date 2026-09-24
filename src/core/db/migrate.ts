@@ -10,8 +10,10 @@ import up5 from './migrations/0005_debts.up.sql?raw';
 import down5 from './migrations/0005_debts.down.sql?raw';
 import up6 from './migrations/0006_people.up.sql?raw';
 import down6 from './migrations/0006_people.down.sql?raw';
+import up7 from './migrations/0007_row_guards.up.sql?raw';
+import down7 from './migrations/0007_row_guards.down.sql?raw';
 import type { Driver } from './driver';
-export const migrations = [{ version: 1, up: up1, down: down1 }, { version: 2, up: up2, down: down2 }, { version: 3, up: up3, down: down3 }, { version: 4, up: up4, down: down4 }, { version: 5, up: up5, down: down5 }, { version: 6, up: up6, down: down6 }] as const;
+export const migrations = [{ version: 1, up: up1, down: down1 }, { version: 2, up: up2, down: down2 }, { version: 3, up: up3, down: down3 }, { version: 4, up: up4, down: down4 }, { version: 5, up: up5, down: down5 }, { version: 6, up: up6, down: down6 }, { version: 7, up: up7, down: down7 }] as const;
 /**
  * Split a migration into statements.
  *
@@ -36,6 +38,8 @@ export function statements(sql: string): string[] {
     if (quote) { current += char; if (char === quote) quote = null; continue; }
     if (char === "'" || char === '"') { quote = char; current += char; continue; }
     if (char === '-' && sql[i + 1] === '-') { while (i < sql.length && sql[i] !== '\n') i++; current += '\n'; continue; }
+    // A trigger's body holds its own ";" and ends only at END.
+    if (char === ';' && /^\s*CREATE\s+TRIGGER\b/i.test(current) && !/\bEND\s*$/i.test(current)) { current += char; continue; }
     if (char === ';') { out.push(current); current = ''; continue; }
     current += char;
   }

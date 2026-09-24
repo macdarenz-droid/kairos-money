@@ -26,7 +26,9 @@ import {useDisplayCurrency} from '../currency';
  * `kind` seeds the type: the Quick action "Transfer between accounts" opened this sheet on Expense, which
  * is why pressing it looked like it had done nothing.
  */
-export function ManualSheet({accounts,entry,prefill,kind:initialKind,onClose}:{accounts:Account[];entry?:ManualEntry;prefill?:RepeatEntryPrefill;kind?:ManualEntry['kind'];onClose:()=>void}){
+export function ManualSheet({accounts:all,entry,prefill,kind:initialKind,onClose}:{accounts:Account[];entry?:ManualEntry;prefill?:RepeatEntryPrefill;kind?:ManualEntry['kind'];onClose:()=>void}){
+ // Closed accounts take no new entries; an entry being edited keeps its own.
+ const accounts=all.filter(a=>!a.archived_at||a.id===entry?.accountId||a.id===entry?.destinationId);
  const session=useSession(),query=useQueryClient();
  // A remembered account is a preference, not a financial fact: it changes what the form starts with and
  // nothing that is recorded. An explicit choice here is what stores it.

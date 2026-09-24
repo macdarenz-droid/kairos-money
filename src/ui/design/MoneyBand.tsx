@@ -1,12 +1,11 @@
 import {ArrowDown, ArrowUp} from 'lucide-react';
 import {useQuery} from '@tanstack/react-query';
-import {currency, format, money} from '../../core/money';
-import {convert, rateBetween, type Rate as FxRate} from '../../core/fx';
+import {format, money} from '../../core/money';
 import {displayRatio} from '../../intelligence/visuals';
-import {changePercent, moneyBand, type BandBlock} from '../../intelligence/visuals/band';
-import {localDay} from '../../ingest/reminders';
+import {changePercent} from '../../intelligence/visuals/band';
+import type {Band} from '../../brain/types';
 import {useSession} from '../session';
-import {useAnalysis} from '../money';
+import {useBrain} from '../money';
 import {useDisplayCurrency} from '../currency';
 import {Explain, Skeleton} from './primitives';
 
@@ -37,87 +36,34 @@ import {Explain, Skeleton} from './primitives';
  * confident-looking guess.
  */
 export function MoneyBand() {
-  const session = useSession(), today = localDay();
-
+  const session = useSession();
   const accounts = useQuery({queryKey: ['accounts'], queryFn: () => session.run(repo => repo.accounts()), enabled: session.state === 'ready'});
   const live = (accounts.data ?? []).filter(account => !account.archived_at);
   const codes = [...new Set(live.map(account => account.currency))];
-  /**
-   * THE CURRENCY HE CHOSE, like every other figure on this screen.
-   *
-   * This preferred AUD from the accounts while Surfaces and Intelligence followed the display setting,
-   * so one screen gave two different answers to "whose money is this" — his was set to PHP and these
-   * two carried on in AUD. Both now ask the one hook every screen shares, which is where that same
-   * disagreement — an explicit choice honoured everywhere, an unset one inferred from the account
-   * everywhere — actually lives, rather than each screen re-deciding it on its own.
-   */
   const code = useDisplayCurrency();
-
-  const balances = useQuery({queryKey: ['account-balances'], queryFn: () => session.run(repo => repo.accountBalances()), enabled: session.state === 'ready'});
-  const stored = useQuery({queryKey: ['fx-rates'], enabled: session.state === 'ready',
-    queryFn: () => session.run(repo => repo.rates())});
-  const rates: FxRate[] = (stored.data ?? []).map(r => ({asOf: r.asOf, base: currency(r.base),
-    quote: currency(r.quote), rateE8: BigInt(r.rateE8), source: r.source}));
-  /**
-   * THE SAME ANALYSIS THE REST OF THIS SCREEN IS ALREADY WAITING FOR.
-   *
-   * This asked for its own snapshot under its own key while Surfaces and Intelligence asked for an
-   * analysis under theirs — and an analysis begins by building exactly this snapshot. Two full passes
-   * over every transaction and every source row, for one screen. On a 20,000-row ledger the device
-   * profile caught them side by side: 160 paged reads of the transactions and 158 of the provenance,
-   * 7,985 ms between them, about half of it the same work done twice, and the Ledger tab queued behind
-   * all of it because database access is serialised.
-   *
-   * One key, one pass. `analyse` returns the snapshot it built, which is what MoneyFlowCard already
-   * reads, so nothing here needs its own copy.
-   */
-  const report = useAnalysis();
-  const snapshot = report.data?.snapshot;
+  // One read of the ledger for the whole screen: the brain (ADR 0042).
+  const brain = useBrain();
 
   if (session.state !== 'ready') return null;
-  if (accounts.error || report.error) return <p role="alert">Your money summary could not be read.</p>;
-  if (report.isPending || accounts.isPending || !snapshot) return <Skeleton label="Reading your money"/>;
-  // Absent rather than empty. With no accounts every tile is a zero, and four zeros above the first-run
-  // prompt is the app reporting on its own emptiness — the same thing the thirty-six roll-call was doing.
-  // The screen that asks for an account should be the only thing on it.
+  if (accounts.error || brain.error) return <p role="alert">Your money summary could not be read.</p>;
+  if (brain.isPending || accounts.isPending || !brain.data) return <Skeleton label="Reading your money"/>;
+  // Absent rather than empty: with no accounts the screen that asks for one should be the only thing on it.
   if (!live.length) return null;
+  const missing: readonly string[] = brain.data.coverage.unconverted;
+  if (live.every(account => missing.includes(account.currency))) return <section className="stack" aria-label="Your money">
+    <h2>Your money</h2><p className="meta">No {missing.join(', ')} to {code} rate yet, so nothing to show.</p></section>;
 
-  const band = moneyBand(snapshot, today);
-  /**
-   * "Balance now" READ PHP 0.00 WHILE HE HELD A$116, because this kept only the accounts whose currency
-   * already matched the one being displayed. Everything else on the screen had been taught to convert;
-   * this one line was still filtering, so the tiles reported what changed correctly and what he has as
-   * nothing at all.
-   *
-   * A balance converts at TODAY'S rate — it is what is held now, and what it is worth now is today's
-   * rate, which is the same rule the combined total states at length. An account no rate reaches is left
-   * out rather than counted as nought, and Unconverted at the top of this screen names it.
-   */
-  /**
-   * SAVINGS IS SEPARATE MONEY. "savings money doesnt mix in overall balance. its a separate money."
-   *
-   * A savings or investment account is money being KEPT; everything else is money to spend. They were one
-   * figure, so the number he read as "what I can spend" included the money he had deliberately put out of
-   * reach — the one mistake a money app must not make.
-   */
-  const kept = (account: {type?: string}) => account.type === 'savings' || account.type === 'investment';
-  const total = (rows: typeof live) => rows.reduce((sum, account) => {
-    const rate = rateBetween(rates, currency(account.currency), code, today);
-    if (rate === null) return sum;
-    const minor = BigInt(balances.data?.find(row => row.accountId === account.id)?.minor ?? 0n);
-    return sum + convert(money(minor, currency(account.currency)), code, rate).minor;
-  }, 0n);
-  const spending = live.filter(account => !kept(account));
-  const held = total(spending);
-  // Plus what was set aside with no savings account to set it in, which the snapshot counted from the
-  // ledger. A transfer into a tracked savings account is not in that figure, so nothing is doubled.
-  const saved = total(live.filter(kept)) + BigInt(snapshot.savings?.asideMinor ?? '0');
+  const band = brain.data.spending.band;
+  const spending = live.filter(account => account.type !== 'savings' && account.type !== 'investment');
+  const held = brain.data.today.holdings.spendableMinor;
+  // Savings accounts plus money set aside with no savings account to set it in; nothing is doubled.
+  const saved = brain.data.today.savingsPath.potMinor;
   const show = (minor: string | bigint) => format(money(BigInt(minor), code));
 
   // A change is printed only against a block that had movement, so a first month never reports a rise
   // from nothing, and the change beside a figure is always a change in the same thing over the same
   // number of days.
-  const change = (pick: (block: BandBlock) => string) =>
+  const change = (pick: (block: Band['now']) => string) =>
     band.comparable ? changePercent(pick(band.now), pick(band.before)) : null;
 
   return <section className="stack money-band-block" aria-label="Your money">
@@ -147,7 +93,7 @@ export function MoneyBand() {
         note={`${spending.length} ${spending.length === 1 ? 'account' : 'accounts'}`}/>
     </div>
 
-    <p className="meta">{stamp(band.now.start)} – {stamp(band.end)}{codes.length > 1 ? ` · ${code}` : ''}
+    <p className="meta">{stamp(band.now.start)} – {stamp(band.end)}{codes.length > 1 ? ` · ${code}` : ''}{missing.length ? ` · Leaves out ${missing.join(', ')}` : ''}
       {band.now.unconfirmed && <> · <span className="tag">Not on a statement yet</span></>}</p>
 
     {/* The shapes are the fast read; these are the numbers behind them, for anyone who wants them or

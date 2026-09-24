@@ -92,7 +92,7 @@ public class KairosNoticeListener extends NotificationListenerService {
         manager.createNotificationChannel(new NotificationChannel(CHANNEL, "Check a transaction", NotificationManager.IMPORTANCE_DEFAULT));
 
         Question question = questionFor(detail);
-        int slot = BASE + Math.abs(id.hashCode() % 64);
+        int slot = BASE + NoticeStore.slot(this, id);
         Notification.Builder builder = new Notification.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.kairos_mark)
             .setContentTitle(question.title)

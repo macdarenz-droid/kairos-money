@@ -7,14 +7,15 @@ import {localDay} from '../src/ingest/reminders';
 import {noticeKinds} from '../src/intelligence/notifications';
 import type {Snapshot} from '../src/intelligence/model';
 import {NotificationSync} from '../src/ui/screens/Notifications';
+import {brainInputs} from './brain-mock';
 
 /**
  * The reminder plan and the Today cards want the same ledger snapshot. On the device gate the two full
  * reads, started together at unlock, held the 20,000-row History load at the edge of its budget. The
- * plan now reads the display currency's analysis through Today's own query key, so the ledger is paged
+ * plan now reads the display currency's brain through Today's own query key, so the ledger is paged
  * once; only an account held in another currency costs a snapshot of its own.
  */
-const spies = vi.hoisted(() => ({analyse: vi.fn(), snapshot: vi.fn(), notices: vi.fn(async () => undefined)}));
+const spies = vi.hoisted(() => ({inputs: vi.fn(), snapshot: vi.fn(), notices: vi.fn(async () => undefined)}));
 vi.mock('@capacitor/core', () => ({Capacitor: {isNativePlatform: () => true}, registerPlugin: () => ({notices: spies.notices})}));
 vi.mock('../src/intelligence/notifications', async (importOriginal) => ({...await importOriginal<typeof import('../src/intelligence/notifications')>(), notificationPlan: () => []}));
 const today = localDay();
@@ -25,21 +26,21 @@ vi.mock('../src/ui/session', () => ({
     displayCurrency: () => Promise.resolve('AUD'),
     notifications: {preferences: () => Promise.resolve(Object.fromEntries(noticeKinds.map(k => [k, true])))},
     intelligence: {
-      analyse: (...args: unknown[]) => { spies.analyse(...args); return Promise.resolve({buffer: '0', snapshot: snapshot('AUD')}); },
+      inputs: (...args: unknown[]) => { spies.inputs(...args); return Promise.resolve(brainInputs(snapshot('AUD'), {})); },
       snapshot: (...args: unknown[]) => { spies.snapshot(...args); return Promise.resolve(snapshot(String(args[1]))); },
     },
   }))}),
 }));
 afterEach(cleanup);
 
-it('reads the displayed currency through the analysis Today already runs, and snapshots only the other currency', async () => {
+it('reads the displayed currency through the brain Today already reads, and snapshots only the other currency', async () => {
   const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
   render(<QueryClientProvider client={client}><NotificationSync/></QueryClientProvider>);
   await waitFor(() => expect(spies.notices).toHaveBeenCalled());
-  expect(spies.analyse).toHaveBeenCalledTimes(1);
-  expect(spies.analyse).toHaveBeenCalledWith(today, 'AUD', '0', 0);
+  expect(spies.inputs).toHaveBeenCalledTimes(1);
+  expect(spies.inputs).toHaveBeenCalledWith(today, 'AUD');
   expect(spies.snapshot).toHaveBeenCalledTimes(1);
   expect(spies.snapshot).toHaveBeenCalledWith(today, 'PHP');
-  // The analysis now sits under Today's key: a card mounting next reads it, it is not fetched again.
-  expect(client.getQueryData(['intelligence', today, 'AUD', {extra: '0', cut: 0}])).toMatchObject({snapshot: {currency: 'AUD'}});
+  // The brain now sits under Today's key: a card mounting next reads it, it is not fetched again.
+  expect(client.getQueryData(['intelligence', today, 'AUD'])).toMatchObject({snapshot: {currency: 'AUD'}, brain: {currency: 'AUD'}});
 });

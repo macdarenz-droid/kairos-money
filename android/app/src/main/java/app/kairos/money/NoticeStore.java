@@ -33,7 +33,7 @@ final class NoticeStore {
         catch (JSONException broken) { return new JSONArray(); }
     }
 
-    static void setSources(Context context, JSONArray packages) {
+    static synchronized void setSources(Context context, JSONArray packages) {
         prefs(context).edit().putString("sources", packages.toString()).apply();
     }
 
@@ -56,7 +56,7 @@ final class NoticeStore {
      * purchase of the same amount at the same shop lands in a different second, while a repost of one
      * purchase does not.
      */
-    static String capture(Context context, String source, String title, String text, long postedAt) {
+    static synchronized String capture(Context context, String source, String title, String text, long postedAt) {
         if (!watched(context, source)) return null;
         String body = (title == null ? "" : title) + " | " + (text == null ? "" : text);
         if (body.replace("|", "").trim().isEmpty()) return null;
@@ -73,6 +73,12 @@ final class NoticeStore {
             JSONArray next = new JSONArray();
             // Oldest first, so an unanswered backlog sheds its stalest entries rather than its newest.
             for (int i = Math.max(0, held.length() - (LIMIT - 1)); i < held.length(); i++) next.put(held.get(i));
+            // Its own notification slot, so two questions never replace each other or share buttons.
+            boolean[] used = new boolean[LIMIT];
+            for (int i = 0; i < next.length(); i++) { int taken = next.getJSONObject(i).optInt("slot", -1); if (taken >= 0 && taken < LIMIT) used[taken] = true; }
+            int slot = 0;
+            while (slot < LIMIT - 1 && used[slot]) slot++;
+            entry.put("slot", slot);
             next.put(entry);
             prefs(context).edit().putString("captured", next.toString()).apply();
             return id;
@@ -80,7 +86,7 @@ final class NoticeStore {
     }
 
     /** Records an answer given in the notification shade, to be applied when the ledger is next open. */
-    static boolean decide(Context context, String id, String decision) {
+    static synchronized boolean decide(Context context, String id, String decision) {
         JSONArray held = captured(context);
         boolean found = false;
         for (int i = 0; i < held.length(); i++) {
@@ -92,13 +98,23 @@ final class NoticeStore {
         return found;
     }
 
-    static void forget(Context context, List<String> ids) {
+    static synchronized void forget(Context context, List<String> ids) {
         JSONArray held = captured(context), next = new JSONArray();
         for (int i = 0; i < held.length(); i++) {
             JSONObject entry = held.optJSONObject(i);
             if (entry != null && !ids.contains(entry.optString("id"))) next.put(entry);
         }
         prefs(context).edit().putString("captured", next.toString()).apply();
+    }
+
+    /** The notification slot a notice was given; notices held from before slots existed keep their old one. */
+    static int slot(Context context, String id) {
+        JSONArray held = captured(context);
+        for (int i = 0; i < held.length(); i++) {
+            JSONObject entry = held.optJSONObject(i);
+            if (entry != null && id.equals(entry.optString("id")) && entry.has("slot")) return entry.optInt("slot");
+        }
+        return Math.abs(id.hashCode() % 64);
     }
 
     static List<String> ids(Context context) {

@@ -1,5 +1,5 @@
 import {Button} from './primitives';
-import {useAnalysis} from '../money';
+import {useBrain} from '../money';
 import {useDisplayCurrency} from '../currency';
 
 /**
@@ -14,14 +14,11 @@ import {useDisplayCurrency} from '../currency';
  * person has, with no reason given. That is the same failure as a button that does nothing: the app
  * knows something the person needs to know and does not say it.
  *
- * Reads the report the screen is already waiting for — same cache key as Surfaces, Intelligence,
- * SpendRing and MoneyBand — so naming the gap costs no extra work.
+ * Reads the one brain the screen already waits for, so naming the gap costs no extra work.
  */
 export function Unconverted({onFix}: {onFix: () => void}) {
   const code = useDisplayCurrency();
-  const report = useAnalysis();
-
-  const missing = report.data?.snapshot.unconverted ?? [];
+  const missing = useBrain().data?.coverage.unconverted ?? [];
   if (!missing.length) return null;
   return <div className="unconverted" role="status">
     <p>{missing.join(' and ')} {missing.length === 1 ? 'is' : 'are'} not included below: no stored rate

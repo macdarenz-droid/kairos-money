@@ -25,13 +25,12 @@ public class AccessibilityInstrumentedTest {
     private void loaded(String tab) throws Exception {
         String content;
         switch (tab) {
-            case "Today": content="Boolean(document.querySelector('.intelligence'))"; break;
+            case "Today": content="Boolean(document.querySelector('[data-brain]'))"; break;
             case "Ledger": content="document.querySelector('main').innerText.includes('Search history')"; break;
             case "Insights":
                 js("document.querySelectorAll('main details').forEach(d=>{d.open=true;})");
-                // One currency for the whole app: the per-card pickers these used to wait for are gone,
-                // so readiness is the cards themselves.
-                content="Boolean(document.querySelector('.spending-patterns')) && Boolean(document.querySelector('.intelligence')) && Boolean(document.querySelector('.money-visuals'))"; break;
+                // Readiness is the one brain read behind the screen.
+                content="Boolean(document.querySelector('[data-brain]'))"; break;
             // You is the currency everything is shown in, what is set up, and the settings behind them.
             case "You": content="Boolean(document.querySelector('#settings-currency select')) && document.querySelector('main').innerText.includes('Accounts set up')"; break;
             default: content="Boolean(document.querySelector('dialog[open] h2')?.textContent.trim()==='Quick')";

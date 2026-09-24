@@ -23,7 +23,13 @@ export function inferExport(table: string[][], context: ImportContext, saved?: E
  if (table.some(r => r.length !== width)) throw new Error('Export rows have different column counts. Check the delimiter or export again.');
  const header = table[0].some(c => Object.values(labels).some(pattern => pattern.test(c.trim())));
  const signature = hash(JSON.stringify([width, header ? table[0].map(c => c.trim().toLowerCase()) : 'headerless']));
- if (saved && saved.signature === signature) { validateMapping(saved, width); return { mapping: saved, confidence: 10000, reasons: [], outside: null }; }
+ if (saved && saved.signature === signature) {
+  validateMapping(saved, width);
+  // A remembered mapping settles the columns, not the dates: rows outside the period are still named.
+  const values = table.slice(saved.header ? 1 : 0).map(r => r[saved.columns.date!] ?? '');
+  const fits = values.every(v => { try { normalizeDate(v, context.period, saved.dateOrder); return true; } catch { return false; } });
+  return { mapping: saved, confidence: 10000, reasons: [], outside: fits ? null : dateSpan(values, context.period, saved.dateOrder) };
+ }
  const columns: ExportMapping['columns'] = {};
  if (header) for (const [role, pattern] of Object.entries(labels)) { const found = table[0].flatMap((v, i) => pattern.test(v.trim()) ? [i] : []); if (found.length === 1) columns[role as ColumnRole] = found[0]!; }
  const rows = table.slice(header ? 1 : 0);

@@ -1,10 +1,10 @@
 # Kairos Money Tracker
 
-A private, on-device money tracker with exact money math, an encrypted Android ledger, account setup, app lock, encrypted backup/recovery, export/delete and a quiet two-theme interface. It imports local statements through mandatory review and reversible reconciliation, supports manual history and evidence, and derives coverage-aware charts and insights without sending financial data to a server. Session 4 remains open until its combined native, accessibility, hardening, performance and private-release gate passes.
+A private, on-device money tracker with exact money math, an encrypted Android ledger, account setup, app lock, encrypted backup/recovery, export/delete and a quiet interface in five themes. It imports local statements through mandatory review and reversible reconciliation, supports manual history and evidence, and derives its figures and advice on the device. An optional Claude advisor, off by default and using the owner's own key, can review the figures or sort categories; it sends only what the owner has seen and allowed.
 
 **Session 1 gate: PASS** on Android 34 AOSP; [verified run](https://github.com/macdarenz-droid/kairos-money/actions/runs/34747556681).
 
-Read `HANDOFF.md` and `docs/GATE_SESSION_4.md` before continuing. A source-test pass is not an Android install/security pass.
+Read `HANDOFF.md` and `docs/ARCHITECTURE.md` before continuing. A source-test pass is not an Android install/security pass.
 
 ## Run the UI
 
@@ -82,7 +82,9 @@ It proves encrypted-file behavior on the host, not native Android execution. Nat
 - `ui/design`: OKLCH tokens, contrast aliases, primitives and persisted theme.
 - `ui/screens`: native lock, accounts, import review, manual records, charts, insights, settings and the development-only kitchen sink.
 - `ingest`: offline extraction, parser registry, normalization, encrypted staging, reconciliation and review.
-- `ledger`: deterministic categorisation, evidence ownership, transfers, recurring costs, net worth and read-only financial analysis.
+- `ledger`: deterministic categorisation, evidence ownership, transfers, recurring costs, net worth, and the read-only inputs the brain uses.
+- `brain`: one pure `think(inputs)` that every screen reads; it never writes the ledger.
+- `core/net`: the only modules that reach the network: exchange rates, and the optional Claude advisor.
 - `tests`: property, database, privacy and interaction verification. Synthetic data never enters the production import graph.
 - `ADR`: rationale for non-obvious choices. `docs/SCHEMA.md` is regenerated from SQL.
 
@@ -90,7 +92,7 @@ Ingest writes staging only until confirmation. Intelligence consumes a read-only
 
 ## Privacy and recovery
 
-No account, analytics, financial-data network calls or internet permission. A native PIN protects opening the database; optional strong biometrics can be enabled after setup. On background, financial UI and query caches are cleared. A 60-second background interval requires re-authentication on resume.
+No account and no analytics. The only network calls are exchange rates (a currency code and a date) and, only if the owner turns it on, the Claude advisor, which is logged in the privacy log. A native PIN protects opening the database; optional strong biometrics can be enabled after setup. On background, financial UI and query caches are cleared. A 60-second background interval requires re-authentication on resume.
 
 Reading bank notifications is off until it is switched on, and it is the one capability here with a cost
 worth stating plainly. Android has no permission for a single app's notifications: granting notification

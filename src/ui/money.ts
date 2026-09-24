@@ -1,4 +1,5 @@
 import {useQuery} from '@tanstack/react-query';
+import {think} from '../brain';
 import {convert, rateBetween, type Rate} from '../core/fx';
 import {currency, money} from '../core/money';
 import {localDay} from '../ingest/reminders';
@@ -41,20 +42,20 @@ export function useHoldings() {
     ready: accounts.isSuccess && balances.isSuccess};
 }
 
+/** The brain and the snapshot it was built from, under one key, so a pure caller can reuse the read. */
+export function brainQuery(run: ReturnType<typeof useSession>['run'], today: string, code: string) {
+  return {
+    queryKey: ['intelligence', today, code], staleTime: 60000,
+    queryFn: async () => { const inputs = await run(repo => repo.intelligence.inputs(today, code)); return {brain: think(inputs), snapshot: inputs.snapshot}; },
+  };
+}
+
 /**
- * THE LEDGER ANALYSED ONCE, for every card that reads it.
- *
- * Seven cards on Today and Insights each declared this same query, and each started it as soon as the
- * session was ready — on the display currency's fallback, then again on the real one. One hook, one
- * key, and it waits for the currency to settle, so the ledger is paged once and every card waits on that.
+ * THE BRAIN, read once per (day, display currency) and shared by every card (ADR 0042).
+ * Kept for a minute rather than re-run on every tab switch; every write invalidates 'intelligence'.
  */
-export function useAnalysis() {
+export function useBrain() {
   const session = useSession();
   const {code, settled} = useDisplayCurrencyState();
-  const today = localDay();
-  return useQuery({
-    queryKey: ['intelligence', today, code, {extra: '0', cut: 0}], staleTime: 0,
-    enabled: session.state === 'ready' && settled,
-    queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
-  });
+  return useQuery({...brainQuery(session.run, localDay(), code), enabled: session.state === 'ready' && settled, select: data => data.brain});
 }

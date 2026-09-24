@@ -2,11 +2,12 @@
 import {afterEach, expect, it, vi} from 'vitest';
 import {cleanup, render, screen, within} from '@testing-library/react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {MoneyAudit} from '../src/ui/screens/MoneyAudit';
+import {Insights} from '../src/ui/screens/Insights';
 import {SavingsPath} from '../src/ui/design/SavingsPath';
 import {currency} from '../src/core/money';
 import {localDay} from '../src/ingest/reminders';
-import {addMonths} from '../src/intelligence/debt';
+import {addMonths, openDebts} from '../src/intelligence/debt';
+import {brainInputs} from './brain-mock';
 import type {Snapshot, Transaction} from '../src/intelligence/model';
 
 /** "try to keep ($) amount of money, to add to your savings for debt repayment" — drawn, per pay and per day. */
@@ -21,7 +22,11 @@ vi.mock('../src/ui/session', () => ({
     displayCurrency: () => Promise.resolve('AUD'),
     rates: () => Promise.resolve([]),
     debts: {list: () => Promise.resolve(ledger.debts)},
-    intelligence: {analyse: () => Promise.resolve({buffer: '0', snapshot: {
+    intelligence: {inputs: () => Promise.resolve(brainInputs({
+      asOf: today, currency: AUD, accountIds: ['a'], coverage: [], pays: [],
+      transactions: ledger.transactions, savings: {asideMinor: '0', accountIds: [], evidence: []},
+    }, {accounts: [{id: 'a', currency: 'AUD'}], balances: [{accountId: 'a', minor: '50000'}]},
+    {debts: openDebts(ledger.debts as Parameters<typeof openDebts>[0], 'AUD')})), analyse: () => Promise.resolve({buffer: '0', snapshot: {
       asOf: today, currency: AUD, accountIds: ['a'], coverage: [], pays: [],
       transactions: ledger.transactions, savings: {asideMinor: '0', accountIds: [], evidence: []},
     } satisfies Snapshot})},
@@ -43,13 +48,11 @@ it('shows a dated debt as an amount to keep each day, on Insights and on Today',
   ];
   const date = addMonths(today, 10);
   ledger.debts = [{id: 'loan', name: 'Synthetic loan', currency: 'AUD', balanceMinor: '700000', annualRateBp: '0', minimumMinor: '0', closedAt: null, targetDate: date}];
-  render(<QueryClientProvider client={client()}><MoneyAudit/></QueryClientProvider>);
-  const card = await screen.findByLabelText('Money audit');
-  expect(within(card).getByText('Pay off by')).toBeTruthy();
-  const step = within(card).getByText('Synthetic loan').closest('.audit-step')!;
-  expect(step.getAttribute('data-status')).toBe('now');
-  expect(within(step as HTMLElement).getByText('$700.00 a month')).toBeTruthy();
-  expect(within(step as HTMLElement).getByText(/\$23\.33 a day/)).toBeTruthy();
+  render(<QueryClientProvider client={client()}><Insights/></QueryClientProvider>);
+  const plan = await screen.findByLabelText('Plan');
+  const step = within(plan).getByText('Synthetic loan').closest('.row')! as HTMLElement;
+  expect(within(step).getByText('$700.00 a month')).toBeTruthy();
+  expect(within(step).getByText(new RegExp(`Pay off by ${date} · \\$23\\.33 a day`))).toBeTruthy();
   cleanup();
   render(<QueryClientProvider client={client()}><SavingsPath/></QueryClientProvider>);
   await screen.findByLabelText('Savings');

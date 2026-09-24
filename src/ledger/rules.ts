@@ -163,3 +163,18 @@ export async function ownerRules(driver: Driver): Promise<CategoryRule[]> {
 export async function merchantDefaults(driver: Driver): Promise<Record<string, string>> {
   return Object.fromEntries((await driver.query('SELECT m.canonical_name,c.name FROM merchants m JOIN categories c ON c.id=m.default_category_id')).map(r => [String(r.canonical_name), String(r.name)]));
 }
+
+/** "All from this merchant": an owner rule, so it beats Claude and survives every rebuild. */
+export function merchantRuleRepository(driver: Driver, refresh: () => Promise<void>) {
+  async function set(merchant: string, category: string) {
+    const {editableCategories} = await import('./categories');
+    if (!editableCategories.includes(category)) throw new Error('Choose a supported category.');
+    return driver.transaction(async () => {
+      if (!(await driver.query('SELECT 1 FROM merchants WHERE canonical_name=?', [merchant])).length) throw new Error('That merchant is not in your ledger.');
+      await driver.execute('INSERT OR REPLACE INTO rules(id,priority,matcher,action,created_by) VALUES(?,0,?,?,?)',
+        ['merchant-rule:' + merchant, JSON.stringify({merchant}), JSON.stringify({category}), 'user']);
+      await refresh();
+    });
+  }
+  return {set};
+}

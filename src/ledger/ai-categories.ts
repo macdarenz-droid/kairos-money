@@ -116,3 +116,13 @@ export function aiCategoryRepository(driver: Driver, refresh: () => Promise<void
   }
   return {applyRun, undoRun, runs, read};
 }
+
+/** What a sorting run sends: merchants the owner has not decided; with `onlyNew`, only uncategorised ones. */
+export async function sortingPayload(driver: Driver, rows: readonly LedgerRow[], onlyNew: boolean): Promise<Payload> {
+  const {ownerRules, merchantDefaults} = await import('./rules');
+  const rules = await ownerRules(driver), defaults = await merchantDefaults(driver);
+  const decided = new Set([...rules.map(r => r.merchant), ...Object.keys(defaults)]);
+  const splitIds = new Set((await driver.query("SELECT key FROM app_settings WHERE key>='split:' AND key<'split;'")).map(r => String(r.key).slice('split:'.length)));
+  const eligible = rows.filter(row => !decided.has(row.merchant) && (!onlyNew || row.category === null));
+  return categorisationPayload(eligible, {splitIds, examples: rules.map(r => ({description: r.merchant, category: r.category}))});
+}

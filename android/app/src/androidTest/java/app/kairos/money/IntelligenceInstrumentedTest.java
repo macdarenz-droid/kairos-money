@@ -180,6 +180,9 @@ public class IntelligenceInstrumentedTest {
                 }
             }
             db.execSQL("INSERT OR REPLACE INTO app_settings VALUES('intelligence:metadata',?)",new Object[]{metadata.toString()});
+            // Low leaves $10 in the account whatever earlier seeds added: the opening balance cancels every row.
+            if(low) db.execSQL("UPDATE accounts SET opening_balance_minor=1000-(SELECT COALESCE(SUM(amount_minor),0) FROM transactions WHERE account_id='s3') WHERE id='s3'");
+            else db.execSQL("UPDATE accounts SET opening_balance_minor=0 WHERE id='s3'");
             return null;
         });
     }
@@ -217,6 +220,8 @@ public class IntelligenceInstrumentedTest {
             // Reuse settled source rows: preserve amounts, coverage and existing profile assertions.
             click("Ledger");
             DatabaseDigest.transaction(activity, db -> {
+                // The triage run leaves $10 in the account; restore it so Insights shows its sections.
+                db.execSQL("UPDATE accounts SET opening_balance_minor=0 WHERE id='s3'");
                 for (int offset : new int[]{28,14,0}) {
                     String id = "s3-" + java.time.LocalDate.now().minusDays(offset) + "-essential";
                     android.content.ContentValues values = new android.content.ContentValues();
@@ -232,27 +237,20 @@ public class IntelligenceInstrumentedTest {
                 click("You");click(theme);awaitJs("Boolean(document.querySelector('#settings-currency select'))");
                 js("(()=>{const e=document.querySelector('#settings-currency select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
                 awaitJs("document.querySelector('#settings-currency select').value==='USD'");
-                // The monthly views live on Insights now: derived money sits with the other derived money.
-                click("Insights");awaitJs("Boolean(document.querySelector('.fingerprint'))");
-                for(String heading:new String[]{"Money Fingerprint","Daily cashflow","Recurring payment timeline","Spending by category","Recurring costs","Upcoming bills","Merchant history"}) {
-                    if (heading.equals("Recurring payment timeline")) {
-                        awaitJs("Array.from(document.querySelectorAll('[aria-label]')).some(e=>e.getAttribute('aria-label').startsWith('synthetic fortnightly membership:') && e.querySelectorAll('circle').length>0)");
-                    }
-                    captureHeading(heading,theme.toLowerCase()+"-monthly-"+heading.toLowerCase().replace(' ','-'));
+                // Insights after the cut: one brain read, six sections.
+                click("Insights");awaitJs("Boolean(document.querySelector('[data-brain=ready]'))");
+                for(String heading:new String[]{"This month","Where it went","Bills and subscriptions","Plan"}) {
+                    captureHeading(heading,theme.toLowerCase()+"-insights-"+heading.toLowerCase().replace(' ','-'));
                 }
-                for(String heading:new String[]{"Spending after payday","What changed"}) {
-                    captureHeadingIfPresent(heading,theme.toLowerCase()+"-monthly-"+heading.toLowerCase().replace(' ','-'));
-                }
-                click("Record cancellation · synthetic fortnightly membership");
+                click("Record cancellation · Synthetic fortnightly membership");
                 input("Contact or confirmation date",java.time.LocalDate.now().minusDays(1).toString());
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-cancellation-entry");click("Save cancellation record");
                 awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Cancellation requested')");
                 click("Review 1 later payment");awaitJs("Boolean(document.querySelector('dialog')) && document.body.innerText.includes('These may be final charges')");
                 NativeEvidence.capture(activity,theme.toLowerCase()+"-cancellation-later-payment");js("document.querySelector('dialog .icon-button').click()");
-                click("Remove record");click("Remove cancellation record");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('No cancellation records in USD.')");
-                js("(()=>{const e=document.querySelector('.money-visuals input[type=range]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'1');e.dispatchEvent(new Event('input',{bubbles:true}));})()");
-                awaitJs("document.querySelector('.money-visuals input[type=range]').value==='1'");
-                js("document.querySelector('.money-visuals').scrollIntoView()");NativeEvidence.capture(activity,theme.toLowerCase()+"-monthly-comparison");
+                click("Remove record");click("Remove cancellation record");awaitJs("!document.querySelector('dialog') && !document.body.innerText.includes('Cancellation requested')");
+                // Net worth lives on You.
+                click("You");
                 // Nothing is counted yet, so there is no total to print: the three zero rows only appear
                 // once a holding is recorded or an account balance is included.
                 awaitJs("!document.body.innerText.includes('Combined position')");
@@ -292,13 +290,8 @@ public class IntelligenceInstrumentedTest {
                 // picker of its own any more. The reconciled fixture is USD.
                 click("You");js("(()=>{const e=document.querySelector('#settings-currency select');e.value='USD';e.dispatchEvent(new Event('change',{bubbles:true}));})()");
                 awaitJs("document.querySelector('#settings-currency select').value==='USD'");click("Insights");
-                awaitJs("Boolean(document.querySelector('.spending-patterns'))");
-                awaitJs("document.querySelector('.spending-patterns').innerText.includes('Purchases')");
-                captureHeading("Your spending patterns",theme.toLowerCase()+"-spending-patterns");
-                js("Array.from(document.querySelectorAll('.spending-patterns h3')).find(e=>e.textContent==='Monthly balance').scrollIntoView({behavior:'instant'})");
-                NativeEvidence.capture(activity,theme.toLowerCase()+"-spending-months");
-                js("document.querySelector('.spending-patterns .row button').click()");awaitJs("Boolean(document.querySelector('dialog'))");
-                NativeEvidence.capture(activity,theme.toLowerCase()+"-spending-evidence");js("document.querySelector('dialog .icon-button').click()");
+                awaitJs("Boolean(document.querySelector('[data-brain=ready]'))");
+                captureHeading("Where it went",theme.toLowerCase()+"-spending-where-it-went");
                 // Use an actual prior file import; intelligence-only SQL fixtures have no staged source document.
                 click("Ledger");input("Search history","");
                 String expense="Array.from(document.querySelectorAll('.transaction-row')).find(e=>e.querySelector('.amount')?.getAttribute('aria-label')?.startsWith('Negative') && !e.textContent.includes('Internal transfer') && !e.textContent.includes('Pending'))";
@@ -340,21 +333,22 @@ public class IntelligenceInstrumentedTest {
     }
     @Test public void a_intelligenceEvidenceAndThemes() throws Exception {
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
-            scenario.onActivity(a->activity=a);unlock();seed(20,false);selectCurrency();awaitJs("document.body.innerText.includes('Still learning') && document.body.innerText.includes('20 covered days')");for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('20 covered days')");captureHeading("Still learning",theme.toLowerCase()+"-intelligence-learning");}
+            scenario.onActivity(a->activity=a);unlock();seed(20,false);selectCurrency();awaitJs("Boolean(document.querySelector('[data-brain=ready]')) && document.body.innerText.includes('Still learning')");
+            for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('Still learning')");captureHeading("Still learning",theme.toLowerCase()+"-intelligence-learning");}
         }
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
             scenario.onActivity(a->activity=a);unlock();seed(182,false);
             for(String theme:new String[]{"Light","Dark"}) {
-                click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('The Drifter') && document.body.innerText.includes('Small purchases add up')");captureHeading("The Drifter",theme.toLowerCase()+"-intelligence-profile");
-                js("document.querySelector('.intelligence .surface button').click()");awaitJs("Boolean(document.querySelector('dialog')) && document.body.innerText.includes('Synthetic discretionary')");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-evidence");click("Confirm purchase context");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-context");js("document.querySelector('dialog .icon-button').click()");
-                click("Optional reflections");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-reflections");click("Keep these unknown");awaitJs("!document.querySelector('dialog')");
-                click("See assumptions and sources");awaitJs("Boolean(document.querySelector('dialog'))");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-forecast");js("document.querySelector('dialog .icon-button').click()");
-                click("Spending scenario");NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-scenario");input("A new cost to take on","80");click("Apply scenario");awaitJs("!document.querySelector('dialog')");
+                click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('Small buys add up. Try one fewer a week.')");
+                captureHeading("Advice",theme.toLowerCase()+"-intelligence-advice");captureHeading("Plan",theme.toLowerCase()+"-intelligence-plan");
                 click("Money set aside");input("What are you saving for?","Synthetic rego "+theme);input("Target amount","500");input("Target date",java.time.LocalDate.now().plusDays(90).toString());NativeEvidence.capture(activity,theme.toLowerCase()+"-intelligence-goal");click("Save goal");awaitJs("!document.querySelector('dialog') && document.body.innerText.includes('Synthetic rego "+theme+"')");
             }
+            // Dismiss hides the card at once.
+            js("Array.from(document.querySelectorAll('.advice-card')).find(e=>e.textContent.includes('Small buys add up')).querySelector('button').click()");
+            awaitJs("!document.body.innerText.includes('Small buys add up. Try one fewer a week.')");
         }
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
-            scenario.onActivity(a->activity=a);unlock();seed(182,true);selectCurrency();awaitJs("document.body.innerText.includes('Focus on essentials')");assertEquals("false",js("document.body.innerText.includes('Cashflow outlook')"));
+            scenario.onActivity(a->activity=a);unlock();seed(182,true);selectCurrency();awaitJs("document.body.innerText.includes('Focus on essentials')");assertEquals("false",js("Boolean(document.querySelector('section[aria-label=\"Advice\"]'))"));
             for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('Focus on essentials')");captureHeading("Focus on essentials",theme.toLowerCase()+"-intelligence-triage");}
         }
     }

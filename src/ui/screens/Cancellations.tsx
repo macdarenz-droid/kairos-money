@@ -13,7 +13,7 @@ export function Cancellations({code,merchants,payments=[],review}:{code:Currency
  const rows=(query.data??[]).filter(r=>r.currency===code);
  // No repeating payment to cancel and nothing recorded: the section has no subject, so it does not appear.
  if(!merchants.length&&!rows.length&&!query.isPending)return null;
- const refresh=()=>client.invalidateQueries({queryKey:['cancellations']});
+ const refresh=async()=>{await client.invalidateQueries({queryKey:['cancellations']});await client.invalidateQueries({queryKey:['intelligence']});};
  function start(value:Cancellation){setError('');setEdit(value);}
  async function save(){if(!edit)return;setBusy(true);setError('');try{if(edit.date>localDay())throw new Error('Use the date you contacted the provider, up to today.');await session.run(r=>r.cancellations.save(edit));await refresh();setEdit(null);}catch(e){setError(e instanceof Error?e.message:'The cancellation record could not be saved.');}finally{setBusy(false);}}
  return <section className="stack cancellation-records" aria-label="Cancellation records"><span className="heading-row"><h3>Track a cancellation</h3><Explain title="Track a cancellation">

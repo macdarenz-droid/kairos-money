@@ -9,6 +9,11 @@ import {statements} from '../src/core/db/migrate';
  * word, which points nowhere near the punctuation that caused it.
  */
 describe('splitting a migration into statements', () => {
+  it('keeps a trigger body whole, up to its END', () => {
+    const sql = "CREATE TRIGGER g BEFORE INSERT ON t WHEN NEW.a IS NULL BEGIN SELECT RAISE(ABORT, 'no; really'); END;\nCREATE TABLE u (b TEXT);";
+    expect(statements(sql)).toEqual(["CREATE TRIGGER g BEFORE INSERT ON t WHEN NEW.a IS NULL BEGIN SELECT RAISE(ABORT, 'no; really'); END", 'CREATE TABLE u (b TEXT)']);
+  });
+
   it('drops a line comment', () => {
     expect(statements('-- why this table exists\nCREATE TABLE t (a TEXT);')).toEqual(['CREATE TABLE t (a TEXT)']);
   });

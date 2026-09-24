@@ -1,4 +1,5 @@
-import type {DueWindow} from '../../intelligence/visuals/due';
+import type {DueWindow} from '../../brain/types';
+import {displayRatio} from '../../intelligence/visuals';
 
 /**
  * The next thirty days as a shape.
@@ -17,13 +18,16 @@ import type {DueWindow} from '../../intelligence/visuals/due';
 export function DueStrip({window: due, label}: {window: DueWindow; label: string}) {
   if (!due.dues.length) return null;
   const x = (offset: number) => (offset * 1000000 / due.days).toString();
+  const tallest = due.dues.reduce((m, d) => BigInt(d.minor) > m ? BigInt(d.minor) : m, 1n).toString();
+  // Millionths of the tallest due, so the drawing never touches an amount.
+  const heights = due.dues.map(d => displayRatio(d.minor, tallest));
   return <figure className="due-strip" aria-label={label}>
     <svg viewBox="0 0 1000000 120000" preserveAspectRatio="none" className="due-plot" aria-hidden="true">
       <line x1="0" y1="118000" x2="1000000" y2="118000" className="due-axis" vectorEffect="non-scaling-stroke"/>
       {due.payOffset !== null && <line x1={x(due.payOffset)} y1="0" x2={x(due.payOffset)} y2="118000"
         className="due-payday" vectorEffect="non-scaling-stroke"/>}
-      {due.dues.map(d => <line key={`${d.date}-${d.merchant}`} x1={x(d.offset)} x2={x(d.offset)}
-        y1={(118000 - Number(d.height) * 110000 / 1000000).toString()} y2="118000"
+      {due.dues.map((d, i) => <line key={`${d.date}-${d.merchant}`} x1={x(d.offset)} x2={x(d.offset)}
+        y1={(118000 - Number(heights[i]) * 110000 / 1000000).toString()} y2="118000"
         className={d.beforePay ? 'due-tick due-tick-before' : 'due-tick'} vectorEffect="non-scaling-stroke"/>)}
     </svg>
     <figcaption>{label}</figcaption>

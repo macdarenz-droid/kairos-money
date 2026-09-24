@@ -38,7 +38,8 @@ export function spending(input: BrainInputs): Spending {
     const sample = s.transactions.find(t => t.id === r.evidence.at(-1));
     const cancelled = input.cancelled.has(r.merchant);
     return {merchant: sample?.description ?? r.merchant, category: sample?.category ?? 'Uncategorised', minor: r.minor, interval: r.interval,
-      yearlyMinor: (BigInt(r.minor) * 365n / BigInt(r.interval)).toString(), nextDate: cancelled ? null : r.next, cancelled, evidence: r.evidence};
+      yearlyMinor: (BigInt(r.minor) * 365n / BigInt(r.interval)).toString(), nextDate: cancelled ? null : r.next, cancelled, evidence: r.evidence,
+      charges: s.transactions.filter(t => t.status === 'settled' && !t.transfer && BigInt(t.minor) < 0n && t.description === sample?.description).map(t => ({id: t.id, date: t.date}))};
   }).sort((a, b) => BigInt(b.yearlyMinor) > BigInt(a.yearlyMinor) ? 1 : BigInt(b.yearlyMinor) < BigInt(a.yearlyMinor) ? -1 : a.merchant.localeCompare(b.merchant));
 
   // Ninety days for patterns: a weekday and a payday need more than one month to say anything.

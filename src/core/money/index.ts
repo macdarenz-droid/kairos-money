@@ -64,3 +64,11 @@ export function fromDatabase(value: unknown, code: Currency): Money {
   return money(BigInt(value), code);
 }
 export function serialize(value: Money): { minor: string; currency: Currency } { return { minor: value.minor.toString(), currency: value.currency }; }
+
+/** "1.2e-3" as "0.0012": the exponent moves the point by characters, so no float ever holds the value. */
+export function expandDecimal(value: string): string {
+  const m = /^(-?)(\d+)(?:\.(\d+))?[Ee]([+-]?\d+)$/.exec(value); if (!m) return value;
+  const exponent = Number(m[4]); if (Math.abs(exponent) > 30) throw new Error('A number is outside the supported range.');
+  const digits = m[2]! + (m[3] ?? ''), point = m[2]!.length + exponent;
+  return m[1]! + (point <= 0 ? '0.' + '0'.repeat(-point) + digits : point >= digits.length ? digits + '0'.repeat(point - digits.length) : digits.slice(0, point) + '.' + digits.slice(point));
+}

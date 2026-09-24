@@ -17,7 +17,9 @@ import { asc, eq } from 'drizzle-orm';
 import { accounts, schema, SECRET_KEY_SQL, tableNames } from './schema';
 import { queryPages } from './query-pages';
 import { privacyRepository } from './privacy';
-import { aiCategoryRepository } from '../../ledger/ai-categories';
+import { aiCategoryRepository, sortingPayload } from '../../ledger/ai-categories';
+import { merchantRuleRepository } from '../../ledger/rules';
+import { advisorRepository } from '../../ledger/advisor';
 import type { Driver, SqlValue } from './driver';
 import { currency, money, toDatabase, type Currency } from '../money';
 export type AccountKind = 'checking' | 'savings' | 'credit' | 'cash' | 'loan' | 'investment';
@@ -37,7 +39,8 @@ export function repository(driver: Driver) {
   return {
     refunds:{read:async(id:string)=>(await refunds()).read(id),save:async(creditId:string,purchaseId:string)=>(await refunds()).save(creditId,purchaseId),remove:async(id:string)=>(await refunds()).remove(id)},
     imports,
-    aiCategories: aiCategoryRepository(driver, imports.rebuild),
+    aiCategories: {...aiCategoryRepository(driver, imports.rebuild), payload: async (onlyNew: boolean) => sortingPayload(driver, await imports.ledger(), onlyNew)},
+    merchantRules: merchantRuleRepository(driver, imports.rebuild),
     manual: manualRepository(driver),
     notices: noticeRepository(driver),
     notifications: notificationRepository(driver),
@@ -52,6 +55,7 @@ export function repository(driver: Driver) {
     attachments: attachmentRepository(driver),
     restoreBackup: (snapshot: unknown) => restoreSnapshot(driver, snapshot),
     privacy: privacyRepository(driver),
+    advisor: advisorRepository(driver),
     intelligence: intelligenceRepository(driver),
     async accounts() { return db.select().from(accounts).orderBy(asc(accounts.name), asc(accounts.id)); },
     /**

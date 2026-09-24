@@ -5,6 +5,11 @@ import { memoryDriver } from './db-helper';
 import { migrate } from '../src/core/db/migrate';
 import { repository } from '../src/core/db/repository';
 import type { Driver } from '../src/core/db/driver';
+/** What an older build's Today wrote into the derived tables, which restore must still replace. */
+async function olderAnalysis(driver: Driver) {
+  await driver.execute("INSERT INTO signals(id,period,key,value,computed_at,version,status,inputs) VALUES('AUD:2026-07:buffer_days','AUD:2026-07','buffer_days',NULL,'2026-07-01',1,'insufficient_data','{}')");
+  await driver.execute("INSERT INTO profiles(id,period,archetype,axis_scores,confidence,version,covered_days) VALUES('AUD:2026-07','AUD:2026-07',NULL,'{}',0,1,0)");
+}
 const code = '2345-6789-ABCD-EFGH-JKLM-NPQR-STUV-WXYZ-2345-6789';
 async function seeded() {
   const { driver } = memoryDriver(); await migrate(driver); const repo = repository(driver);
@@ -45,8 +50,8 @@ it('refuses to overwrite a populated ledger', async () => {
 it('restores after Today has calculated empty-installation signals and profiles', async () => {
   const { repo } = await seeded(); const original = await repo.exportAll();
   const { driver } = memoryDriver(); await migrate(driver); const fresh = repository(driver);
-  await fresh.intelligence.analyse('2026-07-01', 'AUD');
-  expect(await driver.query('SELECT * FROM signals')).toHaveLength(24);
+  await olderAnalysis(driver);
+  expect(await driver.query('SELECT * FROM signals')).toHaveLength(1);
   expect(await driver.query('SELECT * FROM profiles')).toHaveLength(1);
   await fresh.restoreBackup(original);
   expect((await fresh.exportAll()).tables).toEqual(original.tables);
@@ -54,7 +59,7 @@ it('restores after Today has calculated empty-installation signals and profiles'
 it('still protects a goal-only installation after empty-ledger analysis', async () => {
   const { repo } = await seeded(); const original = await repo.exportAll();
   const { driver } = memoryDriver(); await migrate(driver); const fresh = repository(driver);
-  await fresh.intelligence.analyse('2026-07-01', 'AUD');
+  await olderAnalysis(driver);
   await fresh.intelligence.saveGoal({ id: 'g', name: 'Synthetic goal', target: '50000', funded: '0', date: '2026-12-01', kind: 'goal', currency: 'AUD' });
   const before = (await fresh.exportAll()).tables;
   await expect(fresh.restoreBackup(original)).rejects.toThrow('empty ledger');
@@ -75,7 +80,7 @@ it('rejects invalid columns, broken links, missing tables and inexact money with
 it('rolls back an interrupted restore, including its earlier inserted accounts', async () => {
   const { repo } = await seeded(); const snapshot = await repo.exportAll();
   const { driver } = memoryDriver(); await migrate(driver);
-  await repository(driver).intelligence.analyse('2026-07-01', 'AUD');
+  await olderAnalysis(driver);
   const before = await repository(driver).exportAll();
   const failing: Driver = { ...driver, async execute(sql, values) { if (sql.startsWith('INSERT INTO coverage_ranges')) throw new Error('Synthetic storage interruption'); await driver.execute(sql, values); } };
   await expect(repository(failing).restoreBackup(snapshot)).rejects.toThrow('Synthetic storage interruption');

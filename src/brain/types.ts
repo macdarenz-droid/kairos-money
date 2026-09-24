@@ -112,6 +112,8 @@ export type Bill = {
   nextDate: Day | null;
   cancelled: boolean;
   evidence: Evidence;
+  /** Every settled charge under this name, so charges after a cancellation can be checked. */
+  charges: readonly {id: string; date: Day}[];
 };
 export type Total = {minor: Minor; count: number; evidence: Evidence};
 /** 0 is Sunday, as Date.getUTCDay counts. */

@@ -87,3 +87,11 @@ it('does not scan every row for a search term the reader never typed',async()=>{
  expect(issued.some(sql=>/\bLIKE\b/i.test(sql))).toBe(true);
  expect((await paged.ledgerPage('  ')).total).toBe((await paged.ledgerPage()).total);
 });
+
+it('leaves split purchases out of bulk categorising, which would reject them anyway',async()=>{
+ const {repo}=await refundFixture();
+ const purchase=(await repo.imports.ledger()).find(r=>BigInt(r.minor)<-1n&&r.status==='settled'&&!r.transferGroup)!;
+ const half=(-BigInt(purchase.minor)/2n).toString(),rest=(-BigInt(purchase.minor)-BigInt(half)).toString();
+ await repo.splits.save(purchase.id,[{category:'Groceries',minor:half},{category:'Shopping',minor:rest}]);
+ expect((await repo.imports.ledgerBulk()).rows.map(r=>r.id)).not.toContain(purchase.id);
+});

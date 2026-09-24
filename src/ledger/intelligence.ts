@@ -4,25 +4,8 @@ import type {Driver} from '../core/db/driver';
 import {queryPages} from '../core/db/query-pages';
 import {currency,money,toDatabase,type Currency} from '../core/money';
 import {convert,rateBetween,type Rate as FxRate} from '../core/fx';
-import {computeSignals} from '../intelligence/signals';
-import {profile,distress} from '../intelligence/profile';
-import {insights} from '../intelligence/insights';
-import {forecast,payRise,payCycle,goalFunding,recurrences,scheduledDates} from '../intelligence/forecast';
-import {day,describeWindows,type Snapshot,type Kind,type Signal,type Transaction} from '../intelligence/model';
-/**
- * What a stored signal retains.
- *
- * Signal.inputs carries the whole windowed corpus so the calculation can be re-derived in memory, and
- * every transaction in it carries its own provenance payload. Serialising that per signal wrote
- * 45,721,866 bytes across 24 rows for a 20,000-row ledger, the largest row 5,796,371 bytes, and the
- * column is CHECK(json_valid(inputs)) so SQLite parses each one before SQLCipher encrypts its pages.
- * On the device that measured 37,403 ms of a 43,789 ms screen open, across 24 uniformly slow writes.
- *
- * The ledger already holds those transactions and `evidence` already cites them by id, so the stored
- * row keeps the citation and drops the copy. Nothing reads this column back; it exists for audit and
- * export, and a reference serves that better than 24 duplicates of the same corpus.
- */
-function stored(v:Signal){const {transactions,...inputs}=v.inputs;return {...v,inputs:{...inputs,transactionCount:transactions.length}};}
+import {recurrences} from '../intelligence/forecast';
+import {day,type Snapshot,type Kind,type Transaction} from '../intelligence/model';
 export function intelligenceRepository(driver:Driver){
  async function setting<T>(key:string,fallback:T):Promise<T>{const r=(await driver.query('SELECT value FROM app_settings WHERE key=?',[key]))[0];return r?JSON.parse(String(r.value)) as T:fallback;}
  async function set(key:string,value:unknown){await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',[key,JSON.stringify(value)]);}
@@ -159,24 +142,8 @@ export function intelligenceRepository(driver:Driver){
   if(valid)s.liquid={minor:balance.toString(),asOf,verified:true,evidence};
   return s;
  }
- async function analyse(asOf:string,code:string,extraBill='0',cutPercent=0){return driver.transaction(async()=>{
-  // Signals describe how someone spends, so they run over the data's own window rather than one measured
-  // back from today. Three months of statements ending in March describe March perfectly well; anchoring
-  // to today turned them into "not enough data" while the transactions sat in the ledger. The forecast
-  // below still uses asOf, because what is safe to spend *now* really does need data from now.
-  const s=await snapshot(asOf,code),all=describeWindows(s,asOf).flatMap(w=>computeSignals(s,w)),signal=all.filter(v=>v.period.startsWith('trailing-90:')),period=asOf.slice(0,7);
-  const old=(await driver.query('SELECT archetype FROM profiles WHERE period<? AND id LIKE ? ORDER BY period DESC LIMIT 1',[code+':'+period,code+':%']))[0];const p=profile(s,signal,old?.archetype?String(old.archetype):null),dismissed=await setting<Record<string,number>>('intelligence:dismissals',{}),cards=insights(s,signal,dismissed),buffer=await setting<string>('intelligence:buffer:'+code,'0');
-  for(const v of all)await driver.execute('INSERT OR REPLACE INTO signals(id,period,key,value,computed_at,version,status,inputs) VALUES(?,?,?,?,?,?,?,?)',[code+':'+v.period+':'+v.key,code+':'+v.period,v.key,v.value,new Date().toISOString(),1,v.status==='ok'?'ready':'insufficient_data',JSON.stringify(stored(v))]);
-  await driver.execute('INSERT OR REPLACE INTO profiles(id,period,archetype,axis_scores,confidence,version,covered_days) VALUES(?,?,?,?,?,?,?)',[code+':'+period,code+':'+period,p.archetype,JSON.stringify(p.axes),p.confidence,1,p.coveredDays]);
-  for(const i of cards)await driver.execute('INSERT OR REPLACE INTO insights(id,created_at,kind,severity,title,body,evidence,state,projected_effect_minor,currency,research_id,action,threshold) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',[i.id,new Date().toISOString(),i.kind,i.triage?'triage':'normal',i.title,i.body,JSON.stringify(i),'new',toDatabase(money(BigInt(i.projectedMinor),s.currency)),code,i.researchId,i.action,i.threshold]);
-  const goals=await driver.query('SELECT * FROM goals WHERE currency=? ORDER BY target_date,id',[code]);const cycles=payCycle(s);const goalRows=goals.map(g=>{const due=g.target_date?String(g.target_date):asOf;const payDates:string[]=[];for(const c of cycles){payDates.push(...scheduledDates(c,due));}return {id:String(g.id),name:String(g.name),target_minor:String(g.target_minor),funded_minor:String(g.funded_minor),target_date:String(g.target_date),kind:String(g.kind),perPay:due>=asOf?goalFunding(String(g.target_minor),String(g.funded_minor),due,asOf,payDates):null};});
-  return {snapshot:s,signals:all,profile:p,insights:cards,forecast:forecast(s,buffer,{extraBill,cutPercent}),distress:distress(s,signal),payRise:payRise(s),goals:goalRows,buffer};
- });}
- async function dismiss(kind:string){const d=await setting<Record<string,number>>('intelligence:dismissals',{});d[kind]=(d[kind]??0)+1;await set('intelligence:dismissals',d);await driver.execute("UPDATE insights SET state='dismissed' WHERE kind=?",[kind]);}
  async function saveGoal(g:{id:string;name:string;target:string;funded:string;date:string;kind:'goal'|'sinking'|'budget';currency:string}){if(!g.name.trim()||g.name.length>80||BigInt(g.target)<0n||BigInt(g.funded)<0n)throw new Error('Use a goal name and non-negative amounts.');day(g.date);const c=currency(g.currency);await driver.execute('INSERT OR REPLACE INTO goals(id,name,target_minor,target_date,funded_minor,kind,currency) VALUES(?,?,?,?,?,?,?)',[g.id,g.name.trim(),toDatabase(money(BigInt(g.target),c)),g.date,toDatabase(money(BigInt(g.funded),c)),g.kind,c]);}
  async function setBuffer(code:string,minor:string){if(BigInt(minor)<0n)throw new Error('Buffer cannot be negative.');money(BigInt(minor),currency(code));await set('intelligence:buffer:'+code,minor);}
- async function annotate(id:string,data:Partial<Pick<Transaction,'instrument'|'hour'|'planned'|'outsideRoutine'|'overdraftFee'>>){if(data.hour!==undefined&&(!Number.isInteger(data.hour)||data.hour<0||data.hour>23))throw new Error('Use a local hour from 0 to 23.');if(!(await driver.query('SELECT id FROM transactions WHERE id=?',[id])).length)throw new Error('Transaction no longer exists.');const m=await setting<Record<string,typeof data>>('intelligence:metadata',{});m[id]=data;await set('intelligence:metadata',m);}
- async function setReflection(value:NonNullable<Snapshot['selfReport']>|null){if(value&&Object.values(value).some(v=>!Number.isInteger(v)||v<0||v>100))throw new Error('Choose a whole score from 0 to 100.');await set('intelligence:reflection',value);}
  /**
   * Everything the brain reads, in one pass and without writing anything (ADR 0042).
   * Balances convert at today's rate; a debt or balance with no rate is left out and named by the snapshot.
@@ -184,19 +151,18 @@ export function intelligenceRepository(driver:Driver){
  async function inputs(asOf:string,code:string):Promise<import('../brain/types').BrainInputs>{
   const s=await snapshot(asOf,code),c=currency(code);
   const rates:FxRate[]=(await driver.query('SELECT as_of,base,quote,rate_e8,source FROM fx_rates')).map(r=>({asOf:String(r.as_of),base:currency(String(r.base)),quote:currency(String(r.quote)),rateE8:BigInt(String(r.rate_e8)),source:String(r.source)}));
-  const rows=await driver.query('SELECT a.id,a.type,a.currency,a.opening_balance_minor AS opening,COALESCE((SELECT SUM(t.amount_minor) FROM transactions t WHERE t.account_id=a.id),0) AS moved FROM accounts a WHERE a.archived_at IS NULL');
-  let spendable=0n,saved=0n;
-  for(const a of rows){const held=currency(String(a.currency)),rate=rateBetween(rates,held,c,asOf);if(rate===null)continue;
-   const value=convert(money(BigInt(String(a.opening??0))+BigInt(String(a.moved??0)),held),c,rate).minor;
-   if(a.type==='savings'||a.type==='investment')saved+=value;else spendable+=value;}
+  const rows=await driver.query('SELECT a.id,a.type,a.currency,a.archived_at,a.opening_balance_minor AS opening,COALESCE((SELECT SUM(t.amount_minor) FROM transactions t WHERE t.account_id=a.id),0) AS moved FROM accounts a');
+  const {holdingsFrom}=await import('./holdings');
+  const holdings=holdingsFrom(rows.map(a=>({id:String(a.id),type:String(a.type),currency:String(a.currency),archived_at:a.archived_at===null?null:String(a.archived_at)})),
+   rows.map(a=>({accountId:String(a.id),minor:(BigInt(String(a.opening??0))+BigInt(String(a.moved??0))).toString()})),rates,c,asOf);
   const {debtRepository}=await import('./debts'),{openDebts}=await import('../intelligence/debt');
   const records=await debtRepository(driver).list();
   const cancelled=new Set((await driver.query("SELECT value FROM app_settings WHERE key>='cancellation:' AND key<'cancellation;'")).flatMap(r=>{const v=JSON.parse(String(r.value)) as {merchant:string;currency:string};return v.currency===code?[v.merchant]:[];}));
-  return {snapshot:s,holdings:{spendableMinor:spendable.toString(),savedMinor:saved.toString()},bufferMinor:await setting<string>('intelligence:buffer:'+code,'0'),
+  return {snapshot:s,holdings,bufferMinor:await setting<string>('intelligence:buffer:'+code,'0'),
    debts:openDebts(records,code,{rates,asOf}),scheduled:records.filter(d=>d.closedAt===null&&d.currency===code).map(d=>({id:d.id,name:d.name,minimumMinor:d.minimumMinor,dueDay:d.dueDay})),
    cancelled,dismissals:await setting<import('../brain/types').BrainInputs['dismissals']>('brain:dismissals',{})};
  }
  /** Hides a piece of advice now; a rule dismissed twice stays hidden (see src/brain/advice.ts). */
  async function dismissAdvice(rule:import('../brain/types').AdviceRule,today:string){day(today);const all=await setting<Record<string,{count:number;last:string}>>('brain:dismissals',{});all[rule]={count:(all[rule]?.count??0)+1,last:today};await set('brain:dismissals',all);}
- return {snapshot,analyse,inputs,dismissAdvice,dismiss,saveGoal,setBuffer,annotate,setReflection};
+ return {snapshot,inputs,dismissAdvice,saveGoal,setBuffer};
 }
