@@ -75,8 +75,8 @@ it('sorts only new merchants after an import, and only when switched on', async 
   expect(await category('MYSTERY CO')).toBeNull();
   await repo.merchantRules.set((await repo.imports.ledger()).find(r => r.description === 'CAFE LUNA')!.merchant, 'Eating out');
   await repo.advisor.save({...on, autoSort: true});
-  expect(await sortAfterImport(run, {fetch: reply(null, 401) as typeof fetch, maxRetries: 0})).toBe('New merchants were not sorted: Claude did not accept the key. Check it in Settings.');
-  expect(await sortAfterImport(run, options)).toBe('Claude sorted 1 new merchant.');
+  expect(await sortAfterImport(run, {fetch: reply(null, 401) as typeof fetch, maxRetries: 0})).toBe('New merchants were not sorted: Anthropic did not accept the key. Check it in Settings.');
+  expect(await sortAfterImport(run, options)).toBe('Kairos AI sorted 1 new merchant.');
   expect([await category('CAFE LUNA'), await category('MYSTERY CO')]).toEqual(['Eating out', 'Shopping']);
   expect(await sortAfterImport(run, options)).toBe('');
   db.close();

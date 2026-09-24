@@ -5,7 +5,7 @@ import { Vault } from '../../core/crypto/native';
 import { Button, Input, Sheet } from '../design/primitives';
 import { Loader } from '../design/Motion';
 import { useSession } from '../session';
-export function Brand() { return <div className="brand"><span className="brand-mark" aria-hidden="true"><img src="/branding/kairos-aperture.png" width="26" height="26" alt=""/></span><span>Kairos</span></div>; }
+export function Brand() { return <div className="brand"><span className="brand-mark" aria-hidden="true"><img src="/branding/kairos-logo.svg" width="26" height="26" alt=""/></span><span>Kairos</span></div>; }
 export function LockScreen() {
   const session = useSession(); const setup = session.state === 'setup';
   const [pin, setPin] = useState(''); const [confirm, setConfirm] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);

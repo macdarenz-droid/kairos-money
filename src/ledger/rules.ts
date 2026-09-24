@@ -142,7 +142,7 @@ export function categorize(row: NormalizedRow, rules: readonly CategoryRule[], d
   const rule = ruleFor(rules, row.merchant);
   if (rule) return { category: rule.category, confidence: 10000, reason: 'Your merchant rule', source: 'rule' };
   if (Object.hasOwn(defaults, row.merchant)) return { category: defaults[row.merchant]!, confidence: 9500, reason: 'Confirmed merchant default', source: 'default' };
-  if (Object.hasOwn(ai, row.merchant)) return { category: ai[row.merchant]!, confidence: 9300, reason: 'Sorted by Claude', source: 'ai' };
+  if (Object.hasOwn(ai, row.merchant)) return { category: ai[row.merchant]!, confidence: 9300, reason: 'Sorted by Kairos AI', source: 'ai' };
   if (mcc && mccCategories[mcc]) return { category: mccCategories[mcc]!, confidence: 9200, reason: `Merchant category code ${mcc}`, source: 'mcc' };
   // Money arriving is checked against the income wording first — SALARY means something different in
   // "SALARY PAYMENT" than it would in a description of something bought — and falls through to the same

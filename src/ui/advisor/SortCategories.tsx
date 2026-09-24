@@ -3,7 +3,7 @@ import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {editableCategories} from '../../ledger/categories';
 import type {AiRun} from '../../ledger/ai-categories';
 import {Button, Row, Sheet} from '../design/primitives';
-import {ClaudeWorking} from '../design/Motion';
+import {KairosAiWorking} from '../design/Motion';
 import {useSession} from '../session';
 import {usd} from './cost';
 import {estimateMicros, REASONS, sortMerchants, type SortReason} from './sort';
@@ -32,13 +32,13 @@ export function SortCategories({onClose}: {onClose: () => void}) {
 
   const data = preview.data, count = data?.payload.sent.merchants.length ?? 0, runs = data?.runs.filter(r => !undone.includes(r.id)) ?? [];
   return <Sheet title="Sort my categories" onClose={() => { if (!busy && !pending) onClose(); }}><div className="stack">
-    <p>Claude suggests a category for each merchant you have not sorted. Your own choices always win.</p>
+    <p>Kairos AI suggests a category for each merchant you have not sorted. Your own choices always win.</p>
     {!data ? <p>Reading your merchants…</p> : <>
       <p className="meta">{count} {count === 1 ? 'merchant' : 'merchants'} · about {usd(estimateMicros(data.payload, data.settings.model))}, estimated</p>
       <Button onClick={() => setShown(open => !open)} aria-expanded={shown}>See exactly what is sent</Button>
       {shown && <pre className="payload" aria-label="What is sent">{JSON.stringify({categories: editableCategories, examples: data.payload.sent.examples, merchants: data.payload.sent.merchants}, null, 2)}</pre>}
       <Button variant="primary" disabled={busy || !!pending || !count} onClick={() => void start()} busy={busy} busyLabel="Sorting…">Start sorting</Button>
-      {busy && <ClaudeWorking kind="sort"/>}
+      {busy && <KairosAiWorking kind="sort"/>}
     </>}
     {failure && <p role="alert">{REASONS[failure]} {latest ? 'The rest were not sorted.' : 'Nothing was changed.'}</p>}
     {error && <p role="alert">{error}</p>}

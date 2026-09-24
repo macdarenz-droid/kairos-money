@@ -2,7 +2,7 @@ import {useState} from 'react';
 import type {Brain, BrainSummary} from '../../brain/types';
 import type {Point} from '../../core/net/claude';
 import {Button, Input, Surface} from '../design/primitives';
-import {ClaudeWorking} from '../design/Motion';
+import {KairosAiMark, KairosAiWorking} from '../design/Motion';
 import {useSession} from '../session';
 import {useAdvisor} from './AdvisorSettings';
 import {usd} from './cost';
@@ -24,12 +24,12 @@ export function AdvisorPanel({brain}: {brain: Brain}) {
     } catch { setFailure('invalid'); } finally { setBusy(false); }
   }
   const toggleSent = () => { if (sent) setSent(null); else void sentSummary(session.run, brain).then(setSent); };
-  return <section className="stack" aria-label="Claude advisor" data-slot="advisor">
-    <h2>Claude advisor</h2>
-    <Button onClick={() => void go(null)} busy={busy} busyLabel="Asking Claude…">Money review</Button>
+  return <section className="stack" aria-label="Kairos AI" data-slot="advisor">
+    <h2 className="heading-mark"><KairosAiMark size={20}/>Kairos AI</h2>
+    <Button onClick={() => void go(null)} busy={busy} busyLabel="Asking Kairos AI…">Money review</Button>
     <Input label="Ask Kairos" value={question} maxLength={300} onChange={e => setQuestion(e.target.value)} hint="Answers use only your figures."/>
     <Button disabled={busy || !question.trim()} onClick={() => void go(question)}>Ask</Button>
-    {busy && <ClaudeWorking kind="review"/>}
+    {busy && <KairosAiWorking kind="review"/>}
     <Button variant="quiet" aria-expanded={sent !== null} onClick={toggleSent}>See exactly what is sent</Button>
     {sent && <pre className="payload" aria-label="What is sent">{JSON.stringify(sent, null, 2)}</pre>}
     {points.length > 0 && <Surface className="advisor-points"><span className="tag">AI wording</span>

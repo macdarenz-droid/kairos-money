@@ -31,15 +31,15 @@ const mount = () => render(<QueryClientProvider client={new QueryClient({default
 it('stays off until turned on, keeps the key on the phone and asks before sorting', async () => {
   mount();
   const sort = await screen.findByRole('button', {name: 'Sort my categories'});
-  expect(screen.getByRole('button', {name: 'Use the Claude advisor'}).getAttribute('aria-pressed')).toBe('false');
+  expect(screen.getByRole('button', {name: 'Use Kairos AI'}).getAttribute('aria-pressed')).toBe('false');
   expect((sort as HTMLButtonElement).disabled).toBe(true);
   expect((screen.getByRole('button', {name: 'Sort new merchants after each import'}) as HTMLButtonElement).disabled).toBe(true);
   fireEvent.change(screen.getByLabelText('Anthropic API key'), {target: {value: 'sk-ant-synthetic-0123456789abcdef'}});
   fireEvent.click(screen.getByRole('button', {name: 'Save key'}));
   await screen.findByText('Key saved on this phone');
-  fireEvent.click(screen.getByRole('button', {name: 'Use the Claude advisor'}));
-  await waitFor(() => expect(screen.getByRole('button', {name: 'Use the Claude advisor'}).getAttribute('aria-pressed')).toBe('true'));
-  fireEvent.click(screen.getByRole('button', {name: 'Send merchant names to Claude for sorting'}));
+  fireEvent.click(screen.getByRole('button', {name: 'Use Kairos AI'}));
+  await waitFor(() => expect(screen.getByRole('button', {name: 'Use Kairos AI'}).getAttribute('aria-pressed')).toBe('true'));
+  fireEvent.click(screen.getByRole('button', {name: 'Let Kairos AI send merchant names to Claude'}));
   await waitFor(() => expect((screen.getByRole('button', {name: 'Sort my categories'}) as HTMLButtonElement).disabled).toBe(false));
   expect(await state.repo!.advisor.key()).toBe('sk-ant-synthetic-0123456789abcdef');
 });
@@ -75,7 +75,7 @@ it('shows what is sent, sorts, and offers unsure answers to check', async () => 
 it('lays each switch out as a row with a small On/Off button, and sorting as one full-width action', async () => {
   mount();
   await screen.findByRole('button', {name: 'Sort my categories'});
-  for (const name of ['Use the Claude advisor', 'Include merchant names in reviews', 'Send merchant names to Claude for sorting', 'Sort new merchants after each import']) {
+  for (const name of ['Use Kairos AI', 'Include merchant names in reviews', 'Let Kairos AI send merchant names to Claude', 'Sort new merchants after each import']) {
     const button = screen.getByRole('button', {name});
     expect(button.textContent).toBe('Off');
     expect(button.closest('.row-trailing')?.parentElement?.textContent).toContain(name);

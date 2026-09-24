@@ -3,7 +3,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest';
 import {act, cleanup, render, screen, waitFor} from '@testing-library/react';
 import {format, money} from '../src/core/money';
 import {Button} from '../src/ui/design/primitives';
-import {ClaudeWorking, CountUp, Loader} from '../src/ui/design/Motion';
+import {CountUp, KairosAiMark, KairosAiWorking, Loader} from '../src/ui/design/Motion';
 import {BusyOverlay} from '../src/ui/design/KairosMark';
 
 const motion = (reduce: boolean) => { window.matchMedia = vi.fn().mockReturnValue({matches: reduce, addEventListener() {}, removeEventListener() {}}); };
@@ -52,10 +52,10 @@ describe('loaders', () => {
     expect(screen.getByText('Discarding this import…').closest('[role="status"]')?.querySelector('.coin-stack')).toBeTruthy();
   });
 
-  it('gives Claude waits one fixed label, a changing line and elapsed seconds after 10 s', () => {
+  it('gives Kairos AI waits one fixed label, a changing line and elapsed seconds after 10 s', () => {
     vi.useFakeTimers();
-    const {container} = render(<ClaudeWorking kind="sort"/>);
-    expect(screen.getByRole('status', {name: 'Claude is sorting your categories'})).toBeTruthy();
+    const {container} = render(<KairosAiWorking kind="sort"/>);
+    expect(screen.getByRole('status', {name: 'Kairos AI is sorting your categories'})).toBeTruthy();
     const line = () => container.querySelector('.meta')!.textContent;
     const first = line();
     act(() => { vi.advanceTimersByTime(3000); });
@@ -63,5 +63,16 @@ describe('loaders', () => {
     expect(line()).not.toMatch(/ s$/);
     act(() => { vi.advanceTimersByTime(8000); });
     expect(line()).toMatch(/ · 11 s$/);
+  });
+
+  it('moves the Kairos AI mark only while thinking, with its own gradient ids', () => {
+    const {container} = render(<><KairosAiMark size={20}/><KairosAiMark size={36} thinking/><KairosAiMark size={12} label="Sorted by Kairos AI"/></>);
+    const marks = [...container.querySelectorAll('svg.kai-mark')];
+    expect(marks.map(m => m.classList.contains('kai-thinking'))).toEqual([false, true, false]);
+    const ids = marks.map(m => m.querySelector('linearGradient')!.id);
+    expect(new Set(ids).size).toBe(3);
+    for (const [i, m] of marks.entries()) expect(m.querySelector('path')!.getAttribute('stroke')).toBe(`url(#${ids[i]})`);
+    expect(screen.getByRole('img', {name: 'Sorted by Kairos AI'})).toBe(marks[2]);
+    expect(marks[0]!.getAttribute('aria-hidden')).toBe('true');
   });
 });

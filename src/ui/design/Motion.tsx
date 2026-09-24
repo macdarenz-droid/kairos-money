@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { format, money, type Money } from '../../core/money';
 
@@ -56,17 +56,26 @@ const LINES = {
   sort: ['Reading your merchant names', 'Matching each one to a category', 'Checking the unsure ones twice', 'Putting your categories in order'],
   review: ['Reading your figures', 'Looking at where the money went', 'Weighing what matters most', 'Writing your answer'],
 } as const;
-const NAMES = { sort: 'Claude is sorting your categories', review: 'Claude is writing your answer' } as const;
+const NAMES = { sort: 'Kairos AI is sorting your categories', review: 'Kairos AI is writing your answer' } as const;
 
-/** Shown under the button while a Claude call runs; screen readers hear one fixed label. */
-export function ClaudeWorking({ kind }: { kind: 'sort' | 'review' }) {
+/** The Kairos AI mark; it moves only while `thinking`. */
+export function KairosAiMark({ size, thinking = false, label }: { size: number; thinking?: boolean; label?: string }) {
+  const gradient = `kai-${useId().replace(/:/g, '')}`;
+  return <svg className={thinking ? 'kai-mark kai-thinking' : 'kai-mark'} width={size} height={size} viewBox="0 0 100 100"
+    role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true} focusable="false">
+    <defs><linearGradient id={gradient} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#8F97FF"/><stop offset="1" stopColor="#5EE3C1"/></linearGradient></defs>
+    <g className="kai-orbit"><path d="M73.14 22.42A36 36 0 1 1 50 14" fill="none" stroke={`url(#${gradient})`} strokeWidth="7" strokeLinecap="round"/><circle cx="62.31" cy="16.17" r="5" fill="#5EE3C1"/></g>
+    <path className="kai-spark" d="M50 29C51.6 42 58 48.4 71 50 58 51.6 51.6 58 50 71 48.4 58 42 51.6 29 50 42 48.4 48.4 42 50 29Z" fill={`url(#${gradient})`}/>
+  </svg>;
+}
+
+/** Shown under the button while a Kairos AI call runs; screen readers hear one fixed label. */
+export function KairosAiWorking({ kind }: { kind: 'sort' | 'review' }) {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => { const timer = setInterval(() => setSeconds(s => s + 1), 1000); return () => clearInterval(timer); }, []);
   const lines = LINES[kind];
-  return <div className={`claude-working claude-${kind}`} role="status" aria-label={NAMES[kind]}>
-    {kind === 'sort'
-      ? <span className="claude-jars" aria-hidden="true"><span className="claude-coin"/><span/><span/><span/></span>
-      : <span className="claude-receipt" aria-hidden="true"><span/><span/><span/><span/></span>}
+  return <div className="kai-working" role="status" aria-label={NAMES[kind]}>
+    <KairosAiMark size={36} thinking/>
     <span className="meta" aria-hidden="true">{lines[Math.floor(seconds / 3) % lines.length]}{seconds >= 10 ? ` · ${seconds} s` : ''}</span>
   </div>;
 }

@@ -4,7 +4,7 @@ import { Amount, Button, EmptyState, Input, Label, Row, Sheet, Skeleton, Surface
 import { followSystem, useTheme } from '../design/theme';
 import { ThemeChoices } from '../design/ThemeChoices';
 import { money } from '../../core/money';
-import { ClaudeWorking, Coin, CountUp, Loader } from '../design/Motion';
+import { Coin, CountUp, KairosAiMark, KairosAiWorking, Loader } from '../design/Motion';
 import { FlowBar } from '../design/FlowBar';
 export default function KitchenSink() {
   const theme = useTheme(); const [sheet, setSheet] = useState(false); const [toast, setToast] = useState(false); const [tab, setTab] = useState<Tab>('Today'); const [busy, setBusy] = useState(false); const [minor, setMinor] = useState(125090n); const [saved, setSaved] = useState(false);
@@ -17,7 +17,7 @@ export default function KitchenSink() {
     <section className="kitchen-section"><h2>Motion</h2><div className="stack">
       <div className="kitchen-buttons"><Button variant="primary" busy={busy} busyLabel="Saving…" onClick={() => { setBusy(true); setTimeout(() => setBusy(false), 3000); }}>Busy for 3 seconds</Button><Coin/></div>
       <Loader label="Example coin stack"/>
-      <ClaudeWorking kind="sort"/><ClaudeWorking kind="review"/>
+      <div className="kitchen-buttons"><KairosAiMark size={12}/><KairosAiMark size={20}/><KairosAiMark size={36} thinking/></div><KairosAiWorking kind="sort"/><KairosAiWorking kind="review"/>
       <p className="hero-amount"><CountUp value={money(minor, 'AUD')}/></p><Button onClick={() => setMinor(value => value === 125090n ? 98765n : 125090n)}>Change the amount</Button>
       <FlowBar flow={{ inMinor: '420000', outMinor: '310050' }} code="AUD" label="Synthetic month"/>
       <Button onClick={() => setSaved(true)}>Show a saved toast</Button>
