@@ -43,11 +43,12 @@ describe('a second source for the same period', () => {
     const [before] = await driver.query('SELECT id FROM transactions');
     const id = String(before!.id);
     await repo.categories.set([id], 'Eating out');
-    await driver.execute('UPDATE transactions SET notes=? WHERE id=?', ['with Sam', id]);
+    await repo.attachments.note(id, 'with Sam');
 
     await repo.imports.stage(second); await repo.imports.commit(second.id);
-    const after = await driver.query('SELECT t.id,t.notes,c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id');
-    expect(after).toEqual([{id, notes: 'with Sam', name: 'Eating out'}]);
+    const after = await driver.query('SELECT t.id,c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id');
+    expect(after).toEqual([{id, name: 'Eating out'}]);
+    expect((await repo.attachments.read(id)).note).toBe('with Sam');
     raw.close();
   });
 });
@@ -61,10 +62,11 @@ describe('approved bank notices', () => {
     const {driver, raw, repo} = await ready();
     await repo.notices.approve(notice('n1', '2026-02-10'));
     await repo.categories.set([noticeId('n1')], 'Eating out');
-    await driver.execute('UPDATE transactions SET notes=? WHERE id=?', ['lunch', noticeId('n1')]);
+    await repo.attachments.note(noticeId('n1'), 'lunch');
     await repo.notices.approve(notice('n2', '2026-02-12', '-900'));
-    const [row] = await driver.query('SELECT t.notes,c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.id=?', [noticeId('n1')]);
-    expect(row).toEqual({notes: 'lunch', name: 'Eating out'});
+    const [row] = await driver.query('SELECT c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.id=?', [noticeId('n1')]);
+    expect(row).toEqual({name: 'Eating out'});
+    expect((await repo.attachments.read(noticeId('n1'))).note).toBe('lunch');
     raw.close();
   });
 

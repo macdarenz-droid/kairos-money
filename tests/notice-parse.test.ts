@@ -205,3 +205,10 @@ it('reads a phone-wallet purchase as money leaving, not as pay', () => {
   expect(parsed.status === 'ok' && parsed.minor).toBe('-1250');
  }
 });
+
+it('reads money arriving through a phone wallet as money arriving', () => {
+ for (const [text, minor] of [['You received $20.00 via Google Pay from Sam', '2000'], ['Apple Pay refund of $12.50 from Woolworths', '1250']]) {
+  const parsed = read(text!);
+  expect(parsed.status === 'ok' && parsed.minor).toBe(minor);
+ }
+});
