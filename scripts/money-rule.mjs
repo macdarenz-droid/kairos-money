@@ -37,7 +37,7 @@ export const noFloatMoney = {
         if (isFinancial(node.argument) && !hasBigInt(typeAt(node.argument))) context.report({ node, messageId: 'floating' });
       },
       Literal(node) {
-        if (/src\/(core\/money|ledger|ingest|intelligence)\//.test(context.filename) && typeof node.value === 'number' && !Number.isInteger(node.value)) context.report({ node, messageId: 'decimal' });
+        if (/src\/(core\/money|ledger|ingest|intelligence|brain)\//.test(context.filename) && typeof node.value === 'number' && !Number.isInteger(node.value)) context.report({ node, messageId: 'decimal' });
       },
       CallExpression(node) {
         if (node.callee.type === 'Identifier' && ['parseFloat'].includes(node.callee.name)) context.report({ node, messageId: 'decimal' });

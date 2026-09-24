@@ -119,7 +119,7 @@ export function spendingPattern(s: Snapshot): Reading {
   // Leaks: the share of discretionary money that went in purchases under 15 whole units.
   const limit = 15n * 10n ** BigInt(currencyDigits[s.currency] ?? 2);
   const disc = rows.filter(t => t.kind === 'discretionary' || t.kind === 'unknown');
-  const small = disc.filter(t => abs(BigInt(t.minor)) < limit);
+  const small = disc.filter(t => abs(BigInt(t.minor)) <= limit);
   const discTotal = sum(disc.map(t => abs(BigInt(t.minor))));
   measures.smallCount = small.length;
   measures.leakShare = discTotal > 0n ? (sum(small.map(t => abs(BigInt(t.minor)))) * 10000n / discTotal).toString() : '0';

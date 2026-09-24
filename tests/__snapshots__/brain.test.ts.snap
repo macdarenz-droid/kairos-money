@@ -1,0 +1,13 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the brain > pins the shared intelligence fixture 1`] = `
+{
+  "advice": [
+    "pay-yourself-first",
+    "cut-small-purchases",
+  ],
+  "attention": [],
+  "categories": 2,
+  "tier": "verified",
+}
+`;

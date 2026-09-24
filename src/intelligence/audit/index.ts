@@ -231,7 +231,7 @@ export function audit(s: Snapshot, options: Options = {}): Audit {
   // Fees and cash withdrawals are leaks of their own below, not purchases, and not a way of living.
   const lifestyle = disc.filter(t => t.category !== 'Bank fees' && t.category !== 'Cash withdrawal');
   const limit = 15n * 10n ** BigInt(currencyDigits[s.currency] ?? 2);
-  const small = lifestyle.filter(t => abs(BigInt(t.minor)) < limit);
+  const small = lifestyle.filter(t => abs(BigInt(t.minor)) <= limit);
   if (small.length >= 5) {
     const perMonth = monthly(sum(small.map(t => abs(BigInt(t.minor)))), days);
     leaks.push({kind: 'small-purchases', label: LEAK_LABELS['small-purchases'], monthlyMinor: perMonth.toString(),

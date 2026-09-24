@@ -14,4 +14,6 @@ export default tseslint.config(
     rules: { 'money/no-float': 'error', '@typescript-eslint/no-explicit-any': 'error', 'no-restricted-imports': ['error', { paths: [{ name: 'axios', message: 'Financial data must remain local.' }] }] },
   },
   { files: ['src/intelligence/**/*.ts'], rules: { 'no-restricted-imports': ['error', { patterns: ['**/ingest/**', '**/core/db/**'] }] } },
+  // The brain reads one snapshot and never writes: no database, network, ledger writers or UI.
+  { files: ['src/brain/**/*.ts'], rules: { 'no-restricted-imports': ['error', { patterns: ['**/core/db/**', '**/core/net/**', '**/core/crypto/**', '**/ledger/**', '**/ui/**', '**/ingest/*', '!**/ingest/normalize'] }] } },
 );

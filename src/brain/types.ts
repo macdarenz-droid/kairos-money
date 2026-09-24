@@ -71,7 +71,7 @@ export type Today = {
   typicalDayMinor: Minor;
   committedMinor: Minor;
   committed: readonly CommittedBill[];
-  /** Pending purchases already counted once in committedMinor. */
+  /** Pending purchases: already out of the balance, shown so the figure can be explained. */
   pendingMinor: Minor;
   method: MethodReading;
   savingsPath: {potMinor: Minor; perDayMinor: Minor; points: readonly PathPoint[]};
@@ -113,6 +113,8 @@ export type BandBlock = {start: Day; end: Day; inMinor: Minor; outMinor: Minor; 
 export type Band = {start: Day; end: Day; blocks: readonly BandBlock[]; now: BandBlock; before: BandBlock; comparable: boolean; trend: boolean};
 export type DaySpend = {date: Day; minor: Minor};
 export type Spending = {
+  /** The trailing 30 days that categories, merchants, small purchases, fees and refunds cover. */
+  window: {start: Day; end: Day; tier: Tier};
   thisMonth: MonthFlow;
   lastMonth: MonthFlow;
   /** Split-aware: a split row counts under each of its parts. */
@@ -170,7 +172,8 @@ export type DebtStrategy = {
 export type GoalPerPay = {goalId: string; perPayMinor: Minor | null};
 export type PayRise = {employer: string; increaseMinor: Minor; suggestedMinor: Minor; evidence: Evidence};
 export type Plan = {
-  status: 'ok' | 'not_yet';
+  /** 'hidden' while triage is active. */
+  status: 'ok' | 'not_yet' | 'hidden';
   window: {start: Day; end: Day; days: number};
   split: Split;
   findings: readonly Finding[];
@@ -218,6 +221,21 @@ export type TriageReason = 'low-buffer' | 'rising-high-interest-debt' | 'repeate
 export type Triage =
   | {active: false}
   | {active: true; reasons: readonly TriageReason[]; nextEssential: CommittedBill | null; availableMinor: Minor; evidence: Evidence};
+
+// ── inputs, read once per (date, display currency) ────────────────────
+export type Dismissal = {count: number; last: Day};
+export type BrainInputs = {
+  snapshot: import('../intelligence/model').Snapshot;
+  /** Balances in the display currency: spendable accounts, and savings or investment accounts. */
+  holdings: {spendableMinor: Minor; savedMinor: Minor};
+  bufferMinor: Minor;
+  /** Open debts already in the display currency (see openDebts). */
+  debts: readonly import('../intelligence/debt').Debt[];
+  scheduled: readonly import('../intelligence/debt').Scheduled[];
+  /** Lower-case merchant keys the owner has cancelled. */
+  cancelled: ReadonlySet<string>;
+  dismissals: Readonly<Partial<Record<AdviceRule, Dismissal>>>;
+};
 
 // ── the whole result ───────────────────────────────────────────────────
 export type Brain = {

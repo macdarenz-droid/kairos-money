@@ -53,13 +53,14 @@ export function bandRows(snapshot: Snapshot) {
     !row.transfer && row.kind !== 'transfer');
 }
 
-export function moneyBand(snapshot: Snapshot, today: string): MoneyBand {
+/** @param anchor 'today' ends the window on today, as the brain does; 'latest' on the last recorded day. */
+export function moneyBand(snapshot: Snapshot, today: string, anchor: 'latest' | 'today' = 'latest'): MoneyBand {
   const rows = bandRows(snapshot);
   // Anchored to the last day the ledger knows about rather than to today, so statements that end in June
   // still draw a band in September instead of six empty blocks. Never past today: a future-dated row must
   // not drag the window forward into days nothing can have happened in yet.
-  const latest = rows.map(row => row.date).filter(date => date <= today).sort().at(-1) ?? today;
-  const anchor = day(latest);
+  const latest = anchor === 'today' ? today : rows.map(row => row.date).filter(date => date <= today).sort().at(-1) ?? today;
+  const end = day(latest);
 
   const build = (from: number, to: number): BandBlock => {
     const start = iso(from), end = iso(to);
@@ -77,8 +78,8 @@ export function moneyBand(snapshot: Snapshot, today: string): MoneyBand {
   };
 
   const blocks = Array.from({length: BLOCKS}, (_, index) => {
-    const end = anchor - (BLOCKS - 1 - index) * BLOCK_DAYS;
-    return build(end - BLOCK_DAYS + 1, end);
+    const last = end - (BLOCKS - 1 - index) * BLOCK_DAYS;
+    return build(last - BLOCK_DAYS + 1, last);
   });
 
   const moved = (block: BandBlock) => BigInt(block.inMinor) + BigInt(block.outMinor) > 0n;

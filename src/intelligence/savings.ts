@@ -135,7 +135,7 @@ export function keepToday(s: Snapshot, spendableMinor: string, bufferMinor = '0'
   } else if (reading.method === 'round-up') {
     const limit = 15n * 10n ** BigInt(currencyDigits[s.currency] ?? 2);
     const leaks = s.transactions.filter(t => t.status === 'settled' && !t.transfer && t.kind !== 'savings'
-      && t.date >= week && t.date <= s.asOf && BigInt(t.minor) < 0n && abs(BigInt(t.minor)) < limit);
+      && t.date >= week && t.date <= s.asOf && BigInt(t.minor) < 0n && abs(BigInt(t.minor)) <= limit);
     const kept = leaks.reduce((total, t) => total + roundUp(BigInt(t.minor), s.currency), 0n) / 7n;
     keep = doable(min(kept, daily));
   } else if (reading.method === 'baseline-percent') {
