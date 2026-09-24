@@ -27,7 +27,7 @@ Input, read once per (date, display currency):
 The hook `useBrain` in `src/ui/money.ts` replaces `useAnalysis` and keeps its single shared query key.
 
 `shared.ts` holds one definition of each basic idea:
-- **Merchant key:** one way of naming a merchant.
+- **Merchant key:** `merchantName()` from `src/ingest/normalize/index.ts`, the key the rules and the categoriser also use.
 - **Income:** payslips, otherwise rows of kind income; refunds are not income.
 - **Small purchase:** at or under 15 units.
 - **Recurrence:** from `forecast.recurrences`.
@@ -74,6 +74,45 @@ Removed:
 - Export and backup skip `secret:%`. Restore keeps local secrets and rejects any backup that contains them.
 - Every call is logged in `privacy_log` (`action='advisor_call'`: time, model, tokens, cost) and shown in Settings › Privacy log.
 - "See exactly what is sent" shows the payload before any call.
+
+## Claude sorts categories (owner request 2026-09-24)
+Goal: accurate categories across the whole history, with nothing left uncategorised. This makes the brain's charts and advice accurate too. The brain stays read-only; this step is a separate writer that needs its own consent.
+
+**What is sent**
+- One entry per unique merchant (key = `merchantName()` from `src/ingest/normalize/index.ts`, the same key the rules and the brain use).
+- For each merchant: its description with runs of 4 or more digits masked, direction in/out, an amount band, count, MCC if known, and its current category.
+- Examples from the owner's own corrections, so Claude learns them.
+- Never sent: transfers, split rows, dates, exact amounts, accounts.
+
+**The call**
+- `claude.ts categorise()`, with at most 150 merchants per request.
+- The JSON schema limits the answer to the app's category list, with confidence `high | medium | low`.
+- Unknown keys and categories are dropped.
+
+**Where the answer is stored:** `app_settings` key `ai-category:<merchantKey>` holding `{category, confidence, model, at}`.
+
+**Precedence in `categorize()`, strongest first**
+1. The owner's tag on a single transaction.
+2. The owner's merchant rule.
+3. A confirmed merchant default.
+4. **Claude's category.**
+5. MCC.
+6. Description hint.
+7. Uncategorised.
+
+The owner's tags always win. Claude never overwrites them.
+
+**Applying**
+- `high` and `medium` answers apply in one run. The run record `ai-run:<id>` keeps the previous values, so **Undo** restores the whole run.
+- `low` answers become one-tap proposals under "Check these", using the existing Proposal chips.
+- History rows show a small "AI" mark. Correcting one offers "All from this merchant", which creates an owner rule.
+- A cost estimate is shown before starting. Every call is logged in `privacy_log`.
+
+**Consent:** switch "Send merchant names to Claude for sorting" (off by default), with "See exactly what is sent".
+
+**After imports:** an optional switch sorts only new merchants after each import.
+
+**Streams:** S5a (storage, precedence, undo, payload builder in `src/ledger/ai-categories.ts`), S2a (`categorise()`), S2b (screen, consent, AI mark, "All from this merchant"). This depends on S5a's fix for transaction ids changing on re-import.
 
 ## Screens after the cut (~35 charts → ~9)
 - **Today:** MoneyBand, SavingsPath (single spend/keep today), Attention (≤3, including DueStrip), DayStrip, Recorded today, triage card.
