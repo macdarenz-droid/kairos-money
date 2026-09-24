@@ -1,4 +1,4 @@
-import { isBalanceOccurrence } from '../normalize/statement-evidence';
+import { isBalanceOccurrence, isRepeatOccurrence } from '../normalize/statement-evidence';
 import { runningBalance } from '../integrity';
 import { dayNumber, hash, isoDay, shiftDay, similarity } from '../normalize';
 import type { Document, LedgerRow, Period } from '../types';
@@ -34,16 +34,19 @@ export function balance(document: Document): { valid: boolean; difference: bigin
   const difference = BigInt(document.opening) + [...unique.values()].reduce((sum, value) => sum + value, 0n) - BigInt(document.closing);
   return { valid: difference === 0n, difference };
 }
-export function reconcile(documents: readonly Document[]): LedgerRow[] {
+/** @param keep ids already in the ledger; a merge keeps one of them so edits keyed by id survive. */
+export function reconcile(documents: readonly Document[], keep: ReadonlySet<string> = new Set()): LedgerRow[] {
   const parent = new Map<string, string>();
   function root(key: string): string { let cursor = key; while (parent.has(cursor)) cursor = parent.get(cursor)!; return cursor; }
+  function union(a: string, b: string) { const winner = keep.has(a) !== keep.has(b) ? (keep.has(a) ? a : b) : a < b ? a : b; parent.set(winner === a ? b : a, winner); }
   for (const doc of documents) for (const row of doc.rows) if (row.duplicateOf) {
-    const a = root(row.fingerprint), b = root(row.duplicateOf); if (a !== b) { const pendingTarget=documents.some(d=>d.rows.some(r=>r.fingerprint===row.duplicateOf && r.pending)); if(pendingTarget && !row.pending)parent.set(a,b);else parent.set(a > b ? a : b, a > b ? b : a); }
+    const a = root(row.fingerprint), b = root(row.duplicateOf); if (a !== b) { const pendingTarget=documents.some(d=>d.rows.some(r=>r.fingerprint===row.duplicateOf && r.pending)); if(pendingTarget && !row.pending)parent.set(a,b);else union(a, b); }
   }
   const candidatesByKey = new Map<string, { doc: Document; row: Document['rows'][number] }>();
   for (const doc of [...documents].sort((a,b)=>a.id.localeCompare(b.id))) for (const row of doc.rows) if (doc.sourceRank) candidatesByKey.set(row.fingerprint, { doc, row });
   const sourceRows = [...candidatesByKey.values()];
-  const match = (a: typeof sourceRows[number], b: typeof sourceRows[number]) => a.row.fingerprint !== b.row.fingerprint && a.doc.id !== b.doc.id && a.row.accountId === b.row.accountId && a.row.currency === b.row.currency && (!a.row.occurrence || isBalanceOccurrence(a.row.occurrence)) && (!b.row.occurrence || isBalanceOccurrence(b.row.occurrence)) && Math.abs(dayNumber(a.row.date)-dayNumber(b.row.date)) <= 3 && similarity(a.row.merchant,b.row.merchant) >= 9000;
+  const matchable = (occurrence: string) => !occurrence || isBalanceOccurrence(occurrence) || isRepeatOccurrence(occurrence);
+  const match = (a: typeof sourceRows[number], b: typeof sourceRows[number]) => a.row.fingerprint !== b.row.fingerprint && a.doc.id !== b.doc.id && a.row.accountId === b.row.accountId && a.row.currency === b.row.currency && matchable(a.row.occurrence) && matchable(b.row.occurrence) && Math.abs(dayNumber(a.row.date)-dayNumber(b.row.date)) <= 3 && similarity(a.row.merchant,b.row.merchant) >= 9000;
   // Corroboration requires a unique reciprocal match across source families,
   // or matching statement balance evidence. Conflicting balances stay separate.
   const sourceIndex=new Map<string,typeof sourceRows>();
@@ -51,7 +54,7 @@ export function reconcile(documents: readonly Document[]): LedgerRow[] {
   for(const value of sourceRows){const key=sourceKey(value.row,value.row.date),list=sourceIndex.get(key)??[];list.push(value);sourceIndex.set(key,list);}
   const candidatesFor=(a:typeof sourceRows[number])=>{const result:typeof sourceRows=[];for(let delta=-3;delta<=3;delta++)for(const b of sourceIndex.get(sourceKey(a.row,shiftDay(a.row.date,delta)))??[])if(b.doc.id!==a.doc.id)result.push(b);return result;};
   const corroborates = (a: typeof sourceRows[number]) => candidatesFor(a).filter(b=>match(a,b) && a.row.pending===b.row.pending && a.row.minor===b.row.minor && (a.doc.sourceKind!==b.doc.sourceKind || ((isBalanceOccurrence(a.row.occurrence) || isBalanceOccurrence(b.row.occurrence)) && a.row.date===b.row.date && a.row.runningBalance!==undefined && a.row.runningBalance===b.row.runningBalance)) && (!(isBalanceOccurrence(a.row.occurrence) || isBalanceOccurrence(b.row.occurrence)) || a.row.runningBalance===undefined || b.row.runningBalance===undefined || a.row.runningBalance===b.row.runningBalance));
-  for(const a of sourceRows) { const matches=corroborates(a); if(matches.length===1 && corroborates(matches[0]!).length===1) { const x=root(a.row.fingerprint),y=root(matches[0]!.row.fingerprint); if(x!==y) parent.set(x>y?x:y,x>y?y:x); } }
+  for(const a of sourceRows) { const matches=corroborates(a); if(matches.length===1 && corroborates(matches[0]!).length===1) { const x=root(a.row.fingerprint),y=root(matches[0]!.row.fingerprint); if(x!==y) union(x, y); } }
   // Match logical transactions after corroboration, so two sources for one
   // settlement do not make that settlement look ambiguous.
   const uniqueRoots = (values: typeof sourceRows) => [...new Map(values.map(v => [root(v.row.fingerprint), v])).values()];

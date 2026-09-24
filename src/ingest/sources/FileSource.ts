@@ -1,4 +1,4 @@
-import { distinguishStatementRows } from '../normalize/statement-evidence';
+import { distinguishRepeats, distinguishStatementRows } from '../normalize/statement-evidence';
 import { accountTail, looksLikePayslip, statementDetails } from '../parse/statement-details';
 import { extract, type Extracted } from '../extract';
 import { dateSpan, hash, normalizeAmount, normalizeRow } from '../normalize';
@@ -100,11 +100,11 @@ export class FileSource implements TransactionSource {
    // each other. Every row carrying a running balance makes the chain verifiable (tier B); without one
    // there is continuity to check and nothing more (tier C), and the tier says so. It used to be refused
    // until two figures were copied off the page — the page the app had just read.
-   return { ...doc, sourceRank, sourceKind: 'export', integrityTier: doc.rows.every(r => r.runningBalance !== undefined) && doc.rows.length > 1 ? 'B' : 'C' };
+   return { ...distinguishRepeats(doc), sourceRank, sourceKind: 'export', integrityTier: doc.rows.every(r => r.runningBalance !== undefined) && doc.rows.length > 1 ? 'B' : 'C' };
   }
   const issuer = issuerAdapter(institution);
   const parser = issuer === 'commbank-netbank' ? parseCommBankExport : issuer === 'westpac-online' ? parseWestpacExport : parseExport;
   const parsed = parser(e.table, context, options.mapping), resolved = { ...context, dateOrder: parsed.mapping.dateOrder };
-  return { id: hash(JSON.stringify([context.accountId, this.identity])), hash: this.identity, fileName: this.name, parser: issuer + '-v2', context: resolved, opening: '0', closing: '0', payslip: null, rawRows: parsed.rows, rows: parsed.rows.map(r => { const row=normalizeRow(r, resolved, aliases); row.issues=row.issues.filter(i=>!i.startsWith('This transaction is pending.')); return row; }), sourceRank, sourceKind: 'export', integrityTier: parsed.rows.every(r => r.runningBalance !== undefined) && parsed.rows.length > 1 ? 'B' : 'C' };
+  return distinguishRepeats({ id: hash(JSON.stringify([context.accountId, this.identity])), hash: this.identity, fileName: this.name, parser: issuer + '-v2', context: resolved, opening: '0', closing: '0', payslip: null, rawRows: parsed.rows, rows: parsed.rows.map(r => { const row=normalizeRow(r, resolved, aliases); row.issues=row.issues.filter(i=>!i.startsWith('This transaction is pending.')); return row; }), sourceRank, sourceKind: 'export', integrityTier: parsed.rows.every(r => r.runningBalance !== undefined) && parsed.rows.length > 1 ? 'B' : 'C' });
  }
 }

@@ -11,6 +11,7 @@ import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import java.util.Currency;
@@ -150,6 +151,7 @@ public class QuickAddActivity extends AppCompatActivity {
 
     private void save() {
         if (!saveable(amount)) return;
+        if (QuickAddStore.full(this)) { Toast.makeText(this, R.string.qa_full, Toast.LENGTH_LONG).show(); return; }
         String id = QuickAddStore.add(this, amount, direction, category);
         if (id == null) { close(); return; }
         String code = QuickAddStore.currency(this);

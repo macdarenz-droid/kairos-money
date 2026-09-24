@@ -65,6 +65,14 @@ describe('draining the outbox on unlock', () => {
     expect(added).toHaveBeenCalledTimes(1);
     expect(await repo.manual.list()).toHaveLength(2);
   });
+  it('records the good entries even when one cannot be read', async () => {
+    native.entries = [entry({id: 'bad', amount: '0'}), entry({id: 'e2', amount: '12'})];
+    const added = vi.fn();
+    renderHook(() => useQuickAddOutbox(true, <T,>(fn: (r: Repository) => Promise<T>) => fn(repo), [account('a', 'AUD')], 'a', added));
+    await waitFor(() => expect(added).toHaveBeenCalledWith(1));
+    expect((await repo.manual.list()).map(e => e.id)).toEqual(['quick-e2']);
+    expect(native.cleared).toEqual([['e2']]);
+  });
   it('leaves an entry in money no open account holds, and does nothing off the phone', async () => {
     native.entries = [entry({currency: 'USD'})];
     const added = vi.fn();

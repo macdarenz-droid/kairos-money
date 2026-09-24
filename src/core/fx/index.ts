@@ -72,10 +72,10 @@ export function invert(rate: Rate): Rate {
  */
 export function rateBetween(rates: readonly Rate[], from: Currency, to: Currency, date: string): bigint | null {
   if (from === to) return RATE_SCALE;
-  const direct = rateAsAt(rates, from, to, date);
-  if (direct) return direct.rateE8;
-  const published = rateAsAt(rates, to, from, date);
-  return published ? invert(published).rateE8 : null;
+  // The newer of the two directions wins, so a hand-typed rate stops applying once a later one is published.
+  const direct = rateAsAt(rates, from, to, date), reverse = rateAsAt(rates, to, from, date);
+  if (direct && (!reverse || direct.asOf >= reverse.asOf)) return direct.rateE8;
+  return reverse ? invert(reverse).rateE8 : null;
 }
 
 /**

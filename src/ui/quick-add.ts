@@ -60,8 +60,8 @@ export function useQuickAddOutbox(ready:boolean,run:<T>(fn:(repo:Repository)=>Pr
     for(const entry of entries){
      const account=accountForQuickAdd(entry,accounts,primaryId??null);
      if(!account)continue;
-     await latest.current.run(repo=>repo.manual.save(manualFromQuickAdd(entry,account)));
-     done.push(entry.id);
+     // One unreadable entry stays in the outbox; it must not hold back the rest.
+     try{await latest.current.run(repo=>repo.manual.save(manualFromQuickAdd(entry,account)));done.push(entry.id);}catch{continue;}
     }
     if(done.length){await clearQuickAdds(done);if(active)latest.current.onAdded(done.length);}
    }catch{/* The store answers on the next open; nothing is lost by waiting. */}

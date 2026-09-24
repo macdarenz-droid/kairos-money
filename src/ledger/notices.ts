@@ -35,6 +35,11 @@ export async function noticeRecords(driver: Driver): Promise<NoticeRecord[]> {
  */
 export async function syncNotices(driver: Driver): Promise<void> {
   const records = await noticeRecords(driver);
+  // What the owner added to a notice row is kept across the rewrite below.
+  const kept = new Map((await driver.query("SELECT t.id,t.category_id,t.notes FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version='notice-v1'"))
+    .map(row => [String(row.id), {category: row.category_id ?? null, notes: String(row.notes ?? '')}]));
+  // Each settled statement row stands for one notice at most.
+  const claimed = new Set<string>();
   await driver.execute("DELETE FROM transaction_sources WHERE import_batch_id IN (SELECT id FROM import_batches WHERE parser_version='notice-v1')");
   await driver.execute("DELETE FROM transactions WHERE import_batch_id IN (SELECT id FROM import_batches WHERE parser_version='notice-v1')");
   for (const entry of records) {
@@ -53,16 +58,19 @@ export async function syncNotices(driver: Driver): Promise<void> {
       const code = currency(String(account.currency));
       const value = money(leg.minor, code);
       const settled = await driver.query(
-        "SELECT t.posted_date FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version NOT IN ('manual-entry-v1','notice-v1') AND t.status='settled' AND t.account_id=? AND t.amount_minor=?",
+        "SELECT t.id,t.posted_date FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version NOT IN ('manual-entry-v1','notice-v1') AND t.status='settled' AND t.account_id=? AND t.amount_minor=? ORDER BY t.posted_date,t.id",
         [leg.accountId, toDatabase(value)]);
-      if (settled.some(row => Math.abs(dayNumber(String(row.posted_date)) - dayNumber(entry.date)) <= 3)) continue;
+      const gap = (row: typeof settled[number]) => Math.abs(dayNumber(String(row.posted_date)) - dayNumber(entry.date));
+      const match = settled.filter(row => !claimed.has(String(row.id)) && gap(row) <= 3).sort((x, y) => gap(x) - gap(y))[0];
+      if (match) { claimed.add(String(match.id)); continue; }
       // A single notice keeps the id it has always had, so nothing already pointing at one is orphaned by
       // this change; only the two legs of a transfer need ids of their own.
       const id = leg.key === 'entry' ? hash('notice-transaction:' + entry.id) : hash(`notice-transaction:${leg.key}:` + entry.id);
+      const prior = kept.get(id);
       await driver.execute(
-        'INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes,status) VALUES(?,?,?,?,?,?,NULL,?,?,0,?,?,5000,1,?,?)',
-        [id, leg.accountId, entry.date, toDatabase(value), code, entry.merchant,
-         value.minor < 0n ? 'debit' : 'credit', group, id, batchId(entry.id), '', 'pending']);
+        'INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes,status) VALUES(?,?,?,?,?,?,?,?,?,0,?,?,5000,1,?,?)',
+        [id, leg.accountId, entry.date, toDatabase(value), code, entry.merchant, group ? null : prior?.category ?? null,
+         value.minor < 0n ? 'debit' : 'credit', group, id, batchId(entry.id), prior?.notes ?? '', 'pending']);
       await driver.execute('INSERT INTO transaction_sources VALUES(?,?,?,?)',
         [id, batchId(entry.id), marker, JSON.stringify({
           ...entry, origin: 'notification', sourceId: marker, merchant: entry.merchant,

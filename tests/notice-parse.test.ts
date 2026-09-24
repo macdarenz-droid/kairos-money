@@ -198,3 +198,10 @@ it('still refuses a notification in a currency the account is not held in', () =
  if (parsed.status !== 'skip') return;
  expect(parsed.reason).toContain('USD');
 });
+
+it('reads a phone-wallet purchase as money leaving, not as pay', () => {
+ for (const text of ['Apple Pay $12.50 at Woolworths', 'Google Pay: $12.50 at Woolworths', 'Samsung Pay $12.50 at Woolworths']) {
+  const parsed = read(text);
+  expect(parsed.status === 'ok' && parsed.minor).toBe('-1250');
+ }
+});

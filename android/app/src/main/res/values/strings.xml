@@ -12,6 +12,7 @@
     <string name="qa_close">Close</string>
     <string name="qa_delete">Delete the last digit</string>
     <string name="qa_no_account">Your main account</string>
+    <string name="qa_full">200 entries are waiting. Open Kairos to record them first.</string>
     <string name="qa_footer">Kept on this phone until Kairos next opens. Nothing leaves it.</string>
     <string name="title_activity_main">Kairos Money Tracker</string>
     <string name="package_name">app.kairos.money</string>

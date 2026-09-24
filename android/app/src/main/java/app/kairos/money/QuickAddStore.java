@@ -53,6 +53,9 @@ final class QuickAddStore {
      * Keeps one entry. The amount is the decimal string exactly as typed ("4.50"): the ledger turns it
      * into minor units in the account's own currency, the one place that arithmetic is done.
      */
+    /** A full outbox is said out loud by the sheet; an entry is never dropped without a word. */
+    static boolean full(Context context) { return pending(context).length() >= LIMIT; }
+
     static String add(Context context, String amount, String direction, String category) {
         if (amount == null || !QuickAddActivity.saveable(amount)) return null;
         if (!"spent".equals(direction) && !"received".equals(direction)) return null;

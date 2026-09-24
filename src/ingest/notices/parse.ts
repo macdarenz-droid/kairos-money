@@ -25,7 +25,7 @@ export type ParsedNotice =
 // that is ONLY a balance has no amount left and is skipped.
 const BALANCE = /\b(?:available|remaining|current|new|closing|acct|account)?\s*(?:bal|balance|funds)\b[^\d\n]{0,24}(?:[A-Z]{3}\s*)?[$€£¥₱]?\s*\d[\d,]*(?:\.\d{1,3})?/gi;
 const INWARD_PHRASE = /\b(?:been paid|paid into|paid to you|received|deposit(?:ed)?|credited|refund(?:ed)?|transfer(?:red)? from|money in)\b/i;
-const OUTWARD_PHRASE = /\b(?:you spent|spent|purchase(?:d)?|debited|withdrawn|withdrawal|paid from|paid to|payment to|charged|sent to|transfer(?:red)? to|money out)\b/i;
+const OUTWARD_PHRASE = /\b(?:you spent|spent|purchase(?:d)?|debited|withdrawn|withdrawal|paid from|paid to|payment to|charged|sent to|transfer(?:red)? to|money out|(?:apple|google|samsung) pay)\b/i;
 const OUTWARD_WORD = /\b(?:debit|paid|payment|sent)\b/i;
 const INWARD_WORD = /\b(?:credit|pay)\b/i;
 // A run of digits is only an amount when the bank marked it as one: a currency code, a symbol, or cents.

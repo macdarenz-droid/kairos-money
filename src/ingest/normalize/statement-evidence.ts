@@ -30,3 +30,16 @@ export function distinguishStatementRows(doc: Document): Document {
   return doc;
 }
 export function isBalanceOccurrence(value: string): boolean { return /^statement-balance:-?\d+$/.test(value); }
+
+// An export has no balance to tell repeats apart, but a day's list is the same in every export that
+// covers it, so the second identical row that day is the same second purchase in each.
+export function distinguishRepeats(doc: Document): Document {
+  const seen = new Map<string, number>();
+  for (const row of doc.rows) {
+    const count = (seen.get(row.fingerprint) ?? 0) + 1;
+    seen.set(row.fingerprint, count);
+    if (count > 1) { row.occurrence = `repeat:${count}`; row.fingerprint = rowFingerprint(row); }
+  }
+  return doc;
+}
+export function isRepeatOccurrence(value: string): boolean { return /^repeat:\d+$/.test(value); }

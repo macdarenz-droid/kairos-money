@@ -8,6 +8,7 @@ import { currency, money, toDatabase } from '../core/money';
 import { categorize, type CategoryRule } from '../ledger/rules';
 import { continuity } from './integrity';
 import { reanchorOpening } from './opening-anchor';
+import { queryPages } from '../core/db/query-pages';
 import type { ExportMapping } from './sources/types';
 import { hash, isoDay, rowFingerprint, dayNumber, similarity } from './normalize';
 import { balance, gaps, nearDuplicates } from './reconcile';
@@ -33,6 +34,9 @@ function validate(doc: Document): void {
   }
 }
 export function importService(driver: Driver) {
+  // Ids already in the ledger win merges, so edits keyed by transaction id survive a second source.
+  const keep = async () => new Set((await queryPages(driver, 'SELECT id FROM transactions WHERE import_batch_id IS NOT NULL', [], ['id'])).map(r => String(r.id)));
+  const reconciled = async (docs: readonly Document[]) => reconcileAsync(docs, await keep());
   async function batches(): Promise<Batch[]> {
     const records = await driver.query("SELECT d.payload,b.status FROM staging_rows d JOIN import_batches b ON b.id=d.import_batch_id WHERE d.source_row_id='__document__' ORDER BY b.id");
     return records.map(record => { const doc = JSON.parse(String(record.payload)) as Document; validate(doc); return { ...doc, status: String(record.status) as Batch['status'] }; });
@@ -43,6 +47,8 @@ export function importService(driver: Driver) {
   }
   async function aliases() { return (await driver.query("SELECT canonical_name,aliases FROM merchants WHERE aliases<>'[]' ORDER BY id")).map(r => { const list: unknown = JSON.parse(String(r.aliases)); return { canonical: String(r.canonical_name), aliases: Array.isArray(list) ? list.filter((v): v is string => typeof v === 'string') : [] }; }); }
   async function defaults(): Promise<Record<string, string>> { return Object.fromEntries((await driver.query('SELECT m.canonical_name,c.name FROM merchants m JOIN categories c ON c.id=m.default_category_id')).map(r => [String(r.canonical_name), String(r.name)])); }
+  // The privacy log outlives the import it mentions; its metadata still names the transaction.
+  const detachLog = (id: string) => driver.execute('UPDATE privacy_log SET import_batch_id=NULL WHERE import_batch_id=?', [id]);
   async function stage(doc: Document): Promise<{ id: string; alreadyImported: boolean }> {
     validate(doc);
     return driver.transaction(async () => {
@@ -51,7 +57,7 @@ export function importService(driver: Driver) {
       const existing = (await driver.query('SELECT status FROM import_batches WHERE id=?', [doc.id]))[0];
       if (existing?.status === 'committed') return { id: doc.id, alreadyImported: true };
       if (existing && existing.status !== 'rolled_back') return { id: doc.id, alreadyImported: false };
-      if (existing) { await driver.execute('DELETE FROM staging_rows WHERE import_batch_id=?', [doc.id]); await driver.execute('DELETE FROM import_batches WHERE id=?', [doc.id]); }
+      if (existing) { await driver.execute('DELETE FROM staging_rows WHERE import_batch_id=?', [doc.id]); await detachLog(doc.id); await driver.execute('DELETE FROM import_batches WHERE id=?', [doc.id]); }
       await driver.execute('INSERT INTO import_batches(id,account_id,source_file_hash,file_name,issuer_id,parser_version,period_start,period_end,status,stated_opening_minor,stated_closing_minor,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)', [doc.id, doc.context.accountId, doc.hash, doc.fileName, null, doc.parser, doc.context.period.start, doc.context.period.end, balance(doc).valid ? 'staged' : 'quarantined', integer(doc.opening, doc.context.currency), integer(doc.closing, doc.context.currency), new Date().toISOString()]);
       await save(doc); return { id: doc.id, alreadyImported: false };
     });
@@ -65,8 +71,8 @@ export function importService(driver: Driver) {
   }
   async function review(id: string) {
     const all = await batches(), doc = all.find(b => b.id === id); if (!doc) throw new Error('This staged import was not found. Choose the file again.');
-    const existing = await reconcileAsync(all.filter(b => b.status === 'committed' && b.id !== id));
-    const combined = await reconcileAsync([...all.filter(b => b.status === 'committed' && b.id !== id), doc]);
+    const existing = await reconciled(all.filter(b => b.status === 'committed' && b.id !== id));
+    const combined = await reconciled([...all.filter(b => b.status === 'committed' && b.id !== id), doc]);
     const userRules = await rules(), merchantDefaults = await defaults();
     const distinctStatementEntries = hasStatementBalanceChain(doc);
     const balancedSources = new Set(all.filter(b => (b.id === id || b.status === 'committed') && hasStatementBalanceChain(b)).map(b => b.id));
@@ -119,7 +125,7 @@ export function importService(driver: Driver) {
       const doc = (await batches()).find(b => b.id === id); if (!doc || !['staged', 'quarantined'].includes(doc.status)) throw new Error('Only staged rows can be corrected.');
       const row = doc.rows.find(r => r.sourceId === sourceId); if (!row) throw new Error('This row was not found. Reopen the import review.');
       Object.assign(row, change, { verified: true, issues: [], createRule: makeRule }); row.fingerprint = rowFingerprint(row); validate(doc);
-      if (row.duplicateOf) { const target = (await reconcileAsync((await batches()).filter(b => b.status === 'committed'))).find(r => r.id === row.duplicateOf || r.fingerprint === row.duplicateOf); if (!target || target.accountId !== row.accountId || target.currency !== row.currency || (target.minor !== row.minor && !(target.pending && !row.pending && Math.abs(dayNumber(target.date)-dayNumber(row.date))<=3 && similarity(target.merchant,row.merchant)>=9000))) throw new Error('That duplicate target does not match this account and amount. Keep the row separately.'); row.duplicateOf = target.id; }
+      if (row.duplicateOf) { const target = (await reconciled((await batches()).filter(b => b.status === 'committed'))).find(r => r.id === row.duplicateOf || r.fingerprint === row.duplicateOf); if (!target || target.accountId !== row.accountId || target.currency !== row.currency || (target.minor !== row.minor && !(target.pending && !row.pending && Math.abs(dayNumber(target.date)-dayNumber(row.date))<=3 && similarity(target.merchant,row.merchant)>=9000))) throw new Error('That duplicate target does not match this account and amount. Keep the row separately.'); row.duplicateOf = target.id; }
       await save(doc);
     });
   }
@@ -163,7 +169,7 @@ export function importService(driver: Driver) {
   }
   async function rebuild() {
     const docs = (await batches()).filter(b => b.status === 'committed');
-    const ledger = await reconcileAsync(docs);
+    const ledger = await reconciled(docs);
     for (const doc of await batches()) for (const row of doc.rows) await driver.execute('DELETE FROM rules WHERE id=?', [hash('import-rule:' + doc.id + ':' + row.sourceId)]);
     for (const doc of docs) for (const row of doc.rows) if (row.createRule && row.category) await driver.execute('INSERT INTO rules(id,priority,matcher,action,created_by) VALUES(?,0,?,?,?)', [hash('import-rule:' + doc.id + ':' + row.sourceId), JSON.stringify({ merchant: row.merchant }), JSON.stringify({ category: row.category }), 'user']);
     const userRules = await rules(), merchantDefaults = await defaults();
@@ -203,12 +209,12 @@ export function importService(driver: Driver) {
       if (!check.balance.valid) throw new Error(`Balance differs by ${check.balance.difference.toString()} minor units. Correct the statement or rows before committing.`);
       if (check.uncertainCount) throw new Error(`Review ${check.uncertainCount} uncertain rows before committing.`);
       const proposed = [...(await batches()).filter(b => b.status === 'committed' && b.id !== id), check.doc];
-      const projection = await reconcileAsync(proposed);
+      const projection = await reconciled(proposed);
       for (const document of proposed) if (!document.payslip && (!document.integrityTier || document.integrityTier === 'A')) {
         const contribution = projection.filter(r => r.sources.some(source => source.batchId === document.id)).reduce((sum, r) => { const source = r.sources.find(s=>s.batchId===document.id)!; return sum + BigInt(document.rows.find(v=>v.sourceId===source.sourceId)!.minor); }, 0n);
         if (BigInt(document.opening) + contribution !== BigInt(document.closing)) throw new Error(`The duplicate decision would break the balance of ${document.fileName}. Keep the transactions separately or review that statement first.`);
       }
-      const before = await reconcileAsync((await batches()).filter(b=>b.status==='committed'));
+      const before = await reconciled((await batches()).filter(b=>b.status==='committed'));
       for(const row of projection) { const prior=before.find(r=>r.id===row.id); if(prior?.pending && !row.pending) await driver.execute('INSERT OR IGNORE INTO privacy_log(id,created_at,action,import_batch_id,metadata) VALUES(?,?,?,?,?)', [hash('supersession:'+id+':'+row.id),new Date().toISOString(),'transaction_superseded',id,JSON.stringify({transactionId:row.id,before:prior,after:row})]); }
       check.doc.rows.forEach(row => { row.verified = true; });
       await save(check.doc);
@@ -239,6 +245,7 @@ export function importService(driver: Driver) {
       for (const table of ['transaction_sources', 'transactions', 'staging_rows', 'coverage_ranges']) {
         await driver.execute(`DELETE FROM ${table} WHERE import_batch_id=?`, [id]);
       }
+      await detachLog(id);
       await driver.execute('DELETE FROM import_batches WHERE id=?', [id]);
       await driver.execute('DELETE FROM app_settings WHERE key=?', [noteKey(id)]);
     });

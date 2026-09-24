@@ -1,5 +1,6 @@
 import type {Driver} from '../core/db/driver';
 import {currency,money,type Currency} from '../core/money';
+import {convert,rateBetween,type Rate} from '../core/fx';
 export type Valuation={id:string;itemId:string;name:string;kind:'asset'|'liability';currency:Currency;date:string;minor:string;accountId?:string|null};
 export type AccountPosition={accountId:string;name:string;type:string;currency:Currency;choice:'review'|'include'|'exclude';date:string|null;minor:string|null;verified:boolean;reason:string};
 function validDate(date:string){return /^\d{4}-\d{2}-\d{2}$/.test(date)&&!Number.isNaN(Date.parse(date))&&new Date(date).toISOString().slice(0,10)===date;}
@@ -9,19 +10,29 @@ function validate(v:Valuation){
  if(!/^\d+$/.test(v.minor))throw new Error('Enter the positive value or amount owed.');money(BigInt(v.minor),currency(v.currency));
  if(v.accountId!==undefined&&v.accountId!==null&&!/^[a-zA-Z0-9-]{1,80}$/.test(v.accountId))throw new Error('Choose a valid linked account.');
 }
-export function netWorthHistory(values:Valuation[],code:Currency){
- const rows=values.filter(v=>v.currency===code).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
+/** Values in `code`: others convert at their own date's rate; those with no rate are named, never counted as zero. */
+function inCurrency<T extends {currency:Currency;date:string|null;minor:string|null}>(values:readonly T[],code:Currency,rates:readonly Rate[]){
+ const kept:T[]=[],left=new Set<Currency>();
+ for(const v of values){if(v.currency===code||v.minor===null){kept.push(v);continue;}
+  const rate=v.date===null?null:rateBetween(rates,v.currency,code,v.date);
+  if(rate===null)left.add(v.currency);else kept.push({...v,currency:code,minor:convert(money(BigInt(v.minor),v.currency),code,rate).minor.toString()});}
+ return {kept,unconverted:[...left].sort()};
+}
+export function netWorthHistory(values:Valuation[],code:Currency,rates:readonly Rate[]=[]){
+ const rows=inCurrency(values,code,rates).kept.filter(v=>v.currency===code).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id));
  return [...new Set(rows.map(v=>v.date))].map(date=>{
   const latest=new Map<string,Valuation>();for(const row of rows)if(row.date<=date)latest.set(row.itemId,row);
   const items=[...latest.values()];const assets=items.filter(v=>v.kind==='asset').reduce((n,v)=>n+BigInt(v.minor),0n),liabilities=items.filter(v=>v.kind==='liability').reduce((n,v)=>n+BigInt(v.minor),0n);
   return {date,assets:assets.toString(),liabilities:liabilities.toString(),net:(assets-liabilities).toString(),items};
  });
 }
-export function combinedPosition(values:Valuation[],accounts:AccountPosition[],code:Currency){
- const manual=netWorthHistory(values,code).at(-1),included=accounts.filter(a=>a.currency===code&&a.choice==='include'&&a.verified&&a.minor!==null);
+export function combinedPosition(values:Valuation[],accounts:AccountPosition[],code:Currency,rates:readonly Rate[]=[]){
+ const chosen=inCurrency(accounts.filter(a=>a.choice==='include'&&a.verified&&a.minor!==null),code,rates),valued=inCurrency(values,code,rates);
+ const unconverted=[...new Set([...chosen.unconverted,...valued.unconverted])].sort();
+ const manual=netWorthHistory(values,code,rates).at(-1),included=chosen.kept;
  let assets=BigInt(manual?.assets??'0'),liabilities=BigInt(manual?.liabilities??'0');for(const a of included){const n=BigInt(a.minor!);if(n>=0n)assets+=n;else liabilities-=n;}
  const dates=[...(manual?[manual.date]:[]),...included.flatMap(a=>a.date?[a.date]:[])].sort();
- return {assets:assets.toString(),liabilities:liabilities.toString(),net:(assets-liabilities).toString(),asOf:dates.at(-1)??null,manual:manual?.items??[],accounts:included,complete:accounts.filter(a=>a.currency===code).every(a=>a.choice!=='review'&&(a.choice==='exclude'||a.verified))};
+ return {assets:assets.toString(),liabilities:liabilities.toString(),net:(assets-liabilities).toString(),asOf:dates.at(-1)??null,manual:manual?.items??[],accounts:included,unconverted,complete:unconverted.length===0&&accounts.every(a=>a.choice!=='review'&&(a.choice==='exclude'||a.verified))};
 }
 export function netWorthRepository(driver:Driver){
  async function list():Promise<Valuation[]>{return (await driver.query("SELECT value FROM app_settings WHERE key LIKE 'net-worth:%' AND key NOT LIKE 'net-worth-account:%' ORDER BY key")).map(r=>JSON.parse(String(r.value)) as Valuation);}
