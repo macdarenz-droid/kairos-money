@@ -8,7 +8,7 @@
 .transaction-row .meta { display: block; margin-top: 4px; }
 .transaction-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .import-failure { padding: 12px; border: 1px solid var(--border-default); border-radius: 6px; }
-.import-failure pre, .raw-excerpt { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; max-height: 200px; overflow: auto; }
+.import-failure pre, .raw-excerpt, .payload { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; max-height: 200px; overflow: auto; }
 .review-counts { display: flex; flex-wrap: wrap; gap: 12px; font-variant-numeric: tabular-nums; }
 .coverage-map { display: flex; gap: 2px; height: 20px; margin: 12px 0; }
 .covered-range { background: var(--accent); border: 1px solid var(--accent); }

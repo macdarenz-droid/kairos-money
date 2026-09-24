@@ -12,6 +12,7 @@ import {FlowBar} from '../design/FlowBar';
 import {CategorySplit} from '../design/CategorySplit';
 import {DebtBurn} from '../design/DebtBurn';
 import {Cancellations} from './Cancellations';
+import {AdvisorPanel} from '../advisor/AdvisorPanel';
 
 /** What each advice rule says. The figures come from the brain; the words live here. */
 const ADVICE: Record<AdviceRule, string> = {
@@ -45,7 +46,7 @@ export function Insights() {
     <WhereItWent brain={b} code={currency(code)} show={show}/>
     <Bills brain={b} show={show} code={currency(code)}/>
     <Advice brain={b} show={show}/>
-    <div className="advisor-slot" data-slot="advisor"/>
+    <AdvisorPanel brain={b}/>
     <Plan brain={b} show={show}/>
     <SetAside brain={b} code={code} show={show}/>
   </div>;
