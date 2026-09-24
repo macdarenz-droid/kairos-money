@@ -1,5 +1,7 @@
 # Approved app logo
 
+**Next logo:** the owner picks one of six options in `docs/logo-options.svg` (2026-09-24). The paragraphs below describe an older mark; the app now shows `public/branding/kairos-aperture.png`.
+
 The user supplied the mint K on a dark square on 13 September 2026 and requested it as the app logo.
 
 `public/branding/kairos-money-logo.jpg` and `android/app/src/main/res/drawable-nodpi/kairos_logo.jpg` preserve the original attachment bytes. The attachment was named PNG but contains JPEG data; these copies use the correct extension.

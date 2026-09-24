@@ -114,6 +114,38 @@ The owner's tags always win. Claude never overwrites them.
 
 **Streams:** S5a (storage, precedence, undo, payload builder in `src/ledger/ai-categories.ts`), S2a (`categorise()`), S2b (screen, consent, AI mark, "All from this merchant"). This depends on S5a's fix for transaction ids changing on re-import.
 
+## Motion and feedback (owner request 2026-09-24)
+Goal: every tap answers at once, every wait shows a money-themed animation, and the dashboard feels alive without slowing anything.
+
+**Rules**
+- Any action that can take over 300 ms uses the Button busy state. Any wait over 1 s with nothing new on screen shows a loader.
+- Only `transform` and `opacity` animate. Loops run only while waiting. No new dependency (no animation library, no Lottie).
+- `prefers-reduced-motion` turns every animation off (the blanket rule and `tests/motion.test.ts` stay). JS effects show the final state at once.
+- Never hold the UI for an animation: data first, motion on top.
+
+**Parts** (all in `src/ui/design/Motion.tsx` plus `styles.css`; each shown on `/dev/kitchen-sink`)
+| Part | Looks like | Used for |
+|---|---|---|
+| `Coin` | a 16 px coin flipping on its edge | inside busy buttons |
+| `CoinStack` | three coins drop in and stack, then fade, 1.6 s loop | replaces `BusyOverlay`'s KairosMark and the "Reading your money", "Reading accounts" and lock-check waits |
+| `ClaudeWorking` | sorting: coins fall into three jars in turn; review/ask: a receipt prints line by line | every Claude call |
+| Skeleton shimmer | a soft highlight sweeping the grey bars | list placeholders only |
+| Count-up | a hero amount rolls from its old value to the new one in 600 ms | MoneyBand, month summary, FlowBar, SpendingCalendar totals |
+| Chart grow-in | bars grow from zero, lines draw in, 400–600 ms, once per mount | FlowBar, CategorySplit, DayStrip (20 ms stagger), SavingsPath, DebtBurn |
+| Success drop | a coin drops into the toast's check mark | toasts after a save |
+
+**Button busy state:** `Button` gets `busy` and `busyLabel`. Busy means disabled, `aria-busy="true"`, a `Coin` before the label. Every hand-written `x ? 'Saving…' : 'Save'` moves to it (Lock, Manual, AccountSheet, ImportWorkspace, Settings, Backup, BulkProposals, SortCategories, AdvisorPanel), keeping today's exact busy words.
+
+**Claude waits:** `ClaudeWorking` sits under the button while a call runs: a fixed label for screen readers, one status line that changes every 3 s (at most 12 words each), and seconds elapsed after 10 s.
+
+**Count-up is exact:** frames are bigint, `from + (to - from) * BigInt(i) / BigInt(n)` for n ≤ 20, formatted by the same formatter as today; the last frame is exactly `to`. The digits are `aria-hidden` and the label carries the final value. It runs once per value change, never per render.
+
+**Keep:** loaders keep `role="status"` and today's labels. Hash-frozen tests and frozen strings stay untouched.
+
+**Tests:** busy Button (disabled, `aria-busy`, label); count-up ends on the exact value and shows it at once under reduced motion; loaders keep their labels; `ClaudeWorking` shows during a slow mocked call and leaves after; `motion.test.ts` passes; money lint passes.
+
+**Later:** haptics (needs a native plugin); the app logo, once the owner picks one from `docs/logo-options.svg`.
+
 ## Screens after the cut (~35 charts → ~9)
 - **Today:** MoneyBand, SavingsPath (single spend/keep today), Attention (≤3, including DueStrip), DayStrip, Recorded today, triage card.
 - **Insights:**
@@ -152,6 +184,7 @@ Each stream branches from the integration branch and returns one PR. Parallel la
 | 3 | S3 Screens cut + rewire (UI, deletions, Android tests, gate scripts) | after 2a–2c |
 | 4 | S2b Advisor UI | after 3 + 2d |
 | 5 | S5b Docs + dead-code cleanup | after 4 |
+| 6 | S6 Motion and feedback (branch `claude/kairos-motion`) | now |
 
 **Done means**
 - `npm run check` + money lint green.
