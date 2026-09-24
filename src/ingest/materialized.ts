@@ -230,7 +230,8 @@ export async function materializedBulk(driver:Driver,search:string,limit=1001):P
  const where=`FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id
   LEFT JOIN merchants m ON m.id=t.merchant_id LEFT JOIN categories c ON c.id=t.category_id
   WHERE b.status='committed' AND b.parser_version<>'manual-entry-v1' AND b.id IN (${batches})
-  AND t.transfer_group_id IS NULL${match}`;
+  AND t.transfer_group_id IS NULL
+  AND NOT EXISTS (SELECT 1 FROM app_settings x WHERE x.key='split:'||t.id)${match}`;
  const total=Number((await driver.query(`SELECT COUNT(*) AS total ${where}`,bounds))[0]?.total??0);
  if(!total)return {rows:[],total:0};
  const transactions=await driver.query(`SELECT t.id,t.account_id,t.posted_date,t.amount_minor,t.currency,t.raw_description,

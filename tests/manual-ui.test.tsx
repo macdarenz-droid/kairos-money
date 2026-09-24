@@ -23,3 +23,10 @@ it.each(['dark','light'])('saves a manual expense and reopens it for editing in 
  expect((screen.getByLabelText('Amount') as HTMLInputElement).value).toBe('12.50');fireEvent.change(screen.getByLabelText('Amount'),{target:{value:'15.00'}});fireEvent.click(screen.getByRole('button',{name:'Save transaction'}));await waitFor(async()=>expect((await state.repo!.manual.list())[0]!.minor).toBe('1500'));
  await state.repo!.manual.remove(entry.id);expect(await state.repo!.manual.list()).toHaveLength(0);
 });
+it('offers only open accounts when adding a transaction',async()=>{
+ await state.repo!.addAccount({id:'old',name:'Closed card',institution:'',type:'cash',currency:'AUD',mask_last4:null,opening_balance_minor:0n});
+ await state.repo!.updateAccount('old',{archived:true});
+ const q=new QueryClient({defaultOptions:{queries:{retry:false}}});
+ render(<QueryClientProvider client={q}><ManualSheet accounts={await state.repo!.accounts()} onClose={()=>{}}/></QueryClientProvider>);
+ expect(screen.getAllByRole('option').map(o=>o.textContent)).not.toContain('Closed card · AUD');
+});

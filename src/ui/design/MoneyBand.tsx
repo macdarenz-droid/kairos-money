@@ -49,6 +49,9 @@ export function MoneyBand() {
   if (brain.isPending || accounts.isPending || !brain.data) return <Skeleton label="Reading your money"/>;
   // Absent rather than empty: with no accounts the screen that asks for one should be the only thing on it.
   if (!live.length) return null;
+  const missing: readonly string[] = brain.data.coverage.unconverted;
+  if (live.every(account => missing.includes(account.currency))) return <section className="stack" aria-label="Your money">
+    <h2>Your money</h2><p className="meta">No {missing.join(', ')} to {code} rate yet, so nothing to show.</p></section>;
 
   const band = brain.data.spending.band;
   const spending = live.filter(account => account.type !== 'savings' && account.type !== 'investment');
@@ -90,7 +93,7 @@ export function MoneyBand() {
         note={`${spending.length} ${spending.length === 1 ? 'account' : 'accounts'}`}/>
     </div>
 
-    <p className="meta">{stamp(band.now.start)} – {stamp(band.end)}{codes.length > 1 ? ` · ${code}` : ''}
+    <p className="meta">{stamp(band.now.start)} – {stamp(band.end)}{codes.length > 1 ? ` · ${code}` : ''}{missing.length ? ` · Leaves out ${missing.join(', ')}` : ''}
       {band.now.unconfirmed && <> · <span className="tag">Not on a statement yet</span></>}</p>
 
     {/* The shapes are the fast read; these are the numbers behind them, for anyone who wants them or

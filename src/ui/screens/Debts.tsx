@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {ChevronRight} from 'lucide-react';
-import {currency, currencyDigits, format, money, parseDecimal} from '../../core/money';
+import {currency, currencyDigits, format, money, parseDecimal, type Currency} from '../../core/money';
 import {compare, openDebts, payoff, plan, ratePercent} from '../../intelligence/debt';
 import type {DebtRecord} from '../../ledger/debts';
 import {localDay} from '../../ingest/reminders';
@@ -13,11 +13,22 @@ import {useConverter, useDisplayCurrency} from '../currency';
 const blank = (code: string) => ({id: '', name: '', accountId: '', currency: code, balance: '', rate: '', minimum: '', dueDay: '', openedAt: localDay(), targetDate: ''});
 type Draft = ReturnType<typeof blank>;
 
-function toDraft(debt: DebtRecord): Draft {
+/** An amount as typed: no grouping or symbol, so it parses back unchanged. */
+function plain(minor: string, code: Currency): string {
+  const digits = currencyDigits[code], value = BigInt(minor), size = value < 0n ? -value : value, unit = 10n ** BigInt(digits);
+  return `${value < 0n ? '-' : ''}${size / unit}${digits ? '.' + (size % unit).toString().padStart(digits, '0') : ''}`;
+}
+/** "19.99" percent to 1999 basis points; at most two decimals. */
+export function bpFromPercent(input: string): string {
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(input.trim());
+  if (!match) throw new Error('Enter the annual rate as a percent, like 19.99.');
+  return (BigInt(match[1]!) * 100n + BigInt((match[2] ?? '').padEnd(2, '0'))).toString();
+}
+
+export function toDraft(debt: DebtRecord): Draft {
   return {id: debt.id, name: debt.name, accountId: debt.accountId ?? '', currency: debt.currency,
-    balance: format(money(BigInt(debt.balanceMinor), debt.currency)).replace(/[^\d.,-]/g, ''),
-    rate: debt.annualRateBp,
-    minimum: format(money(BigInt(debt.minimumMinor), debt.currency)).replace(/[^\d.,-]/g, ''),
+    balance: plain(debt.balanceMinor, currency(debt.currency)), rate: ratePercent(debt.annualRateBp).replace('%', ''),
+    minimum: plain(debt.minimumMinor, currency(debt.currency)),
     dueDay: debt.dueDay === null ? '' : String(debt.dueDay), openedAt: debt.openedAt, targetDate: debt.targetDate ?? ''};
 }
 
@@ -51,10 +62,10 @@ export function Debts({accounts}: {accounts: {id: string; name: string; currency
     try {
       const code = currency(entry.currency);
       const balance = parseDecimal(entry.balance, code), minimum = parseDecimal(entry.minimum, code);
-      if (!/^\d+$/.test(entry.rate)) throw new Error('Enter the annual rate in basis points: 1999 is 19.99%.');
+      const rate = bpFromPercent(entry.rate);
       await session.run(repo => repo.debts.save({
         id: entry.id || crypto.randomUUID(), name: entry.name, accountId: entry.accountId || null,
-        currency: code, balanceMinor: balance.minor.toString(), annualRateBp: entry.rate,
+        currency: code, balanceMinor: balance.minor.toString(), annualRateBp: rate,
         minimumMinor: minimum.minor.toString(), dueDay: entry.dueDay ? Number(entry.dueDay) : null,
         openedAt: entry.openedAt, targetDate: entry.targetDate || null}));
       await refresh(); setDraft(null);
@@ -82,7 +93,7 @@ export function Debts({accounts}: {accounts: {id: string; name: string; currency
         <Input label="Name" value={draft.name} maxLength={80} onChange={e => setDraft({...draft, name: e.target.value})}/>
         <label className="input-label">Currency<select value={draft.currency} onChange={e => setDraft({...draft, currency: e.target.value})}>{Object.keys(currencyDigits).map(c => <option key={c}>{c}</option>)}</select></label>
         <Input label="Owed now" inputMode="decimal" value={draft.balance} onChange={e => setDraft({...draft, balance: e.target.value})}/>
-        <Input label="Annual rate in basis points" hint="1999 is 19.99%." inputMode="numeric" value={draft.rate} onChange={e => setDraft({...draft, rate: e.target.value})}/>
+        <Input label="Annual interest rate (%)" hint="For example 19.99." inputMode="decimal" value={draft.rate} onChange={e => setDraft({...draft, rate: e.target.value})}/>
         <Input label="Minimum payment" inputMode="decimal" value={draft.minimum} onChange={e => setDraft({...draft, minimum: e.target.value})}/>
         <Input label="Due day of the month" hint="Leave blank when there is no set date." inputMode="numeric" value={draft.dueDay} onChange={e => setDraft({...draft, dueDay: e.target.value})}/>
         <Input label="Started" type="date" value={draft.openedAt} onChange={e => setDraft({...draft, openedAt: e.target.value})}/>

@@ -18,3 +18,10 @@ export function TodayTriage() {
   if (!brain.data?.triage.active) return null;
   return <Triage brain={brain.data} show={minor => format(money(BigInt(minor), code))}/>;
 }
+
+/** A hidden mark device tests wait on: the one brain read for this screen has settled. */
+export function BrainMarker() {
+  const brain = useBrain();
+  if (brain.data) return <span hidden data-brain="ready"/>;
+  return brain.error ? <span hidden data-brain="failed"/> : null;
+}

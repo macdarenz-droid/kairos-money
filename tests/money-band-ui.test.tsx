@@ -12,7 +12,7 @@ const AUD = currency('AUD');
 const today = localDay();
 const back = (days: number) => new Date(Date.parse(today) - days * 86400000).toISOString().slice(0, 10);
 
-const ledger = vi.hoisted(() => ({transactions: [] as Transaction[], balances: [] as {accountId: string; minor: string}[], display: 'AUD', rates: [] as {asOf: string; base: string; quote: string; rateE8: string; source: string}[], accounts: [] as {id: string; name: string; type?: string; currency: string; archived_at: string | null; opening_balance_minor: string; mask_last4: string | null}[], aside: '0'}));
+const ledger = vi.hoisted(() => ({unconverted: [] as string[], transactions: [] as Transaction[], balances: [] as {accountId: string; minor: string}[], display: 'AUD', rates: [] as {asOf: string; base: string; quote: string; rateE8: string; source: string}[], accounts: [] as {id: string; name: string; type?: string; currency: string; archived_at: string | null; opening_balance_minor: string; mask_last4: string | null}[], aside: '0'}));
 vi.mock('../src/ui/session', () => ({
   useSession: () => ({state: 'ready', run: (fn: (repo: unknown) => unknown) => Promise.resolve(fn({
     accounts: () => Promise.resolve(ledger.accounts),
@@ -24,7 +24,8 @@ vi.mock('../src/ui/session', () => ({
       const code = currency(ledger.display);
       const rates = ledger.rates.map(r => ({...r, base: currency(r.base), quote: currency(r.quote), rateE8: BigInt(r.rateE8)}));
       return Promise.resolve({snapshot: {asOf: today, currency: code, accountIds: ['a'], coverage: [], pays: [],
-        transactions: ledger.transactions, savings: {asideMinor: ledger.aside, accountIds: [], evidence: []}} satisfies Snapshot,
+        transactions: ledger.transactions, savings: {asideMinor: ledger.aside, accountIds: [], evidence: []},
+        ...(ledger.unconverted.length ? {unconverted: ledger.unconverted.map(currency)} : {})} satisfies Snapshot,
         holdings: holdingsFrom(ledger.accounts, ledger.balances, rates, code, today), bufferMinor: '0', debts: [], scheduled: [],
         cancelled: new Set<string>(), dismissals: {}});
     }},
@@ -154,4 +155,14 @@ it('keeps savings out of what is spendable, and counts what was set aside withou
   expect(tiles.textContent).not.toContain('$6,450.00');
   // And the account count beside Balance now counts the accounts that figure is about.
   expect(tiles.textContent).toContain('1 account');
+});
+
+it('names the missing rate instead of printing zeros', async () => {
+  ledger.transactions = []; ledger.display = 'AUD'; ledger.rates = []; ledger.aside = '0'; ledger.unconverted = ['PHP'];
+  ledger.accounts = [{id: 'a', name: 'Peso', currency: 'PHP', archived_at: null, opening_balance_minor: '0', mask_last4: null}];
+  ledger.balances = [{accountId: 'a', minor: '500000'}];
+  render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}><MoneyBand/></QueryClientProvider>);
+  await screen.findByText('No PHP to AUD rate yet, so nothing to show.');
+  expect(screen.queryByText('$0.00')).toBeNull();
+  ledger.unconverted = [];
 });

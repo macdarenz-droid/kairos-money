@@ -25,3 +25,23 @@ it.each([['dark',50],['dark',51],['light',50],['light',51]] as const)('prompts o
  if(count>50){await screen.findByRole('button',{name:'Back up'});fireEvent.click(screen.getByRole('button',{name:'Dismiss'}));expect(screen.queryByRole('button',{name:'Back up'})).toBeNull();}
  else expect(screen.queryByRole('button',{name:'Back up'})).toBeNull();
 });
+
+it('drops the backup prompt once the import it was for is rolled back',async()=>{
+ const decimal=(minor:bigint)=>`${minor/100n}.${(minor%100n).toString().padStart(2,'0')}`;
+ const csv='Date,Description,Amount\n'+Array.from({length:51},(_,i)=>`01/01/2026,Synthetic merchant,-${decimal(BigInt(i+1))}`).join('\n');
+ await state.repo!.imports.stageFile('synthetic.csv',btoa(csv),hash(csv));
+ render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><ImportWorkspace accounts={await state.repo!.accounts()} request={0} consumed={()=>undefined}/></QueryClientProvider>);
+ fireEvent.click(await screen.findByRole('button',{name:'Read file'}));
+ for(const [label,value] of [['Statement start','2026-01-01'],['Statement end','2026-01-31'],['Stated opening balance','0'],['Stated closing balance',`-${decimal(51n*52n/2n)}`]])fireEvent.change(screen.getByLabelText(label!),{target:{value}});
+ fireEvent.click(screen.getByRole('button',{name:'Extract for review'}));await screen.findByText('✓ Balance check passed',{}, {timeout:10000});
+ fireEvent.click(screen.getByRole('button',{name:'Confirm import'}));await screen.findByRole('button',{name:'Back up'});
+ fireEvent.click(screen.getByRole('button',{name:'Roll back'}));fireEvent.click(screen.getByRole('button',{name:'Confirm rollback'}));
+ await waitFor(async()=>expect(await state.repo!.imports.ledger()).toHaveLength(0));
+ await waitFor(()=>expect(screen.queryByRole('button',{name:'Back up'})).toBeNull());
+});
+
+it('offers one import button on an empty ledger',async()=>{
+ render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><ImportWorkspace accounts={await state.repo!.accounts()} request={0} consumed={()=>undefined}/></QueryClientProvider>);
+ await screen.findByText('No transactions yet');
+ expect(screen.getAllByRole('button').filter(b=>/^(Import|Choose) statements$/.test(b.textContent??''))).toHaveLength(1);
+});

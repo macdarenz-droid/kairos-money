@@ -55,9 +55,8 @@ final class BackupTestUi {
     }
     void ready() throws Exception {
         await("Boolean(document.querySelector('nav'))");
-        // Navigation mounts before Today's asynchronous analysis transaction finishes.
-        // Compare a completed database snapshot, including every derived table.
-        await("document.querySelector('.screen-header h1')?.textContent !== 'Today' || Boolean(document.querySelector('section[aria-label=\"Money evidence\"]'))");
+        // Navigation mounts before Today's brain read settles; wait for it so the screen is complete.
+        await("document.querySelector('.screen-header h1')?.textContent !== 'Today' || Boolean(document.querySelector('[data-brain]'))");
     }
     void unlock(String pin) throws Exception { await("document.body.innerText.includes('Welcome back')"); input("PIN", pin); click("Unlock"); ready(); }
     void setup(String pin) throws Exception {

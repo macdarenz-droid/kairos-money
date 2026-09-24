@@ -74,12 +74,19 @@ function WhereItWent({brain, code, show}: Part & {code: Currency}) {
 
 function Bills({brain, show, code}: Part & {code: Currency}) {
   const bills = brain.spending.bills;
+  const [later, setLater] = useState<{merchant: string; dates: string[]} | null>(null);
   if (!bills.length) return null;
+  const payments = bills.flatMap(bill => bill.charges.map(c => ({merchant: bill.merchant, date: c.date, id: c.id})));
   return <section className="stack" aria-label="Bills and subscriptions">
     <h2>Bills and subscriptions</h2>
     <div>{bills.map(bill => <Row key={bill.merchant} trailing={`${show(bill.yearlyMinor)} a year`}>{bill.merchant}
       <p className="meta">{bill.cancelled ? <span className="tag">Cancelled</span> : bill.nextDate ? `Next ${bill.nextDate}` : ''}</p></Row>)}</div>
-    <Cancellations code={code} merchants={bills.map(bill => bill.merchant)}/>
+    <Cancellations code={code} merchants={bills.map(bill => bill.merchant)} payments={payments}
+      review={(merchant, ids) => setLater({merchant, dates: payments.filter(p => ids.includes(p.id)).map(p => p.date).sort()})}/>
+    {later && <Sheet title={later.merchant} onClose={() => setLater(null)}>
+      <p>These may be final charges. Check them with the provider.</p>
+      {later.dates.map(date => <Row key={date}>{date}</Row>)}
+    </Sheet>}
   </section>;
 }
 

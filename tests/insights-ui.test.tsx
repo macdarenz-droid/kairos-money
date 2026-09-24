@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import {afterEach, expect, it, vi} from 'vitest';
-import {cleanup, render, screen} from '@testing-library/react';
+import {cleanup, fireEvent, render, screen} from '@testing-library/react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {currency} from '../src/core/money';
 import {localDay} from '../src/ingest/reminders';
@@ -9,15 +9,18 @@ import {brainInputs} from './brain-mock';
 
 const AUD = currency('AUD'), today = localDay();
 const back = (days: number) => new Date(Date.parse(today) - days * 86400000).toISOString().slice(0, 10);
-const ledger = vi.hoisted(() => ({transactions: [] as Transaction[], reads: 0, spendable: '500000'}));
+const ledger = vi.hoisted(() => ({cancellations: [] as unknown[], transactions: [] as Transaction[], reads: 0, spendable: '500000'}));
 vi.mock('../src/ui/session', () => ({useSession: () => ({state: 'ready', run: (fn: (repo: unknown) => unknown) => Promise.resolve(fn({
   accounts: () => Promise.resolve([{id: 'a', name: 'Everyday', currency: 'AUD', archived_at: null}]),
   displayCurrency: () => Promise.resolve('AUD'),
+  cancellations: {list: () => Promise.resolve(ledger.cancellations)},
   intelligence: {inputs: () => { ledger.reads++; return Promise.resolve(brainInputs({asOf: today, currency: AUD, accountIds: ['a'], coverage: [], pays: [],
     transactions: ledger.transactions, savings: {asideMinor: '0', accountIds: [], evidence: []}} satisfies Snapshot,
     {accounts: [{id: 'a', currency: 'AUD'}], balances: [{accountId: 'a', minor: ledger.spendable}]})); }},
 }))})}));
 import {Insights} from '../src/ui/screens/Insights';
+HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
+HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
 afterEach(cleanup);
 const row = (id: string, date: string, minor: string, over: Partial<Transaction> = {}): Transaction => ({id, accountId: 'a', date, minor, currency: AUD,
   description: 'Landlord', category: 'Housing', kind: 'essential', status: 'settled', transfer: false, recurring: false, ...over});
@@ -42,4 +45,14 @@ it('shows essentials and free help instead of plan and advice while things are t
   expect(screen.queryByLabelText('Plan')).toBeNull();
   expect(screen.queryByLabelText('Advice')).toBeNull();
   expect(screen.getByText(/1800 007 007/)).toBeTruthy();
+});
+
+it('flags charges after a cancellation as possible final charges', async () => {
+  ledger.transactions = month(); ledger.spendable = '500000';
+  ledger.cancellations = [{merchant: 'landlord', currency: 'AUD', date: back(40), status: 'requested', note: ''}];
+  mount();
+  fireEvent.click(await screen.findByRole('button', {name: 'Review 1 later payment'}));
+  await screen.findByText('These may be final charges. Check them with the provider.');
+  expect(screen.getByText(back(28))).toBeTruthy();
+  ledger.cancellations = [];
 });
