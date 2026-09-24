@@ -83,6 +83,7 @@ Goal: accurate categories across the whole history, with nothing left uncategori
 - For each merchant: its description with runs of 4 or more digits masked, direction in/out, an amount band, count, MCC if known, and its current category.
 - Examples from the owner's own corrections, so Claude learns them.
 - Never sent: transfers, split rows, dates, exact amounts, accounts.
+- Skipped: merchants the owner or an earlier run already sorted; undoing that run makes them eligible again.
 
 **The call**
 - `claude.ts categorise()`, with at most 150 merchants per request.
@@ -128,7 +129,7 @@ Goal: every tap answers at once, every wait shows a money-themed animation, and 
 |---|---|---|
 | `Coin` | a 16 px coin flipping on its edge | inside busy buttons |
 | `CoinStack` | three coins drop in and stack, then fade, 1.6 s loop | replaces `BusyOverlay`'s KairosMark and the "Reading your money", "Reading accounts" and lock-check waits |
-| `ClaudeWorking` | sorting: coins fall into three jars in turn; review/ask: a receipt prints line by line | every Claude call |
+| `KairosAiWorking` | the Kairos AI mark thinking (below) with a status line | every Kairos AI call |
 | Skeleton shimmer | a soft highlight sweeping the grey bars | list placeholders only |
 | Count-up | a hero amount rolls from its old value to the new one in 600 ms | MoneyBand, month summary, FlowBar, SpendingCalendar totals |
 | Chart grow-in | bars grow from zero, lines draw in, 400–600 ms, once per mount | FlowBar, CategorySplit, DayStrip (20 ms stagger), SavingsPath, DebtBurn |
@@ -136,15 +137,41 @@ Goal: every tap answers at once, every wait shows a money-themed animation, and 
 
 **Button busy state:** `Button` gets `busy` and `busyLabel`. Busy means disabled, `aria-busy="true"`, a `Coin` before the label. Every hand-written `x ? 'Saving…' : 'Save'` moves to it (Lock, Manual, AccountSheet, ImportWorkspace, Settings, Backup, BulkProposals, SortCategories, AdvisorPanel), keeping today's exact busy words.
 
-**Claude waits:** `ClaudeWorking` sits under the button while a call runs: a fixed label for screen readers, one status line that changes every 3 s (at most 12 words each), and seconds elapsed after 10 s.
+**Kairos AI waits:** `KairosAiWorking` sits under the button while a call runs: a fixed label for screen readers, one status line that changes every 3 s (at most 12 words each), and seconds elapsed after 10 s.
 
 **Count-up is exact:** frames are bigint, `from + (to - from) * BigInt(i) / BigInt(n)` for n ≤ 20, formatted by the same formatter as today; the last frame is exactly `to`. The digits are `aria-hidden` and the label carries the final value. It runs once per value change, never per render.
 
 **Keep:** loaders keep `role="status"` and today's labels. Hash-frozen tests and frozen strings stay untouched.
 
-**Tests:** busy Button (disabled, `aria-busy`, label); count-up ends on the exact value and shows it at once under reduced motion; loaders keep their labels; `ClaudeWorking` shows during a slow mocked call and leaves after; `motion.test.ts` passes; money lint passes.
+**Tests:** busy Button (disabled, `aria-busy`, label); count-up ends on the exact value and shows it at once under reduced motion; loaders keep their labels; `KairosAiWorking` shows during a slow mocked call and leaves after; `motion.test.ts` passes; money lint passes.
 
-**Later:** haptics (needs a native plugin); the app logo, once the owner picks one from `docs/logo-options.svg`.
+**Later:** haptics (needs a native plugin).
+
+**Kairos AI (the advisor's name)**
+- The owner sees "Kairos AI" wherever the advisor, its sorting or its log is named. Examples: the section "Kairos AI", the switch "Use Kairos AI", "Asking Kairos AI…", "Sorted by Kairos AI", "No Kairos AI calls".
+- Where data leaves the phone, the words still name Claude and Anthropic:
+  - the section line "Runs on Claude with your own Anthropic key.";
+  - the switch "Let Kairos AI send merchant names to Claude";
+  - the privacy lines;
+  - "Anthropic did not accept the key." instead of "Claude did not accept the key.".
+- Code names (`claude.ts`, `advisor`) stay.
+- **Mark** (`public/branding/kairos-ai.svg`): a gradient ring with a gap and a dot, with a four-point sparkle inside.
+- **`KairosAiMark({size, thinking})`:** gradient ids come from `useId`.
+- **While thinking:**
+  - the ring and dot turn once every 2.4 s, so the dot orbits;
+  - the sparkle turns 45° and pulses between 0.82 and 1.04 every 1.2 s.
+- **When idle:** still.
+- **Used in:**
+  - the Settings section title and the Money review / Ask panel title, at 20 px;
+  - `KairosAiWorking`, at 36 px;
+  - the ledger's "AI" tag, at 12 px, labelled "Sorted by Kairos AI".
+
+**App logo: option C** ("the right moment": a ring with a gap and a dot, with savings bars rising inside).
+- **Web:**
+  - `public/branding/kairos-logo.svg` becomes the favicon (`image/svg+xml`) and the header/lock `Brand` image.
+  - The aperture PNGs, `KairosMark` and its `kairos-step` keyframes are deleted once nothing uses them.
+- **Android:** `kairos_launcher.xml` (adaptive icon) and `kairos_mark.xml` (notification icon) are already redrawn as vectors of logo C.
+
 
 ## Screens after the cut (~35 charts → ~9)
 - **Today:** MoneyBand, SavingsPath (single spend/keep today), Attention (≤3, including DueStrip), DayStrip, Recorded today, triage card.

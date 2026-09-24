@@ -184,6 +184,17 @@ describe('re-sorting after a Claude run, an undo or an owner rule', () => {
     db.close();
   });
 
+  it('does not send merchants Claude already sorted again, until that run is undone', async () => {
+    const {db, repo, rows} = await large(30);
+    const sent = async () => Object.values((await repo.aiCategories.payload(false)).keys).sort();
+    const all = await sent();
+    const run = await repo.aiCategories.applyRun([{key: rows[0]!.merchant, category: 'Coffee & snacks', confidence: 'high'}, {key: rows[1]!.merchant, category: 'Shopping', confidence: 'low'}], 'claude-opus-5');
+    expect(await sent()).toEqual(all.filter(key => key !== rows[0]!.merchant));
+    await repo.aiCategories.undoRun(run.id);
+    expect(await sent()).toEqual(all);
+    db.close();
+  });
+
   it('leaves the ledger exactly as a full rebuild would', async () => {
     const {db, repo, rows, state} = await large(30);
     const tagged = String((await repo.imports.ledger()).find(r => r.merchant === rows[2]!.merchant)!.id);
