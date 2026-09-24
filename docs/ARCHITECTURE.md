@@ -130,10 +130,10 @@ The owner's tags always win. Claude never overwrites them.
 ## Themes (5)
 **The themes:** `dark` and `light` (unchanged), `black` (OLED), `paper` (warm, low glare), `contrast` (7:1). Preference is `system | <id>`.
 
-**Generation:** `scripts/tokens.mjs` produces `tokens.css`, `docs/CONTRAST.md` and `android/app/src/main/res/values/kairos_theme_colors.xml`. It fails the build below AA (7:1 for `contrast`).
+**Generation:** `scripts/tokens.mjs` produces `tokens.css`, `docs/CONTRAST.md`, `src/ui/design/theme-registry.ts` and `android/app/src/main/res/values/kairos_theme_colors.xml`. It fails the build below AA (7:1 for `contrast`).
 
 **Where the theme is applied:**
-- **Web:** `theme.ts` registry `{id, label, scheme, metaColor}`; the `index.html` bootstrap script, with a test that checks its CSP hash.
+- **Web:** generated `theme-registry.ts` `{id, label, scheme, background, swatch}`, re-exported by `theme.ts`; the `index.html` bootstrap script, with a test that checks its CSP hash.
 - **Native:** `KairosVaultPlugin.setTheme`; `MainActivity` and `QuickAddActivity` choose by scheme.
 
 **Button labels:** "Dark" and "Light" keep their exact labels.
