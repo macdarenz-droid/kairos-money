@@ -14,7 +14,10 @@ import { intelligenceRepository } from '../../ledger/intelligence';
 import { importService } from '../../ingest/service';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { asc, eq } from 'drizzle-orm';
-import { accounts, schema, tableNames } from './schema';
+import { accounts, schema, SECRET_PREFIX, tableNames } from './schema';
+import { queryPages } from './query-pages';
+import { privacyRepository } from './privacy';
+import { aiCategoryRepository } from '../../ledger/ai-categories';
 import type { Driver, SqlValue } from './driver';
 import { currency, money, toDatabase, type Currency } from '../money';
 export type AccountKind = 'checking' | 'savings' | 'credit' | 'cash' | 'loan' | 'investment';
@@ -30,9 +33,11 @@ export function repository(driver: Driver) {
   }, { schema });
   const refunds=()=>import('../../ledger/refunds').then(m=>m.refundRepository(driver));
   const netWorth=()=>import('../../ledger/net-worth').then(m=>m.netWorthRepository(driver));
+  const imports = importService(driver);
   return {
     refunds:{read:async(id:string)=>(await refunds()).read(id),save:async(creditId:string,purchaseId:string)=>(await refunds()).save(creditId,purchaseId),remove:async(id:string)=>(await refunds()).remove(id)},
-    imports: importService(driver),
+    imports,
+    aiCategories: aiCategoryRepository(driver, imports.rebuild),
     manual: manualRepository(driver),
     notices: noticeRepository(driver),
     notifications: notificationRepository(driver),
@@ -46,6 +51,7 @@ export function repository(driver: Driver) {
     foreignCurrency: foreignCurrencyRepository(driver),
     attachments: attachmentRepository(driver),
     restoreBackup: (snapshot: unknown) => restoreSnapshot(driver, snapshot),
+    privacy: privacyRepository(driver),
     intelligence: intelligenceRepository(driver),
     async accounts() { return db.select().from(accounts).orderBy(asc(accounts.name), asc(accounts.id)); },
     /**
@@ -174,8 +180,12 @@ export function repository(driver: Driver) {
       return driver.transaction(async () => {
         const tables: Record<string, Record<string, SqlValue>[]> = {};
         const present = new Set((await driver.query("SELECT name FROM sqlite_master WHERE type='table'")).map(row => String(row.name)));
-        for (const table of tableNames) if (present.has(table)) tables[table] = await driver.query(`SELECT * FROM ${table} ORDER BY rowid`);
-        return { format: 'kairos-money', version: 1, schema_version: 2, database_schema_version: Number((await driver.query('SELECT MAX(version) AS version FROM _migrations'))[0]?.version ?? 0), exported_at: new Date().toISOString(), tables };
+        for (const table of tableNames) if (present.has(table)) {
+          // Paged (ADR 0033) and without the reserved secret rows (ADR 0044).
+          const where = table === 'app_settings' ? ` WHERE key NOT LIKE '${SECRET_PREFIX}%'` : '';
+          tables[table] = (await queryPages(driver, `SELECT rowid AS "__rowid", * FROM ${table}${where}`, [], ['__rowid'])).map(row => { delete row['__rowid']; return row; });
+        }
+        return { format: 'kairos-money', version: 1, schema_version: 3, database_schema_version: Number((await driver.query('SELECT MAX(version) AS version FROM _migrations'))[0]?.version ?? 0), exported_at: new Date().toISOString(), tables };
       });
     },
   };

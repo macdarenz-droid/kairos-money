@@ -1,0 +1,111 @@
+import {describe, expect, it} from 'vitest';
+import {memoryDriver} from './db-helper';
+import {migrate} from '../src/core/db/migrate';
+import {repository} from '../src/core/db/repository';
+import {hash, normalizeRow} from '../src/ingest/normalize';
+import {categorize} from '../src/ledger/rules';
+import {categorisationPayload} from '../src/ledger/ai-categories';
+import type {Document, ImportContext, LedgerRow} from '../src/ingest/types';
+
+const context: ImportContext = {accountId: 'acct-7', accountKind: 'checking', currency: 'AUD', period: {start: '2026-02-01', end: '2026-02-28'}, dateOrder: 'DMY', decimal: '.', creditPositivePurchases: false};
+const raw = (sourceId: string, date: string, description: string, amount: string, direction: 'debit' | 'credit' = 'debit') =>
+  normalizeRow({sourceId, date, description, amount, direction, confidence: 9800}, context);
+
+function ledgerRow(over: Partial<LedgerRow> & {description: string; minor: string}): LedgerRow {
+  const base = raw('0', '2026-02-10', over.description, '1.00');
+  return {...base, id: hash(over.description + over.minor + (over.date ?? '')), owner: 'b', transferGroup: null, sources: [], ...over, merchant: over.merchant ?? base.merchant};
+}
+
+describe('the categorisation payload', () => {
+  const rows = [
+    ledgerRow({description: 'CAFE LUNA 123456 NEWTOWN', minor: '-450', date: '2026-02-03'}),
+    ledgerRow({description: 'CAFE LUNA 123456 NEWTOWN', minor: '-520', date: '2026-02-05'}),
+    ledgerRow({description: 'ACME PAYROLL 99887766', minor: '250000', date: '2026-02-07'}),
+    ledgerRow({description: 'TRANSFER TO SAVINGS 4455', minor: '-10000', transferGroup: 'g'}),
+    ledgerRow({description: 'HARDWARE HOUSE', minor: '-8900', id: 'split-me'}),
+  ];
+  const payload = categorisationPayload(rows, {splitIds: new Set(['split-me']),
+    examples: [{description: 'GYM CLUB 12345678', category: 'Fitness & wellbeing'}]});
+
+  it('sends one entry per merchant, never transfers or split rows', () => {
+    expect(payload.merchants).toHaveLength(2);
+    const cafe = payload.merchants.find(m => m.description.startsWith('CAFE'))!;
+    expect(cafe).toEqual({id: expect.stringMatching(/^m\d+$/), description: 'CAFE LUNA #### NEWTOWN', direction: 'out', band: 'under 10', count: 2, mcc: null, category: null});
+    expect(payload.merchants.find(m => m.description.startsWith('ACME'))).toMatchObject({direction: 'in', band: 'over 1000'});
+    expect(payload.keys[cafe.id]).toBe(rows[0]!.merchant);
+  });
+
+  it('carries no dates, exact amounts, accounts or unmasked digit runs', () => {
+    const sent = JSON.stringify({merchants: payload.merchants, examples: payload.examples});
+    for (const secret of ['2026-02', '450', '520', '250000', 'acct-7', '123456', '99887766', '12345678', 'TRANSFER', 'HARDWARE'])
+      expect(sent).not.toContain(secret);
+    expect(payload.examples).toEqual([{description: 'GYM CLUB ####', category: 'Fitness & wellbeing'}]);
+  });
+});
+
+describe('precedence in categorize()', () => {
+  const row = raw('0', '2026-02-10', 'CAFE LUNA', '4.50');
+  const ai = {[row.merchant]: 'Coffee & snacks'};
+  it('puts Claude below the owner and above MCC and hints', () => {
+    expect(categorize(row, [{id: 'r', priority: 0, merchant: row.merchant, category: 'Eating out'}], {}, '5812', ai).category).toBe('Eating out');
+    expect(categorize(row, [], {[row.merchant]: 'Groceries'}, '5812', ai).category).toBe('Groceries');
+    expect(categorize(row, [], {}, '5812', ai)).toMatchObject({category: 'Coffee & snacks', confidence: 9300});
+    expect(categorize(row, [], {}, '5812', {}).category).not.toBe('Coffee & snacks');
+  });
+});
+
+describe('storing and undoing a Claude run', () => {
+  async function ledger() {
+    const {driver, raw: db} = memoryDriver(); await migrate(driver); const repo = repository(driver);
+    await repo.addAccount({id: 'acct-7', name: 'Everyday', institution: 'Synthetic', type: 'checking', currency: 'AUD', mask_last4: null, opening_balance_minor: 0n});
+    const rows = [raw('0', '2026-02-03', 'CAFE LUNA', '4.50'), raw('1', '2026-02-04', 'CAFE LUNA', '5.20'), raw('2', '2026-02-05', 'BOOK NOOK', '20.00'), raw('3', '2026-02-06', 'MYSTERY CO', '9.00')];
+    const fileHash = hash('ai-statement');
+    const doc: Document = {id: hash(JSON.stringify(['acct-7', fileHash])), hash: fileHash, fileName: 's.csv', parser: 'synthetic', context,
+      opening: '10000', closing: String(10000 - 450 - 520 - 2000 - 900), payslip: null, sourceRank: 2, sourceKind: 'statement', integrityTier: 'A', rows};
+    await repo.imports.stage(doc);
+    for (const {row, blocked} of (await repo.imports.review(doc.id)).items) if (blocked) await repo.imports.correct(doc.id, row.sourceId, row, false);
+    await repo.imports.commit(doc.id);
+    const idOf = async (description: string) => String((await driver.query('SELECT id FROM transactions WHERE raw_description=? ORDER BY posted_date', [description]))[0]!.id);
+    const categories = async () => Object.fromEntries((await driver.query('SELECT t.id,c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id ORDER BY t.id')).map(r => [String(r.id), r.name]));
+    return {driver, db, repo, doc, rows, idOf, categories};
+  }
+  const answer = (merchant: string, category: string, confidence: 'high' | 'medium' | 'low') => ({key: merchant, category, confidence});
+
+  it('applies high and medium answers, keeps low ones as proposals, and never beats an owner tag', async () => {
+    const {driver, db, repo, rows, idOf, categories} = await ledger();
+    const [cafe, , book, mystery] = rows;
+    const owned = await idOf('BOOK NOOK');
+    await repo.categories.set([owned], 'Gifts & donations');
+    const run = await repo.aiCategories.applyRun([
+      answer(cafe!.merchant, 'Coffee & snacks', 'high'), answer(book!.merchant, 'Hobbies & media', 'medium'),
+      answer(mystery!.merchant, 'Shopping', 'low'), answer('NOT A MERCHANT', 'Shopping', 'high'), answer(cafe!.merchant + 'X', 'Nonsense', 'high'),
+    ], 'claude-opus-5');
+    expect(run.applied.sort()).toEqual([book!.merchant, cafe!.merchant].sort());
+    expect(run.proposals).toEqual([{key: mystery!.merchant, category: 'Shopping'}]);
+    const now = await categories();
+    expect(now[await idOf('CAFE LUNA')]).toBe('Coffee & snacks');
+    expect(now[owned]).toBe('Gifts & donations');
+    expect(now[await idOf('MYSTERY CO')]).toBeNull();
+    const stored = await driver.query("SELECT value FROM app_settings WHERE key=?", ['ai-category:' + cafe!.merchant]);
+    expect(JSON.parse(String(stored[0]!.value))).toMatchObject({category: 'Coffee & snacks', confidence: 'high', model: 'claude-opus-5'});
+    const materialized = await repo.imports.ledger();
+    expect(materialized.find(r => r.merchant === cafe!.merchant)?.categoryFrom).toBe('ai');
+    expect(materialized.find(r => r.id === owned)?.categoryFrom).toBeUndefined();
+    db.close();
+  });
+
+  it('survives a rebuild and a re-import, and undo restores exactly', async () => {
+    const {driver, db, repo, doc, rows, categories} = await ledger();
+    const before = {categories: await categories(), settings: await driver.query("SELECT * FROM app_settings WHERE key NOT LIKE 'ai-run:%' ORDER BY key")};
+    const run = await repo.aiCategories.applyRun([answer(rows[0]!.merchant, 'Coffee & snacks', 'high')], 'claude-opus-5');
+    const applied = await categories();
+    await repo.imports.rollback(doc.id); await repo.imports.stage(doc);
+    for (const {row, blocked} of (await repo.imports.review(doc.id)).items) if (blocked) await repo.imports.correct(doc.id, row.sourceId, row, false);
+    await repo.imports.commit(doc.id);
+    expect(await categories()).toEqual(applied);
+    await repo.aiCategories.undoRun(run.id);
+    expect({categories: await categories(), settings: await driver.query("SELECT * FROM app_settings WHERE key NOT LIKE 'ai-run:%' ORDER BY key")}).toEqual(before);
+    await expect(repo.aiCategories.undoRun(run.id)).rejects.toThrow();
+    db.close();
+  });
+});

@@ -15,6 +15,7 @@ export async function syncManual(driver:Driver):Promise<void>{
  const records=await manualRecords(driver);
  await driver.execute("DELETE FROM transaction_sources WHERE import_batch_id IN (SELECT id FROM import_batches WHERE parser_version='manual-entry-v1')");
  await driver.execute("DELETE FROM transactions WHERE import_batch_id IN (SELECT id FROM import_batches WHERE parser_version='manual-entry-v1')");
+ const currencies=new Map((await driver.query('SELECT id,currency FROM accounts')).map(a=>[String(a.id),String(a.currency)]));
  for(const entry of records)for(const leg of legs(entry)){
   const link=entry.links[leg.key];
   const linked=link?(await driver.query('SELECT t.id FROM transaction_sources s JOIN transactions t ON t.id=s.transaction_id WHERE ((s.import_batch_id=? AND s.source_row_id=?) OR t.id=?) AND t.account_id=? AND t.amount_minor=?',[link.batchId,link.sourceId,link.transactionId??'',leg.accountId,toDatabase(money(leg.minor,currency(String((await driver.query('SELECT currency FROM accounts WHERE id=?',[leg.accountId]))[0]!.currency))))]))[0]:undefined;
@@ -22,11 +23,11 @@ export async function syncManual(driver:Driver):Promise<void>{
    const current=(await driver.query('SELECT posted_date,status,transfer_group_id FROM transactions WHERE id=?',[String(linked.id)]))[0];
    if(current?.status==='settled' && Math.abs(dayNumber(String(current.posted_date))-dayNumber(entry.date))<=3 && (entry.kind!=='transfer'||current.transfer_group_id!==null))continue;
   }
-  const account=(await driver.query('SELECT currency FROM accounts WHERE id=?',[leg.accountId]))[0];if(!account)throw new Error('A manual entry account is missing.');
+  const accountCurrency=currencies.get(leg.accountId);if(!accountCurrency)throw new Error('A manual entry account is missing.');
   const category=entry.kind==='transfer'?'Transfer':entry.kind==='income'?'Income':entry.category;
   const categoryId=category?hash('category:'+category):null;
   if(categoryId)await driver.execute('INSERT OR IGNORE INTO categories(id,name,kind) VALUES(?,?,?)',[categoryId,category,entry.kind==='income'?'income':entry.kind==='transfer'?'transfer':categoryKind(category!)]);
-  const id=hash('manual-transaction:'+entry.id+':'+leg.key), code=currency(String(account.currency));
+  const id=hash('manual-transaction:'+entry.id+':'+leg.key), code=currency(accountCurrency);
   await driver.execute('INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes,status) VALUES(?,?,?,?,?,?,?,?,?,0,?,?,10000,1,?,?)',[id,leg.accountId,entry.date,toDatabase(money(leg.minor,code)),code,entry.description,categoryId,leg.minor<0n?'debit':'credit',entry.kind==='transfer'?hash('manual-transfer:'+entry.id):null,id,batchId(entry.id),entry.notes,'settled']);
   await driver.execute('INSERT INTO transaction_sources VALUES(?,?,?,?)',[id,batchId(entry.id),leg.key,JSON.stringify({...entry,leg:leg.key,origin:'manual'})]);
  }

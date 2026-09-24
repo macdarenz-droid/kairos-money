@@ -41,4 +41,4 @@ it('commits a multi-file session atomically',async()=>{const {r}=await repo();co
 // The storage version is a FACT about this database, and writing it as a literal only meant editing
 // this line on every migration; asserting it equals migrations.length also catches the real bug, a
 // migration declared but never applied.
-it('keeps the export contract compatible and identifies the storage schema separately',async()=>{const {r}=await repo();const data=await r.exportAll();expect(data.schema_version).toBe(2);expect(data.database_schema_version).toBe(migrations.length);});
+it('keeps the export contract compatible and identifies the storage schema separately',async()=>{const {r}=await repo();const data=await r.exportAll();expect(data.schema_version).toBe(3);expect(data.database_schema_version).toBe(migrations.length);});

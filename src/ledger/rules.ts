@@ -1,5 +1,6 @@
 import { merchantName } from '../ingest/normalize';
 import type { NormalizedRow } from '../ingest/types';
+import type { Driver } from '../core/db/driver';
 export type CategoryRule = { id: string; priority: number; merchant: string; category: string };
 
 /**
@@ -123,17 +124,42 @@ const INCOME_HINTS: readonly (readonly [RegExp, string])[] = [
   [/\b(?:INTEREST\s?PAID|INTEREST\s?CREDIT|DIVIDEND)\b/, 'Interest & investment income'],
 ];
 
-export function categorize(row: NormalizedRow, rules: readonly CategoryRule[], defaults: Readonly<Record<string, string>> = {}, mcc: string | null = null): { category: string | null; confidence: number; reason: string } {
-  const rule = [...rules].sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id)).find(r => merchantName(r.merchant) === row.merchant);
-  if (rule) return { category: rule.category, confidence: 10000, reason: 'Your merchant rule' };
-  if (defaults[row.merchant]) return { category: defaults[row.merchant]!, confidence: 9500, reason: 'Confirmed merchant default' };
-  if (mcc && mccCategories[mcc]) return { category: mccCategories[mcc]!, confidence: 9200, reason: `Merchant category code ${mcc}` };
+export type CategorySource = 'rule' | 'default' | 'ai' | 'mcc' | 'hint' | 'none';
+// Rules sorted and keyed once per list, not once per row.
+const ruleIndex = new WeakMap<readonly CategoryRule[], Map<string, CategoryRule>>();
+function ruleFor(rules: readonly CategoryRule[], merchant: string): CategoryRule | undefined {
+  let index = ruleIndex.get(rules);
+  if (!index) {
+    index = new Map();
+    for (const rule of [...rules].sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id))) { const key = merchantName(rule.merchant); if (!index.has(key)) index.set(key, rule); }
+    ruleIndex.set(rules, index);
+  }
+  return index.get(merchant);
+}
+
+/** Strongest first: owner rule, confirmed default, Claude's category, MCC, description hint. An owner's own tag is applied by the caller and beats all of these. */
+export function categorize(row: NormalizedRow, rules: readonly CategoryRule[], defaults: Readonly<Record<string, string>> = {}, mcc: string | null = null, ai: Readonly<Record<string, string>> = {}): { category: string | null; confidence: number; reason: string; source: CategorySource } {
+  const rule = ruleFor(rules, row.merchant);
+  if (rule) return { category: rule.category, confidence: 10000, reason: 'Your merchant rule', source: 'rule' };
+  if (Object.hasOwn(defaults, row.merchant)) return { category: defaults[row.merchant]!, confidence: 9500, reason: 'Confirmed merchant default', source: 'default' };
+  if (Object.hasOwn(ai, row.merchant)) return { category: ai[row.merchant]!, confidence: 9300, reason: 'Sorted by Claude', source: 'ai' };
+  if (mcc && mccCategories[mcc]) return { category: mccCategories[mcc]!, confidence: 9200, reason: `Merchant category code ${mcc}`, source: 'mcc' };
   // Money arriving is checked against the income wording first — SALARY means something different in
   // "SALARY PAYMENT" than it would in a description of something bought — and falls through to the same
   // brand list a purchase would, since a refund from a shop still names the shop.
   const incoming = BigInt(row.minor) > 0n;
   const found = (incoming ? [...INCOME_HINTS, ...HINTS] : HINTS).find(([test]) => test.test(row.merchant));
   return found
-    ? { category: found[1], confidence: 7000, reason: 'Suggested from description; confirm before applying' }
-    : { category: null, confidence: 0, reason: 'Uncategorised; choose a category' };
+    ? { category: found[1], confidence: 7000, reason: 'Suggested from description; confirm before applying', source: 'hint' }
+    : { category: null, confidence: 0, reason: 'Uncategorised; choose a category', source: 'none' };
+}
+
+/** The owner's merchant rules, as categorize() reads them. */
+export async function ownerRules(driver: Driver): Promise<CategoryRule[]> {
+  const rows = await driver.query("SELECT id,priority,matcher,action FROM rules WHERE created_by='user' ORDER BY priority,id");
+  return rows.flatMap(row => { const match: unknown = JSON.parse(String(row.matcher)), action: unknown = JSON.parse(String(row.action)); if (match && action && typeof match === 'object' && typeof action === 'object' && 'merchant' in match && 'category' in action && typeof match.merchant === 'string' && typeof action.category === 'string') return [{ id: String(row.id), priority: Number(row.priority), merchant: match.merchant, category: action.category }]; return []; });
+}
+/** Categories the owner confirmed as a merchant's default. */
+export async function merchantDefaults(driver: Driver): Promise<Record<string, string>> {
+  return Object.fromEntries((await driver.query('SELECT m.canonical_name,c.name FROM merchants m JOIN categories c ON c.id=m.default_category_id')).map(r => [String(r.canonical_name), String(r.name)]));
 }

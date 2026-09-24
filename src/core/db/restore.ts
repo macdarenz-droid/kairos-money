@@ -1,6 +1,6 @@
 import type { Driver, SqlRow, SqlValue } from './driver';
 import { migrations } from './migrate';
-import { tableIntroduced, tableNames } from './schema';
+import { SECRET_PREFIX, tableIntroduced, tableNames } from './schema';
 function object(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 /**
  * A BACKUP MADE BY AN OLDER KAIROS MUST STILL RESTORE.
@@ -37,6 +37,8 @@ function validate(value: unknown): Record<string, SqlRow[]> {
   const result: Record<string, SqlRow[]> = {};
   for (const name of tableNames) {
     if (!Object.hasOwn(tables, name) && (tableIntroduced[name] ?? 1) > value.database_schema_version) { result[name] = []; continue; }
+    // Exchange rates joined the export at schema_version 3; an older export never carried them.
+    if (!Object.hasOwn(tables, name) && name === 'fx_rates' && !(typeof value.schema_version === 'number' && value.schema_version >= 3)) { result[name] = []; continue; }
     const rows = tables[name];
     if (!Array.isArray(rows)) throw new Error(`The backup table ${name} is invalid. Nothing was restored.`);
     result[name] = rows.map((row: unknown) => {
@@ -49,6 +51,8 @@ function validate(value: unknown): Record<string, SqlRow[]> {
       return parsed;
     });
   }
+  if (result['app_settings']?.some(row => String(row.key).startsWith(SECRET_PREFIX)))
+    throw new Error('This backup holds a secret key, which never leaves a phone. Nothing was restored.');
   return result;
 }
 export async function restoreSnapshot(driver: Driver, snapshot: unknown): Promise<void> {
@@ -57,19 +61,21 @@ export async function restoreSnapshot(driver: Driver, snapshot: unknown): Promis
     for (const table of tableNames) {
       // Today calculates these derived tables even before the first account exists.
       // They are replaced atomically with the backup, not treated as user ledger data.
-      const generated = ['categories', 'app_settings', 'signals', 'profiles', 'insights'].includes(table);
+      const generated = ['categories', 'app_settings', 'signals', 'profiles', 'insights', 'fx_rates'].includes(table);
       if (!generated && Number((await driver.query(`SELECT COUNT(*) AS count FROM ${table}`))[0]?.count) > 0)
         throw new Error('Restore requires an empty ledger. Export or back up this installation before resetting it.');
       const columns = (await driver.query(`PRAGMA table_info(${table})`)).map(row => String(row.name));
       for (const row of tables[table] ?? []) if (Object.keys(row).length !== columns.length || columns.some(column => !Object.hasOwn(row, column)))
         throw new Error(`The backup table ${table} has incompatible columns. Nothing was restored.`);
     }
+    const secrets = await driver.query(`SELECT key,value FROM app_settings WHERE key LIKE '${SECRET_PREFIX}%'`);
     await driver.execute('PRAGMA defer_foreign_keys=ON');
     for (const table of [...tableNames].reverse()) await driver.execute(`DELETE FROM ${table}`);
     for (const table of tableNames) for (const row of tables[table] ?? []) {
       const columns = Object.keys(row);
       await driver.execute(`INSERT INTO ${table} (${columns.map(column => `"${column}"`).join(',')}) VALUES (${columns.map(() => '?').join(',')})`, columns.map(column => row[column] ?? null));
     }
+    for (const secret of secrets) await driver.execute('INSERT INTO app_settings(key,value) VALUES(?,?)', [secret.key ?? null, secret.value ?? null]);
     if ((await driver.query('PRAGMA foreign_key_check')).length) throw new Error('The backup has broken transaction links. Nothing was restored.');
   });
 }

@@ -205,7 +205,16 @@ export const app_settings = sqliteTable('app_settings', {
   value: text('value').notNull(),
 });
 
-export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings, debts, ious };
+export const fx_rates = sqliteTable('fx_rates', {
+  as_of: text('as_of').notNull(),
+  base: text('base').notNull(),
+  quote: text('quote').notNull(),
+  rate_e8: integer('rate_e8').notNull(),
+  source: text('source').notNull(),
+  fetched_at: text('fetched_at').notNull(),
+}, table => [primaryKey({ columns: [table.as_of, table.base, table.quote] })]);
+
+export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings, debts, ious, fx_rates };
 /**
  * The migration each table first appeared in.
  *
@@ -218,5 +227,7 @@ export const schema = { accounts, import_batches, coverage_ranges, categories, m
  * Add a row here whenever a migration creates a table. A table absent from this map is assumed to have
  * been there from the beginning, which is true of the sixteen from migration 1.
  */
-export const tableIntroduced: Partial<Record<(typeof tableNames)[number], number>> = { debts: 5, ious: 6 };
-export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings', 'debts', 'ious'] as const;
+/** app_settings keys under this prefix hold secrets: never exported, backed up or restored. */
+export const SECRET_PREFIX = 'secret:';
+export const tableIntroduced: Partial<Record<(typeof tableNames)[number], number>> = { fx_rates: 4, debts: 5, ious: 6 };
+export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings', 'debts', 'ious', 'fx_rates'] as const;
