@@ -110,7 +110,7 @@ function Tile({label, figure, percent, note, spark}: {
   label: string; figure: ReactNode; percent?: string | null; note?: string;
   spark?: {values: string[]; tone: 'in' | 'out'} | null;
 }) {
-  return <div className="band-tile">
+  return <div className="card band-tile">
     <span className="band-label">{label}</span>
     <span className="band-figure">{figure}</span>
     {percent !== null && percent !== undefined ? <Change percent={percent}/> : note ? <span className="band-note">{note}</span> : null}

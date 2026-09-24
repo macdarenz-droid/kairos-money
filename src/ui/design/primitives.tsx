@@ -1,8 +1,8 @@
-import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type PropsWithChildren, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type PropsWithChildren, type ReactNode } from 'react';
 import { X, Home, List, Sparkles, UserRound, Search, Info } from 'lucide-react';
 import { format, type Money } from '../../core/money';
 import { Coin, SuccessDrop } from './Motion';
-export function Surface({ children, className = '' }: PropsWithChildren<{ className?: string }>) { return <section className={`surface ${className}`}>{children}</section>; }
+export function Surface({ children, className = '' }: PropsWithChildren<{ className?: string }>) { return <section className={`card ${className}`}>{children}</section>; }
 export function Row({ children, trailing }: PropsWithChildren<{ trailing?: ReactNode }>) { return <div className="row"><div>{children}</div>{trailing && <div className="row-trailing">{trailing}</div>}</div>; }
 export function Label({ children, muted = false }: PropsWithChildren<{ muted?: boolean }>) { return <span className={muted ? 'label muted' : 'label'}>{children}</span>; }
 export function Amount({ value, context, hero = false }: { value: Money; context: string; hero?: boolean }) {
@@ -14,11 +14,17 @@ export function Button({ children, variant = 'default', className = '', busy = f
 export function Input({ label, hint, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string | undefined }) {
   const id = useId(); return <label className="input-label" htmlFor={id}><span id={`${id}-label`}>{label}</span><input id={id} aria-labelledby={`${id}-label`} aria-describedby={hint ? `${id}-hint` : undefined} {...props}/>{hint && <span id={`${id}-hint`} className="meta">{hint}</span>}</label>;
 }
+/** Opens a dialog in the top layer; a later one always sits above an earlier one. */
+export function useModal() {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => { const dialog = ref.current; const previous = document.body.style.overflow; if (typeof dialog?.showModal === 'function') dialog.showModal(); else dialog?.setAttribute('open', ''); document.body.style.overflow = 'hidden'; return () => { if (typeof dialog?.close === 'function') dialog.close(); else dialog?.removeAttribute('open'); document.body.style.overflow = previous; }; }, []);
+  return ref;
+}
+const InSheet = createContext(false);
 export function Sheet({ title, children, onClose }: PropsWithChildren<{ title: string; onClose: () => void }>) {
-  const ref = useRef<HTMLDialogElement>(null); const id = useId();
-  useEffect(() => { const dialog = ref.current; const previous = document.body.style.overflow; dialog?.showModal(); document.body.style.overflow = 'hidden'; return () => { dialog?.close(); document.body.style.overflow = previous; }; }, []);
+  const ref = useModal(); const id = useId();
   return <dialog className="sheet" ref={ref} aria-labelledby={id} onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientY < rect.top || event.clientX < rect.left || event.clientX > rect.right) onClose(); } }}>
-    <header className="sheet-header"><h2 id={id}>{title}</h2><Button variant="quiet" className="icon-button" aria-label={`Close ${title}`} onClick={onClose}><X size={20}/></Button></header><div className="sheet-content">{children}</div>
+    <header className="sheet-header"><h2 id={id}>{title}</h2><Button variant="quiet" className="icon-button" aria-label={`Close ${title}`} onClick={onClose}><X size={20}/></Button></header><div className="sheet-content"><InSheet.Provider value={true}>{children}</InSheet.Provider></div>
   </dialog>;
 }
 /**
@@ -35,13 +41,18 @@ export function Sheet({ title, children, onClose }: PropsWithChildren<{ title: s
  * reading it; this is a real control with a real sheet behind it.
  */
 export function Explain({ title, children }: PropsWithChildren<{ title: string }>) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false); const inSheet = useContext(InSheet); const id = useId();
+  // Inside a sheet a second sheet would stack two modals; the answer opens in place instead.
   return <>
-    <button type="button" className="explain" aria-label={`What ${title} means`} onClick={() => setOpen(true)}>
+    <button type="button" className="explain" aria-label={`What ${title} means`} aria-expanded={inSheet ? open : undefined} aria-controls={inSheet && open ? id : undefined} onClick={() => setOpen(value => inSheet ? !value : true)}>
       <Info size={15} strokeWidth={1.8} aria-hidden="true"/>
     </button>
-    {open && <Sheet title={title} onClose={() => setOpen(false)}><div className="stack">{children}</div></Sheet>}
+    {open && (inSheet ? <div className="explain-inline stack" id={id}>{children}</div> : <Sheet title={title} onClose={() => setOpen(false)}><div className="stack">{children}</div></Sheet>)}
   </>;
+}
+/** An On/Off setting drawn as a switch; the setting's label is its name. */
+export function Switch({ label, on, onChange, disabled }: { label: string; on: boolean; onChange: () => void; disabled?: boolean | undefined }) {
+  return <button type="button" className="switch" aria-pressed={on} aria-label={label} disabled={disabled} onClick={onChange}><span className="switch-thumb" aria-hidden="true"/><span className="sr-only">{on ? 'On' : 'Off'}</span></button>;
 }
 
 export type Tab = 'Today' | 'Ledger' | 'Insights' | 'You';

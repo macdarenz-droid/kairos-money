@@ -1,4 +1,5 @@
 import { CoinStack } from './Motion';
+import { useModal } from './primitives';
 
 /**
  * The Kairos aperture, in motion.
@@ -55,7 +56,11 @@ export function KairosMark({size = 44, still = false}: {size?: number; still?: b
  * all of it — off-screen again, and harder to notice being wrong.
  */
 export function BusyOverlay({message}: {message: string}) {
-  return <div className="busy-overlay" role="status" aria-live="polite" aria-atomic="true">
-    <div className="busy-card"><CoinStack/><p>{message}</p></div>
-  </div>;
+  const ref = useModal();
+  // A modal dialog in the top layer, so it covers an open sheet; Escape cannot dismiss a running job.
+  return <dialog ref={ref} className="busy-dialog" aria-label={message} onCancel={event => event.preventDefault()}>
+    <div className="busy-overlay" role="status" aria-live="polite" aria-atomic="true">
+      <div className="busy-card"><CoinStack/><p>{message}</p></div>
+    </div>
+  </dialog>;
 }

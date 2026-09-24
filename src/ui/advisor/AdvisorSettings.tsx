@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {ADVISOR_MODELS, type AdvisorSettings as Settings} from '../../ledger/advisor';
-import {Button, Input, Row} from '../design/primitives';
+import {Button, Input, Row, Switch} from '../design/primitives';
 import {KairosAiMark} from '../design/Motion';
 import {useSession} from '../session';
 import {SortCategories} from './SortCategories';
@@ -25,7 +25,7 @@ export function AdvisorSettings() {
   const change = (next: Partial<Settings>) => act(() => session.run(repo => repo.advisor.save({...settings, ...next})));
   // One row per switch, like Biometric unlock: the label reads, the small button acts.
   const toggle = (label: string, line: string, on: boolean, flip: () => void, disabled = false) =>
-    <Row trailing={<Button aria-pressed={on} aria-label={label} disabled={disabled} onClick={flip}>{on ? 'On' : 'Off'}</Button>}>{label}<p>{line}</p></Row>;
+    <Row trailing={<Switch label={label} on={on} disabled={disabled} onChange={flip}/>}>{label}<p>{line}</p></Row>;
   return <section className="settings-section" aria-label="Kairos AI">
     <h2 className="heading-mark"><KairosAiMark size={20}/>Kairos AI</h2>
     <p className="meta">Runs on Claude with your own Anthropic key.</p>

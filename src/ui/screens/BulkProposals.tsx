@@ -31,7 +31,7 @@ export function BulkProposals({search=''}:{search?:string}){
  return <section className="section-gap">
   <div className="list-heading"><h2>Ready to categorise</h2><span className="meta">From merchants you have filed before</span></div>
   {proposals.map(p=><Row key={p.id} trailing={
-   <Button variant="primary" disabled={busy!==''} aria-label={`${p.label}. ${p.detail}`}
+   <Button disabled={busy!==''} aria-label={`${p.label}. ${p.detail}`}
     onClick={()=>void apply(p.id,p.prefill.ids,p.prefill.category)} busy={busy===p.id} busyLabel="Saving…">{`Set ${p.prefill.category}`}</Button>}>
    <span>{p.label}</span>
    <p className="meta">{p.detail}</p>
