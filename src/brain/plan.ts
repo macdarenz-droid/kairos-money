@@ -1,5 +1,5 @@
 import {audit} from '../intelligence/audit';
-import {goalFunding, payRise, scheduledDates} from '../intelligence/forecast';
+import {goalFunding, payCycle, payRise, scheduledDates} from '../intelligence/forecast';
 import {payModel} from './shared';
 import type {BrainInputs, Goals, Plan} from './types';
 
@@ -7,7 +7,7 @@ import type {BrainInputs, Goals, Plan} from './types';
 export function plan(input: BrainInputs): Plan {
   const s = input.snapshot;
   const held = (BigInt(input.holdings.spendableMinor) + BigInt(input.holdings.savedMinor)).toString();
-  const a = audit(s, {debts: input.debts, spendableMinor: held});
+  const a = audit(s, {debts: input.debts, spendableMinor: held, cancelled: input.cancelled});
   const f = a.cashFlow;
   return {
     status: a.status, window: a.window,
@@ -21,7 +21,10 @@ export function plan(input: BrainInputs): Plan {
     debt: a.debt ? {...a.debt, cheaper: {...a.debt.cheaper}, other: {...a.debt.other}} : null,
     targets: a.targets,
     goalsPerPay: goals(input).items.map(g => ({goalId: g.id, perPayMinor: g.perPayMinor})),
-    payRise: payRise(s).map(p => ({employer: p.employer, increaseMinor: p.increment, suggestedMinor: p.suggested, evidence: p.evidence})),
+    payRise: payRise(s).map(p => {
+      const cycle = payCycle(s).find(c => c.employer === p.employer)!;
+      return {employer: p.employer, increaseMinor: p.increment, suggestedMinor: p.suggested, paysPerYear: cycle.monthly ? 12 : Math.floor(365 / cycle.interval), evidence: p.evidence};
+    }),
     income: a.income, evidence: a.evidence,
   };
 }

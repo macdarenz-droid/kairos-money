@@ -7,7 +7,7 @@ import type {BrainInputs, DebtTarget, Today} from './types';
 /** The only spend/keep-today figures in the app. */
 export function today(input: BrainInputs, targets: readonly DebtTarget[]): Today {
   const s = input.snapshot;
-  const keep = keepToday(s, input.holdings.spendableMinor, input.bufferMinor);
+  const keep = keepToday(s, input.holdings.spendableMinor, input.bufferMinor, input.cancelled);
   const horizonEnd = shift(s.asOf, keep.days);
   const committed = bills(s).filter(b => !input.cancelled.has(b.merchant)).flatMap(b =>
     scheduledDates({next: b.next, interval: b.interval, ...(b.monthly ? {monthly: b.monthly} : {})}, horizonEnd)

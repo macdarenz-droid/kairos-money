@@ -34,5 +34,5 @@ function coverage(input: BrainInputs): Coverage {
   const start = from && from > shift(s.asOf, -364) ? from : shift(s.asOf, -364);
   const {covered, gaps} = from ? coveredDays(s, start, s.asOf) : {covered: 0, gaps: []};
   return {tier: from ? tierFor(s, start, s.asOf) : 'insufficient', from, to: from ? s.asOf : null, coveredDays: covered,
-    totalDays: from ? day(s.asOf) - day(start) + 1 : 0, gaps, unconverted: s.unconverted ?? []};
+    totalDays: from ? day(s.asOf) - day(start) + 1 : 0, gaps, unconverted: [...new Set([...s.unconverted ?? [], ...input.debtsLeftOut ?? []])].sort()};
 }

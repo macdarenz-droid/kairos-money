@@ -26,7 +26,7 @@ const ALLOWED = ['src/core/net/rates.ts', 'src/core/net/claude.ts'];
 // CapacitorHttp is the NATIVE client, outside the WebView and outside CORS. It is the way the phone
 // actually reaches the rate source, so leaving it out of this rule would have quietly retired the
 // guarantee this test exists to keep: one module reaches the network, and it cannot read the ledger.
-const CALLS = /(?:await|=|return|\()\s*fetch\s*\(|\bnew\s+(?:XMLHttpRequest|WebSocket|EventSource)\b|\bsendBeacon\s*\(|\bCapacitorHttp\b/;
+const CALLS = /(?:await|=|return|\()\s*fetch\s*\(|\b(?:globalThis|window|self)\.fetch\b|\bnew\s+(?:XMLHttpRequest|WebSocket|EventSource)\b|\bsendBeacon\s*\(|\bCapacitorHttp\b/;
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap(entry => {
@@ -70,4 +70,17 @@ it('keeps the ledger out of the one module that can reach it', () => {
   // carry a balance, a merchant or an account number to a stranger's server.
   for (const forbidden of ['/db/', 'repository', 'drizzle', 'schema', 'driver', 'ledger/', 'intelligence'])
     expect(code).not.toContain(forbidden);
+});
+
+it('catches the global fetch however it is named', () => {
+  for (const call of ['globalThis.fetch(url)', 'window.fetch(url)', 'self.fetch(url)', 'const f = globalThis.fetch.bind(globalThis)'])
+    expect(CALLS.test(call), call).toBe(true);
+  for (const safe of ['source.fetch(options)', 'async fetch(options) {'])
+    expect(CALLS.test(safe), safe).toBe(false);
+});
+
+it('imports the Claude SDK only in the advisor module', () => {
+  const importers = sourceFiles('src').filter(path => specifiers(path).some(s => s.startsWith('@anthropic-ai/')))
+    .map(path => path.replace(/\\/g, '/'));
+  expect(importers).toEqual(['src/core/net/claude.ts']);
 });

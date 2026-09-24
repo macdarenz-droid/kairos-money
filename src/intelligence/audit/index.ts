@@ -1,6 +1,5 @@
-import {abs, day, ratio, shift, sum, type Snapshot, type Transaction} from '../model';
+import {abs, day, isSmall, ratio, shift, sum, type Snapshot, type Transaction} from '../model';
 import {kindAmount} from '../allocations';
-import {currencyDigits} from '../../core/money';
 import {payCycle, payRise, recurrences} from '../forecast';
 import {addMonths, compare, monthsUntil, paymentFor, payoff, type Debt, type Plan} from '../debt';
 import {nextPayDate} from '../method';
@@ -166,6 +165,8 @@ type Options = {
   debts?: readonly Debt[];
   /** What is held to spend now, in the snapshot's currency. */
   spendableMinor?: string;
+  /** Merchant keys the owner has cancelled: no longer a leak to point at. */
+  cancelled?: ReadonlySet<string>;
 };
 
 /** Settled money that moved in or out on the accounts in view, not between them. */
@@ -219,6 +220,7 @@ export function audit(s: Snapshot, options: Options = {}): Audit {
   const leaks: Leak[] = [];
   const disc = expenses.filter(t => t.kind === 'discretionary' || t.kind === 'unknown');
   const subs = recurrences(s, {requireCoverage: false}).filter(r => {
+    if (options.cancelled?.has(r.merchant)) return false;
     const sample = s.transactions.find(t => t.id === r.evidence[0]);
     // Only a chosen repeat is a subscription; an uncategorised one could be rent or a loan.
     return sample?.kind === 'discretionary';
@@ -230,8 +232,7 @@ export function audit(s: Snapshot, options: Options = {}): Audit {
   }
   // Fees and cash withdrawals are leaks of their own below, not purchases, and not a way of living.
   const lifestyle = disc.filter(t => t.category !== 'Bank fees' && t.category !== 'Cash withdrawal');
-  const limit = 15n * 10n ** BigInt(currencyDigits[s.currency] ?? 2);
-  const small = lifestyle.filter(t => abs(BigInt(t.minor)) <= limit);
+  const small = lifestyle.filter(t => isSmall(t.minor, s.currency));
   if (small.length >= 5) {
     const perMonth = monthly(sum(small.map(t => abs(BigInt(t.minor)))), days);
     leaks.push({kind: 'small-purchases', label: LEAK_LABELS['small-purchases'], monthlyMinor: perMonth.toString(),

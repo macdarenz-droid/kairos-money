@@ -1,4 +1,3 @@
-import {currencyDigits} from '../core/money';
 import {merchantName} from '../ingest/normalize';
 import {abs, day, iso, median, shift, sum, type Snapshot, type Transaction} from '../intelligence/model';
 import {payCycle, recurrences, type Recurrence} from '../intelligence/forecast';
@@ -14,9 +13,6 @@ export const upTo3 = <T>(list: readonly T[]): UpTo3<T> => list.length === 0 ? []
 /** The merchant key the rules, the categoriser and the brain share. */
 export const merchantKey = (t: Pick<Transaction, 'description'>) => merchantName(t.description);
 
-/** A purchase at or under 15 units of the display currency is small (owner decision 2026-09-24). */
-export const SMALL_UNITS = 15n;
-export const smallLimit = (s: Snapshot) => SMALL_UNITS * 10n ** BigInt(currencyDigits[s.currency]);
 
 const inView = (s: Snapshot, t: Transaction) => t.currency === s.currency && s.accountIds.includes(t.accountId) && t.date <= s.asOf;
 
@@ -82,11 +78,13 @@ export function unusualCharge(s: Snapshot): {row: Transaction; usual: bigint} | 
   for (const list of byMerchant.values()) {
     if (list.length < 5) continue;
     const sorted = [...list].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
-    const latest = sorted.at(-1)!;
-    if (day(s.asOf) - day(latest.date) > UNUSUAL_RECENT_DAYS) continue;
-    const usual = median(sorted.slice(0, -1).map(t => abs(BigInt(t.minor)))), amount = abs(BigInt(latest.minor));
-    if (usual <= 0n || amount < usual * UNUSUAL_MULTIPLE || amount - usual < typical) continue;
-    if (!worst || amount - usual > abs(BigInt(worst.row.minor)) - worst.usual) worst = {row: latest, usual};
+    // Every recent charge is judged against the visits before it, so a later normal visit cannot hide one.
+    for (const [i, row] of sorted.entries()) {
+      if (i < 4 || day(s.asOf) - day(row.date) > UNUSUAL_RECENT_DAYS) continue;
+      const usual = median(sorted.slice(0, i).map(t => abs(BigInt(t.minor)))), amount = abs(BigInt(row.minor));
+      if (usual <= 0n || amount < usual * UNUSUAL_MULTIPLE || amount - usual < typical) continue;
+      if (!worst || amount - usual > abs(BigInt(worst.row.minor)) - worst.usual) worst = {row, usual};
+    }
   }
   return worst;
 }

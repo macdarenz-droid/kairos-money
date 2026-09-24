@@ -193,6 +193,14 @@ export function importService(driver: Driver) {
       await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)', [prefix + id, JSON.stringify(value && typeof value === 'object' && 'id' in value ? {...value, id} : value)]);
       await driver.execute('DELETE FROM app_settings WHERE key=?', [key]);
     }
+    // A refund link names two transactions, and either one can be the row that moved.
+    for (const r of await driver.query("SELECT key,value FROM app_settings WHERE key>='refund:' AND key<'refund;'")) {
+      const link = JSON.parse(String(r.value)) as {creditId: string; purchaseId: string};
+      const creditId = moved.get(link.creditId) ?? link.creditId, purchaseId = moved.get(link.purchaseId) ?? link.purchaseId;
+      if (creditId === link.creditId && purchaseId === link.purchaseId) continue;
+      await driver.execute('DELETE FROM app_settings WHERE key=?', [String(r.key)]);
+      await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)', ['refund:' + creditId, JSON.stringify({...link, creditId, purchaseId})]);
+    }
   }
   async function rebuild() {
     const all = await batches(), docs = all.filter(b => b.status === 'committed');

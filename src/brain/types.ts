@@ -183,7 +183,8 @@ export type DebtStrategy = {
   savedMonths: number | null;
 };
 export type GoalPerPay = {goalId: string; perPayMinor: Minor | null};
-export type PayRise = {employer: string; increaseMinor: Minor; suggestedMinor: Minor; evidence: Evidence};
+/** paysPerYear follows the employer's own cycle: 12 when monthly, else 365 over the interval. */
+export type PayRise = {employer: string; increaseMinor: Minor; suggestedMinor: Minor; paysPerYear: number; evidence: Evidence};
 export type Plan = {
   /** 'hidden' while triage is active. */
   status: 'ok' | 'not_yet' | 'hidden';
@@ -246,6 +247,8 @@ export type BrainInputs = {
   /** Open debts already in the display currency (see openDebts). */
   debts: readonly import('../intelligence/debt').Debt[];
   scheduled: readonly import('../intelligence/debt').Scheduled[];
+  /** Currencies of open debts left out because no rate reaches the display currency. */
+  debtsLeftOut?: readonly Currency[];
   /** Lower-case merchant keys the owner has cancelled. */
   cancelled: ReadonlySet<string>;
   dismissals: Readonly<Partial<Record<AdviceRule, Dismissal>>>;

@@ -19,7 +19,8 @@ export function SortCategories({onClose}: {onClose: () => void}) {
     setBusy(true); setFailure(''); setError('');
     try {
       const result = await sortMerchants(session.run, false);
-      if (result.ok) { setLatest(result.run); setCheck(result.run.proposals); await refresh(); } else setFailure(result.reason);
+      if (result.run) { setLatest(result.run); setCheck(result.run.proposals); await refresh(); }
+      if (!result.ok) setFailure(result.reason);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   }
   const guard = (work: () => Promise<unknown>) => { setError(''); void work().then(refresh).catch((e: unknown) => setError(e instanceof Error ? e.message : String(e))); };
@@ -35,7 +36,7 @@ export function SortCategories({onClose}: {onClose: () => void}) {
       {shown && <pre className="payload" aria-label="What is sent">{JSON.stringify({categories: editableCategories, examples: data.payload.sent.examples, merchants: data.payload.sent.merchants}, null, 2)}</pre>}
       <Button variant="primary" disabled={busy || !count} onClick={() => void start()}>{busy ? 'Sorting…' : 'Start sorting'}</Button>
     </>}
-    {failure && <p role="alert">{REASONS[failure]} Nothing was changed.</p>}
+    {failure && <p role="alert">{REASONS[failure]} {latest ? 'The rest were not sorted.' : 'Nothing was changed.'}</p>}
     {error && <p role="alert">{error}</p>}
     {latest && <p role="status">Sorted {latest.applied.length} {latest.applied.length === 1 ? 'merchant' : 'merchants'}.</p>}
     {check.length > 0 && <section className="stack" aria-label="Check these"><h3>Check these</h3>

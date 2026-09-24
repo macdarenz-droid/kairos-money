@@ -6,7 +6,7 @@ import {costMicros, MAX_MERCHANTS} from '../../core/net/claude';
 
 export type Run = <T>(fn: (repo: Repository) => Promise<T>) => Promise<T>;
 export type SortReason = FailureReason | 'setup' | 'nothing';
-export type SortResult = {ok: true; run: AiRun; usage: Usage} | {ok: false; reason: SortReason};
+export type SortResult = {ok: true; run: AiRun; usage: Usage} | {ok: false; reason: SortReason; run?: AiRun};
 
 /** Plain words for every way a call can fail; nothing is changed in any of them. */
 export const REASONS: Record<SortReason, string> = {
@@ -43,9 +43,14 @@ export async function sortMerchants(run: Run, onlyNew: boolean, options: Options
   const {categorise} = await import('../../core/net/claude');
   const result = await categorise({merchants: payload.sent.merchants, examples: payload.sent.examples}, editableCategories, key, settings.model, options);
   await logCall(run, result, settings.model);
-  if (!result.ok) return {ok: false, reason: result.reason};
-  const answers = result.value.flatMap(a => payload.keys[a.id] ? [{key: payload.keys[a.id]!, category: a.category, confidence: a.confidence}] : []);
-  return {ok: true, run: await run(repo => repo.aiCategories.applyRun(answers, result.usage.model)), usage: result.usage};
+  const keyed = (list: readonly {id: string; category: string; confidence: 'high' | 'medium' | 'low'}[]) =>
+    list.flatMap(a => payload.keys[a.id] ? [{key: payload.keys[a.id]!, category: a.category, confidence: a.confidence}] : []);
+  if (!result.ok) {
+    // Answers from batches before the failure were paid for, so they are kept.
+    if (!result.partial.length) return {ok: false, reason: result.reason};
+    return {ok: false, reason: result.reason, run: await run(repo => repo.aiCategories.applyRun(keyed(result.partial), result.usage?.model ?? settings.model))};
+  }
+  return {ok: true, run: await run(repo => repo.aiCategories.applyRun(keyed(result.value), result.usage.model)), usage: result.usage};
 }
 
 /** After an import: sorts only new, uncategorised merchants when the owner switched that on. Returns a sentence to show, or ''. */
@@ -54,5 +59,7 @@ export async function sortAfterImport(run: Run, options: Options = {}): Promise<
   if (!settings.enabled || !settings.sortConsent || !settings.autoSort) return '';
   const result = await sortMerchants(run, true, options);
   if (result.ok) return result.run.applied.length ? `Claude sorted ${result.run.applied.length} new ${result.run.applied.length === 1 ? 'merchant' : 'merchants'}.` : '';
-  return result.reason === 'nothing' || result.reason === 'setup' ? '' : `New merchants were not sorted: ${REASONS[result.reason]}`;
+  if (result.reason === 'nothing' || result.reason === 'setup') return '';
+  const done = result.run?.applied.length ?? 0;
+  return done ? `Claude sorted ${done} new ${done === 1 ? 'merchant' : 'merchants'}; the rest were not: ${REASONS[result.reason]}` : `New merchants were not sorted: ${REASONS[result.reason]}`;
 }

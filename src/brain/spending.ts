@@ -1,7 +1,8 @@
 import {abs, day, shift, sum, type Snapshot} from '../intelligence/model';
 import {categoryAmounts} from '../intelligence/allocations';
 import {moneyBand} from '../intelligence/visuals/band';
-import {bills, inflowRows, merchantKey, out, payModel, smallLimit, spendingRows, tierFor} from './shared';
+import {bills, inflowRows, merchantKey, out, payModel, spendingRows, tierFor} from './shared';
+import {isSmall} from '../intelligence/model';
 import type {Band, Bill, BrainInputs, CategoryShare, Day, MerchantShare, MonthFlow, Spending, Total, Weekday} from './types';
 
 const share = (part: bigint, whole: bigint) => (whole > 0n ? part * 10000n / whole : 0n).toString();
@@ -73,7 +74,7 @@ export function spending(input: BrainInputs): Spending {
     return {date, outMinor: out(list).toString(), evidence: list.map(t => t.id)};
   });
   const thisStart = asOf.slice(0, 8) + '01', lastEnd = shift(thisStart, -1), lastStart = lastEnd.slice(0, 8) + '01';
-  const small = rows.filter(t => abs(BigInt(t.minor)) <= smallLimit(s));
+  const small = rows.filter(t => isSmall(t.minor, s.currency));
 
   return {
     window: {start, end: asOf, days: day(asOf) - day(start) + 1, tier: tierFor(s, start, asOf)},

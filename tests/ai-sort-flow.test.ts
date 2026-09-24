@@ -7,13 +7,13 @@ import type {Document, ImportContext} from '../src/ingest/types';
 import {estimateMicros, sortAfterImport, sortMerchants} from '../src/ui/advisor/sort';
 
 const context: ImportContext = {accountId: 'acct-7', accountKind: 'checking', currency: 'AUD', period: {start: '2026-02-01', end: '2026-02-28'}, dateOrder: 'DMY', decimal: '.', creditPositivePurchases: false};
-const raw = (sourceId: string, date: string, description: string, amount: string) =>
+const raw_ = (sourceId: string, date: string, description: string, amount: string) =>
   normalizeRow({sourceId, date, description, amount, direction: 'debit', confidence: 9800}, context);
 
 async function ledger() {
   const {driver, raw: db} = memoryDriver(); await migrate(driver); const repo = repository(driver);
   await repo.addAccount({id: 'acct-7', name: 'Everyday', institution: 'Synthetic', type: 'checking', currency: 'AUD', mask_last4: null, opening_balance_minor: 0n});
-  const rows = [raw('0', '2026-02-03', 'CAFE LUNA', '4.50'), raw('1', '2026-02-05', 'MYSTERY CO', '9.00')];
+  const rows = [raw_('0', '2026-02-03', 'CAFE LUNA', '4.50'), raw_('1', '2026-02-05', 'MYSTERY CO', '9.00')];
   const fileHash = hash('ai-flow');
   const doc: Document = {id: hash(JSON.stringify(['acct-7', fileHash])), hash: fileHash, fileName: 's.csv', parser: 'synthetic', context,
     opening: '10000', closing: String(10000 - 450 - 900), payslip: null, sourceRank: 2, sourceKind: 'statement', integrityTier: 'A', rows};
@@ -80,4 +80,25 @@ it('sorts only new merchants after an import, and only when switched on', async 
   expect([await category('CAFE LUNA'), await category('MYSTERY CO')]).toEqual(['Eating out', 'Shopping']);
   expect(await sortAfterImport(run, options)).toBe('');
   db.close();
+});
+
+it('applies the batches Claude answered before a later one failed', async () => {
+  const {driver, raw} = memoryDriver(); await migrate(driver); const repo = repository(driver);
+  await repo.addAccount({id: 'acct-7', name: 'Everyday', institution: 'Synthetic', type: 'checking', currency: 'AUD', mask_last4: null, opening_balance_minor: 0n});
+  const rows = Array.from({length: 151}, (_, i) => raw_(String(i), `2026-02-${String(1 + (i % 28)).padStart(2, '0')}`, `SHOP NUMBER ${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + Math.floor(i / 26))}`, '1.00'));
+  const fileHash = hash('ai-partial');
+  const doc: Document = {id: hash(JSON.stringify(['acct-7', fileHash])), hash: fileHash, fileName: 's.csv', parser: 'synthetic', context,
+    opening: '100000', closing: String(100000 - 151 * 100), payslip: null, sourceRank: 2, sourceKind: 'statement', integrityTier: 'A', rows};
+  await repo.imports.stage(doc);
+  for (const {row, blocked} of (await repo.imports.review(doc.id)).items) if (blocked) await repo.imports.correct(doc.id, row.sourceId, row, false);
+  await repo.imports.commit(doc.id);
+  await repo.advisor.save(on); await repo.advisor.setKey('sk-ant-synthetic-0123456789abcdef');
+  let calls = 0;
+  const answerFirst = async (url: unknown, init?: RequestInit) => calls++ ? new Response(JSON.stringify({type: 'error', error: {type: 'overloaded_error', message: 'x'}}), {status: 529, headers: {'content-type': 'application/json'}})
+    : reply((asked: {id: string}[]) => ({answers: asked.map(m => ({id: m.id, category: 'Shopping', confidence: 'high'}))}))(url, init);
+  const result = await sortMerchants(<T,>(fn: (r: Repository) => Promise<T>) => fn(repo), false, {fetch: answerFirst as typeof fetch, maxRetries: 0});
+  expect(result).toMatchObject({ok: false, reason: 'busy'});
+  expect(!result.ok && result.run?.applied.length).toBe(150);
+  expect((await repo.privacy.advisorCalls()).map(c => c.result)).toEqual(['busy']);
+  raw.close();
 });
