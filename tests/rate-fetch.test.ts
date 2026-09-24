@@ -1,6 +1,7 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {currency} from '../src/core/money';
 import {fetchRates} from '../src/core/net/rates';
+import {expandDecimal} from '../src/core/money';
 
 const PHP = currency('PHP'), AUD = currency('AUD'), USD = currency('USD');
 const answer = (body: unknown, init: ResponseInit = {}) =>
@@ -64,5 +65,16 @@ describe('what the rate fetch says when it does not come back', () => {
   it('refuses an answer that does not say which day it is for', async () => {
     answer({base: 'PHP', rates: {AUD: 0.0264}});
     await expect(fetchRates(PHP, [AUD])).rejects.toThrow('did not say which day');
+  });
+});
+
+describe('rates printed in exponent form', () => {
+  it('reads 5.25e-7 as 0.000000525, not as 5.25', async () => {
+    answer({base: 'PHP', date: '2026-09-16', rates: {AUD: 5.25e-7, USD: 1.5e21}});
+    const response = await fetchRates(PHP, [AUD, USD]);
+    expect(response.rates).toEqual({AUD: 53n, USD: 150000000000000000000000000000n});
+  });
+  it('moves the point by characters, whatever the leading zeros', () => {
+    expect(['0.5e-1', '5.25e-7', '1.5e21', '1E+2', '12.5e-1', '7'].map(expandDecimal)).toEqual(['0.05', '0.000000525', '1500000000000000000000', '100', '1.25', '7']);
   });
 });

@@ -2,13 +2,9 @@ import { unzipSync, strFromU8 } from 'fflate';
 import { ImportFailure } from '../types';
 import { inferColumns } from '../parse/csv';
 import { shiftDay } from '../normalize';
+import { expandDecimal } from '../../core/money';
+export { expandDecimal };
 function xml(text: string): XMLDocument { if (/<!DOCTYPE|<!ENTITY/i.test(text)) throw new Error('Spreadsheet document entities are not supported. Export CSV.'); const document = new DOMParser().parseFromString(text, 'application/xml'); if (document.querySelector('parsererror')) throw new Error('Spreadsheet XML is damaged. Export the sheet again.'); return document; }
-export function expandDecimal(value: string): string {
-  const m = /^(-?)(\d+)(?:\.(\d+))?[Ee]([+-]?\d+)$/.exec(value); if (!m) return value;
-  const exponent = Number(m[4]); if (Math.abs(exponent) > 30) throw new Error('A spreadsheet value is outside the supported range.');
-  const digits = m[2]! + (m[3] ?? ''), point = m[2]!.length + exponent;
-  return m[1]! + (point <= 0 ? '0.' + '0'.repeat(-point) + digits : point >= digits.length ? digits + '0'.repeat(point - digits.length) : digits.slice(0, point) + '.' + digits.slice(point));
-}
 export function extractXlsx(bytes: Uint8Array): string[][] {
   let total = 0; const files = unzipSync(bytes, { filter: file => { total += file.originalSize; if (total > 33554432) throw new Error('The expanded workbook exceeds 32 MB. Export only the statement sheet as CSV.'); return /^(xl\/(worksheets\/sheet\d+\.xml|sharedStrings\.xml|workbook\.xml))$/.test(file.name); } });
   const sheets = Object.keys(files).filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
@@ -42,7 +38,13 @@ export function extractXlsx(bytes: Uint8Array): string[][] {
  */
 export function datedSheet(rows: string[][], is1904: boolean): string[][] {
   const width = rows[0]?.length ?? 0; rows.forEach(r => { while (r.length < width) r.push(''); });
-  const mapping = inferColumns(rows[0] ?? []);
-  for (const row of rows.slice(1)) { const value = row[mapping.date] ?? ''; if (/^\d{1,6}$/.test(value)) { const serial = Number(value); if (!is1904 && serial === 60) throw new Error('Excel contains the nonexistent 29 February 1900. Correct the date.'); row[mapping.date] = shiftDay(is1904 ? '1904-01-01' : serial < 60 ? '1899-12-31' : '1899-12-30', serial); } }
+  let dates: number[];
+  try { dates = [inferColumns(rows[0] ?? []).date]; }
+  catch {
+    // Unknown headers are mapped by the owner later; a column of plausible date serials is still a date.
+    const data = rows.slice(1);
+    dates = (rows[0] ?? []).map((_, i) => i).filter(i => data.some(r => r[i]) && data.every(r => !r[i] || (/^\d{5}$/.test(r[i]!) && Number(r[i]) >= 20000 && Number(r[i]) <= 80000)));
+  }
+  for (const column of dates) for (const row of rows.slice(1)) { const value = row[column] ?? ''; if (/^\d{1,6}$/.test(value)) { const serial = Number(value); if (!is1904 && serial === 60) throw new Error('Excel contains the nonexistent 29 February 1900. Correct the date.'); row[column] = shiftDay(is1904 ? '1904-01-01' : serial < 60 ? '1899-12-31' : '1899-12-30', serial); } }
   return rows;
 }

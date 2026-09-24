@@ -1,5 +1,5 @@
 import { Capacitor, CapacitorHttp, type HttpResponse } from '@capacitor/core';
-import { currencyDigits, type Currency } from '../money';
+import { currencyDigits, expandDecimal, type Currency } from '../money';
 import { type Rate } from '../fx';
 
 /**
@@ -155,9 +155,9 @@ export async function fetchRates(base: Currency, quotes: readonly Currency[], on
   const rates: Partial<Record<Currency, bigint>> = {};
   for (const quote of wanted) {
     if (!Object.hasOwn(body.rates as object, quote)) continue;
-    const printed = new RegExp(`"${quote}"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)`).exec(block)?.[1];
+    const printed = new RegExp(`"${quote}"\\s*:\\s*(-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)`).exec(block)?.[1];
     if (printed === undefined) throw new Error(`The rate for ${base}/${quote} could not be read.`);
-    rates[quote] = decimalToE8(printed, `${base}/${quote}`);
+    rates[quote] = decimalToE8(expandDecimal(printed), `${base}/${quote}`);
   }
   if (!Object.keys(rates).length) throw new Error('The rate source knows none of these currencies.');
   return { asOf: body.date, base, rates };

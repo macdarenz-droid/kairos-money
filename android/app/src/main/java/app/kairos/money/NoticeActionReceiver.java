@@ -30,6 +30,6 @@ public class NoticeActionReceiver extends BroadcastReceiver {
         if (decision == null) return;
         NoticeStore.decide(context, id, decision);
         NotificationManager manager = context.getSystemService(NotificationManager.class);
-        if (manager != null) manager.cancel(900 + Math.abs(id.hashCode() % 64));
+        if (manager != null) manager.cancel(900 + NoticeStore.slot(context, id));
     }
 }

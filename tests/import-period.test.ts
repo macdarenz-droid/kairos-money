@@ -115,3 +115,15 @@ describe('an export whose rows fall outside the declared period', () => {
     expect(() => parseExport(unmappable, covering)).toThrow(MappingRequired);
   });
 });
+
+describe('a saved column mapping', () => {
+  const table = [['Date', 'Description', 'Amount'], ['2026-06-18', 'Synthetic payee', '-12.00'], ['2026-09-15', 'Synthetic payee', '-4.90']];
+  it('still checks the rows against the statement period', () => {
+    const saved = parseExport(table, {...context, period: {start: '2026-06-18', end: '2026-09-15'}}).mapping;
+    let thrown: unknown;
+    try { parseExport(table, context, saved); } catch (e) { thrown = e; }
+    expect(thrown).toBeInstanceOf(PeriodTooNarrow);
+    expect((thrown as PeriodTooNarrow).span).toEqual({start: '2026-06-18', end: '2026-09-15'});
+    expect(parseExport(table, {...context, period: {start: '2026-06-01', end: '2026-09-30'}}, saved).rows).toHaveLength(2);
+  });
+});

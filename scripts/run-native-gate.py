@@ -251,7 +251,7 @@ try:
     instrumentation('RevisionInstrumentedTest', 1)
     instrumentation('IntelligenceInstrumentedTest', 4)
     instrumentation('LedgerPerformanceInstrumentedTest', 1)
-    instrumentation('NoticeCaptureInstrumentedTest', 6)
+    instrumentation('NoticeCaptureInstrumentedTest', 7)
     instrumentation('QuickAddInstrumentedTest', 3)
     instrumentation('AccessibilityInstrumentedTest', 1)
     instrumentation('UsabilityBaselineInstrumentedTest', 1)

@@ -19,7 +19,7 @@ COUNTS = {
     'NotificationsInstrumentedTest': 1,
     'RevisionInstrumentedTest': 1, 'IntelligenceInstrumentedTest': 4,
     'LedgerPerformanceInstrumentedTest': 1,
-    'NoticeCaptureInstrumentedTest': 6,
+    'NoticeCaptureInstrumentedTest': 7,
     'QuickAddInstrumentedTest': 3,
     'AccessibilityInstrumentedTest': 1, 'UsabilityBaselineInstrumentedTest': 1, 'AcceptanceInstrumentedTest': 1,
     'PostDeleteInstrumentedTest': 1,
