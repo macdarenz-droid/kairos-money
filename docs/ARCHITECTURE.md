@@ -132,7 +132,7 @@ Goal: every tap answers at once, every wait shows a money-themed animation, and 
 | `KairosAiWorking` | the Kairos AI mark thinking (below) with a status line | every Kairos AI call |
 | Skeleton shimmer | a soft highlight sweeping the grey bars | list placeholders only |
 | Count-up | a hero amount rolls from its old value to the new one in 600 ms | MoneyBand, month summary, FlowBar, SpendingCalendar totals |
-| Chart grow-in | bars grow from zero, lines draw in, 400–600 ms, once per mount | FlowBar, CategorySplit, DayStrip (20 ms stagger), SavingsPath, DebtBurn |
+| Chart grow-in | bars grow from zero, lines draw in, 400–600 ms, once per mount | FlowBar, CategorySplit, DayStrip (20 ms stagger), SavingsPath, DebtBurn, and the attention cards (Runway, FixedFree, DueStrip) |
 | Success drop | a coin drops into the toast's check mark | toasts after a save |
 
 **Button busy state:** `Button` gets `busy` and `busyLabel`. Busy means disabled, `aria-busy="true"`, a `Coin` before the label. Every hand-written `x ? 'Saving…' : 'Save'` moves to it (Lock, Manual, AccountSheet, ImportWorkspace, Settings, Backup, BulkProposals, SortCategories, AdvisorPanel), keeping today's exact busy words.
@@ -173,6 +173,92 @@ Goal: every tap answers at once, every wait shows a money-themed animation, and 
 - **Android:** `kairos_launcher.xml` (adaptive icon) and `kairos_mark.xml` (notification icon) are already redrawn as vectors of logo C.
 
 
+## Layout, layering and polish (S7, from the 2026-09-24 app audit)
+Goal: one clear thing to press on each screen, fewer boxes, and everything in the right place and on the right layer. It comes after S6, on the same branch and PR. Hash-frozen tests must pass unchanged. When one of them asserts a label or structure, keep that label or structure and meet the goal another way.
+
+**System** (`primitives.tsx`, `styles.css`, `tokens.css`)
+- **Buttons.** Tokens: `--accent-solid` / `--on-accent`, which exist and are unused today.
+  - `primary` is filled with the accent. There is one per screen or sheet: the next step.
+  - `default` is outlined, for other actions.
+  - `danger` has a negative-colour border and text.
+  - `quiet` is accent-coloured text with no box, for Cancel and tertiary actions.
+  - Extra primaries become `default`: BulkProposals "Set …", and more than one per screen.
+- **Switches.** Every On/Off setting keeps its `<button aria-pressed>` and name, drawn as a switch: a track and a thumb that slides on `--motion-quick`. This covers Settings, Notifications and Kairos AI.
+- **Borders.**
+  - Only for controls (inputs, default and danger buttons) and row dividers.
+  - Cards are `surface-1` on `surface-0` with no border, through one `.card` class that replaces `.surface`, `.band-tile` and `.notice-card`.
+  - The Quick tab becomes a filled accent circle, not a boxed icon.
+- **Scales.** Radius {4, 6, 10, 16, 999} px. Layering tokens: `--z-sticky: 2`, `--z-tabbar: 10`, `--z-toast: 30`.
+- **Blocking waits and nesting.**
+  - Blocking waits (`BusyOverlay`/`CoinStack`) open as a non-dismissable `<dialog>`, so they sit above an open sheet and stay fixed to the screen.
+  - `Explain` inside a sheet opens inline, never as a second sheet.
+- **Toasts and wrapping.** `.app` bottom padding clears the tab bar and a toast, so a toast never covers the last control. `.form-actions` wraps.
+- **Clean-up.**
+  - Delete the unused CSS families: `.balance-*`, `.axis-*`, `.answer-*`, `.fact*`, `.ring-*`, `.timeline*`, `.money-flow*`/`.flow-*`, `.exposure-*`, `.ranked*`, `.audit-*`, `.row-actions`, `.spending-bar`, `.drop-surface`, `.export-range`, `.money-visuals*`, `.fingerprint*`. Grep for each before deleting.
+  - Merge the two `.sheet-actions` rules.
+  - Focus rings use `--accent-text`.
+
+**Today**
+- **Order:**
+  1. The triage card, only when active.
+  2. MoneyBand.
+  3. SavingsPath.
+  4. Attention.
+  5. DayStrip.
+  6. Recorded today.
+- **Numbers.**
+  - One hero number at the top: today's spend figure at 40 px, counting up. The other figures stay small.
+  - "Recorded today" drops to normal size.
+  - SavingsPath's "Spend today" becomes "Left for today", so it no longer echoes "Spent today".
+- **Rhythm and help.**
+  - The sections sit in one `.stack`, so spacing no longer depends on whether Attention shows.
+  - Runway, DueStrip, SavingsPath and DebtBurn get the inline Explain.
+- **No data yet:** one card with a still coin stack and one primary, "Add your first statement", instead of a long blank.
+
+**Insights**
+- Advice goes in one card with row dividers.
+- Add a "Top merchants" heading.
+- Drop FlowBar's second heading under "This month".
+- The "Money set aside" button reads "Edit".
+- "Track a cancellation" becomes a quiet action on each bill row, not a separate list.
+
+**Ledger**
+- **Order:**
+  1. A screen header with the primary "Import statements".
+  2. Accounts, compact.
+  3. History: search and list.
+  4. Imports: "Files waiting" and "Imports" merged into one list, with a status per row.
+  5. Coverage.
+- **Coverage** becomes the one line promised above: gaps are named, and the score, bar and tiers are dropped.
+- **Transaction sheets** (splits, original currency, refunds): Save is `primary`, Remove/confirm is `danger`, Cancel is `quiet`.
+- **Smaller fixes.**
+  - BulkCategories uses Load more.
+  - "Change categories" is `quiet`.
+  - Space is added between "History" and the search label.
+
+**You** (Settings)
+- **Order:**
+  1. Currency.
+  2. Appearance.
+  3. Kairos AI.
+  4. Notifications.
+  5. Bank notices.
+  6. Privacy.
+  7. Net worth.
+  8. Data: accounts set up, statement history, backup, restore and export.
+  9. A spaced-off "Delete all data" at the very bottom.
+- **Kairos AI in steps.**
+  - At first, only the "Use Kairos AI" switch and the key field show.
+  - Once a key is saved, the model, the two merchant-name switches and "Sort my categories" appear.
+  - The switches read "Send merchant names with reviews" and "Send merchant names for sorting", under "Runs on Claude with your own Anthropic key."
+- **Consistency.**
+  - Deleting all data asks for the same confirmation in Settings and on the lock screen.
+  - All icons in a list are leading.
+  - Net worth gets the `settings-section` wrapper.
+  - Info sheets are at most 2 sentences (bank notices, privacy log, delete).
+
+**Tests:** new or updated focused tests for the button variants, the switch (state and name), Kairos AI steps, Ledger and Today order, and the blocking wait above an open sheet. Update non-frozen tests only alongside the code they test.
+
 ## Screens after the cut (~35 charts → ~9)
 - **Today:** MoneyBand, SavingsPath (single spend/keep today), Attention (≤3, including DueStrip), DayStrip, Recorded today, triage card.
 - **Insights:**
@@ -212,6 +298,7 @@ Each stream branches from the integration branch and returns one PR. Parallel la
 | 4 | S2b Advisor UI | after 3 + 2d |
 | 5 | S5b Docs + dead-code cleanup | after 4 |
 | 6 | S6 Motion and feedback (branch `claude/kairos-motion`) | now |
+| 7 | S7 Layout, layering and polish (same branch and PR) | after 6 |
 
 **Done means**
 - `npm run check` + money lint green.
