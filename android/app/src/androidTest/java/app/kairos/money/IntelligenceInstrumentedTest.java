@@ -159,10 +159,7 @@ public class IntelligenceInstrumentedTest {
         click("You");
         DatabaseDigest.transaction(activity, db -> {
             String end=java.time.LocalDate.now().toString(),start=java.time.LocalDate.now().minusDays(count-1).toString();
-            // Low leaves $10 in the account: pay in minus spending out, plus an opening balance that cancels it.
-            long opening=low?count*1500L-((count+13)/14)*100000L+1000L:0L;
-            db.execSQL("INSERT OR IGNORE INTO accounts(id,name,institution,type,currency,opening_balance_minor) VALUES('s3','Synthetic intelligence','Test','checking','USD',?)",new Object[]{opening});
-            db.execSQL("UPDATE accounts SET opening_balance_minor=? WHERE id='s3'",new Object[]{opening});
+            db.execSQL("INSERT OR IGNORE INTO accounts(id,name,institution,type,currency,opening_balance_minor) VALUES('s3','Synthetic intelligence','Test','checking','USD',0)");
             db.execSQL("INSERT OR IGNORE INTO categories(id,name,kind) VALUES('s3-essential','Synthetic essentials','essential')");
             db.execSQL("INSERT OR IGNORE INTO categories(id,name,kind) VALUES('s3-disc','Synthetic discretionary','discretionary')");
             db.execSQL("INSERT OR IGNORE INTO categories(id,name,kind) VALUES('s3-income','Synthetic income','income')");
@@ -183,6 +180,9 @@ public class IntelligenceInstrumentedTest {
                 }
             }
             db.execSQL("INSERT OR REPLACE INTO app_settings VALUES('intelligence:metadata',?)",new Object[]{metadata.toString()});
+            // Low leaves $10 in the account whatever earlier seeds added: the opening balance cancels every row.
+            if(low) db.execSQL("UPDATE accounts SET opening_balance_minor=1000-(SELECT COALESCE(SUM(amount_minor),0) FROM transactions WHERE account_id='s3') WHERE id='s3'");
+            else db.execSQL("UPDATE accounts SET opening_balance_minor=0 WHERE id='s3'");
             return null;
         });
     }
