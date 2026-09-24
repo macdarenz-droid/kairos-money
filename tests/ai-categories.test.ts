@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {memoryDriver} from './db-helper';
+import type {Driver} from '../src/core/db/driver';
 import {migrate} from '../src/core/db/migrate';
 import {repository} from '../src/core/db/repository';
 import {hash, normalizeRow} from '../src/ingest/normalize';
@@ -150,6 +151,51 @@ describe('storing and undoing a Claude run', () => {
     expect((await repo.aiCategories.read(key))?.category).toBe('Eating out');
     await repo.aiCategories.undoRun(newer.id); await repo.aiCategories.undoRun(older.id);
     expect(await snapshot()).toEqual(start);
+    db.close();
+  });
+});
+
+describe('re-sorting after a Claude run, an undo or an owner rule', () => {
+  // On the phone each native write is a bridge call, so a category change must not rewrite every row.
+  async function large(n: number) {
+    const {driver: inner, raw: db} = memoryDriver(); let writes = 0;
+    const driver: Driver = {...inner, execute: (sql, values) => { writes += 1; return inner.execute(sql, values); }};
+    await migrate(driver); const repo = repository(driver);
+    await repo.addAccount({id: 'acct-7', name: 'Everyday', institution: 'Synthetic', type: 'checking', currency: 'AUD', mask_last4: null, opening_balance_minor: 0n});
+    const names = ['CAFE LUNA', 'BOOK NOOK', 'MYSTERY CO'];
+    const rows = Array.from({length: n}, (_, i) => raw(String(i), `2026-02-${String(1 + i % 28).padStart(2, '0')}`, names[i % 3]!, `${1 + i}.00`));
+    const spent = rows.reduce((sum, _, i) => sum + BigInt(100 * (1 + i)), 0n), fileHash = hash('ai-large');
+    const doc: Document = {id: hash(JSON.stringify(['acct-7', fileHash])), hash: fileHash, fileName: 'l.csv', parser: 'synthetic', context,
+      opening: '1000000', closing: (1000000n - spent).toString(), payslip: null, sourceRank: 2, sourceKind: 'statement', integrityTier: 'A', rows};
+    await repo.imports.stage(doc);
+    for (const {row, blocked} of (await repo.imports.review(doc.id)).items) if (blocked) await repo.imports.correct(doc.id, row.sourceId, row, false);
+    await repo.imports.commit(doc.id);
+    const counted = async (work: () => Promise<unknown>) => { writes = 0; await work(); return writes; };
+    const state = async () => ({transactions: await driver.query('SELECT id,category_id FROM transactions ORDER BY id'), categories: await driver.query('SELECT id,name,kind FROM categories ORDER BY id')});
+    return {db, repo, rows, counted, state};
+  }
+
+  it('writes a handful of statements however long the ledger is', async () => {
+    const {db, repo, rows, counted} = await large(90);
+    let run = null as Awaited<ReturnType<typeof repo.aiCategories.applyRun>> | null;
+    expect(await counted(async () => { run = await repo.aiCategories.applyRun([{key: rows[0]!.merchant, category: 'Coffee & snacks', confidence: 'high'}], 'claude-opus-5'); })).toBeLessThan(15);
+    expect(await counted(() => repo.aiCategories.undoRun(run!.id))).toBeLessThan(15);
+    expect(await counted(() => repo.merchantRules.set(rows[1]!.merchant, 'Hobbies & media'))).toBeLessThan(15);
+    db.close();
+  });
+
+  it('leaves the ledger exactly as a full rebuild would', async () => {
+    const {db, repo, rows, state} = await large(30);
+    const tagged = String((await repo.imports.ledger()).find(r => r.merchant === rows[2]!.merchant)!.id);
+    await repo.categories.set([tagged], 'Gifts & donations');
+    await repo.aiCategories.applyRun([{key: rows[0]!.merchant, category: 'Coffee & snacks', confidence: 'high'}, {key: rows[2]!.merchant, category: 'Shopping', confidence: 'medium'}], 'claude-opus-5');
+    await repo.merchantRules.set(rows[1]!.merchant, 'Hobbies & media');
+    const run = await repo.aiCategories.applyRun([{key: rows[0]!.merchant, category: 'Eating out', confidence: 'high'}], 'claude-opus-5');
+    await repo.aiCategories.undoRun(run.id);
+    const sorted = await state();
+    expect(sorted.transactions.filter(t => t.id === tagged)[0]?.category_id).toBe(hash('category:Gifts & donations'));
+    await repo.imports.rebuild();
+    expect(await state()).toEqual(sorted);
     db.close();
   });
 });

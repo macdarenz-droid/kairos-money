@@ -66,7 +66,10 @@ it('shows what is sent, sorts, and offers unsure answers to check', async () => 
   await waitFor(() => expect(screen.queryByRole('button', {name: 'Use Shopping'})).toBeNull());
   const categories = (await state.repo!.imports.ledger()).map(r => [r.description, r.category]).sort();
   expect(categories).toEqual([['CAFE LUNA', 'Coffee & snacks'], ['MYSTERY CO', 'Shopping']]);
-  expect(await screen.findByRole('button', {name: 'Undo'})).toBeTruthy();
+  fireEvent.click(await screen.findByRole('button', {name: 'Undo'}));
+  expect((screen.getByRole('button', {name: 'Undoing…'}) as HTMLButtonElement).disabled).toBe(true);
+  await waitFor(() => expect(screen.queryByRole('button', {name: /^Undo/})).toBeNull());
+  expect((await state.repo!.imports.ledger()).find(r => r.description === 'CAFE LUNA')?.category).toBeNull();
 });
 
 it('lays each switch out as a row with a small On/Off button, and sorting as one full-width action', async () => {

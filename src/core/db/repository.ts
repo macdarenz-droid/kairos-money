@@ -39,8 +39,8 @@ export function repository(driver: Driver) {
   return {
     refunds:{read:async(id:string)=>(await refunds()).read(id),save:async(creditId:string,purchaseId:string)=>(await refunds()).save(creditId,purchaseId),remove:async(id:string)=>(await refunds()).remove(id)},
     imports,
-    aiCategories: {...aiCategoryRepository(driver, imports.rebuild), payload: async (onlyNew: boolean) => sortingPayload(driver, await imports.ledger(), onlyNew)},
-    merchantRules: merchantRuleRepository(driver, imports.rebuild),
+    aiCategories: {...aiCategoryRepository(driver, imports.recategorise), payload: async (onlyNew: boolean) => sortingPayload(driver, await imports.ledger(), onlyNew)},
+    merchantRules: merchantRuleRepository(driver, imports.recategorise),
     manual: manualRepository(driver),
     notices: noticeRepository(driver),
     notifications: notificationRepository(driver),

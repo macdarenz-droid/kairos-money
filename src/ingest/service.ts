@@ -3,7 +3,7 @@ import { syncManual } from '../ledger/manual';
 import { syncNotices } from '../ledger/notices';
 import {applyCategoryEdits, categoryKind} from '../ledger/categories';
 import { hasStatementBalanceChain } from './normalize/statement-evidence';
-import type { Driver, SqlRow } from '../core/db/driver';
+import type { Driver, SqlRow, SqlValue } from '../core/db/driver';
 import { currency, money, toDatabase } from '../core/money';
 import { categorize, merchantDefaults, ownerRules } from '../ledger/rules';
 import { aiCategories } from '../ledger/ai-categories';
@@ -44,8 +44,8 @@ export function importService(driver: Driver) {
   }
   const rules = () => ownerRules(driver);
   /** One statement per 400 ids instead of one per row. */
-  async function inChunks(ids: readonly string[], sql: (marks: string) => string) {
-    for (let start = 0; start < ids.length; start += 400) { const part = ids.slice(start, start + 400); await driver.execute(sql(part.map(() => '?').join(',')), part); }
+  async function inChunks(ids: readonly string[], sql: (marks: string) => string, before: readonly SqlValue[] = []) {
+    for (let start = 0; start < ids.length; start += 400) { const part = ids.slice(start, start + 400); await driver.execute(sql(part.map(() => '?').join(',')), [...before, ...part]); }
   }
   async function aliases() { return (await driver.query("SELECT canonical_name,aliases FROM merchants WHERE aliases<>'[]' ORDER BY id")).map(r => { const list: unknown = JSON.parse(String(r.aliases)); return { canonical: String(r.canonical_name), aliases: Array.isArray(list) ? list.filter((v): v is string => typeof v === 'string') : [] }; }); }
   const defaults = () => merchantDefaults(driver);
@@ -202,12 +202,45 @@ export function importService(driver: Driver) {
       await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)', ['refund:' + creditId, JSON.stringify({...link, creditId, purchaseId})]);
     }
   }
+  /** The category a committed row gets before the owner's per-transaction edits. */
+  async function categoriser() {
+    const userRules = await rules(), confirmed = await defaults(), claude = await aiCategories(driver);
+    return (row: LedgerRow) => {
+      // An owner's tag wins; an accepted suggestion gives way to a rule, a default or Claude.
+      const suggested = categorize(row, userRules, confirmed, row.mcc, claude);
+      return row.category !== null && row.categoryFrom !== 'suggestion' ? row.category
+        : suggested.confidence >= 9300 ? suggested.category : row.category ?? (suggested.confidence >= 9000 ? suggested.category : null);
+    };
+  }
+  const dropUnusedCategories = (all: readonly Batch[]) => inChunks([...new Set(all.flatMap(doc => doc.rows.flatMap(row => row.category ? [hash('category:' + row.category)] : [])))], marks => `DELETE FROM categories WHERE id IN (${marks}) AND NOT EXISTS(SELECT 1 FROM transactions WHERE category_id=categories.id OR subcategory_id=categories.id) AND NOT EXISTS(SELECT 1 FROM merchants WHERE default_category_id=categories.id) AND NOT EXISTS(SELECT 1 FROM categories child WHERE child.parent_id=categories.id)`);
+  /** For a change that moves no transaction (a Claude run, its undo, an owner rule): rewrites only rows whose category changes, one statement per category. */
+  async function recategorise() {
+    const all = await batches(), ledger = await reconciled(all.filter(b => b.status === 'committed')), category = await categoriser();
+    const current = new Map((await queryPages(driver, 'SELECT id,category_id,transfer_group_id FROM transactions WHERE import_batch_id IS NOT NULL', [], ['id'])).map(r => [String(r.id), r]));
+    const edited = new Set((await driver.query("SELECT key FROM app_settings WHERE key>='category-edit:' AND key<'category-edit;'")).map(r => String(r.key).slice('category-edit:'.length)));
+    const moves = new Map<string, {name: string | null; ids: string[]}>();
+    for (const row of ledger) {
+      const now = current.get(row.id);
+      // The owner's own edit stays; applyCategoryEdits never applies one to a transfer.
+      if (!now || (edited.has(row.id) && !now.transfer_group_id)) continue;
+      const name = category(row), id = name ? hash('category:' + name) : null;
+      if (id === (now.category_id ?? null)) continue;
+      const move = moves.get(String(id)) ?? {name, ids: []}; move.ids.push(row.id); moves.set(String(id), move);
+    }
+    if (!moves.size) return;
+    for (const {name, ids} of moves.values()) {
+      const id = name ? hash('category:' + name) : null;
+      if (id) await driver.execute('INSERT OR IGNORE INTO categories(id,name,kind) VALUES(?,?,?)', [id, name, categoryKind(name!)]);
+      await inChunks(ids, marks => `UPDATE transactions SET category_id=? WHERE id IN (${marks})`, [id]);
+    }
+    await dropUnusedCategories(all);
+  }
   async function rebuild() {
     const all = await batches(), docs = all.filter(b => b.status === 'committed');
     const ledger = await reconciled(docs);
     await inChunks(all.flatMap(doc => doc.rows.map(row => hash('import-rule:' + doc.id + ':' + row.sourceId))), marks => `DELETE FROM rules WHERE id IN (${marks})`);
     for (const doc of docs) for (const row of doc.rows) if (row.createRule && row.category) await driver.execute('INSERT INTO rules(id,priority,matcher,action,created_by) VALUES(?,0,?,?,?)', [hash('import-rule:' + doc.id + ':' + row.sourceId), JSON.stringify({ merchant: row.merchant }), JSON.stringify({ category: row.category }), 'user']);
-    const userRules = await rules(), confirmed = await defaults(), claude = await aiCategories(driver);
+    const category = await categoriser();
     const notes = new Map((await driver.query('SELECT id,notes FROM transactions WHERE import_batch_id IS NOT NULL')).map(r => [String(r.id), String(r.notes)]));
     const moved = await renamed(ledger, new Set(notes.keys())), movedFrom = new Map([...moved].map(([old, id]) => [id, old]));
     await carry(moved);
@@ -217,12 +250,8 @@ export function importService(driver: Driver) {
     await driver.execute(`DELETE FROM coverage_ranges WHERE import_batch_id IN (SELECT import_batch_id FROM staging_rows WHERE source_row_id='__document__')`);
     await driver.execute(`DELETE FROM payslips WHERE import_batch_id IN (SELECT import_batch_id FROM staging_rows WHERE source_row_id='__document__')`);
     for (const row of ledger) {
-      // An owner's tag wins; an accepted suggestion gives way to a rule, a default or Claude.
-      const suggested = categorize(row, userRules, confirmed, row.mcc, claude);
-      const category = row.category !== null && row.categoryFrom !== 'suggestion' ? row.category
-        : suggested.confidence >= 9300 ? suggested.category : row.category ?? (suggested.confidence >= 9000 ? suggested.category : null);
-      const categoryId = category ? hash('category:' + category) : null;
-      if (categoryId) await driver.execute('INSERT OR IGNORE INTO categories(id,name,kind) VALUES(?,?,?)', [categoryId, category, categoryKind(category!)]);
+      const name = category(row), categoryId = name ? hash('category:' + name) : null;
+      if (categoryId) await driver.execute('INSERT OR IGNORE INTO categories(id,name,kind) VALUES(?,?,?)', [categoryId, name, categoryKind(name!)]);
       const merchantId = hash('merchant:' + row.merchant);
       await driver.execute('INSERT OR IGNORE INTO merchants(id,canonical_name,aliases,mcc) VALUES(?,?,?,?)', [merchantId, row.merchant, '[]', row.mcc]);
       await driver.execute('INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,merchant_id,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [row.id, row.accountId, row.date, integer(row.minor, row.currency), row.currency, row.description, merchantId, categoryId, BigInt(row.minor) < 0n ? 'debit' : 'credit', row.transferGroup, 0, row.id, row.owner, row.confidence, row.verified ? 1 : 0, notes.get(row.id) ?? notes.get(movedFrom.get(row.id) ?? '') ?? '']);
@@ -231,7 +260,7 @@ export function importService(driver: Driver) {
     }
     // Namespaced importer entities are removed only when no ledger or merchant uses them.
     await inChunks([...new Set(all.flatMap(doc => doc.rows.map(row => hash('merchant:' + row.merchant))))], marks => `DELETE FROM merchants WHERE id IN (${marks}) AND NOT EXISTS(SELECT 1 FROM transactions WHERE merchant_id=merchants.id)`);
-    await inChunks([...new Set(all.flatMap(doc => doc.rows.flatMap(row => row.category ? [hash('category:' + row.category)] : [])))], marks => `DELETE FROM categories WHERE id IN (${marks}) AND NOT EXISTS(SELECT 1 FROM transactions WHERE category_id=categories.id OR subcategory_id=categories.id) AND NOT EXISTS(SELECT 1 FROM merchants WHERE default_category_id=categories.id) AND NOT EXISTS(SELECT 1 FROM categories child WHERE child.parent_id=categories.id)`);
+    await dropUnusedCategories(all);
     for (const doc of docs) {
       if (!doc.payslip) await driver.execute('INSERT INTO coverage_ranges VALUES(?,?,?,?,?)', [hash('coverage:' + doc.id), doc.context.accountId, doc.context.period.start, doc.context.period.end, doc.id]);
       else { const p = doc.payslip; await driver.execute('INSERT INTO payslips(id,employer,pay_date,period_start,period_end,gross_minor,net_minor,tax_minor,super_minor,deductions,allowances,ytd,currency,linked_transaction_id,import_batch_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [hash('payslip:' + doc.id), p.employer, p.payDate, p.period.start, p.period.end, integer(p.gross, p.currency), integer(p.net, p.currency), integer(p.tax, p.currency), integer(p.super, p.currency), JSON.stringify(p.deductions), JSON.stringify(p.allowances), JSON.stringify(p.ytd), p.currency, linkNet(p, ledger.filter(r => r.accountId === doc.context.accountId)), doc.id]); }
@@ -365,5 +394,5 @@ export function importService(driver: Driver) {
   async function saveMapping(issuer: string, mapping: ExportMapping) { await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',['export-mapping:'+issuer,JSON.stringify(mapping)]); }
   async function audit(transactionId: string) { return (await driver.query("SELECT metadata FROM privacy_log WHERE action='transaction_superseded' ORDER BY created_at,id")).map(r=>JSON.parse(String(r.metadata)) as {transactionId:string;before:unknown;after:unknown}).filter(r=>r.transactionId===transactionId); }
   async function commitSession(ids: string[]) { return driver.transaction(async()=> { const results=[]; for(const id of ids) results.push(await commitUnlocked(id)); return results; }); }
-  return { rebuild, workspace, setNote, keepSeparate, forget, ledgerPage, ledgerBulk, ledgerHealth, leaveCategoriesUnassigned, useSuggestedCategories, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
+  return { rebuild, recategorise, workspace, setNote, keepSeparate, forget, ledgerPage, ledgerBulk, ledgerHealth, leaveCategoriesUnassigned, useSuggestedCategories, savedMapping, saveMapping, audit, commitSession, batches, summaries, stage, review, correct, correctBalances, correctPayslip, commit, rollback, ledger, rules, aliases, stageFile, files, loadFile, removeFile };
 }
