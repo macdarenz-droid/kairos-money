@@ -1,7 +1,6 @@
 package app.kairos.money;
 
 import android.content.res.Configuration;
-import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.content.Intent;
@@ -39,9 +38,7 @@ public class MainActivity extends BridgeActivity {
         pendingQuickAdd = savedInstanceState == null
             ? (QuickAddWidget.QUICK_ADD.equals(getIntent().getAction()) ? UUID.randomUUID().toString() : null)
             : savedInstanceState.getString(QUICK_ADD_STATE);
-        String preference = getSharedPreferences("kairos-appearance", MODE_PRIVATE).getString("theme", "system");
-        boolean light = preference.equals("light") || (preference.equals("system") && (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_NO);
-        setTheme(light ? R.style.AppTheme_Light : R.style.AppTheme_Dark);
+        setTheme(Appearance.light(Appearance.resolved(this)) ? R.style.AppTheme_Light : R.style.AppTheme_Dark);
         // Screenshots and screen recording are deliberately NOT blocked, at the owner's request.
         //
         // FLAG_SECURE used to be set here, which stopped him photographing his own screen to show someone
@@ -62,9 +59,9 @@ public class MainActivity extends BridgeActivity {
         applyAppearance(false);
     }
     void applyAppearance(boolean refreshWidget) {
-        String preference = getSharedPreferences("kairos-appearance", MODE_PRIVATE).getString("theme", "system");
-        boolean light = preference.equals("light") || (preference.equals("system") && (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_NO);
-        int background = Color.parseColor(light ? "#FCFCFD" : "#08090A");
+        String theme = Appearance.resolved(this);
+        boolean light = Appearance.light(theme);
+        int background = getColor(Appearance.background(theme));
         getWindow().setBackgroundDrawable(new ColorDrawable(background));
         getWindow().setStatusBarColor(background); getWindow().setNavigationBarColor(background);
         WindowInsetsControllerCompat bars = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());

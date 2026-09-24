@@ -1,4 +1,5 @@
 import { registerPlugin } from '@capacitor/core';
+import type { ThemeId } from '../../ui/design/theme-registry';
 export interface VaultPlugin {
   status(): Promise<{ configured: boolean; biometric: boolean; biometricEnabled: boolean; unlocked: boolean; backupCodeRequired?: boolean }>;
   setup(options: { pin: string; confirm: string }): Promise<void>;
@@ -14,6 +15,6 @@ export interface VaultPlugin {
   lock(): Promise<void>;
   erase(): Promise<void>;
   exportFile(options: { base64: string; fileName: string }): Promise<{ saved: boolean }>;
-  setTheme(options: { theme: 'system' | 'dark' | 'light' }): Promise<void>;
+  setTheme(options: { theme: 'system' | ThemeId }): Promise<void>;
 }
 export const Vault = registerPlugin<VaultPlugin>('KairosVault');

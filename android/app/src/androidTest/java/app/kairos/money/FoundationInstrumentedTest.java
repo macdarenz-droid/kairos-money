@@ -91,6 +91,20 @@ public class FoundationInstrumentedTest {
             click("Ledger"); click("Set up an account"); input("Account name", "Synthetic everyday"); input("Opening balance", "123.45"); click("Save account");
             awaitJs("document.body.innerText.includes('Synthetic everyday') && !document.querySelector('dialog')");
             assertTrue(evaluate("document.body.innerText").contains("$123.45"));
+            // The three chosen-only themes: the window bars take the theme's own background; one screenshot each.
+            for (String[] theme : new String[][]{{"True black", "black"}, {"Paper", "paper"}, {"High contrast", "contrast"}}) {
+                click("You"); click(theme[0]); awaitJs("document.documentElement.dataset.theme===" + JSONObject.quote(theme[1]));
+                int expected = context.getColor(Appearance.background(theme[1]));
+                long deadline = System.currentTimeMillis() + 10000; int window = 0;
+                while (System.currentTimeMillis() < deadline) {
+                    AtomicReference<Integer> seen = new AtomicReference<>(0);
+                    InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> seen.set(activity.getWindow().getNavigationBarColor()));
+                    window = seen.get(); if (window == expected) break; Thread.sleep(150);
+                }
+                assertEquals("Window colour for " + theme[1], expected, window);
+                click("Today"); awaitJs("document.querySelector('nav [aria-current=page]').textContent.trim()==='Today'");
+                evaluate("window.scrollTo(0,0)"); screenshot(theme[1] + "-today");
+            }
             for (String theme : new String[]{"Light", "Dark"}) {
                 click("You"); click(theme); awaitJs("document.documentElement.dataset.theme===" + JSONObject.quote(theme.toLowerCase()));
                 for (String tab : new String[]{"Today","Ledger","Insights","You"}) {

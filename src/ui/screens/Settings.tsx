@@ -8,6 +8,7 @@ import { Vault } from '../../core/crypto/native';
 import { deleteDatabase } from '../../core/db/native';
 import { base64, exportArchive } from '../../core/db/export';
 import { useTheme, type ThemePreference } from '../design/theme';
+import { ThemeChoices } from '../design/ThemeChoices';
 import { Button, Row, Sheet } from '../design/primitives';
 import { useSession } from '../session';
 /** What Quick can jump straight to. He asked for backup and restore twice while both were already here. */
@@ -44,7 +45,7 @@ export function Settings({ onAccount, notify, accounts = [], focus = null, onFoc
     catch (e) { setError(e instanceof Error ? e.message : 'Android could not delete your data. Try again.'); setBusy(false); }
   }
   return <>
-    <section className="settings-section"><h2>Appearance</h2><div className="theme-choices">{(['system', 'dark', 'light'] as const).map(value => <Button key={value} aria-pressed={preference === value} onClick={() => void theme(value)}>{value === 'system' ? 'System' : value === 'dark' ? 'Dark' : 'Light'}</Button>)}</div></section>
+    <section className="settings-section"><h2>Appearance</h2><ThemeChoices preference={preference} choose={value => void theme(value)}/></section>
     <section className="settings-section"><h2>Your ledger</h2><div className="action-list"><Button onClick={onAccount}><Plus size={18}/>Add an account</Button><Button disabled={session.state === 'preview'} onClick={() => setDialog('backup')}><ShieldPlus size={18}/>Back up</Button><Button disabled={session.state === 'preview'} onClick={() => setDialog('restore')}><ArchiveRestore size={18}/>Restore a backup</Button><Button disabled={session.state === 'preview'} onClick={() => setDialog('export')}><Download size={18}/>Export all data</Button></div></section>
     <NotificationSettings/>
     <NoticeSettings accounts={accounts}/>

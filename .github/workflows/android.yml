@@ -28,7 +28,7 @@ jobs:
           python-version: '3.12'
       - run: pip install sqlcipher3-binary==0.6.0
       - run: python scripts/verify-encryption.py
-      - run: git diff --exit-code -- docs/SCHEMA.md docs/CONTRAST.md src/ui/design/tokens.css
+      - run: git diff --exit-code -- docs/SCHEMA.md docs/CONTRAST.md src/ui/design/tokens.css src/ui/design/theme-registry.ts android/app/src/main/res/values/kairos_theme_colors.xml
   android-gate:
     needs: source-gate
     runs-on: ubuntu-latest

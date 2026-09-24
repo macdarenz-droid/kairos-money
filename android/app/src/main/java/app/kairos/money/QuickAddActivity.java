@@ -56,8 +56,9 @@ public class QuickAddActivity extends AppCompatActivity {
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         // The sheet follows the app's own light or dark choice, not only the system's.
-        String preference = getSharedPreferences("kairos-appearance", MODE_PRIVATE).getString("theme", "system");
-        getDelegate().setLocalNightMode(preference.equals("light") ? AppCompatDelegate.MODE_NIGHT_NO : preference.equals("dark") ? AppCompatDelegate.MODE_NIGHT_YES : AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        // Paper and High contrast use the light sheet, True black the dark one: the sheet follows the scheme.
+        String preference = Appearance.preference(this);
+        getDelegate().setLocalNightMode(preference.equals("system") ? AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM : Appearance.light(preference) ? AppCompatDelegate.MODE_NIGHT_NO : AppCompatDelegate.MODE_NIGHT_YES);
         setContentView(R.layout.quick_add_sheet);
         sheet = findViewById(R.id.qa_sheet);
         amountView = findViewById(R.id.qa_amount); spentView = findViewById(R.id.qa_spent); receivedView = findViewById(R.id.qa_received);
