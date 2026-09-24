@@ -8,6 +8,10 @@ export type Day = string;
 export type BasisPoints = string;
 /** Transaction ids a figure rests on, so any claim can be opened and checked. */
 export type Evidence = readonly string[];
+/** A span of whole days, both ends included. */
+export type Span = {start: Day; end: Day; days: number};
+/** The at-most-3 limit lives in the type, so a fourth item cannot compile. */
+export type UpTo3<T> = readonly [] | readonly [T] | readonly [T, T] | readonly [T, T, T];
 
 /** How far a result can be trusted. It labels; it never hides spending (ADR 0025). */
 export type Tier = 'verified' | 'recorded' | 'insufficient';
@@ -80,7 +84,8 @@ export type Today = {
 };
 
 // ── attention (at most 3, most urgent first) ─────────────────────────────────────────────────────
-export type Due = {date: Day; offset: number; merchant: string; minor: Minor; height: string; beforePay: boolean};
+/** offset is days from asOf. Bar height is drawing, so the UI works it out from minor. */
+export type Due = {date: Day; offset: number; merchant: string; minor: Minor; beforePay: boolean};
 export type DueWindow = {days: number; dues: readonly Due[]; payOffset: number | null; beforePayMinor: Minor};
 type AttentionBase = {urgency: 1 | 2 | 3; evidence: Evidence};
 export type Attention = AttentionBase & (
@@ -93,8 +98,9 @@ export type Attention = AttentionBase & (
 export type AttentionKind = Attention['kind'];
 
 // ── spending ───────────────────────────────────────────────────────────
-export type MonthFlow = {month: string; inMinor: Minor; outMinor: Minor; leftMinor: Minor; tier: Tier};
-export type CategoryShare = {name: string; minor: Minor; share: BasisPoints; evidence: Evidence};
+/** month is YYYY-MM; start and end are the days it covers. */
+export type MonthFlow = {month: string; start: Day; end: Day; inMinor: Minor; outMinor: Minor; leftMinor: Minor; tier: Tier; evidence: Evidence};
+export type CategoryShare = {category: string; minor: Minor; share: BasisPoints; evidence: Evidence};
 export type MerchantShare = {merchant: string; minor: Minor; count: number; category: string; evidence: Evidence};
 export type Bill = {
   merchant: string;
@@ -108,14 +114,18 @@ export type Bill = {
   evidence: Evidence;
 };
 export type Total = {minor: Minor; count: number; evidence: Evidence};
+/** 0 is Sunday, as Date.getUTCDay counts. */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type BandBlock = {start: Day; end: Day; inMinor: Minor; outMinor: Minor; netMinor: Minor; evidence: Evidence; unconfirmed: boolean};
 export type Band = {start: Day; end: Day; blocks: readonly BandBlock[]; now: BandBlock; before: BandBlock; comparable: boolean; trend: boolean};
-export type DaySpend = {date: Day; minor: Minor};
+/** outMinor is the day's money out as a positive amount, '0' when nothing went out. */
+export type DaySpend = {date: Day; outMinor: Minor; evidence: Evidence};
 export type Spending = {
   /** The trailing 30 days that categories, merchants, small purchases, fees and refunds cover. */
-  window: {start: Day; end: Day; tier: Tier};
+  window: Span & {tier: Tier};
+  /** The 1st to asOf. */
   thisMonth: MonthFlow;
+  /** The whole month before, so it can span more days than thisMonth; compare per day. */
   lastMonth: MonthFlow;
   /** Split-aware: a split row counts under each of its parts. */
   categories: readonly CategoryShare[];
@@ -124,12 +134,13 @@ export type Spending = {
   small: Total;
   fees: Total;
   refunds: Total;
-  busiestWeekday: {day: Weekday; minor: Minor} | null;
+  /** Over the last 90 days, as is paydayEffect. */
+  busiestWeekday: {day: Weekday; minor: Minor; evidence: Evidence} | null;
   /** Per-day spend in the days after pay against the rest of the cycle; null when pay is unknown. */
-  paydayEffect: {afterPayDayMinor: Minor; otherDayMinor: Minor; ratio: BasisPoints} | null;
+  paydayEffect: {afterPayDayMinor: Minor; otherDayMinor: Minor; ratio: BasisPoints; evidence: Evidence} | null;
   /** Thirty days to today against the thirty before. */
   band: Band;
-  /** The last 7 days, oldest first. */
+  /** The last 7 days, oldest first, every day present. */
   days: readonly DaySpend[];
 };
 
@@ -174,7 +185,7 @@ export type PayRise = {employer: string; increaseMinor: Minor; suggestedMinor: M
 export type Plan = {
   /** 'hidden' while triage is active. */
   status: 'ok' | 'not_yet' | 'hidden';
-  window: {start: Day; end: Day; days: number};
+  window: Span;
   split: Split;
   findings: readonly Finding[];
   leaks: readonly Leak[];
@@ -202,18 +213,19 @@ export type Goal = {
 export type Goals = {bufferMinor: Minor; items: readonly Goal[]};
 
 // ── advice (at most 3, ranked by yearly impact × ease) ────────────────────────────────────────────────────────
-export type AdviceRule =
-  | 'cancel-unused-subscription' | 'cut-small-purchases' | 'avoid-bank-fees' | 'reduce-cash-out'
-  | 'check-lifestyle-creep' | 'pay-high-interest-first' | 'lower-fixed-costs' | 'build-buffer'
-  | 'pay-yourself-first' | 'save-pay-rise';
-export type Advice = {
-  rule: AdviceRule;
-  /** Named exact values the wording may quote; the UI formats them. */
-  figures: Readonly<Record<string, Minor>>;
-  yearlyMinor: Minor;
-  ease: 1 | 2 | 3;
-  evidence: Evidence;
+export type LeakRule = 'cancel-unused-subscription' | 'cut-small-purchases' | 'avoid-bank-fees' | 'reduce-cash-out' | 'check-lifestyle-creep';
+/** The exact values each rule's wording may quote; the UI formats them. Closed keys keep typos and names out. */
+export type AdviceFigures = Record<LeakRule, {monthlyMinor: Minor; annualMinor: Minor}> & {
+  'pay-high-interest-first': {savedMinor: Minor; interestYearMinor: Minor; owedMinor: Minor};
+  'lower-fixed-costs': {overMinor: Minor};
+  'build-buffer': {currentMinor: Minor; targetMinor: Minor; keepMinor: Minor};
+  'pay-yourself-first': {keepMinor: Minor; automateMinor: Minor};
+  'save-pay-rise': {suggestedMinor: Minor; increaseMinor: Minor};
 };
+export type AdviceRule = keyof AdviceFigures;
+/** One rule with its own figures; the union keeps each rule tied to its keys. */
+export type RuleFigures = {[R in AdviceRule]: {rule: R; figures: Readonly<AdviceFigures[R]>}}[AdviceRule];
+export type Advice = RuleFigures & {yearlyMinor: Minor; ease: 1 | 2 | 3; evidence: Evidence};
 
 // ── triage ─────────────────────────────────────────────────────────────
 export type TriageReason = 'low-buffer' | 'rising-high-interest-debt' | 'repeated-overdraft-fees';
@@ -242,11 +254,11 @@ export type Brain = {
   asOf: Day;
   currency: Currency;
   today: Today;
-  attention: readonly Attention[];
+  attention: UpTo3<Attention>;
   spending: Spending;
   plan: Plan;
   goals: Goals;
-  advice: readonly Advice[];
+  advice: UpTo3<Advice>;
   triage: Triage;
   coverage: Coverage;
   tier: Tier;
@@ -254,21 +266,21 @@ export type Brain = {
 
 // ── BrainSummary: what the optional advisor may see ────────────────────
 /**
- * Aggregates and rule ids only: no transaction ids, account names or raw descriptions.
+ * Aggregates and rule ids only: no transaction ids, account names, goal names or raw descriptions.
  * Merchant names appear only when the owner allows it.
  */
-export type SummaryFact = {id: string; value: Minor | BasisPoints | number};
+export type SummaryFact = {fact: string} & ({minor: Minor} | {basisPoints: BasisPoints} | {days: string});
 export type BrainSummary = {
   asOf: Day;
   currency: Currency;
   tier: Tier;
   coverage: {coveredDays: number; totalDays: number; gapCount: number};
   today: {status: 'ok' | 'not_yet'; spendTodayMinor: Minor; keepTodayMinor: Minor; horizonDays: number; committedMinor: Minor; method: Method | null};
-  attention: readonly {kind: AttentionKind; minor?: Minor; days?: string; basisPoints?: BasisPoints}[];
+  attention: UpTo3<{kind: AttentionKind; minor?: Minor; days?: string; basisPoints?: BasisPoints}>;
   spending: {
-    thisMonth: Omit<MonthFlow, 'month'>;
-    lastMonth: Omit<MonthFlow, 'month'>;
-    categories: readonly {name: string; minor: Minor; share: BasisPoints}[];
+    thisMonth: Omit<MonthFlow, 'month' | 'evidence'>;
+    lastMonth: Omit<MonthFlow, 'month' | 'evidence'>;
+    categories: readonly Omit<CategoryShare, 'evidence'>[];
     merchants?: readonly {merchant: string; minor: Minor; count: number}[];
     billsYearlyMinor: Minor;
     billCount: number;
@@ -278,8 +290,8 @@ export type BrainSummary = {
   };
   plan: {split: Split; leaks: readonly Omit<Leak, 'evidence'>[]; next: StepId | null; debtCount: number; owedMinor: Minor} | null;
   goals: readonly {kind: Goal['kind']; targetMinor: Minor; fundedMinor: Minor; targetDate: Day}[];
-  advice: readonly {rule: AdviceRule; yearlyMinor: Minor; figures: Readonly<Record<string, Minor>>}[];
+  advice: UpTo3<RuleFigures & {yearlyMinor: Minor}>;
   triage: boolean;
-  /** Every figure the advisor may cite, by id; a point citing any other id is dropped. */
+  /** Every figure the advisor may cite, by its fact id; a point citing any other id is dropped. */
   facts: readonly SummaryFact[];
 };

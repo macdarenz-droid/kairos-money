@@ -5,9 +5,9 @@ import type {BrainSummary} from '../src/brain/types';
 
 const summary = {asOf: '2026-09-18', currency: 'AUD', tier: 'recorded', coverage: {coveredDays: 0, totalDays: 90, gapCount: 1},
   today: {status: 'ok', spendTodayMinor: '4000', keepTodayMinor: '1500', horizonDays: 12, committedMinor: '9000', method: 'daily-allowance'},
-  attention: [], spending: {thisMonth: {inMinor: '0', outMinor: '1', leftMinor: '-1', tier: 'recorded'}, lastMonth: {inMinor: '0', outMinor: '0', leftMinor: '0', tier: 'recorded'},
+  attention: [], spending: {thisMonth: {start: '2026-09-01', end: '2026-09-18', inMinor: '0', outMinor: '1', leftMinor: '-1', tier: 'recorded'}, lastMonth: {start: '2026-08-01', end: '2026-08-31', inMinor: '0', outMinor: '0', leftMinor: '0', tier: 'recorded'},
     categories: [], billsYearlyMinor: '0', billCount: 0, smallMinor: '0', feesMinor: '0', refundsMinor: '0'},
-  plan: null, goals: [], advice: [], triage: false, facts: [{id: 'today.spend', value: '4000'}, {id: 'today.keep', value: '1500'}],
+  plan: null, goals: [], advice: [], triage: false, facts: [{fact: 'today.spend', minor: '4000'}, {fact: 'today.keep', minor: '1500'}],
 } satisfies BrainSummary;
 
 type Sent = {url: string; headers: Record<string, string>; body: Record<string, unknown>};

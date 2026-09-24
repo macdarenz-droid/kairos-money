@@ -89,7 +89,7 @@ const ADVISOR = 'You write short, plain money advice for one person from a summa
 /** Keeps only points that cite facts the summary actually holds. */
 export function validPoints(value: unknown, summary: BrainSummary): Point[] | null {
   if (!value || typeof value !== 'object' || !Array.isArray((value as {points?: unknown}).points)) return null;
-  const known = new Set(summary.facts.map(f => f.id));
+  const known = new Set(summary.facts.map(f => f.fact));
   return ((value as {points: unknown[]}).points).flatMap(p => {
     if (!p || typeof p !== 'object') return [];
     const {text, facts} = p as {text?: unknown; facts?: unknown};

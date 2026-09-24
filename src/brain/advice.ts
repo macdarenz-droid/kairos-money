@@ -1,7 +1,8 @@
 import {day} from '../intelligence/model';
-import type {Advice, AdviceRule, BrainInputs, LeakKind, Plan} from './types';
+import {upTo3} from './shared';
+import type {Advice, AdviceRule, BrainInputs, LeakKind, LeakRule, Plan, UpTo3} from './types';
 
-const LEAK_RULES: Record<LeakKind, {rule: AdviceRule; ease: Advice['ease']}> = {
+const LEAK_RULES: Record<LeakKind, {rule: LeakRule; ease: Advice['ease']}> = {
   subscription: {rule: 'cancel-unused-subscription', ease: 3},
   'small-purchases': {rule: 'cut-small-purchases', ease: 2},
   'bank-fees': {rule: 'avoid-bank-fees', ease: 3},
@@ -20,7 +21,7 @@ function hidden(input: BrainInputs, rule: AdviceRule): boolean {
 }
 
 /** Candidates from the plan, ranked by yearly impact × ease, at most three. Closed rule ids only. */
-export function advice(input: BrainInputs, plan: Plan): Advice[] {
+export function advice(input: BrainInputs, plan: Plan): UpTo3<Advice> {
   if (plan.status !== 'ok') return [];
   const out: Advice[] = [];
   for (const leak of plan.leaks) {
@@ -41,7 +42,6 @@ export function advice(input: BrainInputs, plan: Plan): Advice[] {
   for (const rise of plan.payRise.slice(0, 1))
     out.push({rule: 'save-pay-rise', ease: 3, yearlyMinor: (BigInt(rise.suggestedMinor) * 26n).toString(), figures: {suggestedMinor: rise.suggestedMinor, increaseMinor: rise.increaseMinor}, evidence: rise.evidence});
   const score = (a: Advice) => BigInt(a.yearlyMinor) * BigInt(a.ease);
-  return out.filter(a => BigInt(a.yearlyMinor) > 0n && !hidden(input, a.rule))
-    .sort((a, b) => score(b) > score(a) ? 1 : score(b) < score(a) ? -1 : a.rule.localeCompare(b.rule))
-    .slice(0, 3);
+  return upTo3(out.filter(a => BigInt(a.yearlyMinor) > 0n && !hidden(input, a.rule))
+    .sort((a, b) => score(b) > score(a) ? 1 : score(b) < score(a) ? -1 : a.rule.localeCompare(b.rule)));
 }
