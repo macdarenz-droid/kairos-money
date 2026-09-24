@@ -1,3 +1,5 @@
+import {convert, rateBetween, type Rate} from '../../core/fx';
+import {currency, money} from '../../core/money';
 import {day} from '../model';
 
 /**
@@ -27,10 +29,22 @@ export type Debt = {
   targetDate?: string | null;
 };
 
-/** The open debts in one currency, as the planner sees them, from the records the ledger keeps. */
-export function openDebts(records: readonly {id: string; name: string; currency: string; balanceMinor: string; annualRateBp: string; minimumMinor: string; closedAt: string | null; targetDate?: string | null}[], code: string): Debt[] {
-  return records.filter(d => d.closedAt === null && d.currency === code && BigInt(d.balanceMinor) > 0n)
-    .map(d => ({id: d.id, name: d.name, balanceMinor: d.balanceMinor, annualRateBp: d.annualRateBp, minimumMinor: d.minimumMinor, targetDate: d.targetDate ?? null}));
+/**
+ * The open debts, as the planner sees them, in `code`. Given rates, a debt in another currency is converted
+ * at the rate on `asOf`; without a rate it is left out, and the caller names it.
+ */
+export function openDebts(records: readonly {id: string; name: string; currency: string; balanceMinor: string; annualRateBp: string; minimumMinor: string; closedAt: string | null; targetDate?: string | null}[], code: string, fx?: {rates: readonly Rate[]; asOf: string}): Debt[] {
+  return records.flatMap(d => {
+    if (d.closedAt !== null || BigInt(d.balanceMinor) <= 0n) return [];
+    let balance = d.balanceMinor, minimum = d.minimumMinor;
+    if (d.currency !== code) {
+      const rate = fx ? rateBetween(fx.rates, currency(d.currency), currency(code), fx.asOf) : null;
+      if (rate === null) return [];
+      balance = convert(money(BigInt(balance), currency(d.currency)), currency(code), rate).minor.toString();
+      minimum = convert(money(BigInt(minimum), currency(d.currency)), currency(code), rate).minor.toString();
+    }
+    return [{id: d.id, name: d.name, balanceMinor: balance, annualRateBp: d.annualRateBp, minimumMinor: minimum, targetDate: d.targetDate ?? null}];
+  });
 }
 
 export type Payoff = {

@@ -85,10 +85,7 @@ export function keepToday(s: Snapshot, spendableMinor: string, bufferMinor = '0'
     total + BigInt(bill.minor) * BigInt(scheduledDates({next: bill.next, interval: bill.interval,
       ...(bill.monthly ? {monthly: bill.monthly} : {})}, horizon).filter(d => d > s.asOf).length), 0n);
 
-  // Purchases still waiting for a statement are money already gone.
-  const pending = s.transactions
-    .filter(t => t.status === 'pending' && BigInt(t.minor) < 0n)
-    .reduce((total, t) => total + abs(BigInt(t.minor)), 0n);
+  // Pending purchases are already out of the balance (it sums every row), so they are not taken off again.
 
   // WHAT A DAY COSTS: median of the days that cost anything, scaled by how often a day does.
   const window = {start: shift(s.asOf, -(WINDOW - 1)), end: s.asOf, label: ''};
@@ -105,7 +102,7 @@ export function keepToday(s: Snapshot, spendableMinor: string, bufferMinor = '0'
   const typicalDay = span > 0 && spending.length > 0
     ? median(spending) * BigInt(spending.length) / BigInt(span) : 0n;
 
-  const headroom = spendable - pending - committed - buffer - typicalDay * BigInt(days);
+  const headroom = spendable - committed - buffer - typicalDay * BigInt(days);
   const perDay = headroom > 0n ? headroom / BigInt(days) : 0n;
 
   // The cap: a fifth of what a day of his pay is worth, when his payslips can say.
@@ -148,7 +145,7 @@ export function keepToday(s: Snapshot, spendableMinor: string, bufferMinor = '0'
     keep = doable(min(landed / 10n, daily * BigInt(days))); when = 'paid';
   }
   const reserved = when === 'today' ? keep * BigInt(days) : keep;
-  const spend = spendable - pending - committed - buffer - reserved;
+  const spend = spendable - committed - buffer - reserved;
 
   return {status: 'ok', tier, days, spendableMinor: spendable.toString(),
     committedMinor: committed.toString(), typicalDayMinor: typicalDay.toString(),

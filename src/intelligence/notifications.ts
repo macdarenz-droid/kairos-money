@@ -1,4 +1,4 @@
-import {covered,dates,historical,median,shift,type Snapshot} from './model';
+import {covered,dates,median,shift,type Snapshot} from './model';
 import {recurrences} from './forecast';
 import {sha256} from '@noble/hashes/sha256';
 import {bytesToHex} from '@noble/hashes/utils';
@@ -10,9 +10,9 @@ export type Notice={kind:NoticeKind;key:string;date:string};
 /** Conservative observed-data prompts. No bank listener or claimed live detection. */
 export function notificationPlan(s:Snapshot,p:NoticePreferences):Notice[]{
  const result:Notice[]=[];const add=(kind:NoticeKind,id:string,date:string)=>{if(p[kind])result.push({kind,key:bytesToHex(sha256(kind+':'+s.currency+':'+id)),date});};
- if(!covered(s,s.asOf))return result;
- const rows=historical(s,{start:shift(s.asOf,-179),end:s.asOf,label:'notifications'}).filter(t=>BigInt(t.minor)<0n);
- if(p.bill)for(const r of recurrences(s))if(r.next<=shift(s.asOf,14))add('bill',r.merchant+':'+r.next,shift(r.next,-1)<s.asOf?s.asOf:shift(r.next,-1));
+ // Recorded rows, not statement coverage: hand entries and notices are enough to remind from.
+ const rows=s.transactions.filter(t=>t.currency===s.currency&&s.accountIds.includes(t.accountId)&&t.status==='settled'&&!t.transfer&&t.kind!=='transfer'&&t.date>=shift(s.asOf,-179)&&t.date<=s.asOf&&BigInt(t.minor)<0n);
+ if(p.bill)for(const r of recurrences(s,{requireCoverage:false}))if(r.next<=shift(s.asOf,14))add('bill',r.merchant+':'+r.next,shift(r.next,-1)<s.asOf?s.asOf:shift(r.next,-1));
  const prior=rows.filter(t=>t.date<s.asOf);const baseline=median(prior.map(t=>-BigInt(t.minor)));
  if(p.unusual&&prior.length>=20&&baseline>0n)for(const t of rows.filter(t=>t.date===s.asOf&&-BigInt(t.minor)>baseline*3n))add('unusual',t.id,s.asOf);
  if(p.price){const groups=new Map<string,typeof rows>();for(const t of rows){const key=t.description.trim().toLowerCase(),group=groups.get(key)??[];group.push(t);groups.set(key,group);}for(const group of groups.values()){

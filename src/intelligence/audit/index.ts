@@ -181,8 +181,11 @@ const share = (whole: bigint, bp: bigint) => whole * bp / 10000n;
 
 export function audit(s: Snapshot, options: Options = {}): Audit {
   const first = s.transactions.filter(t => t.date <= s.asOf).map(t => t.date).sort()[0];
-  const start = first && first > shift(s.asOf, -(WINDOW_DAYS - 1)) ? first : shift(s.asOf, -(WINDOW_DAYS - 1));
-  const days = first ? day(s.asOf) - day(start) + 1 : 0;
+  const earliest = first && first > shift(s.asOf, -(WINDOW_DAYS - 1)) ? first : shift(s.asOf, -(WINDOW_DAYS - 1));
+  const span = first ? day(s.asOf) - day(earliest) + 1 : 0;
+  // Whole thirty-day blocks, so a bill paid twice in 45 days is not read as 1.33 a month.
+  const days = span >= 30 ? span - span % 30 : span;
+  const start = days ? shift(s.asOf, -(days - 1)) : earliest;
   const blank: Audit = {
     status: 'not_yet', window: {start, end: s.asOf, days}, findings: [], leaks: [],
     cashFlow: {status: 'no_income', incomeSource: 'none', incomeMinor: '0', essentialsMinor: '0', minimumsMinor: '0',
@@ -217,7 +220,8 @@ export function audit(s: Snapshot, options: Options = {}): Audit {
   const disc = expenses.filter(t => t.kind === 'discretionary' || t.kind === 'unknown');
   const subs = recurrences(s, {requireCoverage: false}).filter(r => {
     const sample = s.transactions.find(t => t.id === r.evidence[0]);
-    return sample && (sample.kind === 'discretionary' || sample.kind === 'unknown');
+    // Only a chosen repeat is a subscription; an uncategorised one could be rent or a loan.
+    return sample?.kind === 'discretionary';
   });
   if (subs.length) {
     const perMonth = sum(subs.map(r => BigInt(r.minor) * 30n / BigInt(r.interval)));
@@ -268,7 +272,7 @@ export function audit(s: Snapshot, options: Options = {}): Audit {
   const fixed = essentials + minimums;
   if (income > 0n && ratio(fixed, income) > FIXED_BURDEN_BP) {
     const over = fixed - share(income, FIXED_BURDEN_BP);
-    findings.push({kind: 'fixed-costs', label: 'Fixed costs', annualMinor: annual(over).toString(),
+    findings.push({kind: 'fixed-costs', label: 'Fixed costs over 60% of income', annualMinor: annual(over).toString(),
       detail: `${ratio(fixed, income) / 100n}% of income`, evidence: expenses.filter(t => kindAmount(t, 'essential') > 0n).map(t => t.id)});
   }
   findings.sort((a, b) => BigInt(b.annualMinor) > BigInt(a.annualMinor) ? 1 : BigInt(b.annualMinor) < BigInt(a.annualMinor) ? -1 : a.kind.localeCompare(b.kind));
@@ -309,12 +313,15 @@ export function audit(s: Snapshot, options: Options = {}): Audit {
   const pays = payCycle(s);
   const payEvery = pays.length ? Math.min(...pays.map(c => c.interval)) : null;
   const room = free > 0n ? free : 0n;
-  const targets: Target[] = debts.filter(d => d.targetDate).map(d => {
+  // Earliest date first, each taking its extra out of what the earlier ones left.
+  let left = room;
+  const targets: Target[] = debts.filter(d => d.targetDate).sort((a, b) => a.targetDate!.localeCompare(b.targetDate!) || a.id.localeCompare(b.id)).map(d => {
     const months = monthsUntil(s.asOf, d.targetDate!);
     const payment = BigInt(paymentFor(d, months) ?? d.balanceMinor);
     const extra = payment > BigInt(d.minimumMinor) ? payment - BigInt(d.minimumMinor) : 0n;
-    const fits = income > 0n && extra <= room;
-    const reach = fits ? null : payoff(d, (BigInt(d.minimumMinor) + room).toString()).months;
+    const fits = income > 0n && extra <= left;
+    if (fits) left -= extra;
+    const reach = fits ? null : payoff(d, (BigInt(d.minimumMinor) + left).toString()).months;
     const target: Target = {id: d.id, name: d.name, date: d.targetDate!, months, paymentMinor: payment.toString(), extraMinor: extra.toString(),
       perPayMinor: payEvery ? (payment * BigInt(payEvery) / 30n).toString() : null, payInterval: payEvery,
       perDayMinor: (payment / 30n).toString(), fits, earliest: reach === null ? null : addMonths(s.asOf, reach), status: months < 1 ? 'past' : 'ok'};

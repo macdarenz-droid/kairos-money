@@ -82,10 +82,12 @@ export function intelligenceRepository(driver:Driver){
   // Use the primary-key index for each bounded read, then stable-sort dates once.
   // Equal dates retain SQLite's id order without repeatedly sorting the full table.
   rows.sort((a,b)=>String(a.posted_date)<String(b.posted_date)?-1:String(a.posted_date)>String(b.posted_date)?1:0);
+  const original=new Map<string,{minor:string;currency:Currency}>();
   const metadata=await setting<Record<string,Partial<Pick<Transaction,'instrument'|'hour'|'planned'|'outsideRoutine'|'overdraftFee'>>>>('intelligence:metadata',{});
   const transactions:Transaction[]=rows.filter(r=>ids.includes(String(r.account_id))).map((r):Transaction|null=>{
    const held=currency(String(r.currency)),date=String(r.posted_date),shown=into(String(r.amount_minor),held,date);
    if(shown===null)return null;
+   original.set(String(r.id),{minor:String(r.amount_minor),currency:held});
    return {id:String(r.id),accountId:String(r.account_id),date,minor:shown,currency:c,description:String(r.merchant??r.raw_description),rawDescription:String(r.raw_description),category:String(r.category_name??'Uncategorised'),kind:(r.category_kind??'unknown') as Kind,status:r.status==='pending'?'pending':'settled',transfer:r.transfer_group_id!==null,recurring:r.is_recurring===1,...metadata[String(r.id)]};
   }).filter((t):t is Transaction=>t!==null);
   const {refundRepository}=await import('./refunds');
@@ -97,7 +99,12 @@ export function intelligenceRepository(driver:Driver){
   // snapshot, so evidence the user recorded has to reach it or the FX capability has nothing to report.
   const foreign=new Map((await driver.query("SELECT key,value FROM app_settings WHERE key LIKE 'foreign-amount:%'")).map(r=>[String(r.key).slice(15),JSON.parse(String(r.value)) as Transaction['foreign']]));
   for(const t of transactions){const stored=foreign.get(t.id);if(stored)t.foreign=stored;}
-  for(const t of transactions){const split=splits.get(t.id);if(split&&split.id===t.id&&t.status==='settled'&&!t.transfer&&validSplit(split,t.minor,t.currency))t.allocations=split.parts;}
+  // A split is checked against the amount as recorded, then each part is shown at the same rate; the last
+  // part takes the rounding so the parts still add up exactly to the converted total.
+  for(const t of transactions){const split=splits.get(t.id),held=original.get(t.id);if(!split||!held||split.id!==t.id||t.status!=='settled'||t.transfer||!validSplit(split,held.minor,held.currency))continue;
+   if(held.currency===t.currency){t.allocations=split.parts;continue;}
+   const whole=-BigInt(held.minor),shown=-BigInt(t.minor);let used=0n;
+   t.allocations=split.parts.map((p,i)=>{const minor=i===split.parts.length-1?shown-used:BigInt(p.minor)*shown/whole;used+=minor;return {...p,minor:minor.toString()};});}
   const coverage=(await driver.query("SELECT c.*,b.integrity_tier FROM coverage_ranges c JOIN import_batches b ON b.id=c.import_batch_id WHERE b.status='committed'")).filter(r=>ids.includes(String(r.account_id))).map(r=>({accountId:String(r.account_id),start:String(r.period_start),end:String(r.period_end),tier:(r.integrity_tier==='A'?'A':r.integrity_tier==='B'?'B':'C') as 'A'|'B'|'C'}));
   // Pay converts at the rate for the day it was paid, like every other amount that happened on a date.
   const pays=(await driver.query('SELECT * FROM payslips ORDER BY pay_date,id')).map(r=>{
