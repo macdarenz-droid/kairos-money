@@ -8,13 +8,13 @@ import {join} from 'node:path';
  * Kairos shipped with INTERNET removed from its manifest, so "nothing leaves this device" was a property
  * of the build rather than a claim in a README. The owner decided some features should be online, which
  * is his to decide — but it costs the app that guarantee, and a guarantee that is merely dropped is worth
- * nothing. This replaces it with a narrower one that a machine can check: one file may reach the network,
- * and it is a file that cannot read the ledger.
+ * nothing. This replaces it with a narrower one that a machine can check: two files may reach the network
+ * (exchange rates and the optional Claude advisor, ADR 0045), and neither can read the ledger.
  *
  * If this test fails, the question is not how to make it pass. It is why a second file wants the network,
  * and whether what it would send belongs to the person using the app.
  */
-const ALLOWED = 'src/core/net/rates.ts';
+const ALLOWED = ['src/core/net/rates.ts', 'src/core/net/claude.ts'];
 /**
  * The global fetch, not any method that happens to share its name.
  *
@@ -36,9 +36,9 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-it('reaches the network from one module only', () => {
+it('reaches the network only from the two allow-listed modules', () => {
   const offenders = sourceFiles('src')
-    .filter(path => path.replace(/\\/g, '/') !== ALLOWED)
+    .filter(path => !ALLOWED.includes(path.replace(/\\/g, '/')))
     .filter(path => {
       // Comments discuss the rule; only real calls break it.
       const code = readFileSync(path, 'utf8').split('\n')
@@ -48,8 +48,24 @@ it('reaches the network from one module only', () => {
   expect(offenders).toEqual([]);
 });
 
+/** Every module a file imports, static or dynamic, as written. */
+function specifiers(path: string): string[] {
+  const code = readFileSync(path, 'utf8');
+  return [...code.matchAll(/(?:\bfrom\s*|\bimport\s*\(\s*|^\s*import\s+)['"]([^'"]+)['"]/gm)].map(m => m[1]!);
+}
+
+it('lets the advisor import only Capacitor, the SDK and brain types', () => {
+  const code = readFileSync('src/core/net/claude.ts', 'utf8');
+  const found = specifiers('src/core/net/claude.ts');
+  expect(found.length).toBeGreaterThan(0);
+  for (const spec of found) expect(spec, spec).toMatch(/^(?:@capacitor\/core|@anthropic-ai\/sdk(?:\/.*)?|\.\.\/\.\.\/brain\/types)$/);
+  // Brain types only: a value import from the brain would pull ledger-reading code next to the network.
+  expect(code).toMatch(/import type \{[^}]*\} from '\.\.\/\.\.\/brain\/types'/);
+  expect(code).not.toMatch(/import \{[^}]*\} from '\.\.\/\.\.\/brain\/types'/);
+});
+
 it('keeps the ledger out of the one module that can reach it', () => {
-  const code = readFileSync(ALLOWED, 'utf8');
+  const code = readFileSync(ALLOWED[0]!, 'utf8');
   // It imports currency codes and the rate scale. A database import here would mean a rate lookup could
   // carry a balance, a merchant or an account number to a stranger's server.
   for (const forbidden of ['/db/', 'repository', 'drizzle', 'schema', 'driver', 'ledger/', 'intelligence'])
