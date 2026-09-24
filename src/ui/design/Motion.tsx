@@ -80,6 +80,23 @@ export function KairosAiWorking({ kind }: { kind: 'sort' | 'review' }) {
   </div>;
 }
 
+/** Opens a dialog in the top layer; a later one always sits above an earlier one. */
+export function useModal() {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => { const dialog = ref.current; const previous = document.body.style.overflow; if (typeof dialog?.showModal === 'function') dialog.showModal(); else dialog?.setAttribute('open', ''); document.body.style.overflow = 'hidden'; return () => { if (typeof dialog?.close === 'function') dialog.close(); else dialog?.removeAttribute('open'); document.body.style.overflow = previous; }; }, []);
+  return ref;
+}
+
+/** A wait that covers the screen, above any open sheet; Escape cannot dismiss a running job. */
+export function BusyOverlay({ message }: { message: string }) {
+  const ref = useModal();
+  return <dialog ref={ref} className="busy-dialog" aria-label={message} onCancel={event => event.preventDefault()}>
+    <div className="busy-overlay" role="status" aria-live="polite" aria-atomic="true">
+      <div className="busy-card"><CoinStack/><p>{message}</p></div>
+    </div>
+  </dialog>;
+}
+
 /** A coin drops into the check mark of a saved toast. */
 export function SuccessDrop() {
   return <span className="success-drop" aria-hidden="true"><span className="success-coin"/><Check size={16}/></span>;

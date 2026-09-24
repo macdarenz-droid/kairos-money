@@ -3,7 +3,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {cleanup, fireEvent, render, screen} from '@testing-library/react';
 import {readFileSync} from 'node:fs';
 import {Button, Explain, Sheet, Switch} from '../src/ui/design/primitives';
-import {BusyOverlay} from '../src/ui/design/KairosMark';
+import {BusyOverlay} from '../src/ui/design/Motion';
 
 const order: string[] = [];
 beforeEach(() => {

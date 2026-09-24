@@ -86,14 +86,6 @@ details[open] > summary::before { transform: rotate(45deg); }
   border: 1px solid var(--border-default); border-radius: 16px; background: var(--surface-1);
   color: var(--text-primary); max-width: 300px; }
 .busy-card p { color: var(--text-primary); }
-.kairos-mark { display: block; color: var(--accent-text); }
-.kairos-mark path { fill: currentColor; }
-/* The step sweeps; the disc never breaks. Both halves ride the same transform, so what changes is where
-   the staircase between them sits, not how much disc there is. */
-@keyframes kairos-step { 0%, 100% { transform: translateX(-9px); } 50% { transform: translateX(9px); } }
-.kairos-halves-moving { animation: kairos-step 1800ms var(--ease-in-out) infinite; }
-@media (prefers-reduced-motion: reduce) { .kairos-halves-moving { animation: none; } }
-@media (forced-colors: active) { .kairos-mark path { fill: CanvasText; } }
 .spinner { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border-default);
   border-top-color: var(--accent); animation: spin 700ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

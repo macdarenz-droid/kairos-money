@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type PropsWithChildren, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type PropsWithChildren, type ReactNode } from 'react';
 import { X, Home, List, Sparkles, UserRound, Search, Info } from 'lucide-react';
 import { format, type Money } from '../../core/money';
-import { Coin, SuccessDrop } from './Motion';
+import { Coin, SuccessDrop, useModal } from './Motion';
 export function Surface({ children, className = '' }: PropsWithChildren<{ className?: string }>) { return <section className={`card ${className}`}>{children}</section>; }
 export function Row({ children, trailing }: PropsWithChildren<{ trailing?: ReactNode }>) { return <div className="row"><div>{children}</div>{trailing && <div className="row-trailing">{trailing}</div>}</div>; }
 export function Label({ children, muted = false }: PropsWithChildren<{ muted?: boolean }>) { return <span className={muted ? 'label muted' : 'label'}>{children}</span>; }
@@ -13,12 +13,6 @@ export function Button({ children, variant = 'default', className = '', busy = f
 }
 export function Input({ label, hint, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string | undefined }) {
   const id = useId(); return <label className="input-label" htmlFor={id}><span id={`${id}-label`}>{label}</span><input id={id} aria-labelledby={`${id}-label`} aria-describedby={hint ? `${id}-hint` : undefined} {...props}/>{hint && <span id={`${id}-hint`} className="meta">{hint}</span>}</label>;
-}
-/** Opens a dialog in the top layer; a later one always sits above an earlier one. */
-export function useModal() {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => { const dialog = ref.current; const previous = document.body.style.overflow; if (typeof dialog?.showModal === 'function') dialog.showModal(); else dialog?.setAttribute('open', ''); document.body.style.overflow = 'hidden'; return () => { if (typeof dialog?.close === 'function') dialog.close(); else dialog?.removeAttribute('open'); document.body.style.overflow = previous; }; }, []);
-  return ref;
 }
 const InSheet = createContext(false);
 export function Sheet({ title, children, onClose }: PropsWithChildren<{ title: string; onClose: () => void }>) {
@@ -51,10 +45,11 @@ export function Explain({ title, children }: PropsWithChildren<{ title: string }
   </>;
 }
 /** The one confirmation for deleting everything, the same in Settings and on the lock screen. */
-export function DeleteConfirm({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+export function DeleteConfirm({ checked, onChange, phrase, typed = '', onTyped }: { checked: boolean; onChange: (checked: boolean) => void; phrase?: string; typed?: string; onTyped?: (value: string) => void }) {
   return <>
     <p>This permanently removes your ledger, accounts, files, settings and PIN from this device. Exported copies must be deleted separately.</p>
     <label className="check-row"><input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}/>I understand that my data will be removed.</label>
+    {phrase && <Input label={`Type ${phrase} to confirm`} autoComplete="off" spellCheck={false} value={typed} onChange={e => onTyped?.(e.target.value)}/>}
   </>;
 }
 /** An On/Off setting drawn as a switch; the setting's label is its name. */

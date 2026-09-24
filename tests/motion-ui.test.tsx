@@ -3,8 +3,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest';
 import {act, cleanup, render, screen, waitFor} from '@testing-library/react';
 import {format, money} from '../src/core/money';
 import {Button} from '../src/ui/design/primitives';
-import {CountUp, KairosAiMark, KairosAiWorking, Loader} from '../src/ui/design/Motion';
-import {BusyOverlay} from '../src/ui/design/KairosMark';
+import {BusyOverlay, CountUp, KairosAiMark, KairosAiWorking, Loader} from '../src/ui/design/Motion';
 
 const motion = (reduce: boolean) => { window.matchMedia = vi.fn().mockReturnValue({matches: reduce, addEventListener() {}, removeEventListener() {}}); };
 afterEach(() => { cleanup(); vi.useRealTimers(); });
