@@ -59,11 +59,8 @@ export function NoticeSettings({accounts = []}: {accounts?: readonly Account[]} 
   return <section className="settings-section">
     <span className="heading-row"><h2>Read my bank's notifications</h2>
       <Explain title="Read my bank's notifications">
-        <p>Kairos reads the purchase alerts your banking app puts on your screen and asks whether to record
-          each one, so your spending stays current between statements.</p>
-        <p>Android has no way to share only one app's notifications, which is why the grant is all or
-          nothing. Kairos reads only the apps you tick, keeps everything on this device, and sends none of
-          it anywhere. You can withdraw the access in Android's settings whenever you like.</p>
+        <p>Kairos turns purchase alerts from your banking app into entries you approve. Android grants every
+          app's notifications at once, so Kairos reads only the apps you tick and keeps it all on this device.</p>
       </Explain>
     </span>
     {/* This sentence stays in front of the button that grants the access. It is what the person is being

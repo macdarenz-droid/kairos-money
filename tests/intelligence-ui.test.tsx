@@ -65,3 +65,15 @@ it('orders the Ledger: import first, then accounts, then history', async () => {
   expect([importButton, accounts, history].map(node => all.indexOf(node))).toEqual([importButton, accounts, history].map(node => all.indexOf(node)).sort((x, y) => x - y));
   expect(importButton.className).toContain('button-primary');
 });
+it('orders You: currency, appearance, Kairos AI, notifications, privacy, data, then delete last', async () => {
+  await setup(); fireEvent.click(screen.getByRole('button', {name: 'You'}));
+  await screen.findByRole('heading', {name: 'Your data'}, {timeout: 5000});
+  const all = [...document.querySelectorAll('main *')];
+  const at = (node: Element | null) => all.indexOf(node!);
+  const heading = (name: string | RegExp) => screen.getByRole('heading', {name});
+  const order = [document.querySelector('#settings-currency'), heading('Appearance'), heading(/Kairos AI/), heading('Notifications'),
+    heading("Read my bank's notifications"), heading('Privacy and security'), heading('Your data'), screen.getByRole('button', {name: 'Delete all data'})].map(at);
+  expect(order.every(index => index >= 0)).toBe(true);
+  expect(order).toEqual([...order].sort((x, y) => x - y));
+  expect(screen.getByRole('button', {name: 'Delete all data'}).closest('.danger-zone')).toBeTruthy();
+});

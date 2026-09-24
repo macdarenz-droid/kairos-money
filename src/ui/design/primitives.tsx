@@ -50,6 +50,13 @@ export function Explain({ title, children }: PropsWithChildren<{ title: string }
     {open && (inSheet ? <div className="explain-inline stack" id={id}>{children}</div> : <Sheet title={title} onClose={() => setOpen(false)}><div className="stack">{children}</div></Sheet>)}
   </>;
 }
+/** The one confirmation for deleting everything, the same in Settings and on the lock screen. */
+export function DeleteConfirm({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void }) {
+  return <>
+    <p>This permanently removes your ledger, accounts, files, settings and PIN from this device. Exported copies must be deleted separately.</p>
+    <label className="check-row"><input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}/>I understand that my data will be removed.</label>
+  </>;
+}
 /** An On/Off setting drawn as a switch; the setting's label is its name. */
 export function Switch({ label, on, onChange, disabled }: { label: string; on: boolean; onChange: () => void; disabled?: boolean | undefined }) {
   return <button type="button" className="switch" aria-pressed={on} aria-label={label} disabled={disabled} onClick={onChange}><span className="switch-thumb" aria-hidden="true"/><span className="sr-only">{on ? 'On' : 'Off'}</span></button>;

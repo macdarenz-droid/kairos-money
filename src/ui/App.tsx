@@ -131,7 +131,9 @@ export default function App() {
     {tab === 'Ledger' && count>0 && <Suspense fallback={null}><BulkProposals/></Suspense>}
     {tab === 'Ledger' && <Suspense fallback={null}><Debts accounts={accounts.data??[]}/><People/></Suspense>}
     {tab === 'Insights' && <><BrainMarker/><Unconverted onFix={() => openSettings('currency')}/><DoubleCounted onReview={() => setTab('Ledger')}/><Insights/></>}
-    {tab === 'You' && <>{/* "put at the very top of the you section": every figure in the app is shown in this currency, so the control that sets it comes before the figures rather than after them. */}<Rates accounts={accounts.data ?? []} notify={setToast}/><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []} focus={settingsFocus} onFocused={clearFocus}/><Suspense fallback={null}><NetWorth/></Suspense></>}
+    {tab === 'You' && <>{/* "put at the very top of the you section": every figure in the app is shown in this currency, so the control that sets it comes before the figures rather than after them. */}<Rates accounts={accounts.data ?? []} notify={setToast}/><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []} focus={settingsFocus} onFocused={clearFocus}
+      summary={<><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row></>}
+      netWorth={<Suspense fallback={null}><NetWorth/></Suspense>}/></>}
     </div>
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} kind={manualKind} onClose={()=>setSheet(null)}/>}

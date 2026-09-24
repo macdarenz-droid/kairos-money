@@ -28,18 +28,21 @@ export function AdvisorSettings() {
     <Row trailing={<Switch label={label} on={on} disabled={disabled} onChange={flip}/>}>{label}<p>{line}</p></Row>;
   return <section className="settings-section" aria-label="Kairos AI">
     <h2 className="heading-mark"><KairosAiMark size={20}/>Kairos AI</h2>
-    <p className="meta">Runs on Claude with your own Anthropic key.</p>
     {toggle('Use Kairos AI', 'Reviews and answers from your own summary.', settings.enabled, () => change({enabled: !settings.enabled}))}
     {hasKey
       ? <Row trailing={<Button onClick={() => act(() => session.run(repo => repo.advisor.clearKey()))}>Remove key</Button>}>Key saved on this phone</Row>
       : <><Input label="Anthropic API key" type="password" autoComplete="off" value={key} onChange={e => setKey(e.target.value)} hint="Kept on this phone only. Never in backups."/>
-        <Button disabled={!key.trim()} onClick={() => act(() => session.run(repo => repo.advisor.setKey(key)).then(() => setKey('')))}>Save key</Button></>}
+        <Button variant="primary" disabled={!key.trim()} onClick={() => act(() => session.run(repo => repo.advisor.setKey(key)).then(() => setKey('')))}>Save key</Button></>}
+    {/* Key first: the choices below only mean something once there is a key to use them with. */}
+    {hasKey && <>
     <Row trailing={<select aria-label="Model" value={settings.model} onChange={e => change({model: e.target.value as Settings['model']})}>
       {ADVISOR_MODELS.map(m => <option key={m} value={m}>{MODEL_NAMES[m]}</option>)}</select>}>Model<p>Opus answers best; Haiku costs least.</p></Row>
-    {toggle('Include merchant names in reviews', 'Off sends totals only.', settings.merchantNames, () => change({merchantNames: !settings.merchantNames}))}
-    {toggle('Let Kairos AI send merchant names to Claude', 'Needed to sort categories.', settings.sortConsent, () => change({sortConsent: !settings.sortConsent, ...(settings.sortConsent ? {autoSort: false} : {})}))}
+    <p className="meta">Runs on Claude with your own Anthropic key.</p>
+    {toggle('Send merchant names with reviews', 'Off sends totals only.', settings.merchantNames, () => change({merchantNames: !settings.merchantNames}))}
+    {toggle('Send merchant names for sorting', 'Needed to sort categories.', settings.sortConsent, () => change({sortConsent: !settings.sortConsent, ...(settings.sortConsent ? {autoSort: false} : {})}))}
     {toggle('Sort new merchants after each import', 'Only new, uncategorised merchants.', settings.autoSort, () => change({autoSort: !settings.autoSort}), !settings.sortConsent)}
     <div className="action-list"><Button disabled={!settings.enabled || !hasKey || !settings.sortConsent} onClick={() => setSorting(true)}>Sort my categories</Button></div>
+    </>}
     {error && <p role="alert">{error}</p>}
     {sorting && <SortCategories onClose={() => setSorting(false)}/>}
   </section>;

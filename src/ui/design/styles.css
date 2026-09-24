@@ -636,3 +636,5 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 .button.row-action { padding: 0; justify-content: flex-start; }
 .ledger-accounts .row { min-height: 48px; padding: 8px 0; }
 .history-heading { margin-bottom: 12px; }
+.danger-zone { margin-top: 48px; }
+.row-lead { display: inline-flex; align-items: center; gap: 8px; }
