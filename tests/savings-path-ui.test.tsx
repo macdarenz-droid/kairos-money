@@ -6,6 +6,7 @@ import {SavingsPath} from '../src/ui/design/SavingsPath';
 import {currency} from '../src/core/money';
 import {localDay} from '../src/ingest/reminders';
 import type {Snapshot, Transaction} from '../src/intelligence/model';
+import {brainInputs} from './brain-mock';
 
 const PHP = currency('PHP');
 const today = localDay();
@@ -17,10 +18,10 @@ vi.mock('../src/ui/session', () => ({useSession: () => ({state: 'ready', run: (f
   accountBalances: () => Promise.resolve(ledger.balances),
   displayCurrency: () => Promise.resolve('PHP'),
   rates: () => Promise.resolve([]),
-  intelligence: {analyse: () => Promise.resolve({buffer: '0', snapshot: {
+  intelligence: {inputs: () => Promise.resolve(brainInputs({
     asOf: today, currency: PHP, accountIds: ['a'], coverage: [], pays: [],
     transactions: ledger.transactions, savings: {asideMinor: '0', accountIds: ['s'], evidence: []},
-  } satisfies Snapshot})},
+  } satisfies Snapshot, ledger))},
 }))})}));
 afterEach(cleanup);
 

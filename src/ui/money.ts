@@ -1,4 +1,5 @@
 import {useQuery} from '@tanstack/react-query';
+import {think} from '../brain';
 import {convert, rateBetween, type Rate} from '../core/fx';
 import {currency, money} from '../core/money';
 import {localDay} from '../ingest/reminders';
@@ -56,5 +57,20 @@ export function useAnalysis() {
     queryKey: ['intelligence', today, code, {extra: '0', cut: 0}], staleTime: 0,
     enabled: session.state === 'ready' && settled,
     queryFn: () => session.run(repo => repo.intelligence.analyse(today, code, '0', 0)),
+  });
+}
+
+/**
+ * THE BRAIN, read once per (day, display currency) and shared by every card (ADR 0042).
+ * Kept for a minute rather than re-run on every tab switch; every write invalidates 'intelligence'.
+ */
+export function useBrain() {
+  const session = useSession();
+  const {code, settled} = useDisplayCurrencyState();
+  const today = localDay();
+  return useQuery({
+    queryKey: ['intelligence', today, code, 'brain'], staleTime: 60000,
+    enabled: session.state === 'ready' && settled,
+    queryFn: async () => think(await session.run(repo => repo.intelligence.inputs(today, code))),
   });
 }

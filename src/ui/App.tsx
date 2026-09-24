@@ -4,7 +4,6 @@ import { applyShadeDecisions, shadeBatch } from './notices';
 import { NoticeReview } from './screens/NoticeReview';
 import {useQuickAddLaunch, useQuickAddOutbox} from './quick-add';
 import { NotificationSync } from './screens/Notifications';
-import { Intelligence } from './screens/Intelligence';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Account } from '../core/db/repository';
 import { create } from 'zustand';
@@ -21,21 +20,15 @@ import { Unconverted } from './design/Unconverted';
 import { MoneyBand } from './design/MoneyBand';
 import { SavingsPath } from './design/SavingsPath';
 import { Surfaces } from './design/Surfaces';
-import { SpendRing } from './design/SpendRing';
+import { Insights } from './screens/Insights';
+import { TodayTriage, WeekStrip } from './screens/Today';
 import { AccountSheet } from './screens/AccountSheet';
 import { coveredDays } from '../ingest/reconcile';
 const ImportWorkspace=lazy(()=>import('./screens/ImportWorkspace').then(module=>({default:module.ImportWorkspace})));
-const SpendingPatterns=lazy(()=>import('./screens/SpendingPatterns').then(module=>({default:module.SpendingPatterns})));
-const MoneyVisuals=lazy(()=>import('./screens/MoneyVisuals').then(module=>({default:module.MoneyVisuals})));
-const Analysis=lazy(()=>import('./screens/Analysis').then(module=>({default:module.Analysis})));
 const BulkProposals=lazy(()=>import('./screens/BulkProposals').then(module=>({default:module.BulkProposals})));
 const NetWorth=lazy(()=>import('./screens/NetWorth').then(module=>({default:module.NetWorth})));
 const Debts=lazy(()=>import('./screens/Debts').then(module=>({default:module.Debts})));
-const DebtShape=lazy(()=>import('./screens/Debts').then(module=>({default:module.DebtShape})));
 const People=lazy(()=>import('./screens/People').then(module=>({default:module.People})));
-const MoneyFlowCard=lazy(()=>import('./screens/MoneyFlowCard').then(module=>({default:module.MoneyFlowCard})));
-const MoneyAudit=lazy(()=>import('./screens/MoneyAudit').then(module=>({default:module.MoneyAudit})));
-const CurrencyExposureCard=lazy(()=>import('./screens/CurrencyExposureCard').then(module=>({default:module.CurrencyExposureCard})));
 import {Settings, type SettingsFocus} from './screens/Settings';
 import {Rates} from './screens/Rates';
 import {useConverter} from './currency';
@@ -128,20 +121,12 @@ export default function App() {
     {accounts.error && <p className="error" role="alert">Accounts could not be read. Lock and reopen Kairos before continuing.</p>}
     {quickAddError && <p className="error" role="alert">{quickAddError}</p>}
     <div className="screen" key={tab} data-direction={nav.current.direction}>
-    {tab === 'Today' && <><Unconverted onFix={() => openSettings('currency')}/><MoneyBand/>{/* The one thing this app is for, directly under the figures it changes — not below four other cards at the size of a filter chip. */}<Button variant="primary" className="add-primary" onClick={()=>openManualSheet()}><Plus size={18}/>Add transaction</Button><SavingsPath/><Surfaces/><ManualHistory today/><Intelligence mode="today"/><SpendRing/></>}
+    {tab === 'Today' && <><Unconverted onFix={() => openSettings('currency')}/><MoneyBand/>{/* The one thing this app is for, directly under the figures it changes — not below four other cards at the size of a filter chip. */}<Button variant="primary" className="add-primary" onClick={()=>openManualSheet()}><Plus size={18}/>Add transaction</Button><TodayTriage/><SavingsPath/><Surfaces/><WeekStrip/><ManualHistory today/></>}
     {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Skeleton label="Reading accounts"/> : count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Balance now</span></div>{accounts.data?.map(account => { const held = balances.data?.find(b => b.accountId === account.id); return <Row key={account.id} trailing={<Amount value={shown.into(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor.toString(), account.currency) ?? money(BigInt(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor), currency(account.currency))} context={`${account.name} balance`}/>}>{/* The row was a caption. An account is the one thing on this screen a person most expects to be able to open, and nothing happened when he pressed it. */}<button type="button" className="account-open" onClick={() => setEditAccount(account)}><span className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><span><h3>{account.name}</h3><p className="account-meta">{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}{primaryAccount.data === account.id && <span className="tag tag-primary">Primary</span>}{account.archived_at && <span className="tag">Closed</span>}</p></span></span><ChevronRight size={16}/></button></Row>; })}</> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}<CombinedTotal accounts={accounts.data ?? []} balances={balances.data}/>{!(session.state==='ready' && accounts.isPending)&&<Suspense fallback={<Skeleton label="Opening imports"/>}><ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport}/></Suspense>}</>}
     {tab === 'Ledger' && count>0 && <Suspense fallback={null}><BulkProposals/></Suspense>}
     {tab === 'Ledger' && <Suspense fallback={null}><Debts accounts={accounts.data??[]}/><People/></Suspense>}
-    {tab === 'Insights' && <><Unconverted onFix={() => openSettings('currency')}/><DoubleCounted onReview={() => setTab('Ledger')}/><Suspense fallback={<Skeleton label="Opening spending patterns"/>}><SpendingPatterns/></Suspense>
-      {/* Both render nothing at all when there is nothing to draw: an empty chart is a chart about nothing. */}
-      <Suspense fallback={null}><MoneyFlowCard/><CurrencyExposureCard/><DebtShape/><MoneyAudit/></Suspense>
-      {/* Everything derived from the ledger reads here, whatever screen it used to live on: "all money is
-          the same insight whatever pattern of a user". Each part draws nothing until it has something to
-          draw, so an empty ledger is a short screen rather than a list of its own absences. */}
-      <Suspense fallback={<Skeleton label="Opening your money views"/>}><MoneyVisuals/><NetWorth/></Suspense>
-      <details className="section-gap"><summary>Habits</summary><Intelligence/></details>
-      <details><summary>Every measure</summary><Suspense fallback={<Skeleton label="Opening money analysis"/>}><Analysis/></Suspense></details></>}
-    {tab === 'You' && <>{/* "put at the very top of the you section": every figure in the app is shown in this currency, so the control that sets it comes before the figures rather than after them. */}<Rates accounts={accounts.data ?? []} notify={setToast}/><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []} focus={settingsFocus} onFocused={clearFocus}/></>}
+    {tab === 'Insights' && <><Unconverted onFix={() => openSettings('currency')}/><DoubleCounted onReview={() => setTab('Ledger')}/><Insights/></>}
+    {tab === 'You' && <>{/* "put at the very top of the you section": every figure in the app is shown in this currency, so the control that sets it comes before the figures rather than after them. */}<Rates accounts={accounts.data ?? []} notify={setToast}/><Row trailing={<span className="meta">{count}</span>}>Accounts set up</Row><Row trailing={<span className="meta">{days ? `${days} days of statement history` : 'No statements yet'}</span>}>Statement history</Row><Settings onAccount={() => setSheet('account')} notify={setToast} accounts={accounts.data ?? []} focus={settingsFocus} onFocused={clearFocus}/><Suspense fallback={null}><NetWorth/></Suspense></>}
     </div>
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} kind={manualKind} onClose={()=>setSheet(null)}/>}

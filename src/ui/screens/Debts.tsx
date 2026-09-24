@@ -44,7 +44,7 @@ export function Debts({accounts}: {accounts: {id: string; name: string; currency
   if (session.state !== 'ready') return null;
   const rows = debts.data ?? [];
   const open = rows.filter(d => d.closedAt === null), cleared = rows.filter(d => d.closedAt !== null);
-  const refresh = () => client.invalidateQueries({queryKey: ['debts']});
+  const refresh = async () => { await client.invalidateQueries({queryKey: ['debts']}); await client.invalidateQueries({queryKey: ['intelligence']}); };
 
   async function save(entry: Draft) {
     setBusy(true); setError('');

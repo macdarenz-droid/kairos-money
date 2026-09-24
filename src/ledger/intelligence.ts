@@ -184,15 +184,14 @@ export function intelligenceRepository(driver:Driver){
  async function inputs(asOf:string,code:string):Promise<import('../brain/types').BrainInputs>{
   const s=await snapshot(asOf,code),c=currency(code);
   const rates:FxRate[]=(await driver.query('SELECT as_of,base,quote,rate_e8,source FROM fx_rates')).map(r=>({asOf:String(r.as_of),base:currency(String(r.base)),quote:currency(String(r.quote)),rateE8:BigInt(String(r.rate_e8)),source:String(r.source)}));
-  const rows=await driver.query('SELECT a.id,a.type,a.currency,a.opening_balance_minor AS opening,COALESCE((SELECT SUM(t.amount_minor) FROM transactions t WHERE t.account_id=a.id),0) AS moved FROM accounts a WHERE a.archived_at IS NULL');
-  let spendable=0n,saved=0n;
-  for(const a of rows){const held=currency(String(a.currency)),rate=rateBetween(rates,held,c,asOf);if(rate===null)continue;
-   const value=convert(money(BigInt(String(a.opening??0))+BigInt(String(a.moved??0)),held),c,rate).minor;
-   if(a.type==='savings'||a.type==='investment')saved+=value;else spendable+=value;}
+  const rows=await driver.query('SELECT a.id,a.type,a.currency,a.archived_at,a.opening_balance_minor AS opening,COALESCE((SELECT SUM(t.amount_minor) FROM transactions t WHERE t.account_id=a.id),0) AS moved FROM accounts a');
+  const {holdingsFrom}=await import('./holdings');
+  const holdings=holdingsFrom(rows.map(a=>({id:String(a.id),type:String(a.type),currency:String(a.currency),archived_at:a.archived_at===null?null:String(a.archived_at)})),
+   rows.map(a=>({accountId:String(a.id),minor:(BigInt(String(a.opening??0))+BigInt(String(a.moved??0))).toString()})),rates,c,asOf);
   const {debtRepository}=await import('./debts'),{openDebts}=await import('../intelligence/debt');
   const records=await debtRepository(driver).list();
   const cancelled=new Set((await driver.query("SELECT value FROM app_settings WHERE key>='cancellation:' AND key<'cancellation;'")).flatMap(r=>{const v=JSON.parse(String(r.value)) as {merchant:string;currency:string};return v.currency===code?[v.merchant]:[];}));
-  return {snapshot:s,holdings:{spendableMinor:spendable.toString(),savedMinor:saved.toString()},bufferMinor:await setting<string>('intelligence:buffer:'+code,'0'),
+  return {snapshot:s,holdings,bufferMinor:await setting<string>('intelligence:buffer:'+code,'0'),
    debts:openDebts(records,code,{rates,asOf}),scheduled:records.filter(d=>d.closedAt===null&&d.currency===code).map(d=>({id:d.id,name:d.name,minimumMinor:d.minimumMinor,dueDay:d.dueDay})),
    cancelled,dismissals:await setting<import('../brain/types').BrainInputs['dismissals']>('brain:dismissals',{})};
  }

@@ -6,6 +6,7 @@ import {MoneyBand} from '../src/ui/design/MoneyBand';
 import {currency} from '../src/core/money';
 import {localDay} from '../src/ingest/reminders';
 import type {Snapshot, Transaction} from '../src/intelligence/model';
+import {holdingsFrom} from '../src/ledger/holdings';
 
 const AUD = currency('AUD');
 const today = localDay();
@@ -18,12 +19,15 @@ vi.mock('../src/ui/session', () => ({
     accountBalances: () => Promise.resolve(ledger.balances),
     displayCurrency: () => Promise.resolve(ledger.display),
     rates: () => Promise.resolve(ledger.rates),
-    // The band reads the snapshot the screen's ONE analysis already built, rather than asking for a
-    // second pass of its own over every transaction and every source row.
-    intelligence: {analyse: () => Promise.resolve({snapshot: {
-      asOf: today, currency: AUD, accountIds: ['a'], coverage: [], pays: [],
-      transactions: ledger.transactions, savings: {asideMinor: ledger.aside, accountIds: [], evidence: []},
-    } satisfies Snapshot})},
+    // The band reads the screen's one brain, built from these inputs, rather than a pass of its own.
+    intelligence: {inputs: () => {
+      const code = currency(ledger.display);
+      const rates = ledger.rates.map(r => ({...r, base: currency(r.base), quote: currency(r.quote), rateE8: BigInt(r.rateE8)}));
+      return Promise.resolve({snapshot: {asOf: today, currency: code, accountIds: ['a'], coverage: [], pays: [],
+        transactions: ledger.transactions, savings: {asideMinor: ledger.aside, accountIds: [], evidence: []}} satisfies Snapshot,
+        holdings: holdingsFrom(ledger.accounts, ledger.balances, rates, code, today), bufferMinor: '0', debts: [], scheduled: [],
+        cancelled: new Set<string>(), dismissals: {}});
+    }},
   }))}),
 }));
 HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };

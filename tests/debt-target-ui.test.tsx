@@ -6,7 +6,8 @@ import {MoneyAudit} from '../src/ui/screens/MoneyAudit';
 import {SavingsPath} from '../src/ui/design/SavingsPath';
 import {currency} from '../src/core/money';
 import {localDay} from '../src/ingest/reminders';
-import {addMonths} from '../src/intelligence/debt';
+import {addMonths, openDebts} from '../src/intelligence/debt';
+import {brainInputs} from './brain-mock';
 import type {Snapshot, Transaction} from '../src/intelligence/model';
 
 /** "try to keep ($) amount of money, to add to your savings for debt repayment" — drawn, per pay and per day. */
@@ -21,7 +22,11 @@ vi.mock('../src/ui/session', () => ({
     displayCurrency: () => Promise.resolve('AUD'),
     rates: () => Promise.resolve([]),
     debts: {list: () => Promise.resolve(ledger.debts)},
-    intelligence: {analyse: () => Promise.resolve({buffer: '0', snapshot: {
+    intelligence: {inputs: () => Promise.resolve(brainInputs({
+      asOf: today, currency: AUD, accountIds: ['a'], coverage: [], pays: [],
+      transactions: ledger.transactions, savings: {asideMinor: '0', accountIds: [], evidence: []},
+    }, {accounts: [{id: 'a', currency: 'AUD'}], balances: [{accountId: 'a', minor: '50000'}]},
+    {debts: openDebts(ledger.debts as Parameters<typeof openDebts>[0], 'AUD')})), analyse: () => Promise.resolve({buffer: '0', snapshot: {
       asOf: today, currency: AUD, accountIds: ['a'], coverage: [], pays: [],
       transactions: ledger.transactions, savings: {asideMinor: '0', accountIds: [], evidence: []},
     } satisfies Snapshot})},

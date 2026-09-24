@@ -1,4 +1,4 @@
-import type {DueWindow} from '../../intelligence/visuals/due';
+import type {DueWindow} from '../../brain/types';
 
 /**
  * The next thirty days as a shape.
