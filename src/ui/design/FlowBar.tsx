@@ -1,6 +1,7 @@
-import {format, money, type Currency} from '../../core/money';
+import {money, type Currency} from '../../core/money';
 import {displayRatio} from '../../intelligence/visuals';
 import {Explain} from './primitives';
+import {CountUp} from './Motion';
 
 export type Flow = {inMinor: string; outMinor: string};
 
@@ -19,7 +20,7 @@ export function FlowBar({flow, code, label}: {flow: Flow; code: Currency; label:
   const spent = BigInt(flow.outMinor) > 0n ? BigInt(flow.outMinor) : 0n;
   const ceiling = received > spent ? received : spent;
   const kept = received - spent;
-  const show = (value: bigint) => format(money(value, code));
+  const show = (value: bigint) => <CountUp value={money(value, code)}/>;
 
   if (ceiling <= 0n) return <p className="meta">Nothing has moved in this selection yet.</p>;
 
