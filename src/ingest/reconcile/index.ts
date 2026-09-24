@@ -34,7 +34,7 @@ export function balance(document: Document): { valid: boolean; difference: bigin
   const difference = BigInt(document.opening) + [...unique.values()].reduce((sum, value) => sum + value, 0n) - BigInt(document.closing);
   return { valid: difference === 0n, difference };
 }
-/** @param keep ids already in the ledger; a merge keeps one of them so edits keyed by id survive. */
+/** @param keep ids already in the ledger; they win corroborating merges, while a settlement keeps its pending id in any order. */
 export function reconcile(documents: readonly Document[], keep: ReadonlySet<string> = new Set()): LedgerRow[] {
   const parent = new Map<string, string>();
   function root(key: string): string { let cursor = key; while (parent.has(cursor)) cursor = parent.get(cursor)!; return cursor; }
