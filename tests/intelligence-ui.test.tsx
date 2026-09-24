@@ -55,3 +55,13 @@ it('starts an empty Today with one card and one primary, then orders the section
   expect(order).toEqual([...order].sort((x, y) => x - y));
   expect(order.every(index => index >= 0)).toBe(true);
 });
+it('orders the Ledger: import first, then accounts, then history', async () => {
+  await native.repo!.addAccount({id:'a',name:'Synthetic',institution:'Test',type:'checking',currency:'AUD',mask_last4:null,opening_balance_minor:0n});
+  await setup(); fireEvent.click(screen.getByRole('button', {name: 'Ledger'}));
+  const importButton = await screen.findByRole('button', {name: 'Import statements'}, {timeout: 5000});
+  const accounts = await screen.findByRole('heading', {name: 'Accounts'});
+  const history = await screen.findByRole('heading', {name: 'History'});
+  const all = [...document.querySelectorAll('main *')];
+  expect([importButton, accounts, history].map(node => all.indexOf(node))).toEqual([importButton, accounts, history].map(node => all.indexOf(node)).sort((x, y) => x - y));
+  expect(importButton.className).toContain('button-primary');
+});

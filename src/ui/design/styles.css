@@ -634,3 +634,5 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 .savings-hero .hero-amount { margin-top: 2px; }
 .savings-hero { grid-column: 1 / -1; }
 .button.row-action { padding: 0; justify-content: flex-start; }
+.ledger-accounts .row { min-height: 48px; padding: 8px 0; }
+.history-heading { margin-bottom: 12px; }
