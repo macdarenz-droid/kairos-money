@@ -25,9 +25,11 @@ export type ParsedNotice =
 // that is ONLY a balance has no amount left and is skipped.
 const BALANCE = /\b(?:available|remaining|current|new|closing|acct|account)?\s*(?:bal|balance|funds)\b[^\d\n]{0,24}(?:[A-Z]{3}\s*)?[$€£¥₱]?\s*\d[\d,]*(?:\.\d{1,3})?/gi;
 const INWARD_PHRASE = /\b(?:been paid|paid into|paid to you|received|deposit(?:ed)?|credited|refund(?:ed)?|transfer(?:red)? from|money in)\b/i;
-const OUTWARD_PHRASE = /\b(?:you spent|spent|purchase(?:d)?|debited|withdrawn|withdrawal|paid from|paid to|payment to|charged|sent to|transfer(?:red)? to|money out|(?:apple|google|samsung) pay)\b/i;
+const OUTWARD_PHRASE = /\b(?:you spent|spent|purchase(?:d)?|debited|withdrawn|withdrawal|paid from|paid to|payment to|charged|sent to|transfer(?:red)? to|money out)\b/i;
 const OUTWARD_WORD = /\b(?:debit|paid|payment|sent)\b/i;
 const INWARD_WORD = /\b(?:credit|pay)\b/i;
+// A wallet name says how, not which way: a bare "Apple Pay $12.50" is a purchase, but its "Pay" is not pay.
+const WALLET = /\b(?:apple|google|samsung) pay\b/gi;
 // A run of digits is only an amount when the bank marked it as one: a currency code, a symbol, or cents.
 // Without that rule a card suffix or a store number ("SYNTHETIC GROCER 1234") counts as a second amount
 // and every ordinary notice is thrown away as ambiguous.
@@ -65,12 +67,13 @@ export function parseNotice(notice: Notice, expected: Currency): ParsedNotice {
 
   // An explicit phrase settles it; a bare verb is only asked when no phrase matched, because "paid" alone
   // means opposite things in "paid from your account" and "you've been paid".
-  const inwardPhrase = INWARD_PHRASE.test(body), outwardPhrase = OUTWARD_PHRASE.test(body);
+  const bare = body.replace(WALLET, ' ');
+  const inwardPhrase = INWARD_PHRASE.test(bare), outwardPhrase = OUTWARD_PHRASE.test(bare);
   const decided = inwardPhrase !== outwardPhrase
     ? {inward: inwardPhrase, outward: outwardPhrase}
     : inwardPhrase && outwardPhrase
       ? null                                        // Says both; not resolved by preferring either.
-      : {inward: INWARD_WORD.test(body), outward: OUTWARD_WORD.test(body)};
+      : {inward: INWARD_WORD.test(bare), outward: OUTWARD_WORD.test(bare) || bare !== body};
   if (!decided || decided.inward === decided.outward)
     return {status: 'skip', reason: 'The notification does not say whether money went out or came in.'};
   const outward = decided.outward;

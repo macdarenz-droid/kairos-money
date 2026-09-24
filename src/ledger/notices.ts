@@ -1,5 +1,6 @@
 import type {Driver} from '../core/db/driver';
-import {currency, money, toDatabase} from '../core/money';
+import {currency, money, toDatabase, type Currency, type Money} from '../core/money';
+import {applyCategoryEdits} from './categories';
 import {dayNumber, hash, isoDay} from '../ingest/normalize';
 
 export type NoticeRecord = {
@@ -34,53 +35,106 @@ export async function noticeRecords(driver: Driver): Promise<NoticeRecord[]> {
  * so the row reappears if that import is ever rolled back.
  */
 export async function syncNotices(driver: Driver): Promise<void> {
-  const records = await noticeRecords(driver);
+  // Date order lets each notice pair with the statement rows around its own day (see claims below).
+  const records = (await noticeRecords(driver)).sort((x, y) => x.date === y.date ? (x.id < y.id ? -1 : 1) : x.date < y.date ? -1 : 1);
   // What the owner added to a notice row is kept across the rewrite below.
   const kept = new Map((await driver.query("SELECT t.id,t.category_id,t.notes FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version='notice-v1'"))
     .map(row => [String(row.id), {category: row.category_id ?? null, notes: String(row.notes ?? '')}]));
-  // Each settled statement row stands for one notice at most.
-  const claimed = new Set<string>();
   await driver.execute("DELETE FROM transaction_sources WHERE import_batch_id IN (SELECT id FROM import_batches WHERE parser_version='notice-v1')");
   await driver.execute("DELETE FROM transactions WHERE import_batch_id IN (SELECT id FROM import_batches WHERE parser_version='notice-v1')");
+  const legs: Leg[] = [];
   for (const entry of records) {
     // A transfer is two legs sharing one group: out of the account the money left, into the one it
     // reached. Everything else is a single leg. The group id is what makes the rest of the app read this
     // as moving money rather than spending it, so it is never left null on a transfer.
     const group = entry.destinationId ? hash('notice-transfer:' + entry.id) : null;
-    const legs = entry.destinationId
+    const parts = entry.destinationId
       ? [{key: 'from', accountId: entry.accountId, minor: -absolute(entry.minor)},
          {key: 'to', accountId: entry.destinationId, minor: absolute(entry.minor)}]
       : [{key: 'entry', accountId: entry.accountId, minor: BigInt(entry.minor)}];
-
-    for (const leg of legs) {
+    for (const leg of parts) {
       const account = (await driver.query('SELECT currency FROM accounts WHERE id=?', [leg.accountId]))[0];
       if (!account) continue;                      // The account was removed; the approval is not a reason to resurrect it.
       const code = currency(String(account.currency));
-      const value = money(leg.minor, code);
-      const settled = await driver.query(
-        "SELECT t.id,t.posted_date FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version NOT IN ('manual-entry-v1','notice-v1') AND t.status='settled' AND t.account_id=? AND t.amount_minor=? ORDER BY t.posted_date,t.id",
-        [leg.accountId, toDatabase(value)]);
-      const gap = (row: typeof settled[number]) => Math.abs(dayNumber(String(row.posted_date)) - dayNumber(entry.date));
-      const match = settled.filter(row => !claimed.has(String(row.id)) && gap(row) <= 3).sort((x, y) => gap(x) - gap(y))[0];
-      if (match) { claimed.add(String(match.id)); continue; }
       // A single notice keeps the id it has always had, so nothing already pointing at one is orphaned by
       // this change; only the two legs of a transfer need ids of their own.
-      const id = leg.key === 'entry' ? hash('notice-transaction:' + entry.id) : hash(`notice-transaction:${leg.key}:` + entry.id);
-      const prior = kept.get(id);
-      await driver.execute(
-        'INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes,status) VALUES(?,?,?,?,?,?,?,?,?,0,?,?,5000,1,?,?)',
-        [id, leg.accountId, entry.date, toDatabase(value), code, entry.merchant, group ? null : prior?.category ?? null,
-         value.minor < 0n ? 'debit' : 'credit', group, id, batchId(entry.id), prior?.notes ?? '', 'pending']);
-      await driver.execute('INSERT INTO transaction_sources VALUES(?,?,?,?)',
-        [id, batchId(entry.id), marker, JSON.stringify({
-          ...entry, origin: 'notification', sourceId: marker, merchant: entry.merchant,
-          fingerprint: leg.key === 'entry' ? hash('notice-fingerprint:' + entry.id) : hash(`notice-fingerprint:${leg.key}:` + entry.id),
-          issues: [], reference: '',
-          duplicateOf: null, occurrence: '', createRule: false, mcc: null,
-          pending: true, verified: true, confidence: 5000,
-        })]);
+      const id = leg.key === 'entry' ? noticeTransactionId(entry.id) : hash(`notice-transaction:${leg.key}:` + entry.id);
+      legs.push({id, key: leg.key, entry, group, accountId: leg.accountId, code, value: money(leg.minor, code)});
     }
   }
+  const matched = await claims(driver, legs);
+  let recategorised = false;
+  for (const {id, key, entry, group, accountId, code, value} of legs) {
+    const match = matched.get(id);
+    if (match) { recategorised = await carry(driver, id, match) || recategorised; continue; }
+    const prior = kept.get(id);
+    await driver.execute(
+      'INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes,status) VALUES(?,?,?,?,?,?,?,?,?,0,?,?,5000,1,?,?)',
+      [id, accountId, entry.date, toDatabase(value), code, entry.merchant, group ? null : prior?.category ?? null,
+       value.minor < 0n ? 'debit' : 'credit', group, id, batchId(entry.id), prior?.notes ?? '', 'pending']);
+    await driver.execute('INSERT INTO transaction_sources VALUES(?,?,?,?)',
+      [id, batchId(entry.id), marker, JSON.stringify({
+        ...entry, origin: 'notification', sourceId: marker, merchant: entry.merchant,
+        fingerprint: key === 'entry' ? hash('notice-fingerprint:' + entry.id) : hash(`notice-fingerprint:${key}:` + entry.id),
+        issues: [], reference: '',
+        duplicateOf: null, occurrence: '', createRule: false, mcc: null,
+        pending: true, verified: true, confidence: 5000,
+      })]);
+  }
+  if (recategorised) await applyCategoryEdits(driver);
+}
+
+type Leg = {id: string; key: string; entry: NoticeRecord; group: string | null; accountId: string; code: Currency; value: Money};
+const noticeTransactionId = (id: string) => hash('notice-transaction:' + id);
+const legIds = (id: string) => [noticeTransactionId(id), ...['from', 'to'].map(key => hash(`notice-transaction:${key}:` + id))];
+
+// Pairs notice legs with settled rows (same account, exact amount, within three days): most pairs first, so
+// no notice stays pending beside its own row; then fewest days apart, so edits reach the closest row.
+async function claims(driver: Driver, legs: Leg[]): Promise<Map<string, string>> {
+  const groups = new Map<string, Leg[]>();
+  for (const leg of legs) {
+    const key = leg.accountId + ' ' + toDatabase(leg.value);
+    groups.set(key, [...groups.get(key) ?? [], leg]);
+  }
+  const paired = new Map<string, string>();
+  for (const group of groups.values()) {
+    const rows = await driver.query(
+      "SELECT t.id,t.posted_date FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version NOT IN ('manual-entry-v1','notice-v1') AND t.status='settled' AND t.account_id=? AND t.amount_minor=? ORDER BY t.posted_date,t.id",
+      [group[0]!.accountId, toDatabase(group[0]!.value)]);
+    // best[i][k] pairs the first i legs with the first k rows; both are in date order, and pairs that
+    // never cross are enough on a calendar. step: 0 leaves leg i out, 1 leaves row k out, 2 pairs them.
+    const best = group.map(() => rows.map(() => ({count: 0, days: 0, step: 0})));
+    const at = (i: number, k: number) => i < 0 || k < 0 ? {count: 0, days: 0, step: 0} : best[i]![k]!;
+    const better = (x: {count: number; days: number}, y: {count: number; days: number}) => x.count !== y.count ? x.count > y.count : x.days < y.days;
+    group.forEach((leg, i) => rows.forEach((row, k) => {
+      let pick = {...at(i - 1, k), step: 0};
+      if (better(at(i, k - 1), pick)) pick = {...at(i, k - 1), step: 1};
+      const gap = Math.abs(dayNumber(String(row.posted_date)) - dayNumber(leg.entry.date));
+      const pair = {count: at(i - 1, k - 1).count + 1, days: at(i - 1, k - 1).days + gap, step: 2};
+      if (gap <= 3 && better(pair, pick)) pick = pair;
+      best[i]![k] = pick;
+    }));
+    for (let i = group.length - 1, k = rows.length - 1; i >= 0 && k >= 0;) {
+      const {step} = best[i]![k]!;
+      if (step === 2) paired.set(group[i]!.id, String(rows[k]!.id));
+      if (step !== 1) i -= 1;
+      if (step !== 0) k -= 1;
+    }
+  }
+  return paired;
+}
+
+/** Hands a notice's category, note and receipts to the settled row that replaces it, unless it has its own. */
+async function carry(driver: Driver, from: string, to: string): Promise<boolean> {
+  let recategorised = false;
+  for (const prefix of ['category-edit:', 'ledger-detail:']) {
+    const source = (await driver.query('SELECT value FROM app_settings WHERE key=?', [prefix + from]))[0];
+    if (!source || (await driver.query('SELECT key FROM app_settings WHERE key=?', [prefix + to])).length) continue;
+    const value = prefix === 'category-edit:' ? JSON.stringify({...JSON.parse(String(source.value)) as object, id: to}) : String(source.value);
+    await driver.execute('INSERT INTO app_settings(key,value) VALUES(?,?)', [prefix + to, value]);
+    recategorised ||= prefix === 'category-edit:';
+  }
+  return recategorised;
 }
 
 const absolute = (minor: string) => BigInt(minor) < 0n ? -BigInt(minor) : BigInt(minor);
@@ -147,6 +201,7 @@ export function noticeRepository(driver: Driver) {
   async function remove(id: string) {
     return driver.transaction(async () => {
       const batch = batchId(id);
+      for (const tx of legIds(id)) await driver.execute('DELETE FROM app_settings WHERE key IN (?,?,?)', ['split:' + tx, 'ledger-detail:' + tx, 'category-edit:' + tx]);
       await driver.execute('DELETE FROM transaction_sources WHERE import_batch_id=?', [batch]);
       await driver.execute('DELETE FROM transactions WHERE import_batch_id=?', [batch]);
       await driver.execute('DELETE FROM staging_rows WHERE import_batch_id=?', [batch]);
