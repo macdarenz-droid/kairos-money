@@ -3,6 +3,11 @@ on:
   push:
     branches: ['**']
   workflow_dispatch:
+    inputs:
+      save_signing_key:
+        description: Save the cached debug keystore as secret ANDROID_DEBUG_KEYSTORE_B64 (needs secret SECRETS_ADMIN_TOKEN)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -188,3 +193,34 @@ jobs:
             android/app/build/outputs/androidTest-results/
             docs/evidence/
           retention-days: 30
+  # Copies the only existing debug keystore (this branch's cache) into a repository secret, so every branch
+  # signs with the same identity. Manual only; the key is piped, never printed.
+  save-signing-key:
+    if: github.event_name == 'workflow_dispatch' && inputs.save_signing_key
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Restore the cached development keystore
+        id: key
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: kairos-money-debug-signing-v1
+      - name: Save it as a repository secret
+        env:
+          GH_TOKEN: ${{ secrets.SECRETS_ADMIN_TOKEN }}
+          HIT: ${{ steps.key.outputs.cache-hit }}
+        run: |
+          [ "$HIT" = "true" ] || { echo "No cached keystore on this branch; nothing saved."; exit 1; }
+          [ -n "$GH_TOKEN" ] || { echo "Secret SECRETS_ADMIN_TOKEN is not set; nothing saved."; exit 1; }
+          actual=$(keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey 2>/dev/null \
+            | sed -n 's/.*(SHA-256): //p' | tr -d ':' | tr 'A-F' 'a-f')
+          pinned=$(tr -d '[:space:]' < android/debug-signing-fingerprint.txt)
+          [ "$actual" = "$pinned" ] || { echo "Cached keystore ($actual) does not match the pinned fingerprint; nothing saved."; exit 1; }
+          base64 -w0 ~/.android/debug.keystore | gh secret set ANDROID_DEBUG_KEYSTORE_B64 --repo "$GITHUB_REPOSITORY"
+          echo "Saved ANDROID_DEBUG_KEYSTORE_B64 for certificate $actual."
