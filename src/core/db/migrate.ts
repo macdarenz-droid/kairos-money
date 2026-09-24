@@ -4,9 +4,44 @@ import up2 from './migrations/0002_query_indexes.up.sql?raw';
 import down2 from './migrations/0002_query_indexes.down.sql?raw';
 import up3 from './migrations/0003_export_sources.up.sql?raw';
 import down3 from './migrations/0003_export_sources.down.sql?raw';
+import up4 from './migrations/0004_fx_rates.up.sql?raw';
+import down4 from './migrations/0004_fx_rates.down.sql?raw';
+import up5 from './migrations/0005_debts.up.sql?raw';
+import down5 from './migrations/0005_debts.down.sql?raw';
+import up6 from './migrations/0006_people.up.sql?raw';
+import down6 from './migrations/0006_people.down.sql?raw';
 import type { Driver } from './driver';
-export const migrations = [{ version: 1, up: up1, down: down1 }, { version: 2, up: up2, down: down2 }, { version: 3, up: up3, down: down3 }] as const;
-export function statements(sql: string): string[] { return sql.split(';').map(s => s.trim()).filter(Boolean); }
+export const migrations = [{ version: 1, up: up1, down: down1 }, { version: 2, up: up2, down: down2 }, { version: 3, up: up3, down: down3 }, { version: 4, up: up4, down: down4 }, { version: 5, up: up5, down: down5 }, { version: 6, up: up6, down: down6 }] as const;
+/**
+ * Split a migration into statements.
+ *
+ * ONE SCAN THAT KNOWS WHERE IT IS. Comments are removed and statements are separated in the same pass,
+ * because both jobs need the same piece of knowledge — whether the character in hand is inside a quoted
+ * string — and a pass that does not know that gets both wrong.
+ *
+ * Splitting on every ";" used to cut a statement in half whenever one appeared inside a comment, and the
+ * fragments went to SQLite as SQL. It stayed hidden because no migration had ever carried a comment, and
+ * it surfaced as a syntax error naming a word out of an English sentence — a long way from the
+ * punctuation that caused it. Migrations are where the reasoning behind a schema belongs, and that
+ * reasoning is worth nothing if writing it down can corrupt the schema.
+ *
+ * A ";" or a "--" inside a string literal or a quoted identifier is left exactly alone, for the same
+ * reason: what looks like punctuation there is somebody's data.
+ */
+export function statements(sql: string): string[] {
+  const out: string[] = [];
+  let current = '', quote: string | null = null;
+  for (let i = 0; i < sql.length; i++) {
+    const char = sql[i]!;
+    if (quote) { current += char; if (char === quote) quote = null; continue; }
+    if (char === "'" || char === '"') { quote = char; current += char; continue; }
+    if (char === '-' && sql[i + 1] === '-') { while (i < sql.length && sql[i] !== '\n') i++; current += '\n'; continue; }
+    if (char === ';') { out.push(current); current = ''; continue; }
+    current += char;
+  }
+  out.push(current);
+  return out.map(s => s.trim()).filter(Boolean);
+}
 export async function migrate(driver: Driver, target: number = migrations.length, allowDestructive = false): Promise<void> {
   if (!Number.isInteger(target) || target < 0 || target > migrations.length) throw new Error('Unsupported schema version.');
   await driver.execute('CREATE TABLE IF NOT EXISTS _migrations (version INTEGER PRIMARY KEY NOT NULL)');

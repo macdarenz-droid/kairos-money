@@ -1,0 +1,57 @@
+import {useState} from 'react';
+import {useQuery,useQueryClient} from '@tanstack/react-query';
+import {currency,money,parseDecimal} from '../../core/money';
+import {combinedPosition,netWorthHistory} from '../../ledger/net-worth';
+import {displayRatio} from '../../intelligence/visuals';
+import {localDay} from '../../ingest/reminders';
+import {valueUpdateProposals} from '../proposals/derive';
+import {Amount,Button,Explain,Input,Row,Sheet} from '../design/primitives';
+import {useSession} from '../session';
+import {useDisplayCurrency} from '../currency';
+export function NetWorth(){
+ const session=useSession(),client=useQueryClient(),code=useDisplayCurrency(),[open,setOpen]=useState(false),[item,setItem]=useState(''),[name,setName]=useState(''),[kind,setKind]=useState<'asset'|'liability'>('asset'),[date,setDate]=useState(localDay()),[amount,setAmount]=useState(''),[linkedAccount,setLinkedAccount]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[remove,setRemove]=useState<string|null>(null);
+ const q=useQuery({queryKey:['net-worth'],enabled:session.state==='ready',queryFn:()=>session.run(async repo=>({values:await repo.netWorth.list(),accounts:await repo.netWorth.accountPositions()}))});
+ if(session.state!=='ready')return null;
+ const values=q.data?.values??[],accountPositions=q.data?.accounts??[],history=netWorthHistory(values,currency(code)),latest=history.at(-1),items=[...new Map(values.map(v=>[v.itemId,v])).values()],position=combinedPosition(values,accountPositions,currency(code));
+ // Every holding, stalest first, with everything but the amount already decided. Deliberately not
+ // filtered to the displayed currency and deliberately not capped: every holding had a button here
+ // before, and each one states its own currency, so narrowing the list would take away a one-tap route
+ // that exists today.
+ const updates=valueUpdateProposals(values,localDay(),values.length);
+ /**
+  * NOTHING RECORDED, NOTHING TO SHOW — "removeee useless all text."
+  *
+  * This printed "$0.00 / $0.00 / $0.00" under three headings and two paragraphs explaining why they were
+  * nought. Two questions, answered separately now:
+  *
+  *   bare       — there is nothing here and no account this could ever be about: one button, no prose.
+  *   hasFigures — something is actually counted, so a total, assets and liabilities are worth printing.
+  *
+  * Between the two sits the case that matters for getting started: accounts exist but none is included
+  * yet. That shows the ownership list and one line saying so, because the alternative is a screen that
+  * cannot be moved forward from.
+  */
+ const owned=accountPositions.filter(a=>a.currency===code);
+ const bare=!values.length&&!owned.length;
+ const hasFigures=values.length>0||owned.some(a=>a.choice==='include');
+ const refresh=()=>client.invalidateQueries({queryKey:['net-worth']});
+ async function changeAccount(accountId:string,choice:'include'|'exclude'){setBusy(true);setError('');try{await session.run(repo=>repo.netWorth.chooseAccount(accountId,choice));await refresh();}catch(e){setError(e instanceof Error?e.message:'The account choice could not be saved.');}finally{setBusy(false);}}
+ async function save(){setBusy(true);setError('');try{if(date>localDay())throw new Error('Use a valuation date up to today.');const existing=items.find(v=>v.itemId===item),value=parseDecimal(amount,currency(existing?.currency??code));await session.run(repo=>repo.netWorth.save({id:crypto.randomUUID(),itemId:item||crypto.randomUUID(),name:existing?.name??name,kind:existing?.kind??kind,currency:value.currency,date,minor:value.minor.toString(),accountId:(existing?.accountId??linkedAccount)||null}));await refresh();setOpen(false);setAmount('');setName('');setLinkedAccount('');}catch(e){setError(e instanceof Error?e.message:'The value could not be saved.');}finally{setBusy(false);}}
+ const ceiling=history.reduce((m,p)=>{const n=BigInt(p.net),a=n<0n?-n:n;return a>m?a:m;},1n);
+ const plotY=(value:string)=>{const unit=Number(displayRatio(value,ceiling.toString()));return 100-unit*90/1000000;};
+ const first=Date.parse(history[0]?.date??localDay()),last=Date.parse(latest?.date??localDay());
+ const plotX=(date:string)=>10+(Date.parse(date)-first)*980/Math.max(1,last-first);
+ const points=history.flatMap((p,i)=>i?[`${plotX(p.date)},${plotY(history[i-1]!.net)}`,`${plotX(p.date)},${plotY(p.net)}`]:[`${plotX(p.date)},${plotY(p.net)}`]);
+ return <section className="stack">{!bare&&<><span className="heading-row"><h2>Recorded net worth</h2><Explain title="Recorded net worth"><p>Assets minus liabilities, from the holdings you record and the imported accounts you choose to include.</p><p>Review every account once, so the same money is not counted twice.</p></Explain></span>{hasFigures&&<><h3>Combined position</h3><Row trailing={<Amount value={money(BigInt(position.net),currency(code))} context="combined net worth"/>}>Recorded holdings and included accounts<p className="meta">{position.asOf?`Latest contributing date ${position.asOf}`:''}</p></Row><Row trailing={<Amount value={money(BigInt(position.assets),currency(code))} context="combined assets"/>}>Assets</Row><Row trailing={<Amount value={money(BigInt(position.liabilities),currency(code))} context="combined liabilities"/>}>Liabilities</Row></>}{!position.complete&&owned.length>0&&<p role="status">Some {code} accounts are not included yet.</p>}<details><summary>Imported account ownership</summary>{accountPositions.filter(a=>a.currency===code).map(a=><section className="stack" key={a.accountId}><Row trailing={a.minor!==null?<Amount value={money(BigInt(a.minor),a.currency)} context={`${a.name} verified closing balance`}/>:undefined}>{a.name}<p>{a.type} · {a.date??'No verified closing date'} · {a.choice==='review'?'needs review':a.choice+'d'}</p></Row><p className="meta">{a.reason}</p><div className="form-actions"><Button disabled={busy||!a.verified} onClick={()=>void changeAccount(a.accountId,'include')}>Include balance</Button><Button disabled={busy} onClick={()=>void changeAccount(a.accountId,'exclude')}>Exclude balance</Button></div></section>)}{!accountPositions.some(a=>a.currency===code)&&<p>No {code} accounts.</p>}</details>{error&&!open&&!remove&&<p role="alert">{error}</p>}{latest?<><h3>Manual holdings history</h3><Row trailing={<Amount value={money(BigInt(latest.net),currency(code))} context="recorded net worth"/>}>Latest manual total<p className="meta">As of {latest.date} · includes earlier valuations</p></Row>{history.length===1?<p className="meta">One valuation date recorded. Add a value on another date to see how your total changes.</p>:<><Row trailing={<Amount value={money(ceiling,currency(code))} context="net worth scale maximum"/>}>Scale maximum</Row><svg viewBox="0 0 1000 200" role="img" aria-label="Recorded net worth at valuation dates. Earlier item values are carried forward; this is not a live market valuation."><line x1="0" y1="100" x2="1000" y2="100" stroke="var(--border-default)"/><polyline points={points.join(' ')} stroke="var(--accent)" fill="none" strokeWidth="2" vectorEffect="non-scaling-stroke"/>{/* r=3 in a 1000-unit viewBox inside 371px of phone drew a two-pixel dot — invisible, which lost the one
+    thing this chart has to say. The line between valuations is carried forward, not measured; only these
+    marks are dates a value was actually recorded. The surface ring keeps them legible where the line runs
+    behind them. */}
+   {history.map(p=><circle key={p.date} cx={plotX(p.date)} cy={plotY(p.net)} r="11" fill="var(--accent)"
+    stroke="var(--surface-1)" strokeWidth="2"/>)}</svg><Row trailing={<Amount value={money(-ceiling,currency(code))} context="net worth scale minimum"/>}>Scale minimum · zero is the centre</Row><p className="meta">{history[0]?.date} to {latest.date}</p></>}<details><summary>Valuation dates and source values</summary>{history.map(p=><section key={p.date}><Row trailing={<Amount value={money(BigInt(p.net),currency(code))} context={`recorded net worth ${p.date}`}/>}>{p.date}</Row>{p.items.map(v=><Row key={v.id} trailing={<Amount value={money(BigInt(v.minor)*(v.kind==='liability'?-1n:1n),v.currency)} context={v.name}/>}>{v.name}<p className="meta">{v.kind} · valued {v.date}</p></Row>)}</section>)}</details></>:<p>No {code} manual valuations recorded.</p>}</>}<Button disabled={q.isPending} onClick={()=>{setItem('');setLinkedAccount('');setError('');setOpen(true);}}>Record a value</Button>{updates.length>0&&<section className="section-gap"><h3>Update a holding</h3><p className="meta">The item and its currency carry over. Only the amount is left to enter, and Save still records it. Holdings you have not valued for longest come first.</p><div className="form-actions">{updates.map(u=>
+  <Button key={u.id} onClick={()=>{setItem(u.prefill.itemId);setAmount('');setDate(u.prefill.date);setError('');setOpen(true);}}
+   aria-label={`Update the value of ${u.label}, recorded in ${u.prefill.currency}. ${u.detail}`}>{u.label}</Button>)}</div></section>}
+ <details><summary>Manage recorded values</summary>{values.map(v=><Row key={v.id} trailing={<div className="stack"><Amount value={money(BigInt(v.minor),v.currency)} context={v.name}/><Button onClick={()=>setRemove(v.id)}>Remove</Button></div>}>{v.name} · {v.date}</Row>)}</details>{q.error&&<p role="alert">Recorded values could not be read.</p>}
+ {open&&<Sheet title={item?`Update ${items.find(v=>v.itemId===item)?.name??'a holding'}`:'Record an asset or liability'} onClose={()=>{if(!busy)setOpen(false);}}><div className="stack"><label className="input-label">Item<select value={item} onChange={e=>setItem(e.target.value)}><option value="">New item</option>{items.map(v=><option key={v.itemId} value={v.itemId}>{v.name} · {v.currency}</option>)}</select></label>{!item&&<><Input label="Item name" value={name} maxLength={80} onChange={e=>setName(e.target.value)}/><label className="input-label">Type<select value={kind} onChange={e=>setKind(e.target.value as 'asset'|'liability')}><option value="asset">Asset</option><option value="liability">Liability</option></select></label><p>Currency: {code}</p><label className="input-label">Represents an imported account<select value={linkedAccount} onChange={e=>setLinkedAccount(e.target.value)}><option value="">No imported account</option>{accountPositions.filter(a=>a.currency===code&&a.choice!=='include').map(a=><option key={a.accountId} value={a.accountId}>{a.name}</option>)}</select></label><p className="meta">Use this only when the manual holding is the same account. That imported balance cannot also be included.</p></>}<Input label="Valuation date" type="date" value={date} onChange={e=>setDate(e.target.value)}/><Input label="Positive value or amount owed" inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)}/>{error&&<p role="alert">{error}</p>}<Button disabled={busy} onClick={()=>void save()}>Save value</Button></div></Sheet>}
+ {remove&&<Sheet title="Remove this valuation?" onClose={()=>setRemove(null)}><p>Only this recorded value is removed. Other dates and ledger transactions stay intact.</p><Button variant="danger" disabled={busy} onClick={()=>{setBusy(true);void session.run(repo=>repo.netWorth.remove(remove)).then(refresh).then(()=>setRemove(null)).catch(()=>setError('The valuation could not be removed.')).finally(()=>setBusy(false));}}>Remove value</Button>{error&&<p role="alert">{error}</p>}</Sheet>}
+ </section>;
+}

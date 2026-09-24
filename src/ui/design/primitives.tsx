@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type PropsWithChildren, type ReactNode } from 'react';
-import { X, Home, List, Sparkles, UserRound, Search } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type PropsWithChildren, type ReactNode } from 'react';
+import { X, Home, List, Sparkles, UserRound, Search, Info } from 'lucide-react';
 import { format, type Money } from '../../core/money';
 export function Surface({ children, className = '' }: PropsWithChildren<{ className?: string }>) { return <section className={`surface ${className}`}>{children}</section>; }
 export function Row({ children, trailing }: PropsWithChildren<{ trailing?: ReactNode }>) { return <div className="row"><div>{children}</div>{trailing && <div className="row-trailing">{trailing}</div>}</div>; }
@@ -20,6 +20,29 @@ export function Sheet({ title, children, onClose }: PropsWithChildren<{ title: s
     <header className="sheet-header"><h2 id={id}>{title}</h2><Button variant="quiet" className="icon-button" aria-label={`Close ${title}`} onClick={onClose}><X size={20}/></Button></header><div className="sheet-content">{children}</div>
   </dialog>;
 }
+/**
+ * The explanation, one press away, instead of a paragraph nobody asked for.
+ *
+ * The app used to describe itself beside everything it offered: what a button would do, what a file is
+ * kept in, what a chart is showing. All of it was true and all of it was addressed to a first-time reader
+ * who no longer exists after the first day — so the screens read as instructions rather than as money.
+ *
+ * The rule this encodes: a screen shows what is, and says what a thing IS only when asked. Nothing is
+ * removed from the app; it moves behind a mark small enough to ignore and specific enough to find.
+ *
+ * Deliberately not a tooltip. A tooltip has no touch target worth the name and vanishes on the way to
+ * reading it; this is a real control with a real sheet behind it.
+ */
+export function Explain({ title, children }: PropsWithChildren<{ title: string }>) {
+  const [open, setOpen] = useState(false);
+  return <>
+    <button type="button" className="explain" aria-label={`What ${title} means`} onClick={() => setOpen(true)}>
+      <Info size={15} strokeWidth={1.8} aria-hidden="true"/>
+    </button>
+    {open && <Sheet title={title} onClose={() => setOpen(false)}><div className="stack">{children}</div></Sheet>}
+  </>;
+}
+
 export type Tab = 'Today' | 'Ledger' | 'Insights' | 'You';
 export function Tabs({ current, onChange, onQuick }: { current: Tab; onChange: (tab: Tab) => void; onQuick: () => void }) {
   const icons = { Today: Home, Ledger: List, Insights: Sparkles, You: UserRound };

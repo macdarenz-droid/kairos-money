@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS debts_open;
+DROP TABLE IF EXISTS debts;

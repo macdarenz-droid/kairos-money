@@ -2,6 +2,7 @@ export const currencyDigits = { AUD: 2, USD: 2, PHP: 2, EUR: 2, GBP: 2, NZD: 2, 
 export type Currency = keyof typeof currencyDigits;
 export type Money = Readonly<{ minor: bigint; currency: Currency }>;
 const limit = 9007199254740991n;
+const formatters = new Map<string, Intl.NumberFormat>();
 
 export function currency(value: string): Currency {
   if (!Object.hasOwn(currencyDigits, value)) throw new Error(`Unsupported currency: ${value}`);
@@ -41,14 +42,21 @@ export function parseDecimal(input: string, code: Currency): Money {
 }
 export function format(value: Money, locale = 'en-AU'): string {
   const digits = currencyDigits[value.currency];
+  const key = JSON.stringify([locale, value.currency]);
+  let formatter = formatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(locale, { style: 'currency', currency: value.currency, minimumFractionDigits: digits, maximumFractionDigits: digits });
+    // Formatting configuration is reusable; amounts and their rendered strings are not cached.
+    if (formatters.size >= 32) formatters.delete(formatters.keys().next().value!);
+    formatters.set(key, formatter);
+  }
   const unit = 10n ** BigInt(digits);
   const negative = value.minor < 0n;
   const absolute = negative ? -value.minor : value.minor;
   const whole = absolute / unit;
   const fraction = (absolute % unit).toString().padStart(digits, '0');
   const signed = negative ? (whole === 0n ? -1n : -whole) : whole;
-  return new Intl.NumberFormat(locale, { style: 'currency', currency: value.currency, minimumFractionDigits: digits, maximumFractionDigits: digits })
-    .formatToParts(signed).map(part => part.type === 'fraction' ? fraction : part.type === 'integer' && whole === 0n ? '0' : part.value).join('');
+  return formatter.formatToParts(signed).map(part => part.type === 'fraction' ? fraction : part.type === 'integer' && whole === 0n ? '0' : part.value).join('');
 }
 export function toDatabase(value: Money): number { return Number(money(value.minor, value.currency).minor); }
 export function fromDatabase(value: unknown, code: Currency): Money {

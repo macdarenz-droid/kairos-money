@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS fx_rates_pair;
+DROP TABLE IF EXISTS fx_rates;

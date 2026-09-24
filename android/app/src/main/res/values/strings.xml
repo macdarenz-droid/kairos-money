@@ -1,6 +1,18 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="app_name">Kairos Money Tracker</string>
+    <string name="widget_add">Add transaction</string>
+    <string name="widget_label">Kairos · Add</string>
+    <string name="widget_description">Record a purchase in two taps, without opening the app.</string>
+    <string name="widget_saved">Saved %1$s · %2$s</string>
+    <string name="qa_title">Add</string>
+    <string name="qa_spent">Spent</string>
+    <string name="qa_received">Received</string>
+    <string name="qa_save">Save</string>
+    <string name="qa_close">Close</string>
+    <string name="qa_delete">Delete the last digit</string>
+    <string name="qa_no_account">Your main account</string>
+    <string name="qa_footer">Kept on this phone until Kairos next opens. Nothing leaves it.</string>
     <string name="title_activity_main">Kairos Money Tracker</string>
     <string name="package_name">app.kairos.money</string>
     <string name="custom_url_scheme">app.kairos.money</string>

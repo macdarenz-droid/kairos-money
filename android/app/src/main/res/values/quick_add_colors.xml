@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app's design tokens (src/ui/design/tokens.css), converted from oklch. Light set; values-night holds dark. -->
+<resources>
+    <color name="qa_surface1">#FFFFFF</color>
+    <color name="qa_surface2">#F4F5F6</color>
+    <color name="qa_surface3">#EAECEE</color>
+    <color name="qa_border">#1C000000</color>
+    <color name="qa_border_subtle">#0F000000</color>
+    <color name="qa_text">#14171A</color>
+    <color name="qa_text2">#5C6469</color>
+    <color name="qa_meta">#60686E</color>
+    <color name="qa_accent">#324DBB</color>
+    <color name="qa_ripple">#14000000</color>
+    <color name="qa_scrim">#8C000000</color>
+</resources>

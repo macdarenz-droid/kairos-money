@@ -3,6 +3,11 @@ on:
   push:
     branches: ['**']
   workflow_dispatch:
+    inputs:
+      save_signing_key:
+        description: Save the cached debug keystore as secret ANDROID_DEBUG_KEYSTORE_B64 (needs secret SECRETS_ADMIN_TOKEN)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -21,6 +26,7 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: node scripts/test-money-lint.mjs
+      - run: python3 scripts/test-native-gate.py
       - run: npm run dev:fixtures
       - uses: actions/setup-python@v5
         with:
@@ -43,20 +49,76 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          # Google withdrew the obsolete 'tools' package, so the action's default package set now
+          # fails sdkmanager with "Failed to find package 'tools'". adb comes from platform-tools;
+          # the platform and build-tools this gate needs are installed explicitly below.
+          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
       - name: Preserve development signing identity
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
           key: kairos-money-debug-signing-v1
+      # A cache is evicted after a week unused, and a rotated key means every phone with the previous
+      # build refuses the new one. When the keystore is held as a secret instead, it never rotates.
+      # The secret is optional: without it the cache above still works.
+      - name: Use the pinned development keystore when one is configured
+        if: env.ANDROID_DEBUG_KEYSTORE_B64 != ''
+        env:
+          ANDROID_DEBUG_KEYSTORE_B64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_B64 }}
+        run: |
+          mkdir -p ~/.android
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
+      # WITHOUT THIS THE CACHE ABOVE HAS NOTHING TO SAVE, and it never has.
+      #
+      # Every run ended with "Path Validation Error: Path(s) specified in the action for caching do(es)
+      # not exist", because Gradle generates its debug key somewhere the cache was not looking. So the
+      # restore always missed, a NEW key was generated every build, and every APK was signed by a
+      # different identity — which is precisely why an update refuses to install over the copy already
+      # on a phone. The cache was not expiring; it was never working.
+      #
+      # Creating the keystore here puts it at the path Gradle's default debug config reads AND the path
+      # the cache saves, with the conventional debug alias and password. It is made once and then
+      # restored, so the identity stops moving.
+      - name: Create the development keystore if the cache did not restore one
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkeypair -v -keystore ~/.android/debug.keystore \
+              -storepass android -keypass android -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+            echo "Generated a new development keystore; the signing identity has changed."
+          else
+            echo "Restored the existing development keystore; the signing identity is unchanged."
+          fi
+          # THE KEYSTORE'S OWN FINGERPRINT, so it can be compared with the APK's.
+          #
+          # A build whose cache restored this file still produced a different signing certificate from
+          # the build that created it, and with only the APK's fingerprint printed there was no way to
+          # tell whether the file was wrong or was simply not the one Gradle used. Two numbers answer
+          # that in one reading. They must match.
+          keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey 2>/dev/null \
+            | sed -n 's/.*(SHA-256): //p' | tr -d ':' | tr 'A-F' 'a-f' | sed 's/^/Keystore certificate SHA-256: /'
+      # Gradle chooses the debug keystore's path itself unless it is told, and it was not choosing this
+      # one. Naming it is what makes the cached identity the identity that signs the APK.
+      - name: Sign debug builds with the keystore that is actually cached
+        run: echo "KAIROS_DEBUG_STORE_FILE=$HOME/.android/debug.keystore" >> "$GITHUB_ENV"
       - run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
       - run: npm ci
       - run: npm run android:sync
-      - name: Build signed debug and instrumentation APKs
+      - name: Generate synthetic instrumentation ledger
+        run: node --import tsx scripts/native-ledger-fixture.ts
+      - name: Build benchmark, debug and instrumentation APKs
         working-directory: android
-        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --no-daemon
+        run: ./gradlew :app:assembleBenchmark :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --no-daemon
       - name: Verify APK signature
         run: "$ANDROID_HOME/build-tools/34.0.0/apksigner verify --verbose android/app/build/outputs/apk/debug/app-debug.apk"
+      - name: Verify the signing identity has not rotated
+        run: python3 scripts/verify-signing-identity.py android/app/build/outputs/apk/debug/app-debug.apk "$ANDROID_HOME"
+      - name: Verify non-debuggable benchmark APK
+        run: python3 scripts/verify-benchmark-apk.py
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -90,7 +152,7 @@ jobs:
           heap-size: 512M
           disk-size: 2048M
           emulator-boot-timeout: 300
-          emulator-options: -no-window -gpu swiftshader -no-snapshot -noaudio -no-boot-anim -no-metrics
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
           disable-animations: true
           disable-spellchecker: true
           enable-hw-keyboard: true
@@ -103,6 +165,24 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+      # The same check again, as the last thing the job prints.
+      #
+      # The verification itself belongs before the emulator, so a rotated key fails in seconds instead of
+      # thirteen minutes later. But that puts its output thousands of logcat lines from the end, and the
+      # log is only readable from the tail — so the one value somebody has to ACT on was the one value
+      # buried deepest. Printing it again at the end costs a second and makes it reachable.
+      # The emulator streams logcat to stdout for as long as it is alive, so anything the gate prints
+      # while a device test is failing ends up hundreds of lines from the end of the job log. By here the
+      # emulator is dead and nothing else is writing, so this is the first place a tail reliably reaches.
+      - name: What the device test said, once the device has stopped talking
+        if: always()
+        run: cat docs/evidence/instrumentation-failure.log 2>/dev/null || echo 'No instrumentation failure recorded.'
+      - name: Signing identity, repeated at the end of the log so it can be read
+        if: always()
+        run: |
+          keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey 2>/dev/null \
+            | sed -n 's/.*(SHA-256): //p' | tr -d ':' | tr 'A-F' 'a-f' | sed 's/^/Keystore certificate SHA-256: /'
+          python3 scripts/verify-signing-identity.py android/app/build/outputs/apk/debug/app-debug.apk "$ANDROID_HOME"
       - name: Upload gate evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -113,3 +193,34 @@ jobs:
             android/app/build/outputs/androidTest-results/
             docs/evidence/
           retention-days: 30
+  # Copies the only existing debug keystore (this branch's cache) into a repository secret, so every branch
+  # signs with the same identity. Manual only; the key is piped, never printed.
+  save-signing-key:
+    if: github.event_name == 'workflow_dispatch' && inputs.save_signing_key
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Restore the cached development keystore
+        id: key
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: kairos-money-debug-signing-v1
+      - name: Save it as a repository secret
+        env:
+          GH_TOKEN: ${{ secrets.SECRETS_ADMIN_TOKEN }}
+          HIT: ${{ steps.key.outputs.cache-hit }}
+        run: |
+          [ "$HIT" = "true" ] || { echo "No cached keystore on this branch; nothing saved."; exit 1; }
+          [ -n "$GH_TOKEN" ] || { echo "Secret SECRETS_ADMIN_TOKEN is not set; nothing saved."; exit 1; }
+          actual=$(keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey 2>/dev/null \
+            | sed -n 's/.*(SHA-256): //p' | tr -d ':' | tr 'A-F' 'a-f')
+          pinned=$(tr -d '[:space:]' < android/debug-signing-fingerprint.txt)
+          [ "$actual" = "$pinned" ] || { echo "Cached keystore ($actual) does not match the pinned fingerprint; nothing saved."; exit 1; }
+          base64 -w0 ~/.android/debug.keystore | gh secret set ANDROID_DEBUG_KEYSTORE_B64 --repo "$GITHUB_REPOSITORY"
+          echo "Saved ANDROID_DEBUG_KEYSTORE_B64 for certificate $actual."

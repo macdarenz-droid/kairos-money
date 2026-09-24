@@ -1,0 +1,126 @@
+{
+  "run_id": 34843754745,
+  "candidate_sha": "3262bfd47611098221b48a8b88c7b73e989b5d61",
+  "run_result": "failure",
+  "artifact_id": 10348081576,
+  "archive_sha256": "f0cb2b83aa6196548a4a371cddc623f910941f25452a812bc05b2b62588ef6f3",
+  "startup": {
+    "status": "PASS",
+    "variant": "benchmark",
+    "debuggable": false,
+    "metric": "Android TotalTime to first activity frame; setup readiness checked separately",
+    "process_cold_limit_ms": 2000,
+    "fresh_install_limit_ms": 2500,
+    "samples": [
+      {
+        "total_time_ms": 2263,
+        "measurement": "Starting: Intent { cmp=app.kairos.money/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: app.kairos.money/.MainActivity\nTotalTime: 2263\nWaitTime: 2416\nComplete\n"
+      },
+      {
+        "total_time_ms": 1653,
+        "measurement": "Starting: Intent { cmp=app.kairos.money/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: app.kairos.money/.MainActivity\nTotalTime: 1653\nWaitTime: 2347\nComplete\n"
+      },
+      {
+        "total_time_ms": 1366,
+        "measurement": "Starting: Intent { cmp=app.kairos.money/.MainActivity }\nStatus: ok\nLaunchState: COLD\nActivity: app.kairos.money/.MainActivity\nTotalTime: 1366\nWaitTime: 1901\nComplete\n"
+      }
+    ],
+    "process_cold_median_ms": 1653,
+    "fresh_install_ms": 2263,
+    "failures": []
+  },
+  "native_status": {
+    "status": "FAIL",
+    "reason": "LedgerPerformanceInstrumentedTest did not pass; see its instrumentation log",
+    "functional_complete": false,
+    "completed_instrumentation": [
+      "PinRecoveryInstrumentedTest",
+      "FoundationInstrumentedTest",
+      "KeyProtectionInstrumentedTest",
+      "HardeningInstrumentedTest",
+      "ImportInstrumentedTest",
+      "LargeImportInstrumentedTest",
+      "NotificationsInstrumentedTest",
+      "RevisionInstrumentedTest",
+      "IntelligenceInstrumentedTest"
+    ],
+    "performance_failures": [],
+    "runner": "Android 34 emulator",
+    "evidence": "Read the individual instrumentation logs for completed assertions; the full native gate did not pass."
+  },
+  "notifications": {
+    "kinds": [
+      {
+        "kind": "bill",
+        "delivered": true,
+        "generic_private_content": true,
+        "daily_cap": true,
+        "deduplicated": true
+      },
+      {
+        "kind": "unusual",
+        "delivered": true,
+        "generic_private_content": true,
+        "daily_cap": true,
+        "deduplicated": true
+      },
+      {
+        "kind": "price",
+        "delivered": true,
+        "generic_private_content": true,
+        "daily_cap": true,
+        "deduplicated": true
+      },
+      {
+        "kind": "digest",
+        "delivered": true,
+        "generic_private_content": true,
+        "daily_cap": true,
+        "deduplicated": true
+      }
+    ],
+    "denied_permission_suppresses_delivery": true,
+    "future_and_stale_events_suppressed": true,
+    "queue_cancellation": true,
+    "scope": "Production receiver through Android broadcast and actual NotificationManager. Due-time fixture; real Doze/alarm delivery timing remains unmeasured."
+  },
+  "failure": "LedgerPerformanceInstrumentedTest cleanup at line 109 throws Database snapshot timed out, replacing the original throwable.",
+  "observations": [
+    "20,000-row fixture retains document and reconciled JSON arrays in the same Android process while measuring the app.",
+    "Log shows repeated heap clamping at 192 MB, blocking GC and 24 MB allocation attempts after recreation; no completed ledger scrolling report.",
+    "The original exception was not retained, so the log does not establish its exact assertion or prove a single exclusive cause."
+  ],
+  "repair": [
+    "Scope JSON fixture parsing and seeding in a helper returning only the batch ID.",
+    "Read transaction/provenance/label row sets in pages of at most 256 across the bridge; preserve every row/value/source.",
+    "Read transactions in primary-key order and stable-sort dates once, avoiding repeated full-table sort per page.",
+    "Keep primary and cleanup errors, and persist native phase/heap checkpoints."
+  ],
+  "native_repair_status": "Unrun; replacement combined gate required. Row count, 100%/200% checks, frame samples, original assertions and startup limits unchanged.",
+  "files": [
+    {
+      "file": "native-run-status.json",
+      "sha256": "a861a97272c18c69f98281171514a0fca235460f3f328898d90a25ceacf29286"
+    },
+    {
+      "file": "android-cold-start.json",
+      "sha256": "6533fa7e1a2bce721041385258ec55d950c7d52afd113d04139581ef0142c389"
+    },
+    {
+      "file": "NotificationsInstrumentedTest.log",
+      "sha256": "655ccd706105d16d241cec558b71786799b54803d95cee1d367f1c042df695e8"
+    },
+    {
+      "file": "LedgerPerformanceInstrumentedTest.log",
+      "sha256": "7102c61aa81fcb911a551865c91d6592e53f89fc72cce9fcd0a8d1aaf0c305d9"
+    },
+    {
+      "file": "android-screens-current/native-notifications.json",
+      "sha256": "90b19f19d9edd5c412c792429132d28ec44311b0688a1a314e033479c676c89e"
+    },
+    {
+      "file": "android-logcat-full.log",
+      "sha256": "783c893b0fc95b3989cdbabb807a19b5296717886ebfe4f359e30a484fe4d6f4"
+    }
+  ]
+}
