@@ -36,8 +36,25 @@ it.each(['dark','light'])('records and removes a dated asset without a ledger tr
 it.each(['dark','light'])('requires explicit ownership and prevents duplicate account value in %s',async theme=>{
  document.documentElement.dataset.theme=theme;const q=new QueryClient({defaultOptions:{queries:{retry:false}}});render(<QueryClientProvider client={q}><NetWorth/></QueryClientProvider>);await screen.findByRole('status');fireEvent.click(screen.getByText('Imported account ownership'));expect(screen.getByText(/2026-01-31 · needs review/)).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Include balance'}));await waitFor(()=>expect(screen.queryByRole('status')).toBeNull());expect(screen.getByLabelText('$1,500.00 AUD, combined net worth')).toBeTruthy();fireEvent.click(screen.getByRole('button',{name:'Exclude balance'}));await screen.findByText(/2026-01-31 · excluded/);fireEvent.click(screen.getByRole('button',{name:'Record a value'}));fireEvent.change(screen.getByLabelText('Item name'),{target:{value:'Same bank manually'}});fireEvent.change(screen.getByLabelText('Represents an imported account'),{target:{value:'bank'}});fireEvent.change(screen.getByLabelText('Valuation date'),{target:{value:'2026-01-31'}});fireEvent.change(screen.getByLabelText('Positive value or amount owed'),{target:{value:'1500.00'}});fireEvent.click(screen.getByRole('button',{name:'Save value'}));await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull());fireEvent.click(screen.getByRole('button',{name:'Include balance'}));expect((await screen.findByRole('alert')).textContent).toContain('manual holding');expect((await state.repo!.netWorth.accountPositions())[0]?.choice).toBe('exclude');
 });
-it('names holdings it could not convert instead of leaving them out silently',async()=>{
- await state.repo!.netWorth.save({id:'v1',itemId:'car',name:'Synthetic car',kind:'asset',currency:'USD',date:'2026-01-31',minor:'500000'});
+it('asks for review only when a display-currency account is unreviewed',async()=>{
+ await state.repo!.addAccount({id:'php',name:'Synthetic PHP',institution:'Test',type:'checking',currency:'PHP',mask_last4:null,opening_balance_minor:0n});await state.repo!.setDisplayCurrency('AUD');await state.repo!.netWorth.chooseAccount('bank','include');
  render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><NetWorth/></QueryClientProvider>);
- await screen.findByText('Leaves out USD: no rate to AUD yet.');
+ await screen.findByLabelText('$1,500.00 AUD, combined net worth');expect(screen.queryByText(/accounts are not included yet/)).toBeNull();
+});
+it('converts other-currency holdings at stored rates and names what has no rate',async()=>{
+ const repo=state.repo!,base={kind:'asset' as const,date:'2026-02-01',accountId:null};await repo.netWorth.chooseAccount('bank','exclude');
+ await repo.netWorth.save({...base,id:'home-value',itemId:'home',name:'Synthetic home',currency:'AUD',minor:'100000'});await repo.netWorth.save({...base,id:'land-value',itemId:'land',name:'Synthetic land',currency:'PHP',minor:'5000000'});
+ render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><NetWorth/></QueryClientProvider>);
+ expect((await screen.findByText(/not counted/)).textContent).toBe('PHP not counted: no stored rate reaches AUD.');expect(screen.getByLabelText('$1,000.00 AUD, combined net worth')).toBeTruthy();expect(screen.queryByText(/accounts are not included yet/)).toBeNull();
+ cleanup();await repo.saveRates([{asOf:'2026-01-30',base:'PHP',quote:'AUD',rateE8:2500000n,source:'test'}]);
+ render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><NetWorth/></QueryClientProvider>);
+ await screen.findByLabelText('$2,250.00 AUD, combined net worth');expect(screen.getByLabelText('$2,250.00 AUD, recorded net worth')).toBeTruthy();expect(screen.queryByText(/not counted/)).toBeNull();
+});
+it('counts an included other-currency account at its stored rate',async()=>{
+ const {driver}=memoryDriver();await migrate(driver);const repo=repository(driver);state.repo=repo;
+ for(const code of ['AUD','USD'] as const)await repo.addAccount({id:code,name:`Synthetic ${code}`,institution:'Test',type:'checking',currency:code,mask_last4:null,opening_balance_minor:0n});
+ await driver.execute("INSERT INTO import_batches(id,account_id,source_file_hash,file_name,parser_version,period_start,period_end,status,stated_closing_minor,created_at,integrity_tier) VALUES('usd-import','USD','usd-hash','usd.csv','test','2026-01-01','2026-01-31','committed',100000,'2026-02-01','A')");
+ await repo.netWorth.chooseAccount('USD','include');await repo.setDisplayCurrency('AUD');await repo.saveRates([{asOf:'2026-01-30',base:'USD',quote:'AUD',rateE8:150000000n,source:'test'}]);
+ render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><NetWorth/></QueryClientProvider>);
+ await screen.findByLabelText('$1,500.00 AUD, combined net worth');expect(screen.getByRole('status').textContent).toBe('Some AUD accounts are not included yet.');
 });

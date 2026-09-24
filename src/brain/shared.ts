@@ -3,9 +3,13 @@ import {merchantName} from '../ingest/normalize';
 import {abs, day, iso, median, shift, sum, type Snapshot, type Transaction} from '../intelligence/model';
 import {payCycle, recurrences, type Recurrence} from '../intelligence/forecast';
 import {nextPayDate} from '../intelligence/method';
-import type {Day, Tier} from './types';
+import type {Day, Tier, UpTo3} from './types';
 
 /** One definition of each basic idea; every other brain module asks these. */
+
+/** The first three at most, typed so a fourth cannot ship. */
+export const upTo3 = <T>(list: readonly T[]): UpTo3<T> => list.length === 0 ? [] : list.length === 1 ? [list[0]!]
+  : list.length === 2 ? [list[0]!, list[1]!] : [list[0]!, list[1]!, list[2]!];
 
 /** The merchant key the rules, the categoriser and the brain share. */
 export const merchantKey = (t: Pick<Transaction, 'description'>) => merchantName(t.description);

@@ -3,7 +3,7 @@ import { syncManual } from '../ledger/manual';
 import { syncNotices } from '../ledger/notices';
 import {applyCategoryEdits, categoryKind} from '../ledger/categories';
 import { hasStatementBalanceChain } from './normalize/statement-evidence';
-import type { Driver } from '../core/db/driver';
+import type { Driver, SqlRow } from '../core/db/driver';
 import { currency, money, toDatabase } from '../core/money';
 import { categorize, merchantDefaults, ownerRules } from '../ledger/rules';
 import { aiCategories } from '../ledger/ai-categories';
@@ -14,7 +14,7 @@ import type { ExportMapping } from './sources/types';
 import { hash, isoDay, rowFingerprint, dayNumber, similarity } from './normalize';
 import { balance, gaps, nearDuplicates } from './reconcile';
 import { linkNet } from '../ledger/payslips';
-import type { Batch, BatchSummary, Document, NormalizedRow, Payslip } from './types';
+import type { Batch, BatchSummary, Document, LedgerRow, NormalizedRow, Payslip } from './types';
 const integer = (s: string, c: string) => toDatabase(money(BigInt(s), currency(c)));
 function validate(doc: Document): void {
   if (doc.id !== hash(JSON.stringify([doc.context.accountId, doc.hash])) || !/^[a-f0-9]{64}$/.test(doc.hash)) throw new Error('Import identity does not match the source. Choose the file again.');
@@ -126,7 +126,8 @@ export function importService(driver: Driver) {
     return driver.transaction(async () => {
       const doc = (await batches()).find(b => b.id === id); if (!doc || !['staged', 'quarantined'].includes(doc.status)) throw new Error('Only staged rows can be corrected.');
       const row = doc.rows.find(r => r.sourceId === sourceId); if (!row) throw new Error('This row was not found. Reopen the import review.');
-      Object.assign(row, change, { verified: true, issues: [], createRule: makeRule }); row.fingerprint = rowFingerprint(row); validate(doc);
+      // What the owner submits is their tag, which a rule, default or Claude must not replace.
+      Object.assign(row, change, { verified: true, issues: [], createRule: makeRule }); delete row.categoryFrom; row.fingerprint = rowFingerprint(row); validate(doc);
       if (row.duplicateOf) { const target = (await reconciled((await batches()).filter(b => b.status === 'committed'))).find(r => r.id === row.duplicateOf || r.fingerprint === row.duplicateOf); if (!target || target.accountId !== row.accountId || target.currency !== row.currency || (target.minor !== row.minor && !(target.pending && !row.pending && Math.abs(dayNumber(target.date)-dayNumber(row.date))<=3 && similarity(target.merchant,row.merchant)>=9000))) throw new Error('That duplicate target does not match this account and amount. Keep the row separately.'); row.duplicateOf = target.id; }
       await save(doc);
     });
@@ -169,6 +170,30 @@ export function importService(driver: Driver) {
       return settled;
     });
   }
+  /** Old id to new id for each row whose id changed one for one: its kept source rolled back, or a pending copy arrived. */
+  async function renamed(ledger: readonly LedgerRow[], before: ReadonlySet<string>) {
+    if (ledger.every(r => before.has(r.id))) return new Map<string, string>();
+    const owners = new Map((await queryPages(driver, `SELECT transaction_id,import_batch_id,source_row_id FROM transaction_sources WHERE import_batch_id IN (SELECT import_batch_id FROM staging_rows WHERE source_row_id='__document__')`, [], ['transaction_id', 'import_batch_id', 'source_row_id']))
+      .map(r => [JSON.stringify([String(r.import_batch_id), String(r.source_row_id)]), String(r.transaction_id)]));
+    const now = new Set(ledger.map(r => r.id)), pairs = new Map<string, [string, string]>();
+    for (const row of ledger) if (!before.has(row.id)) for (const s of row.sources) {
+      const old = owners.get(JSON.stringify([s.batchId, s.sourceId])); if (old && !now.has(old)) pairs.set(old + '|' + row.id, [old, row.id]);
+    }
+    const olds = new Map<string, number>(), ids = new Map<string, number>();
+    for (const [old, id] of pairs.values()) { olds.set(old, (olds.get(old) ?? 0) + 1); ids.set(id, (ids.get(id) ?? 0) + 1); }
+    return new Map([...pairs.values()].filter(([old, id]) => olds.get(old) === 1 && ids.get(id) === 1));
+  }
+  /** Moves the owner's per-transaction edits to each row's new id. */
+  async function carry(moved: ReadonlyMap<string, string>) {
+    const prefixes = ['category-edit:', 'split:', 'ledger-detail:', 'foreign-amount:'], keys = [...moved.keys()].flatMap(old => prefixes.map(p => p + old)), stored: SqlRow[] = [];
+    for (let start = 0; start < keys.length; start += 400) { const part = keys.slice(start, start + 400); stored.push(...await driver.query(`SELECT key,value FROM app_settings WHERE key IN (${part.map(() => '?').join(',')})`, part)); }
+    for (const r of stored) {
+      const key = String(r.key), prefix = prefixes.find(p => key.startsWith(p))!, id = moved.get(key.slice(prefix.length))!, value: unknown = JSON.parse(String(r.value));
+      // Any leftover under the new id belongs to a row the owner no longer sees, so the live edit replaces it.
+      await driver.execute('INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)', [prefix + id, JSON.stringify(value && typeof value === 'object' && 'id' in value ? {...value, id} : value)]);
+      await driver.execute('DELETE FROM app_settings WHERE key=?', [key]);
+    }
+  }
   async function rebuild() {
     const all = await batches(), docs = all.filter(b => b.status === 'committed');
     const ledger = await reconciled(docs);
@@ -176,6 +201,8 @@ export function importService(driver: Driver) {
     for (const doc of docs) for (const row of doc.rows) if (row.createRule && row.category) await driver.execute('INSERT INTO rules(id,priority,matcher,action,created_by) VALUES(?,0,?,?,?)', [hash('import-rule:' + doc.id + ':' + row.sourceId), JSON.stringify({ merchant: row.merchant }), JSON.stringify({ category: row.category }), 'user']);
     const userRules = await rules(), confirmed = await defaults(), claude = await aiCategories(driver);
     const notes = new Map((await driver.query('SELECT id,notes FROM transactions WHERE import_batch_id IS NOT NULL')).map(r => [String(r.id), String(r.notes)]));
+    const moved = await renamed(ledger, new Set(notes.keys())), movedFrom = new Map([...moved].map(([old, id]) => [id, old]));
+    await carry(moved);
     await driver.execute('UPDATE payslips SET linked_transaction_id=NULL');
     await driver.execute(`DELETE FROM transaction_sources WHERE import_batch_id IN (SELECT import_batch_id FROM staging_rows WHERE source_row_id='__document__')`);
     await driver.execute(`DELETE FROM transactions WHERE import_batch_id IN (SELECT import_batch_id FROM staging_rows WHERE source_row_id='__document__')`);
@@ -190,7 +217,7 @@ export function importService(driver: Driver) {
       if (categoryId) await driver.execute('INSERT OR IGNORE INTO categories(id,name,kind) VALUES(?,?,?)', [categoryId, category, categoryKind(category!)]);
       const merchantId = hash('merchant:' + row.merchant);
       await driver.execute('INSERT OR IGNORE INTO merchants(id,canonical_name,aliases,mcc) VALUES(?,?,?,?)', [merchantId, row.merchant, '[]', row.mcc]);
-      await driver.execute('INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,merchant_id,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [row.id, row.accountId, row.date, integer(row.minor, row.currency), row.currency, row.description, merchantId, categoryId, BigInt(row.minor) < 0n ? 'debit' : 'credit', row.transferGroup, 0, row.id, row.owner, row.confidence, row.verified ? 1 : 0, notes.get(row.id) ?? '']);
+      await driver.execute('INSERT INTO transactions(id,account_id,posted_date,amount_minor,currency,raw_description,merchant_id,category_id,type,transfer_group_id,is_recurring,fingerprint,import_batch_id,confidence,user_verified,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', [row.id, row.accountId, row.date, integer(row.minor, row.currency), row.currency, row.description, merchantId, categoryId, BigInt(row.minor) < 0n ? 'debit' : 'credit', row.transferGroup, 0, row.id, row.owner, row.confidence, row.verified ? 1 : 0, notes.get(row.id) ?? notes.get(movedFrom.get(row.id) ?? '') ?? '']);
       await driver.execute('UPDATE transactions SET status=? WHERE id=?', [row.pending ? 'pending' : 'settled', row.id]);
       for (const source of row.sources) { const original = docs.find(d => d.id === source.batchId)!.rows.find(r => r.sourceId === source.sourceId)!; await driver.execute('INSERT INTO transaction_sources VALUES(?,?,?,?)', [row.id, source.batchId, source.sourceId, JSON.stringify(original)]); }
     }

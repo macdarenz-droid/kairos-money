@@ -32,7 +32,7 @@ it('stays hidden while the advisor is off', async () => {
 });
 
 it('shows a cited money review as AI wording and logs the call', async () => {
-  const fact = summary(brain).facts[0]!.id;
+  const fact = summary(brain).facts[0]!.fact;
   vi.stubGlobal('fetch', answer({points: [{text: 'You spent less this month.', facts: [fact]}, {text: 'Made up.', facts: ['no.such.fact']}]}));
   mount();
   fireEvent.click(await screen.findByRole('button', {name: 'Money review'}));

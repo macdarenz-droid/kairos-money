@@ -152,7 +152,7 @@ public class QuickAddActivity extends AppCompatActivity {
 
     private void save() {
         if (!saveable(amount)) return;
-        if (QuickAddStore.full(this)) { Toast.makeText(this, R.string.qa_full, Toast.LENGTH_LONG).show(); return; }
+        if (QuickAddStore.full(this)) { Toast.makeText(this, getString(R.string.qa_full, QuickAddStore.LIMIT), Toast.LENGTH_LONG).show(); return; }
         String id = QuickAddStore.add(this, amount, direction, category);
         if (id == null) { close(); return; }
         String code = QuickAddStore.currency(this);

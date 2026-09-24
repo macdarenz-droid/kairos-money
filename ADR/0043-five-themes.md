@@ -13,3 +13,4 @@ Accepted 24 September 2026. Amends ADR 0004 (accessible tokens).
 
 ## Consequences
 Paper and High contrast get the Light quick-add sheet, True black the Dark one. The owner reviews the new screenshots.
+The start-up splash stays light or dark by scheme; a per-theme splash (Android 13 `setSplashScreenTheme`) is left for later.

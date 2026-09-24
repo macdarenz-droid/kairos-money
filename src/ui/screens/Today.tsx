@@ -8,8 +8,8 @@ import {Triage} from './Insights';
 export function WeekStrip() {
   const brain = useBrain(), code = currency(useDisplayCurrency());
   const days = brain.data?.spending.days;
-  if (!days || days.every(d => d.minor === '0')) return null;
-  return <DayStrip days={[...days]} code={code} today={brain.data!.asOf}/>;
+  if (!days || days.every(d => d.outMinor === '0')) return null;
+  return <DayStrip days={days.map(d => ({date: d.date, minor: d.outMinor}))} code={code} today={brain.data!.asOf}/>;
 }
 
 /** Essentials and free help, on Today too, while triage is active. */

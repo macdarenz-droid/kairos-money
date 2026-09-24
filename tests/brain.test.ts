@@ -61,7 +61,7 @@ describe('the brain', () => {
     const brain = think(inputs(snapshot(handEntered())));
     expect(brain.tier).toBe('recorded');
     expect(BigInt(brain.spending.thisMonth.outMinor)).toBeGreaterThan(0n);
-    expect(brain.spending.categories.map(c => c.name)).toContain('Coffee & snacks');
+    expect(brain.spending.categories.map(c => c.category)).toContain('Coffee & snacks');
     expect(brain.plan.status).toBe('ok');
   });
 
@@ -111,6 +111,21 @@ describe('the brain', () => {
     expect(due).toMatchObject({kind: 'due-soon', minor: '4000', date: day(2)});
   });
 
+  it('states the last 7 days as positive money out, with the rows behind each figure', () => {
+    const phone = [0, 1, 2].map(n => row(`p${n}`, day(-88 + n * 30), '-4000', {description: 'Phone plan', category: 'Utilities'}));
+    const brain = think(inputs(snapshot(handEntered(phone))));
+    expect(brain.spending.days.map(d => d.date)).toEqual([-6, -5, -4, -3, -2, -1, 0].map(day));
+    expect(brain.spending.days.slice(-2)).toEqual([{date: day(-1), outMinor: '450', evidence: ['c-1']}, {date: TODAY, outMinor: '0', evidence: []}]);
+    expect(brain.spending.window).toMatchObject({start: day(-29), end: TODAY, days: 30});
+    expect(brain.spending.thisMonth).toMatchObject({start: '2026-09-01', end: TODAY});
+    expect(brain.spending.thisMonth.evidence).toContain('c-1');
+    expect(brain.spending.busiestWeekday?.evidence.length).toBeGreaterThan(0);
+    const dues = brain.attention.flatMap(a => a.kind === 'due-soon' ? a.window.dues : []);
+    expect(dues.length).toBeGreaterThan(0);
+    for (const d of dues) expect(d).not.toHaveProperty('height');
+    expect(brain.attention.find(a => a.kind === 'due-soon')?.evidence).toEqual(expect.arrayContaining(phone.map(t => t.id)));
+  });
+
   it('counts savings accounts toward the buffer steps', () => {
     const spendOnly = think(inputs(snapshot(handEntered()), {holdings: {spendableMinor: '50000', savedMinor: '0'}}));
     const withSavings = think(inputs(snapshot(handEntered()), {holdings: {spendableMinor: '50000', savedMinor: '900000'}}));
@@ -134,7 +149,7 @@ describe('the advisor summary', () => {
     const text = JSON.stringify(summary(brain)).toLowerCase();
     for (const secret of ['secret-id-1', 'acct-private', '998877', 'private clinic', 'rent0', 'landlord']) expect(text).not.toContain(secret);
     expect(JSON.stringify(summary(brain, {merchantNames: true}))).toContain('LANDLORD');
-    expect(summary(brain).facts.every(f => typeof f.id === 'string')).toBe(true);
+    expect(summary(brain).facts.every(f => typeof f.fact === 'string')).toBe(true);
   });
 });
 

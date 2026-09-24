@@ -3,12 +3,8 @@ package app.kairos.money;
 import android.content.Context;
 import android.content.res.Configuration;
 
-/**
- * The app's theme choice, read the same way by every native screen.
- *
- * Ids and colours come from scripts/tokens.mjs (kairos_theme_colors.xml). "system" resolves only to
- * dark or light; the other themes are chosen, never inferred.
- */
+// Hand-written id lists (only colours are generated); tests/theme-native-source.test.ts keeps them
+// equal to the registry. "system" resolves only to dark or light.
 final class Appearance {
     static final String PREFS = "kairos-appearance";
     private Appearance() {}

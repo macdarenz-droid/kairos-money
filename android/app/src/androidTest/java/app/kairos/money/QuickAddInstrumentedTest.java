@@ -58,6 +58,13 @@ public class QuickAddInstrumentedTest {
 
         QuickAddStore.clear(context, Collections.singletonList(id));
         assertEquals("Taken by the app, it is gone", 0, QuickAddStore.pending(context).length());
+
+        for (int i = 0; i < QuickAddStore.LIMIT - 1; i++) assertNotNull(QuickAddStore.add(context, "1", "spent", null));
+        assertFalse("One place left is not full", QuickAddStore.full(context));
+        assertNotNull(QuickAddStore.add(context, "1", "spent", null));
+        assertTrue("A full outbox says so, so the sheet can tell the owner", QuickAddStore.full(context));
+        assertNull("A full outbox keeps nothing more", QuickAddStore.add(context, "1", "spent", null));
+        assertEquals(QuickAddStore.LIMIT, QuickAddStore.pending(context).length());
     }
 
     @Test public void theWidgetShowsOneWordAndAnIconForEachChip() {

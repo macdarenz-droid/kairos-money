@@ -68,7 +68,7 @@ function WhereItWent({brain, code, show}: Part & {code: Currency}) {
   const s = brain.spending;
   if (!s.categories.length) return null;
   return <section className="stack" aria-label="Where it went">
-    <CategorySplit heading="Where it went" code={code} slices={s.categories.map(c => ({name: c.name, minor: c.minor, ids: [...c.evidence]}))}/>
+    <CategorySplit heading="Where it went" code={code} slices={s.categories.map(c => ({name: c.category, minor: c.minor, ids: [...c.evidence]}))}/>
     <div>{s.merchants.map(m => <Row key={m.merchant} trailing={show(m.minor)}>{m.merchant}<p className="meta">{m.count} {m.count === 1 ? 'purchase' : 'purchases'}</p></Row>)}</div>
   </section>;
 }

@@ -26,13 +26,13 @@ export function SortCategories({onClose}: {onClose: () => void}) {
   const undo = (id: string) => guard(async () => { await session.run(repo => repo.aiCategories.undoRun(id)); if (latest?.id === id) { setLatest(null); setCheck([]); } });
   const use = (key: string, category: string) => guard(async () => { await session.run(repo => repo.merchantRules.set(key, category)); setCheck(list => list.filter(p => p.key !== key)); });
 
-  const data = preview.data, count = data?.payload.merchants.length ?? 0;
+  const data = preview.data, count = data?.payload.sent.merchants.length ?? 0;
   return <Sheet title="Sort my categories" onClose={() => { if (!busy) onClose(); }}><div className="stack">
     <p>Claude suggests a category for each merchant you have not sorted. Your own choices always win.</p>
     {!data ? <p>Reading your merchants…</p> : <>
       <p className="meta">{count} {count === 1 ? 'merchant' : 'merchants'} · about {usd(estimateMicros(data.payload, data.settings.model))}, estimated</p>
       <Button onClick={() => setShown(open => !open)} aria-expanded={shown}>See exactly what is sent</Button>
-      {shown && <pre className="payload" aria-label="What is sent">{JSON.stringify({categories: editableCategories, examples: data.payload.examples, merchants: data.payload.merchants}, null, 2)}</pre>}
+      {shown && <pre className="payload" aria-label="What is sent">{JSON.stringify({categories: editableCategories, examples: data.payload.sent.examples, merchants: data.payload.sent.merchants}, null, 2)}</pre>}
       <Button variant="primary" disabled={busy || !count} onClick={() => void start()}>{busy ? 'Sorting…' : 'Start sorting'}</Button>
     </>}
     {failure && <p role="alert">{REASONS[failure]} Nothing was changed.</p>}

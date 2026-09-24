@@ -22,9 +22,9 @@ export const REASONS: Record<SortReason, string> = {
 /** Rough ceiling for a run: characters over four for input, thirty tokens a merchant out, doubled when the model thinks. */
 export function estimateMicros(payload: Payload, model: AdvisorModel): bigint {
   let input = 0;
-  for (let start = 0; start < payload.merchants.length; start += MAX_MERCHANTS)
-    input += Math.ceil(JSON.stringify({categories: editableCategories, examples: payload.examples, merchants: payload.merchants.slice(start, start + MAX_MERCHANTS)}).length / 4) + 300;
-  const output = payload.merchants.length * 30 * (model === 'claude-haiku-4-5' ? 1 : 2);
+  for (let start = 0; start < payload.sent.merchants.length; start += MAX_MERCHANTS)
+    input += Math.ceil(JSON.stringify({categories: editableCategories, examples: payload.sent.examples, merchants: payload.sent.merchants.slice(start, start + MAX_MERCHANTS)}).length / 4) + 300;
+  const output = payload.sent.merchants.length * 30 * (model === 'claude-haiku-4-5' ? 1 : 2);
   return costMicros(model, input, output);
 }
 
@@ -39,9 +39,9 @@ export async function logCall<T>(run: Run, result: Result<T>, model: AdvisorMode
 export async function sortMerchants(run: Run, onlyNew: boolean, options: Options = {}): Promise<SortResult> {
   const {settings, key, payload} = await run(async repo => ({settings: await repo.advisor.settings(), key: await repo.advisor.key(), payload: await repo.aiCategories.payload(onlyNew)}));
   if (!settings.enabled || !settings.sortConsent || !key) return {ok: false, reason: 'setup'};
-  if (!payload.merchants.length) return {ok: false, reason: 'nothing'};
+  if (!payload.sent.merchants.length) return {ok: false, reason: 'nothing'};
   const {categorise} = await import('../../core/net/claude');
-  const result = await categorise({merchants: payload.merchants, examples: payload.examples}, editableCategories, key, settings.model, options);
+  const result = await categorise({merchants: payload.sent.merchants, examples: payload.sent.examples}, editableCategories, key, settings.model, options);
   await logCall(run, result, settings.model);
   if (!result.ok) return {ok: false, reason: result.reason};
   const answers = result.value.flatMap(a => payload.keys[a.id] ? [{key: payload.keys[a.id]!, category: a.category, confidence: a.confidence}] : []);

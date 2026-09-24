@@ -22,7 +22,7 @@ async function ledger() {
   const category = async (description: string) => (await driver.query('SELECT c.name FROM transactions t LEFT JOIN categories c ON c.id=t.category_id WHERE t.raw_description=?', [description])).map(r => r.name);
   return {db, repo, rows, category};
 }
-const descriptions = (p: {merchants: {description: string}[]}) => p.merchants.map(m => m.description).sort();
+const descriptions = (p: {sent: {merchants: {description: string}[]}}) => p.sent.merchants.map(m => m.description).sort();
 
 it('sends only merchants the owner has not decided, and only new ones when asked', async () => {
   const {db, repo, rows, category} = await ledger();

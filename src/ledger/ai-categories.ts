@@ -1,26 +1,33 @@
 import type {Driver} from '../core/db/driver';
-import {currencyDigits} from '../core/money';
+import {currencyDigits, type Currency} from '../core/money';
 import {bytesToHex, randomBytes} from '@noble/hashes/utils';
 import type {LedgerRow} from '../ingest/types';
 import {editableCategories} from './categories';
 
 export type Confidence = 'high' | 'medium' | 'low';
-/** Stored under `ai-category:<merchantKey>`; only high and medium answers are stored. */
-export type AiCategory = {category: string; confidence: Confidence; model: string; at: string};
+/** Stored under `ai-category:<merchantKey>` for high and medium answers; `run` is the run that wrote it. */
+export type AiCategory = {category: string; confidence: Confidence; model: string; at: string; run: string};
 export type Answer = {key: string; category: string; confidence: Confidence};
 export type AiRun = {id: string; at: string; model: string; previous: Record<string, AiCategory | null>; applied: string[]; proposals: {key: string; category: string}[]};
 
 export type PayloadMerchant = {id: string; description: string; direction: 'in' | 'out' | 'both'; band: string; count: number; mcc: string | null; category: string | null};
-export type Payload = {merchants: PayloadMerchant[]; examples: {description: string; category: string}[]; keys: Record<string, string>};
+/** `sent` is the only part that leaves the device; `keys` maps its opaque ids back to merchant keys. */
+export type Payload = {sent: {merchants: PayloadMerchant[]; examples: {description: string; category: string}[]}; keys: Record<string, string>};
 
 const PREFIX = 'ai-category:';
 const RUN = 'ai-run:';
 const mask = (text: string) => text.replace(/\d{4,}/g, '####').replace(/\s+/g, ' ').trim().slice(0, 120);
 const BANDS: readonly [bigint, string][] = [[10n, 'under 10'], [50n, '10–50'], [200n, '50–200'], [1000n, '200–1000']];
 
-function band(minor: bigint, code: keyof typeof currencyDigits): string {
+function band(minor: bigint, code: Currency): string {
   const unit = 10n ** BigInt(currencyDigits[code]);
   return BANDS.find(([limit]) => minor < limit * unit)?.[1] ?? 'over 1000';
+}
+/** Ties go to the first in sort order, so the result never depends on row order. */
+function mostCommon<T extends string>(values: readonly T[]): T {
+  const counts = new Map<T, number>();
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+  return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]![0];
 }
 function median(values: bigint[]): bigint {
   const sorted = [...values].sort((a, b) => a < b ? -1 : a > b ? 1 : 0);
@@ -29,8 +36,9 @@ function median(values: bigint[]): bigint {
 }
 
 /**
- * What Claude is shown to sort categories: one entry per merchant key, with an opaque id.
+ * What Claude is shown to sort categories (`sent`): one entry per merchant key, with an opaque id.
  * No dates, exact amounts, accounts, transfers or split rows; digit runs of 4+ are masked.
+ * The amount band uses the merchant's most common currency only.
  */
 export function categorisationPayload(rows: readonly LedgerRow[], options: {splitIds: ReadonlySet<string>; examples: readonly {description: string; category: string}[]}): Payload {
   const groups = new Map<string, LedgerRow[]>();
@@ -43,17 +51,15 @@ export function categorisationPayload(rows: readonly LedgerRow[], options: {spli
   for (const [key, list] of [...groups].sort(([a], [b]) => a.localeCompare(b))) {
     const id = `m${merchants.length + 1}`;
     keys[id] = key;
-    const counts = new Map<string, number>();
-    for (const row of list) counts.set(row.description, (counts.get(row.description) ?? 0) + 1);
-    const description = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]![0];
+    const description = mostCommon(list.map(row => row.description)), currency = mostCommon(list.map(row => row.currency));
     const inward = list.some(row => BigInt(row.minor) > 0n), outward = list.some(row => BigInt(row.minor) < 0n);
-    const amounts = list.map(row => BigInt(row.minor) < 0n ? -BigInt(row.minor) : BigInt(row.minor));
+    const amounts = list.filter(row => row.currency === currency).map(row => BigInt(row.minor) < 0n ? -BigInt(row.minor) : BigInt(row.minor));
     const categories = new Set(list.map(row => row.category));
     merchants.push({id, description: mask(description), direction: inward && outward ? 'both' : inward ? 'in' : 'out',
-      band: band(median(amounts), list[0]!.currency), count: list.length, mcc: list.find(row => row.mcc)?.mcc ?? null,
+      band: band(median(amounts), currency), count: list.length, mcc: list.find(row => row.mcc)?.mcc ?? null,
       category: categories.size === 1 ? [...categories][0] ?? null : null});
   }
-  return {merchants, keys, examples: options.examples.slice(0, 40).map(e => ({description: mask(e.description), category: e.category}))};
+  return {sent: {merchants, examples: options.examples.slice(0, 40).map(e => ({description: mask(e.description), category: e.category}))}, keys};
 }
 
 /** Claude's stored categories by merchant key, as categorize() reads them. */
@@ -84,7 +90,7 @@ export function aiCategoryRepository(driver: Driver, refresh: () => Promise<void
         seen.add(answer.key);
         if (answer.confidence === 'low') { run.proposals.push({key: answer.key, category: answer.category}); continue; }
         run.previous[answer.key] = await read(answer.key);
-        await write(answer.key, {category: answer.category, confidence: answer.confidence, model, at});
+        await write(answer.key, {category: answer.category, confidence: answer.confidence, model, at, run: run.id});
         run.applied.push(answer.key);
       }
       await driver.execute('INSERT INTO app_settings(key,value) VALUES(?,?)', [RUN + run.id, JSON.stringify(run)]);
@@ -92,12 +98,14 @@ export function aiCategoryRepository(driver: Driver, refresh: () => Promise<void
       return run;
     });
   }
-  /** Puts every merchant the run touched back exactly as it was. */
+  /** Puts every merchant the run touched back exactly as it was. Refuses while a newer run still covers one of them. */
   async function undoRun(id: string) {
     return driver.transaction(async () => {
       const row = (await driver.query('SELECT value FROM app_settings WHERE key=?', [RUN + id]))[0];
       if (!row) throw new Error('That sorting run was already undone.');
       const run = JSON.parse(String(row.value)) as AiRun;
+      // Restoring under a newer run would drop its answer and later bring this run's back.
+      for (const key of Object.keys(run.previous)) if ((await read(key))?.run !== id) throw new Error('A newer sorting run changed these merchants. Undo that one first.');
       for (const [key, value] of Object.entries(run.previous)) await write(key, value);
       await driver.execute('DELETE FROM app_settings WHERE key=?', [RUN + id]);
       await refresh();
