@@ -33,3 +33,25 @@ it('keeps the import action out of the loading state until accounts can support 
 it('does not lock an authenticated foreground session on a repeated active notification',async()=>{await setup();await act(async()=>{native.listener!({isActive:true});});expect(native.unlocked).toBe(true);expect(screen.getByRole('navigation',{name:'Primary'})).toBeTruthy();});
 it('tracks a pause without stop and preserves a short authenticated picker return',async()=>{await setup();let now=100000;const clock=vi.spyOn(Date,'now').mockImplementation(()=>now);try{await act(async()=>{native.pause!();});expect(screen.queryByRole('navigation')).toBeNull();now+=1000;await act(async()=>{native.listener!({isActive:true});});await screen.findByRole('navigation');expect(native.unlocked).toBe(true);}finally{clock.mockRestore();}});
 it('does not extend the 60-second deadline when stop follows pause',async()=>{await setup();let now=100000;const clock=vi.spyOn(Date,'now').mockImplementation(()=>now);try{await act(async()=>{native.pause!();});now+=59000;await act(async()=>{native.listener!({isActive:false});});now+=1000;await act(async()=>{native.listener!({isActive:true});});await screen.findByLabelText('PIN');expect(native.unlocked).toBe(false);expect(screen.queryByRole('navigation')).toBeNull();}finally{clock.mockRestore();}});
+it('starts an empty Today with one card and one primary, then orders the sections once data exists', async () => {
+  await setup(); fireEvent.click(screen.getByRole('button', {name: 'Today'}));
+  const start = await screen.findByRole('region', {name: 'Get started'}, {timeout: 5000});
+  expect(start.querySelector('.coin-stack')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Add your first statement'}).className).toContain('button-primary');
+  expect(screen.getByRole('button', {name: 'Add transaction'}).className).toContain('button-default');
+  cleanup();
+  await native.repo!.addAccount({id:'a',name:'Synthetic',institution:'Test',type:'checking',currency:'AUD',mask_last4:null,opening_balance_minor:0n});
+  await native.repo!.manual.save({id:'m',kind:'expense',accountId:'a',destinationId:null,date:new Date().toISOString().slice(0,10),minor:'1000',description:'Synthetic purchase',category:null,notes:''});
+  native.configured = true; mount(); await screen.findByLabelText('PIN');
+  fireEvent.change(screen.getByLabelText('PIN'), {target: {value: '246810'}}); fireEvent.click(screen.getByRole('button', {name: 'Unlock'}));
+  fireEvent.click(await screen.findByRole('button', {name: 'Today'}));
+  const add = await screen.findByRole('button', {name: 'Add transaction'}, {timeout: 5000});
+  await waitFor(() => expect(add.className).toContain('button-primary'), {timeout: 5000});
+  expect(screen.queryByRole('region', {name: 'Get started'})).toBeNull();
+  const today = document.querySelector('.today')!;
+  const band = await screen.findByRole('region', {name: 'Your money'}, {timeout: 5000});
+  const recorded = await screen.findByRole('heading', {name: 'Recorded today'});
+  const order = [band, add, recorded].map(node => [...today.querySelectorAll('*')].indexOf(node));
+  expect(order).toEqual([...order].sort((x, y) => x - y));
+  expect(order.every(index => index >= 0)).toBe(true);
+});

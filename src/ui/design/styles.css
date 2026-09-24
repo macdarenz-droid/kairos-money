@@ -628,3 +628,8 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 .switch[aria-pressed="true"] .switch-thumb { transform: translateX(20px); }
 @media (forced-colors: active) { .switch { border: 1px solid ButtonText; } .switch-thumb { background: ButtonText; } }
 .explain-inline { padding: 12px; border-radius: 6px; background: var(--surface-2); }
+.today > .surfaces, .today > .savings-path, .today > .button.add-primary { margin-top: 0; }
+.today-start { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.still .coin-stack > span { animation: none; }
+.savings-hero .hero-amount { margin-top: 2px; }
+.savings-hero { grid-column: 1 / -1; }

@@ -1,4 +1,5 @@
 import {displayRatio} from '../../intelligence/visuals';
+import {Explain} from './primitives';
 
 /**
  * How long the money lasts, as a length rather than a sentence.
@@ -25,7 +26,7 @@ export function Runway({days, ceiling}: {days: string; ceiling: string}) {
           nothing here divides, rounds, or touches a float. */}
       <rect x="0" y="0" width={fill} height="1" className={short ? 'runway-fill runway-fill-short' : 'runway-fill'}/>
     </svg>
-    <figcaption><strong>{days}</strong> days left</figcaption>
+    <figcaption><strong>{days}</strong> days left <Explain title="Days left"><p>How many days your money covers essential spending. It uses your recent essentials.</p></Explain></figcaption>
   </figure>;
 }
 

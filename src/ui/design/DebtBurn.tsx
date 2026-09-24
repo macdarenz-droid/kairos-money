@@ -1,4 +1,5 @@
 import {displayRatio} from '../../intelligence/visuals';
+import {Explain} from './primitives';
 
 /**
  * WHEN THIS IS GONE.
@@ -39,6 +40,6 @@ export function DebtBurn({balances, startMinor, growing, label}:
       <line x1="0" y1="1000000" x2="1000000" y2="1000000" className="debt-burn-floor" vectorEffect="non-scaling-stroke"/>
       <polyline points={points} className="debt-burn-line" vectorEffect="non-scaling-stroke" pathLength="1"/>
     </svg>
-    <figcaption>{label}</figcaption>
+    <figcaption>{label} <Explain title="Debt line"><p>Your debt balance month by month at this payment. It reaches the floor when the debt is clear.</p></Explain></figcaption>
   </figure>;
 }

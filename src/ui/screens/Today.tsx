@@ -1,3 +1,5 @@
+import {Button} from '../design/primitives';
+import {CoinStack} from '../design/Motion';
 import {currency, format, money} from '../../core/money';
 import {useBrain} from '../money';
 import {useDisplayCurrency} from '../currency';
@@ -24,4 +26,14 @@ export function BrainMarker() {
   const brain = useBrain();
   if (brain.data) return <span hidden data-brain="ready"/>;
   return brain.error ? <span hidden data-brain="failed"/> : null;
+}
+
+/** Today before anything is recorded: one card, one next step. */
+export function TodayStart({onStart}: {onStart: () => void}) {
+  return <section className="card today-start" aria-label="Get started">
+    <span className="still"><CoinStack/></span>
+    <h2>Nothing recorded yet</h2>
+    <p>Import a statement and Kairos fills this screen.</p>
+    <Button variant="primary" onClick={onStart}>Add your first statement</Button>
+  </section>;
 }
