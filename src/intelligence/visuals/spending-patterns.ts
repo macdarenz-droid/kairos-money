@@ -1,5 +1,4 @@
-import {currencyDigits} from '../../core/money';
-import {covered,dates,type Snapshot,type Transaction,type Window} from '../model';
+import {covered,dates,isSmall,smallLimit,type Snapshot,type Transaction,type Window} from '../model';
 export function spendingMerchant(t:Transaction){return t.description.replace(/^(?:DEBIT CARD PURCHASE|CREDIT CARD PURCHASE|PURCHASE|EFTPOS DEBIT|DEBIT)\s+/i,'').replace(/\s+CARD\s+XX\d+.*$/i,'').replace(/\s+VALUE DATE.*$/i,'').replace(/\s+(?:(?:VI|VIC|NSW|QLD|SA|WA|AU)\s+)?AUS$/i,'').trim()||t.description;}
 /** Describes evidence, never supplies ledger categories or changes a forecast. */
 export function spendingKind(t:Transaction):'transfer'|'review'|'spending'{
@@ -46,7 +45,7 @@ export function spendingPatterns(snapshot:Snapshot,month='all',account='all'){
   return {month:label,minor:total(items),ids:items.map(t=>t.id),complete:end<=snapshot.asOf&&dates(window).every(date=>covered(s,date))};
  });
  const weekdays=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map((name,i)=>{const items=spending.filter(t=>new Date(t.date+'T00:00:00Z').getUTCDay()===i);return {name,minor:total(items),count:items.length,ids:items.map(t=>t.id)};});
- const smallLimit=20n*10n**BigInt(currencyDigits[snapshot.currency]),small=spending.filter(t=>-BigInt(t.minor)<=smallLimit);
+ const small=spending.filter(t=>isSmall(t.minor,snapshot.currency));
  const ordered=rows.map(t=>t.date).sort();
- return {refunds:{minor:refunded,ids:cohortRefunds.map(t=>t.id),net:(BigInt(total(spending))-BigInt(refunded)).toString()},months,rows,spending,review,transfers,repayments:{minor:total(repayments),ids:repayments.map(t=>t.id)},merchants,monthly,weekdays,small:{minor:total(small),limit:smallLimit.toString(),ids:small.map(t=>t.id)},total:total(spending),otherDebits:total(review),credits:total(rows.filter(t=>BigInt(t.minor)>0n&&spendingKind(t)!=='transfer')),debits:total(out),pending:eligible.filter(t=>t.status==='pending'&&(month==='all'||t.date.startsWith(month))).length,start:ordered[0]??null,end:ordered.at(-1)??null};
+ return {refunds:{minor:refunded,ids:cohortRefunds.map(t=>t.id),net:(BigInt(total(spending))-BigInt(refunded)).toString()},months,rows,spending,review,transfers,repayments:{minor:total(repayments),ids:repayments.map(t=>t.id)},merchants,monthly,weekdays,small:{minor:total(small),limit:smallLimit(snapshot.currency).toString(),ids:small.map(t=>t.id)},total:total(spending),otherDebits:total(review),credits:total(rows.filter(t=>BigInt(t.minor)>0n&&spendingKind(t)!=='transfer')),debits:total(out),pending:eligible.filter(t=>t.status==='pending'&&(month==='all'||t.date.startsWith(month))).length,start:ordered[0]??null,end:ordered.at(-1)??null};
 }

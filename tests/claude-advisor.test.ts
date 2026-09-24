@@ -123,3 +123,45 @@ describe('the advisor module', () => {
     expect(readFileSync('capacitor.config.ts', 'utf8')).toMatch(/loggingBehavior:\s*'none'/);
   });
 });
+
+describe('pricing a served model id', () => {
+  it('reads a dated id as its model, and an unknown one at the requested model’s price', () => {
+    expect(costMicros('claude-haiku-4-5-20251001', 1000, 1000)).toBe(6000n);
+    expect(costMicros('claude-sonnet-5-20260101', 1_000_000, 0)).toBe(2_000_000n);
+    expect(costMicros('claude-unknown-9', 1_000_000, 0, 'claude-haiku-4-5')).toBe(1_000_000n);
+  });
+});
+
+describe('a later sorting batch failing', () => {
+  it('keeps the answers already paid for, with their cost, beside the failure', async () => {
+    const merchants = Array.from({length: 160}, (_, i) => ({id: `m${i}`, description: `Shop ${i}`, direction: 'out' as const, band: 'under 10', count: 1, mcc: null, category: null}));
+    let calls = 0;
+    const net = server(sent => {
+      if (calls++) return error(529, 'overloaded_error');
+      const asked = (JSON.parse((sent.body['messages'] as {content: string}[])[0]!.content) as {merchants: {id: string}[]}).merchants;
+      return message(JSON.stringify({answers: asked.map(m => ({id: m.id, category: 'Shopping', confidence: 'high'}))}));
+    });
+    const result = await categorise({merchants, examples: []}, ['Shopping'], 'sk', 'claude-opus-5', {fetch: net.fetch, maxRetries: 0});
+    expect(result).toMatchObject({ok: false, reason: 'busy', usage: {costMicros: 10000n}});
+    expect(!result.ok && result.partial?.length).toBe(150);
+  });
+});
+
+describe('a slow or busy Claude', () => {
+  it('calls a timeout busy and does not send the request again', async () => {
+    const sent: unknown[] = [];
+    const hang: typeof fetch = (_input, init) => { sent.push(1); return new Promise((_, reject) => init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))); };
+    expect(await review(summary, 'sk', 'claude-opus-5', {fetch: hang, maxRetries: 1, timeoutMs: 50})).toEqual({ok: false, reason: 'busy', usage: null});
+    expect(sent).toHaveLength(1);
+  });
+  it('tries an overloaded request once more', async () => {
+    let calls = 0;
+    const net = server(() => calls++ ? message(points([{text: 'x', facts: ['today.spend']}])) : error(529, 'overloaded_error'));
+    expect(await review(summary, 'sk', 'claude-opus-5', {fetch: net.fetch, maxRetries: 1})).toMatchObject({ok: true});
+    expect(net.sent).toHaveLength(2);
+  });
+  it('waits long enough for the longest answer it allows', async () => {
+    const {TIMEOUT_MS} = await import('../src/core/net/claude');
+    expect(TIMEOUT_MS).toBeGreaterThanOrEqual(60_000 + 16_000 * 20);
+  });
+});

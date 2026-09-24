@@ -40,7 +40,7 @@ export function advice(input: BrainInputs, plan: Plan): UpTo3<Advice> {
   }
   if (plan.next === 'save-20') out.push({rule: 'pay-yourself-first', ease: 3, yearlyMinor: keepYear, figures: {keepMinor: plan.split.keepMinor, automateMinor: plan.split.automate.minor}, evidence: []});
   for (const rise of plan.payRise.slice(0, 1))
-    out.push({rule: 'save-pay-rise', ease: 3, yearlyMinor: (BigInt(rise.suggestedMinor) * 26n).toString(), figures: {suggestedMinor: rise.suggestedMinor, increaseMinor: rise.increaseMinor}, evidence: rise.evidence});
+    out.push({rule: 'save-pay-rise', ease: 3, yearlyMinor: (BigInt(rise.suggestedMinor) * BigInt(rise.paysPerYear)).toString(), figures: {suggestedMinor: rise.suggestedMinor, increaseMinor: rise.increaseMinor}, evidence: rise.evidence});
   const score = (a: Advice) => BigInt(a.yearlyMinor) * BigInt(a.ease);
   return upTo3(out.filter(a => BigInt(a.yearlyMinor) > 0n && !hidden(input, a.rule))
     .sort((a, b) => score(b) > score(a) ? 1 : score(b) < score(a) ? -1 : a.rule.localeCompare(b.rule)));

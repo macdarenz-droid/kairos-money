@@ -129,7 +129,10 @@ async function carry(driver: Driver, from: string, to: string): Promise<boolean>
   let recategorised = false;
   for (const prefix of ['category-edit:', 'ledger-detail:']) {
     const source = (await driver.query('SELECT value FROM app_settings WHERE key=?', [prefix + from]))[0];
-    if (!source || (await driver.query('SELECT key FROM app_settings WHERE key=?', [prefix + to])).length) continue;
+    if (!source) continue;
+    // A move, not a copy: a copy left under the notice would reapply if the notice ever returned.
+    await driver.execute('DELETE FROM app_settings WHERE key=?', [prefix + from]);
+    if ((await driver.query('SELECT key FROM app_settings WHERE key=?', [prefix + to])).length) continue;
     const value = prefix === 'category-edit:' ? JSON.stringify({...JSON.parse(String(source.value)) as object, id: to}) : String(source.value);
     await driver.execute('INSERT INTO app_settings(key,value) VALUES(?,?)', [prefix + to, value]);
     recategorised ||= prefix === 'category-edit:';

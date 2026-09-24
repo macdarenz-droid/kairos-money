@@ -1,4 +1,4 @@
-import {abs, day, dates, median, shift, type Snapshot} from './model';
+import {abs, day, dates, isSmall, median, shift, type Snapshot} from './model';
 import {currencyDigits} from '../core/money';
 import {payCycle, recurrences, scheduledDates} from './forecast';
 import {nextPayDate, roundUp, spendingPattern, type Reading} from './method';
@@ -133,9 +133,8 @@ export function keepToday(s: Snapshot, spendableMinor: string, bufferMinor = '0'
   if (reading.method === 'pay-yourself-first' && tier === 'payday') {
     keep = doable(daily * BigInt(days)); when = 'payday';
   } else if (reading.method === 'round-up') {
-    const limit = 15n * 10n ** BigInt(currencyDigits[s.currency] ?? 2);
     const leaks = s.transactions.filter(t => t.status === 'settled' && !t.transfer && t.kind !== 'savings'
-      && t.date >= week && t.date <= s.asOf && BigInt(t.minor) < 0n && abs(BigInt(t.minor)) <= limit);
+      && t.date >= week && t.date <= s.asOf && BigInt(t.minor) < 0n && isSmall(t.minor, s.currency));
     const kept = leaks.reduce((total, t) => total + roundUp(BigInt(t.minor), s.currency), 0n) / 7n;
     keep = doable(min(kept, daily));
   } else if (reading.method === 'baseline-percent') {

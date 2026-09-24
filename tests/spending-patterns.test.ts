@@ -6,7 +6,7 @@ const snapshot=():Snapshot=>({asOf:'2026-09-14',currency:'AUD',accountIds:['a','
 it('shows old, uncategorised statement purchases despite unequal account coverage and no payslips',()=>{
  const s=snapshot();s.transactions=[tx('jan','2026-01-15'),tx('jul','2026-07-02','-2000',{accountId:'b'}),tx('pending','2026-07-03','-9000',{accountId:'b',status:'pending'})];
  const p=spendingPatterns(s);expect(p.total).toBe('3000');expect(p.pending).toBe(1);expect(p.merchants[0]).toMatchObject({count:2,minor:'3000'});expect(p.monthly.map(m=>m.complete)).toEqual([false,false]);
- expect(spendingPatterns(s,'2026-07','b')).toMatchObject({total:'2000',small:{minor:'2000'}});expect(spendingPatterns(s,'2026-07','b').monthly[0]!.complete).toBe(true);
+ expect(spendingPatterns(s,'2026-07','b')).toMatchObject({total:'2000',small:{minor:'0'}});expect(spendingPatterns(s,'2026-07','b').monthly[0]!.complete).toBe(true);
 });
 it('separates unmatched transfers, cash, ambiguous debits and credits instead of inventing consumption or income',()=>{
  const s=snapshot();s.transactions=[tx('buy','2026-02-02'),tx('move','2026-02-03','-5000',{rawDescription:'Transfer To Self'}),tx('cash','2026-02-03','-10000',{rawDescription:'ATM withdrawal'}),tx('unknown','2026-02-03','-3000',{rawDescription:'Unclear reference'}),tx('salary','2026-02-03','20000',{rawDescription:'Deposit Salary'}),tx('refund','2026-02-03','1000'),tx('matched','2026-02-03','-4000',{transfer:true}),tx('future','2026-10-01'),tx('other-currency','2026-02-01','-500',{currency:'USD'})];

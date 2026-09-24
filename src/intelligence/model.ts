@@ -1,4 +1,4 @@
-import type { Currency } from '../core/money';
+import { currencyDigits, type Currency } from '../core/money';
 export type Kind = 'essential'|'discretionary'|'debt'|'income'|'savings'|'transfer'|'unknown'|'refund';
 export type Transaction = { id:string; accountId:string; date:string; minor:string; currency:Currency; description:string; rawDescription?:string; refundOf?:string; allocations?:import('./allocations').Allocation[]; category:string; kind:Kind; status:'pending'|'settled'; transfer:boolean; recurring:boolean; instrument?:'card'|'bnpl'|'cash'|'transfer'; hour?:number; outsideRoutine?:boolean; planned?:boolean; overdraftFee?:boolean; foreign?:{postedMinor:string;postedCurrency:Currency;originalMinor:string;originalCurrency:Currency;note:string}; sources?:{file:string;row:string;raw:string}[] };
 export type Coverage = {accountId:string;start:string;end:string;tier:'A'|'B'|'C'};
@@ -10,6 +10,9 @@ export type Key=typeof keys[number];
 export type Signal={key:Key;version:1;period:string;status:'ok'|'insufficient_data';value:string|null;unit:string;reason:string;confidence:number;unverified:boolean;inputs:{window:Window;coveredDays:number;transactions:Transaction[];coverage:Coverage[];pays:Pay[];liquid:Snapshot['liquid']|null;selfReport:Snapshot['selfReport']|null};evidence:string[];details:Record<string,string>};
 export const sum=(xs:bigint[])=>xs.reduce((a,b)=>a+b,0n);
 export const abs=(x:bigint)=>x<0n?-x:x;
+/** The one small-purchase line: at or under 15 units of the currency (ADR 0048). */
+export const smallLimit=(code:Currency)=>15n*10n**BigInt(currencyDigits[code]);
+export const isSmall=(minor:string,code:Currency)=>abs(BigInt(minor))<=smallLimit(code);
 export function median(xs:bigint[]):bigint {const a=[...xs].sort((x,y)=>x<y?-1:x>y?1:0);return a.length? a.length%2?a[Math.floor(a.length/2)]!:(a[a.length/2-1]!+a[a.length/2]!)/2n:0n;}
 export const ratio=(a:bigint,b:bigint)=>b>0n?a*10000n/b:0n;
 export function day(s:string):number {if(!/^\d{4}-\d{2}-\d{2}$/.test(s)||Number.isNaN(Date.parse(s))||new Date(s).toISOString().slice(0,10)!==s)throw new Error('Invalid calendar date.');return Math.floor(Date.parse(s)/86400000);}

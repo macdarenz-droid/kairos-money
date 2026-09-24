@@ -5,6 +5,7 @@ import {queryPages} from '../core/db/query-pages';
 import {currency,money,toDatabase,type Currency} from '../core/money';
 import {convert,rateBetween,type Rate as FxRate} from '../core/fx';
 import {recurrences} from '../intelligence/forecast';
+import {merchantName} from '../ingest/normalize';
 import {day,type Snapshot,type Kind,type Transaction} from '../intelligence/model';
 export function intelligenceRepository(driver:Driver){
  async function setting<T>(key:string,fallback:T):Promise<T>{const r=(await driver.query('SELECT value FROM app_settings WHERE key=?',[key]))[0];return r?JSON.parse(String(r.value)) as T:fallback;}
@@ -110,7 +111,7 @@ export function intelligenceRepository(driver:Driver){
   const sources=new Map<string,NonNullable<Transaction['sources']>>();
   for(const r of provenance){const id=String(r.transaction_id),group=sources.get(id)??[];group.push({file:String(r.file_name),row:String(r.source_row_id),raw:String(r.original_payload)});sources.set(id,group);}
   for(const t of transactions)t.sources=sources.get(t.id)??[];
-  const recurringNames=new Set(recurrences(s).map(r=>r.merchant));for(const t of transactions)if(recurringNames.has(t.description.trim().toLowerCase()))t.recurring=true;
+  const recurringNames=new Set(recurrences(s).map(r=>r.merchant));for(const t of transactions)if(recurringNames.has(merchantName(t.description)))t.recurring=true;
   /**
    * SAVINGS IS NOT SPENDING MONEY. "savings money doesnt mix in overall balance. its a separate money."
    *
@@ -156,10 +157,12 @@ export function intelligenceRepository(driver:Driver){
   const holdings=holdingsFrom(rows.map(a=>({id:String(a.id),type:String(a.type),currency:String(a.currency),archived_at:a.archived_at===null?null:String(a.archived_at)})),
    rows.map(a=>({accountId:String(a.id),minor:(BigInt(String(a.opening??0))+BigInt(String(a.moved??0))).toString()})),rates,c,asOf);
   const {debtRepository}=await import('./debts'),{openDebts}=await import('../intelligence/debt');
-  const records=await debtRepository(driver).list();
-  const cancelled=new Set((await driver.query("SELECT value FROM app_settings WHERE key>='cancellation:' AND key<'cancellation;'")).flatMap(r=>{const v=JSON.parse(String(r.value)) as {merchant:string;currency:string};return v.currency===code?[v.merchant]:[];}));
+  const records=await debtRepository(driver).list(),open=openDebts(records,code,{rates,asOf}),converted=new Map(open.map(d=>[d.id,d]));
+  // A debt with no rate to the display currency is named, as a balance would be, not dropped.
+  const debtsLeftOut=[...new Set(records.filter(d=>d.closedAt===null&&BigInt(d.balanceMinor)>0n&&!converted.has(d.id)).map(d=>currency(d.currency)))].sort();
+  const cancelled=new Set((await driver.query("SELECT value FROM app_settings WHERE key>='cancellation:' AND key<'cancellation;'")).flatMap(r=>{const v=JSON.parse(String(r.value)) as {merchant:string;currency:string};return v.currency===code?[merchantName(v.merchant)]:[];}));
   return {snapshot:s,holdings,bufferMinor:await setting<string>('intelligence:buffer:'+code,'0'),
-   debts:openDebts(records,code,{rates,asOf}),scheduled:records.filter(d=>d.closedAt===null&&d.currency===code).map(d=>({id:d.id,name:d.name,minimumMinor:d.minimumMinor,dueDay:d.dueDay})),
+   debts:open,debtsLeftOut,scheduled:records.flatMap(d=>{const o=converted.get(d.id);return o?[{id:d.id,name:d.name,minimumMinor:o.minimumMinor,dueDay:d.dueDay}]:[];}),
    cancelled,dismissals:await setting<import('../brain/types').BrainInputs['dismissals']>('brain:dismissals',{})};
  }
  /** Hides a piece of advice now; a rule dismissed twice stays hidden (see src/brain/advice.ts). */

@@ -2,15 +2,22 @@ import {abs, day, ratio, shift, sum} from '../intelligence/model';
 import {dueWindow} from '../intelligence/visuals/due';
 import {dueDebts} from '../intelligence/debt';
 import {DUE_SOON_DAYS, FIXED_BURDEN_BP, RUNWAY_DAYS, RUNWAY_URGENT_DAYS} from '../intelligence/surfaces';
-import {bills, payModel, spendingRows, unusualCharge, upTo3} from './shared';
+import {bills, coveredDays, payModel, spendingRows, unusualCharge, upTo3} from './shared';
 import type {Attention, BrainInputs, Due, Plan, UpTo3} from './types';
 
 /** Days the spendable balance lasts at the recent pace of essential spending, or null when unknown. */
 export function runwayDays(input: BrainInputs): bigint | null {
   const s = input.snapshot, rows = spendingRows(s, shift(s.asOf, -89), s.asOf).filter(t => t.kind === 'essential');
-  const first = rows[0]?.date;
-  if (!first) return null;
-  const days = BigInt(Math.min(90, day(s.asOf) - day(first) + 1));
+  if (!rows.length) return null;
+  // Days since the first recorded day, less statement gaps with nothing recorded in them.
+  const recorded = new Set(s.transactions.filter(t => s.accountIds.includes(t.accountId)).map(t => t.date));
+  const first = [...recorded, ...s.coverage.map(c => c.start)].filter(d => d <= s.asOf).sort()[0]!;
+  const from = first > shift(s.asOf, -89) ? first : shift(s.asOf, -89);
+  const gapDays = s.coverage.length ? coveredDays(s, from, s.asOf).gaps.reduce((n, g) => {
+    for (let d = day(g.start); d <= day(g.end); d++) if (!recorded.has(shift(g.start, d - day(g.start)))) n++;
+    return n;
+  }, 0) : 0;
+  const days = BigInt(day(s.asOf) - day(from) + 1 - gapDays);
   const perDay = sum(rows.map(t => abs(BigInt(t.minor)))) / days;
   return perDay > 0n ? BigInt(input.holdings.spendableMinor) / perDay : null;
 }

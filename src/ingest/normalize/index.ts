@@ -90,9 +90,8 @@ export function normalizeAmount(value: string, code: Currency, decimal: '.' | ',
   const parsed = parseDecimal(`${negative ? '-' : ''}${whole.split(grouping).join('')}${parts[1] === undefined ? '' : '.' + parts[1]}`, code);
   return parsed.minor;
 }
-export function merchantName(value: string): string {
-  return value.normalize('NFKC').toUpperCase().replace(/\b(?:EFTPOS|POS|VISA|MASTERCARD|DEBIT CARD|CREDIT CARD)\b/g, ' ').replace(/\b(?:TERMINAL|STORE|REF|REFERENCE|AUTH|TID)\s*[#:]?\s*[A-Z0-9-]+\b/g, ' ').replace(/\b\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?\b/g, ' ').replace(/\b\d{5,}\b/g, ' ').replace(/\s+(?:MELBOURNE|SYDNEY|BRISBANE|PERTH|ADELAIDE)(?:\s+(?:VIC|NSW|QLD|WA|SA))?$/g, '').replace(/[^\p{L}\p{N} ]/gu, ' ').replace(/\s+/g, ' ').trim();
-}
+import {merchantName} from '../../core/merchant';
+export {merchantName};
 export function similarity(a: string, b: string): number {
   if (a === b) return 10000;
   const grams = (s: string) => new Set(Array.from({ length: Math.max(0, s.length - 2) }, (_, i) => s.slice(i, i + 3)));
