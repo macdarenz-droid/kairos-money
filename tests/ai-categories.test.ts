@@ -21,6 +21,7 @@ describe('the categorisation payload', () => {
     ledgerRow({description: 'CAFE LUNA 123456 NEWTOWN', minor: '-450', date: '2026-02-03'}),
     ledgerRow({description: 'CAFE LUNA 123456 NEWTOWN', minor: '-520', date: '2026-02-05'}),
     ledgerRow({description: 'ACME PAYROLL 99887766', minor: '250000', date: '2026-02-07'}),
+    ledgerRow({description: 'CHEMIST 4321 SYDNEY', minor: '-1500', date: '2026-02-08'}),
     ledgerRow({description: 'TRANSFER TO SAVINGS 4455', minor: '-10000', transferGroup: 'g'}),
     ledgerRow({description: 'HARDWARE HOUSE', minor: '-8900', id: 'split-me'}),
   ];
@@ -28,18 +29,31 @@ describe('the categorisation payload', () => {
     examples: [{description: 'GYM CLUB 12345678', category: 'Fitness & wellbeing'}]});
 
   it('sends one entry per merchant, never transfers or split rows', () => {
-    expect(payload.merchants).toHaveLength(2);
-    const cafe = payload.merchants.find(m => m.description.startsWith('CAFE'))!;
+    expect(payload.sent.merchants).toHaveLength(3);
+    const cafe = payload.sent.merchants.find(m => m.description.startsWith('CAFE'))!;
     expect(cafe).toEqual({id: expect.stringMatching(/^m\d+$/), description: 'CAFE LUNA #### NEWTOWN', direction: 'out', band: 'under 10', count: 2, mcc: null, category: null});
-    expect(payload.merchants.find(m => m.description.startsWith('ACME'))).toMatchObject({direction: 'in', band: 'over 1000'});
+    expect(payload.sent.merchants.find(m => m.description.startsWith('ACME'))).toMatchObject({direction: 'in', band: 'over 1000'});
     expect(payload.keys[cafe.id]).toBe(rows[0]!.merchant);
   });
 
-  it('carries no dates, exact amounts, accounts or unmasked digit runs', () => {
-    const sent = JSON.stringify({merchants: payload.merchants, examples: payload.examples});
-    for (const secret of ['2026-02', '450', '520', '250000', 'acct-7', '123456', '99887766', '12345678', 'TRANSFER', 'HARDWARE'])
+  it('carries no dates, exact amounts, accounts, merchant keys or unmasked digit runs', () => {
+    expect(Object.keys(payload.sent).sort()).toEqual(['examples', 'merchants']);
+    expect(rows[3]!.merchant).toContain('4321');
+    const sent = JSON.stringify(payload.sent);
+    for (const secret of ['2026-02', '450', '520', '250000', 'acct-7', '123456', '99887766', '12345678', '4321', 'TRANSFER', 'HARDWARE'])
       expect(sent).not.toContain(secret);
-    expect(payload.examples).toEqual([{description: 'GYM CLUB ####', category: 'Fitness & wellbeing'}]);
+    expect(payload.sent.examples).toEqual([{description: 'GYM CLUB ####', category: 'Fitness & wellbeing'}]);
+  });
+
+  it('bands a merchant by its main currency, whatever the row order', () => {
+    const mixed = [
+      ledgerRow({description: 'DUTY FREE', minor: '-150000', currency: 'JPY'}),
+      ledgerRow({description: 'DUTY FREE', minor: '-450'}),
+      ledgerRow({description: 'DUTY FREE', minor: '-520'}),
+    ];
+    const bandOf = (list: LedgerRow[]) => categorisationPayload(list, {splitIds: new Set(), examples: []}).sent.merchants[0]!.band;
+    expect(bandOf(mixed)).toBe('under 10');
+    expect(bandOf([...mixed].reverse())).toBe('under 10');
   });
 });
 
@@ -61,7 +75,7 @@ describe('storing and undoing a Claude run', () => {
     const rows = [raw('0', '2026-02-03', 'CAFE LUNA', '4.50'), raw('1', '2026-02-04', 'CAFE LUNA', '5.20'), raw('2', '2026-02-05', 'BOOK NOOK', '20.00'), raw('3', '2026-02-06', 'MYSTERY CO', '9.00')];
     const fileHash = hash('ai-statement');
     const doc: Document = {id: hash(JSON.stringify(['acct-7', fileHash])), hash: fileHash, fileName: 's.csv', parser: 'synthetic', context,
-      opening: '10000', closing: String(10000 - 450 - 520 - 2000 - 900), payslip: null, sourceRank: 2, sourceKind: 'statement', integrityTier: 'A', rows};
+      opening: '10000', closing: (10000n - 450n - 520n - 2000n - 900n).toString(), payslip: null, sourceRank: 2, sourceKind: 'statement', integrityTier: 'A', rows};
     await repo.imports.stage(doc);
     for (const {row, blocked} of (await repo.imports.review(doc.id)).items) if (blocked) await repo.imports.correct(doc.id, row.sourceId, row, false);
     await repo.imports.commit(doc.id);
@@ -106,6 +120,36 @@ describe('storing and undoing a Claude run', () => {
     await repo.aiCategories.undoRun(run.id);
     expect({categories: await categories(), settings: await driver.query("SELECT * FROM app_settings WHERE key NOT LIKE 'ai-run:%' ORDER BY key")}).toEqual(before);
     await expect(repo.aiCategories.undoRun(run.id)).rejects.toThrow();
+    db.close();
+  });
+
+  async function twoRuns() {
+    const setup = await ledger();
+    const key = setup.rows[0]!.merchant, at = '2026-09-24T00:00:00.000Z';
+    const snapshot = async () => ({categories: await setup.categories(), settings: await setup.driver.query('SELECT * FROM app_settings ORDER BY key')});
+    const start = await snapshot();
+    const older = await setup.repo.aiCategories.applyRun([answer(key, 'Coffee & snacks', 'high')], 'claude-opus-5', at);
+    const newer = await setup.repo.aiCategories.applyRun([answer(key, 'Eating out', 'high')], 'claude-opus-5', at);
+    return {...setup, key, older, newer, start, snapshot};
+  }
+
+  it('undoes two runs on the same merchant newest first, back to the start', async () => {
+    const {db, repo, key, older, newer, start, snapshot} = await twoRuns();
+    await repo.aiCategories.undoRun(newer.id);
+    expect((await repo.aiCategories.read(key))?.category).toBe('Coffee & snacks');
+    await repo.aiCategories.undoRun(older.id);
+    expect(await snapshot()).toEqual(start);
+    db.close();
+  });
+
+  it('refuses to undo an older run while a newer run still covers its merchant', async () => {
+    const {db, repo, key, older, newer, start, snapshot} = await twoRuns();
+    const applied = await snapshot();
+    await expect(repo.aiCategories.undoRun(older.id)).rejects.toThrow('A newer sorting run changed these merchants. Undo that one first.');
+    expect(await snapshot()).toEqual(applied);
+    expect((await repo.aiCategories.read(key))?.category).toBe('Eating out');
+    await repo.aiCategories.undoRun(newer.id); await repo.aiCategories.undoRun(older.id);
+    expect(await snapshot()).toEqual(start);
     db.close();
   });
 });
