@@ -4,6 +4,7 @@ import {strFromU8, unzipSync} from 'fflate';
 import {memoryDriver} from './db-helper';
 import {migrate, migrations} from '../src/core/db/migrate';
 import {repository} from '../src/core/db/repository';
+import {isSecretKey} from '../src/core/db/schema';
 import {exportArchive} from '../src/core/db/export';
 import type {Driver} from '../src/core/db/driver';
 
@@ -58,6 +59,18 @@ describe('export and backup', () => {
     await expect(other.repo.restoreBackup(damaged)).rejects.toThrow(/fx_rates/);
     raw.close(); target.raw.close(); other.raw.close();
   });
+
+  it('keep the phone\'s hand-typed rates when a version-2 backup is restored', async () => {
+    const {repo, raw} = await fresh();
+    const {...tables} = (await repo.exportAll()).tables;
+    delete tables['fx_rates'];
+    const old = {format: 'kairos-money', version: 1, schema_version: 2, database_schema_version: migrations.length, exported_at: '2026-01-01T00:00:00Z', tables};
+    const target = await fresh();
+    await target.repo.saveRates([{...rate, source: 'manual'}]);
+    await target.repo.restoreBackup(old);
+    expect(await target.repo.rates()).toEqual([expect.objectContaining({source: 'manual', rateE8: '2600000'})]);
+    raw.close(); target.raw.close();
+  });
 });
 
 describe('secrets never leave the phone', () => {
@@ -82,6 +95,20 @@ describe('secrets never leave the phone', () => {
     const other = await fresh();
     await expect(other.repo.restoreBackup(leaked)).rejects.toThrow(/secret/i);
     source.raw.close(); raw.close(); other.raw.close();
+  });
+
+  it('are matched by one case-sensitive prefix everywhere', async () => {
+    expect(isSecretKey('secret:x')).toBe(true);
+    expect(isSecretKey('SECRET:x')).toBe(false);
+    const {driver, repo, raw} = await fresh();
+    await driver.execute('INSERT INTO app_settings(key,value) VALUES(?,?)', ['SECRET:x', '"plain"']);
+    const backup = await repo.exportAll();
+    expect(backup.tables['app_settings']).toContainEqual({key: 'SECRET:x', value: '"plain"'});
+    const target = await fresh();
+    await target.driver.execute('INSERT INTO app_settings(key,value) VALUES(?,?)', ['SECRET:x', '"local"']);
+    await target.repo.restoreBackup(backup);
+    expect(await target.driver.query("SELECT value FROM app_settings WHERE key='SECRET:x'")).toEqual([{value: '"plain"'}]);
+    raw.close(); target.raw.close();
   });
 });
 

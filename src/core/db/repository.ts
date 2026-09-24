@@ -14,7 +14,7 @@ import { intelligenceRepository } from '../../ledger/intelligence';
 import { importService } from '../../ingest/service';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { asc, eq } from 'drizzle-orm';
-import { accounts, schema, SECRET_PREFIX, tableNames } from './schema';
+import { accounts, schema, SECRET_KEY_SQL, tableNames } from './schema';
 import { queryPages } from './query-pages';
 import { privacyRepository } from './privacy';
 import { aiCategoryRepository } from '../../ledger/ai-categories';
@@ -182,7 +182,7 @@ export function repository(driver: Driver) {
         const present = new Set((await driver.query("SELECT name FROM sqlite_master WHERE type='table'")).map(row => String(row.name)));
         for (const table of tableNames) if (present.has(table)) {
           // Paged (ADR 0033) and without the reserved secret rows (ADR 0044).
-          const where = table === 'app_settings' ? ` WHERE key NOT LIKE '${SECRET_PREFIX}%'` : '';
+          const where = table === 'app_settings' ? ` WHERE NOT ${SECRET_KEY_SQL}` : '';
           tables[table] = (await queryPages(driver, `SELECT rowid AS "__rowid", * FROM ${table}${where}`, [], ['__rowid'])).map(row => { delete row['__rowid']; return row; });
         }
         return { format: 'kairos-money', version: 1, schema_version: 3, database_schema_version: Number((await driver.query('SELECT MAX(version) AS version FROM _migrations'))[0]?.version ?? 0), exported_at: new Date().toISOString(), tables };

@@ -2,7 +2,6 @@ import type {CSSProperties} from 'react';
 import {Button} from './primitives';
 import {THEMES, type ThemePreference} from './theme';
 
-/** System, then every theme in registry order, each with a swatch of its own colours. */
 export function ThemeChoices({preference, choose}: {preference: ThemePreference; choose: (value: ThemePreference) => void}) {
   return <div className="theme-choices">
     <Button aria-pressed={preference === 'system'} onClick={() => choose('system')}>System</Button>
