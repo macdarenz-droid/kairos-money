@@ -35,7 +35,7 @@ export async function logCall<T>(run: Run, result: Result<T>, model: AdvisorMode
     costMicros: usage?.costMicros ?? 0n, result: result.ok ? 'ok' : result.reason}));
 }
 
-/** Sends the merchants the owner has not decided (only uncategorised ones with `onlyNew`) and stores the answers as one undoable run. */
+/** Sends the merchants nobody has sorted yet (only uncategorised ones with `onlyNew`) and stores the answers as one undoable run. */
 export async function sortMerchants(run: Run, onlyNew: boolean, options: Options = {}): Promise<SortResult> {
   const {settings, key, payload} = await run(async repo => ({settings: await repo.advisor.settings(), key: await repo.advisor.key(), payload: await repo.aiCategories.payload(onlyNew)}));
   if (!settings.enabled || !settings.sortConsent || !key) return {ok: false, reason: 'setup'};
