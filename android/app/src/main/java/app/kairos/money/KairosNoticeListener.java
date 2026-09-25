@@ -73,7 +73,9 @@ public class KairosNoticeListener extends NotificationListenerService {
 
         String id = NoticeStore.capture(this, posted.getPackageName(),
             title == null ? null : title.toString(), text == null ? null : text.toString(), posted.getPostTime());
-        if (id != null) ask(id, text == null ? "" : text.toString());
+        // Still captured so the app can show it, but a login alert gets no Yes that could never be recorded.
+        if (id != null && NoticeQuestion.asks(title == null ? null : title.toString(), text == null ? null : text.toString()))
+            ask(id, text == null ? "" : text.toString());
     }
 
     /**

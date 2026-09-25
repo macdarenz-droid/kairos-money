@@ -145,7 +145,7 @@ export default function App() {
     </div>
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} kind={manualKind} onClose={()=>setSheet(null)}/>}
-    {sheet === 'notices' && <NoticeReview accounts={accounts.data ?? []} onClose={() => { setNoticesDismissed(waitingIds); setSheet(null); }}/>}
+    {sheet === 'notices' && <NoticeReview accounts={accounts.data ?? []} onManual={() => openManualSheet('expense')} onClose={() => { setNoticesDismissed(waitingIds); setSheet(null); }}/>}
     {sheet === 'account' && <AccountSheet onClose={() => setSheet(null)} onSaved={() => { setTab('Ledger'); setToast('Account saved on this device.'); }}/>}
     {editAccount && <AccountSheet account={editAccount} onClose={() => setEditAccount(null)} onSaved={() => setToast('Account updated on this device.')}/>}
     {sheet === 'quick' && <Sheet title="Quick" onClose={() => setSheet(null)}><Input label="Find an action" placeholder="Search actions or screens" value={search} onChange={e => setSearch(e.target.value)}/><div className="action-list">{quickActions.map(action => <Button key={action.label} onClick={action.act}><action.icon size={18}/><span style={{ flex: 1, textAlign: 'left' }}>{action.label}</span><ChevronRight size={16}/></Button>)}</div>{!quickActions.length && <p className="section-gap"><Search size={16}/> No matching action. Try “account” or “settings”.</p>}</Sheet>}
