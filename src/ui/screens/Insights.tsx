@@ -163,7 +163,7 @@ function GoalSheet({code, bufferMinor, onClose}: {code: string; bufferMinor: str
   </Sheet>;
 }
 
-/** While things are tight: essentials and free help only; plan and advice are hidden. */
+/** While things are tight: the next essential bill and the money available for it. */
 export function Triage({brain, show}: Part) {
   const t = brain.triage;
   if (!t.active) return null;
@@ -172,6 +172,5 @@ export function Triage({brain, show}: Part) {
     <p>Keep this small. The next essential bill, and the money available for it.</p>
     {t.nextEssential && <Row trailing={show(t.nextEssential.minor)}>{t.nextEssential.merchant}<p className="meta">{t.nextEssential.date}</p></Row>}
     <Row trailing={show(t.availableMinor)}>Available now</Row>
-    <p>Free, confidential financial counselling: National Debt Helpline, <a href="tel:1800007007">1800 007 007</a>.</p>
   </Surface>;
 }

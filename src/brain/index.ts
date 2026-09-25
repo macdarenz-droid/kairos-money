@@ -18,7 +18,7 @@ export function think(input: BrainInputs): Brain {
   const full = buildPlan(input);
   const now = today(input, full.targets);
   const help = triage(input, now);
-  // While triage is active the plan and advice are hidden; essentials and free help are shown instead.
+  // While triage is active the plan and advice are hidden; the essentials card is shown instead.
   const shown: Plan = help.active ? {...full, status: 'hidden', findings: [], leaks: [], roadmap: [], next: null, debt: null, targets: [], goalsPerPay: [], payRise: []} : full;
   const c = coverage(input);
   return {

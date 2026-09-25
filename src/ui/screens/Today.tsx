@@ -14,7 +14,7 @@ export function WeekStrip() {
   return <DayStrip days={days.map(d => ({date: d.date, minor: d.outMinor}))} code={code} today={brain.data!.asOf}/>;
 }
 
-/** Essentials and free help, on Today too, while triage is active. */
+/** The essentials card, on Today too, while triage is active. */
 export function TodayTriage() {
   const brain = useBrain(), code = currency(useDisplayCurrency());
   if (!brain.data?.triage.active) return null;

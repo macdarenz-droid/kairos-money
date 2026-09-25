@@ -37,14 +37,14 @@ it('reads the ledger once per open and shows the sections after the cut', async 
   expect(screen.queryByText('Still learning')).toBeNull();
 });
 
-it('shows essentials and free help instead of plan and advice while things are tight', async () => {
+it('shows essentials, without a helpline, instead of plan and advice while things are tight', async () => {
   ledger.transactions = month().concat([row('f1', back(3), '-1500', {overdraftFee: true, category: 'Bank fees', kind: 'discretionary'}), row('f2', back(9), '-1500', {overdraftFee: true, category: 'Bank fees', kind: 'discretionary'})]);
   ledger.spendable = '1000';
   mount();
   await screen.findByText('Focus on essentials');
   expect(screen.queryByLabelText('Plan')).toBeNull();
   expect(screen.queryByLabelText('Advice')).toBeNull();
-  expect(screen.getByText(/1800 007 007/)).toBeTruthy();
+  expect(screen.queryByText(/1800 007 007|Helpline/)).toBeNull();
   // The card sits on top; the month and where it went stay readable.
   for (const section of ['This month', 'Where it went']) expect(screen.getByLabelText(section)).toBeTruthy();
   expect(screen.queryByLabelText('Money set aside')).toBeNull();

@@ -232,7 +232,7 @@ export type Advice = RuleFigures & {yearlyMinor: Minor; ease: 1 | 2 | 3; evidenc
 
 // ── triage ─────────────────────────────────────────────────────────────
 export type TriageReason = 'low-buffer' | 'rising-high-interest-debt' | 'repeated-overdraft-fees';
-/** When active, advice and plan are hidden; essentials and free help are shown. */
+/** When active, advice and plan are hidden; the essentials card is shown. */
 export type Triage =
   | {active: false}
   | {active: true; reasons: readonly TriageReason[]; nextEssential: CommittedBill | null; availableMinor: Minor; evidence: Evidence};

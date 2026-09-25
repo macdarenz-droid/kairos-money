@@ -41,7 +41,7 @@ Output `Brain` (type in `src/brain/types.ts`, written first):
 - `spending`: this month and last month (in, out, left); categories (split-aware); top merchants; bills (yearly cost, next date, cancelled); small purchases, fees, refunds; busiest weekday; payday effect; 30-day `band`; 7-day `days`.
 - `plan`: monthly keep/save/spend split, leaks, next roadmap step, debt strategy, targets, goals per pay, pay rise.
 - `advice`: at most 3 items, each a closed rule id plus figures and evidence ids. Ranked by yearly impact × ease; hidden after 2 dismissals.
-- `triage`: when distress is active, hide advice and plan, and show essentials plus free help.
+- `triage`: when distress is active, hide advice and plan, and show the next essential bill and the money available for it.
 - `coverage` and `tier` for the whole result.
 
 `notificationPlan` stays a pure export, called once per account currency. `summary.ts` builds the redacted `BrainSummary` for the advisor.
