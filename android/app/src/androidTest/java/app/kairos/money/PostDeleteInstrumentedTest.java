@@ -18,6 +18,8 @@ public class PostDeleteInstrumentedTest {
         java.security.KeyStore keys = java.security.KeyStore.getInstance("AndroidKeyStore"); keys.load(null);
         assertFalse("Authentication key survived reset", keys.containsAlias(AuthenticatedKey.ALIAS));
         assertFalse("Vault key survived reset", keys.containsAlias(VaultStore.KEY_ALIAS));
+        assertFalse("PIN key survived reset", keys.containsAlias(UnlockKeys.PIN_ALIAS));
+        assertFalse("Biometric key survived reset", keys.containsAlias(UnlockKeys.BIOMETRIC_ALIAS));
         assertFalse(new VaultStore(context).configured());
         assertFalse(context.getDatabasePath("kairos-moneySQLite.db").exists());
         try (ActivityScenario<MainActivity> scenario = ActivityScenario.launch(MainActivity.class)) {

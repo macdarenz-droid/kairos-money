@@ -11,6 +11,8 @@ import java.io.File;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import javax.crypto.AEADBadTagException;
+import javax.crypto.Cipher;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
@@ -22,6 +24,9 @@ final class VaultStore {
     private SharedPreferences prefs;
     private boolean unlocked;
     private long recoveryUntil;
+    // The database key while unlocked, and what a PIN unlock or a recovery holds until it can be saved.
+    private String sessionSecret, recoverySecret;
+    private byte[] pendingPinKey, pendingPinSalt;
     VaultStore(Context context) { this.context = context; }
     private synchronized SharedPreferences prefs() throws Exception {
         if (prefs == null) {
@@ -48,12 +53,13 @@ final class VaultStore {
         if (!pin.equals(confirmation)) throw new IllegalArgumentException("The PINs do not match.");
         byte[] salt = new byte[32]; byte[] secret = new byte[32];
         new SecureRandom().nextBytes(salt); new SecureRandom().nextBytes(secret);
-        byte[] hash = derive(pin, salt);
+        byte[] hash = derive(pin, salt); String encoded = encode(secret); byte[] wrapSalt = PinWrap.salt();
         boolean saved = prefs().edit().putString("salt", encode(salt)).putString("pinHash", encode(hash))
-            .putString("dbSecret", encode(secret)).putInt("attempts", 0).putBoolean("biometric", false).commit();
+            .putString("dbSecret", encoded).putString("pinWrapSalt", encode(wrapSalt)).putString("pinDbSecret", pinWrap(pin, wrapSalt, encoded))
+            .putInt("attempts", 0).putBoolean("biometric", false).commit();
         Arrays.fill(hash, (byte) 0); Arrays.fill(secret, (byte) 0);
         if (!saved) throw new IllegalStateException("The PIN could not be saved. Free some device storage and try again.");
-        unlocked = true;
+        sessionSecret = encoded; unlocked = true;
     }
     synchronized void unlock(String pin) throws Exception {
         if (!configured()) throw new IllegalStateException("Set a PIN before opening the ledger.");
@@ -75,42 +81,107 @@ final class VaultStore {
         }
         if (!prefs().edit().putInt("attempts", 0).putLong("nextAttempt", 0).putLong("lastAttempt", now).commit())
             throw new IllegalStateException("Secure storage is unavailable. Restart Kairos.");
+        String wrapped = prefs().getString("pinDbSecret", null);
+        if (wrapped != null) {
+            byte[] key = PinWrap.deriveKey(pin, Base64.decode(prefs().getString("pinWrapSalt", ""), Base64.NO_WRAP));
+            try { sessionSecret = PinWrap.open(key, UnlockKeys.openForPin(wrapped)); }
+            catch (AEADBadTagException damaged) { throw new IllegalStateException("The saved PIN key is damaged. Use Forgot PIN to recover with your screen lock."); }
+            finally { Arrays.fill(key, (byte) 0); }
+        } else {
+            // Installed before the PIN wrap: the first open after this unlock saves one (ADR 0050).
+            pendingPinSalt = PinWrap.salt(); pendingPinKey = PinWrap.deriveKey(pin, pendingPinSalt);
+        }
         unlocked = true;
+    }
+    private static String pinWrap(String pin, byte[] wrapSalt, String secret) throws Exception {
+        byte[] key = PinWrap.deriveKey(pin, wrapSalt);
+        try { return UnlockKeys.sealForPin(PinWrap.seal(key, secret)); } finally { Arrays.fill(key, (byte) 0); }
+    }
+    private void savePendingPinWrap(String secret) throws Exception {
+        String wrapped = UnlockKeys.sealForPin(PinWrap.seal(pendingPinKey, secret));
+        if (!secret.equals(PinWrap.open(pendingPinKey, UnlockKeys.openForPin(wrapped)))) throw new IllegalStateException("PIN key verification failed.");
+        if (!prefs().edit().putString("pinWrapSalt", encode(pendingPinSalt)).putString("pinDbSecret", wrapped).commit())
+            throw new IllegalStateException("Could not save the PIN key. Free storage and try again.");
+        Arrays.fill(pendingPinKey, (byte) 0); pendingPinKey = null; pendingPinSalt = null;
     }
     synchronized void requireUnlocked() { if (!unlocked) throw new IllegalStateException("Unlock Kairos to continue."); }
     synchronized boolean isUnlocked() { return unlocked; }
-    synchronized void lock() { UtilsSecret.clearSessionSecret(); unlocked = false; recoveryUntil = 0; }
-    synchronized boolean biometricEnabled() throws Exception { return configured() && prefs().getBoolean("biometric", false); }
+    synchronized void lock() {
+        UtilsSecret.clearSessionSecret(); unlocked = false; recoveryUntil = 0; sessionSecret = null; recoverySecret = null;
+        if (pendingPinKey != null) Arrays.fill(pendingPinKey, (byte) 0);
+        pendingPinKey = null; pendingPinSalt = null;
+    }
+    /** Before the PIN wrap exists, the old biometric path still opens through the screen-lock key. */
+    synchronized boolean biometricEnabled() throws Exception {
+        return configured() && prefs().getBoolean("biometric", false) && (prefs().contains("biometricDbSecret") || !prefs().contains("pinDbSecret"));
+    }
+    synchronized boolean biometricWrapped() throws Exception { return configured() && prefs().contains("biometricDbSecret"); }
     synchronized void setBiometric(boolean enabled) throws Exception {
         requireUnlocked();
-        if (!prefs().edit().putBoolean("biometric", enabled).commit()) throw new IllegalStateException("Could not save biometric preference.");
+        if (enabled) throw new IllegalStateException("Turn biometrics on with a fingerprint or face check.");
+        if (!prefs().edit().putBoolean("biometric", false).remove("biometricDbSecret").commit()) throw new IllegalStateException("Could not save biometric preference.");
+        UnlockKeys.deleteBiometric();
+    }
+    synchronized Cipher biometricSealCipher() throws Exception {
+        requireUnlocked();
+        if (sessionSecret == null) throw new IllegalStateException("Unlock Kairos with your PIN, then turn biometrics on.");
+        // The old key is replaced below, so its wrap goes first: a cancelled prompt must not leave a wrap nothing opens.
+        if (!prefs().edit().putBoolean("biometric", false).remove("biometricDbSecret").commit()) throw new IllegalStateException("Could not save biometric preference.");
+        return UnlockKeys.biometricSealCipher();
+    }
+    synchronized void saveBiometric(Cipher authenticated) throws Exception {
+        requireUnlocked();
+        if (sessionSecret == null) throw new IllegalStateException("Unlock Kairos with your PIN, then turn biometrics on.");
+        if (!prefs().edit().putString("biometricDbSecret", UnlockKeys.sealForBiometric(authenticated, sessionSecret)).putBoolean("biometric", true).commit())
+            throw new IllegalStateException("Could not save biometric preference.");
+    }
+    synchronized Cipher biometricOpenCipher() throws Exception {
+        if (prefs().getBoolean("pinReplacementRequired", false)) throw new IllegalStateException("Choose a new Kairos PIN before unlocking.");
+        String wrapped = prefs().getString("biometricDbSecret", null);
+        if (wrapped == null) throw new IllegalStateException("Biometric unlock is not enabled.");
+        try { return UnlockKeys.biometricOpenCipher(wrapped); }
+        catch (android.security.keystore.KeyPermanentlyInvalidatedException changed) {
+            prefs().edit().putBoolean("biometric", false).remove("biometricDbSecret").commit(); UnlockKeys.deleteBiometric();
+            throw new IllegalStateException("Biometrics changed on this phone. Unlock with your PIN, then turn biometrics on again.");
+        }
+    }
+    synchronized void biometricUnlock(Cipher authenticated) throws Exception {
+        if (prefs().getBoolean("pinReplacementRequired", false)) throw new IllegalStateException("Choose a new Kairos PIN before unlocking.");
+        sessionSecret = UnlockKeys.openForBiometric(authenticated, prefs().getString("biometricDbSecret", ""));
+        unlocked = true;
     }
     synchronized void biometricUnlock() throws Exception {
         if (prefs().getBoolean("pinReplacementRequired", false)) throw new IllegalStateException("Choose a new Kairos PIN before unlocking.");
         if (!biometricEnabled()) throw new IllegalStateException("Biometric unlock is not enabled.");
         unlocked = true;
     }
+    /** Called straight after Android authentication, while the screen-lock key's window is open. */
     synchronized void authorizePinReplacement() throws Exception {
         if (!configured()) throw new IllegalStateException("Set up Kairos first.");
-        unlocked = false;
+        String legacy = prefs().getString("dbSecret", null), wrapped = prefs().getString("authenticatedDbSecret", null);
+        if ((legacy == null || legacy.isEmpty()) && wrapped == null) throw new IllegalStateException("The database key is unavailable. Restore a backup after resetting Kairos.");
+        String secret = legacy != null && !legacy.isEmpty() ? legacy : AuthenticatedKey.unwrap(context, wrapped);
+        lock();
         if (!prefs().edit().putBoolean("pinReplacementRequired", true).commit())
             throw new IllegalStateException("Could not save recovery state. Try device authentication again.");
-        recoveryUntil = SystemClock.elapsedRealtime() + 300000;
+        recoverySecret = secret; recoveryUntil = SystemClock.elapsedRealtime() + 300000;
     }
     synchronized void replacePin(String pin, String confirmation) throws Exception {
         if (recoveryUntil == 0 || SystemClock.elapsedRealtime() >= recoveryUntil)
             throw new IllegalStateException("Authenticate with your device again before replacing your PIN.");
         if (pin == null || !pin.matches("[0-9]{6,12}")) throw new IllegalArgumentException("Choose a PIN with 6 to 12 digits.");
         if (!pin.equals(confirmation)) throw new IllegalArgumentException("The PINs do not match.");
+        if (recoverySecret == null) throw new IllegalStateException("Authenticate with your device again before replacing your PIN.");
         byte[] salt = new byte[32]; new SecureRandom().nextBytes(salt);
-        byte[] hash = derive(pin, salt);
+        byte[] hash = derive(pin, salt); byte[] wrapSalt = PinWrap.salt();
         try {
             if (!prefs().edit().putString("salt", encode(salt)).putString("pinHash", encode(hash))
+                .putString("pinWrapSalt", encode(wrapSalt)).putString("pinDbSecret", pinWrap(pin, wrapSalt, recoverySecret))
                 .putBoolean("pinReplacementRequired", false).putInt("attempts", 0)
                 .putLong("nextAttempt", 0).putLong("lastAttempt", 0).commit())
                 throw new IllegalStateException("The new PIN could not be saved. Free device storage and try again.");
         } finally { Arrays.fill(hash, (byte) 0); }
-        recoveryUntil = 0; unlocked = true;
+        sessionSecret = recoverySecret; recoverySecret = null; recoveryUntil = 0; unlocked = true;
     }
     synchronized String backupRecoveryCode() throws Exception {
         requireUnlocked();
@@ -146,7 +217,16 @@ final class VaultStore {
             if (!prefs().edit().putString("authenticatedDbSecret", wrapped).remove("dbSecret").commit())
                 throw new IllegalStateException("Could not migrate the device key. Free storage and try again.");
         }
-        return AuthenticatedKey.unwrap(context, wrapped);
+        if (sessionSecret != null) return sessionSecret;
+        // Unlocked without the key in hand: an install from before the PIN wrap, opening one last time with Android's prompt.
+        String secret = AuthenticatedKey.unwrap(context, wrapped);
+        if (pendingPinKey != null) savePendingPinWrap(secret);
+        sessionSecret = secret;
+        return secret;
     }
-    synchronized String secret() throws Exception { requireUnlocked(); return prefs().contains("authenticatedDbSecret") ? protectedSecret() : prefs().getString("dbSecret", ""); }
+    synchronized String secret() throws Exception {
+        requireUnlocked();
+        if (sessionSecret != null) return sessionSecret;
+        return prefs().contains("authenticatedDbSecret") ? protectedSecret() : prefs().getString("dbSecret", "");
+    }
 }
