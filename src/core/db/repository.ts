@@ -13,8 +13,8 @@ import { restoreSnapshot } from './restore';
 import { intelligenceRepository } from '../../ledger/intelligence';
 import { importService } from '../../ingest/service';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
-import { asc, eq } from 'drizzle-orm';
-import { accounts, schema, SECRET_KEY_SQL, tableNames } from './schema';
+import { asc, eq, sql } from 'drizzle-orm';
+import { account_order, accounts, schema, SECRET_KEY_SQL, tableNames } from './schema';
 import { queryPages } from './query-pages';
 import { privacyRepository } from './privacy';
 import { aiCategoryRepository, sortingPayload } from '../../ledger/ai-categories';
@@ -57,7 +57,19 @@ export function repository(driver: Driver) {
     privacy: privacyRepository(driver),
     advisor: advisorRepository(driver),
     intelligence: intelligenceRepository(driver),
-    async accounts() { return db.select().from(accounts).orderBy(asc(accounts.name), asc(accounts.id)); },
+    async accounts() {
+      return (await db.select({ account: accounts }).from(accounts).leftJoin(account_order, eq(account_order.account_id, accounts.id))
+        .orderBy(sql`${account_order.position} IS NULL`, asc(account_order.position), asc(accounts.name), asc(accounts.id))).map(row => row.account);
+    },
+    /** Saves the owner's order; `ids` must name every account exactly once. */
+    async orderAccounts(ids: readonly string[]) {
+      const known = (await driver.query('SELECT id FROM accounts')).map(row => String(row.id));
+      if (ids.length !== known.length || new Set(ids).size !== ids.length || ids.some(id => !known.includes(id))) throw new Error('That order does not match your accounts.');
+      await driver.transaction(async () => {
+        await driver.execute('DELETE FROM account_order');
+        for (const [position, id] of ids.entries()) await driver.execute('INSERT INTO account_order(account_id, position) VALUES(?, ?)', [id, position]);
+      });
+    },
     /**
      * What each account actually holds now: the balance it opened with, plus every transaction recorded
      * against it.
@@ -131,7 +143,7 @@ export function repository(driver: Driver) {
       const rows = await driver.query(
         `SELECT a.id AS id, a.opening_balance_minor AS opening,
                 COALESCE((SELECT SUM(t.amount_minor) FROM transactions t WHERE t.account_id = a.id), 0) AS moved
-         FROM accounts a ORDER BY a.name, a.id`);
+         FROM accounts a LEFT JOIN account_order o ON o.account_id = a.id ORDER BY o.position IS NULL, o.position, a.name, a.id`);
       return rows.map(row => ({
         accountId: String(row.id),
         minor: (BigInt(String(row.opening ?? 0)) + BigInt(String(row.moved ?? 0))).toString(),

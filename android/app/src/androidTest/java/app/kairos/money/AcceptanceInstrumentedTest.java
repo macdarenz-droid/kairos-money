@@ -93,7 +93,7 @@ public class AcceptanceInstrumentedTest {
         assertNotNull("JSON missing from saved export", json); assertEquals(3, json.getInt("schema_version"));
         // One CSV per ledger table. Kept in step with tableNames by scripts/device-strings.mjs, because
         // this number lives in Java and the table list lives in TypeScript, and nothing else connects them.
-        assertEquals(19, csvCount); assertNotNull(accounts); assertTrue(accounts.contains("Synthetic everyday")); assertTrue(accounts.contains("12345"));
+        assertEquals(20, csvCount); assertNotNull(accounts); assertTrue(accounts.contains("Synthetic everyday")); assertTrue(accounts.contains("12345"));
         assertEquals(12345L, json.getJSONObject("tables").getJSONArray("accounts").getJSONObject(0).getLong("opening_balance_minor"));
         // This external file contains only this test's synthetic account; remove it after verification.
         shellBytes("rm /sdcard/Download/Kairos-money-export.zip");

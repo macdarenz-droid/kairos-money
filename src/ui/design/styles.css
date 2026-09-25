@@ -635,3 +635,8 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 .history-heading { margin-bottom: 12px; }
 .danger-zone { margin-top: 48px; }
 .row-lead { display: inline-flex; align-items: center; gap: 8px; }
+
+/* Accounts reorder by press and hold. The held row follows the finger; the others slide to make room. */
+.reorder-row { position: relative; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.reorder-row[data-settling] { transition: transform var(--motion-quick) var(--ease-out); }
+.reorder-row[data-dragging] { z-index: var(--z-sticky); border-radius: 10px; background: var(--surface-2); box-shadow: 0 6px 18px oklch(0% 0 0 / .25); }

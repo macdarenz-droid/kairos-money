@@ -12,8 +12,10 @@ import up6 from './migrations/0006_people.up.sql?raw';
 import down6 from './migrations/0006_people.down.sql?raw';
 import up7 from './migrations/0007_row_guards.up.sql?raw';
 import down7 from './migrations/0007_row_guards.down.sql?raw';
+import up8 from './migrations/0008_account_order.up.sql?raw';
+import down8 from './migrations/0008_account_order.down.sql?raw';
 import type { Driver } from './driver';
-export const migrations = [{ version: 1, up: up1, down: down1 }, { version: 2, up: up2, down: down2 }, { version: 3, up: up3, down: down3 }, { version: 4, up: up4, down: down4 }, { version: 5, up: up5, down: down5 }, { version: 6, up: up6, down: down6 }, { version: 7, up: up7, down: down7 }] as const;
+export const migrations = [{ version: 1, up: up1, down: down1 }, { version: 2, up: up2, down: down2 }, { version: 3, up: up3, down: down3 }, { version: 4, up: up4, down: down4 }, { version: 5, up: up5, down: down5 }, { version: 6, up: up6, down: down6 }, { version: 7, up: up7, down: down7 }, { version: 8, up: up8, down: down8 }] as const;
 /**
  * Split a migration into statements.
  *
