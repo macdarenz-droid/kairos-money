@@ -75,23 +75,23 @@ export default function App() {
   const balances = useQuery({ queryKey: ['account-balances'], queryFn: () => session.run(repo => repo.accountBalances()), enabled: session.state === 'ready' });
   const quickAddDisplayed=(sheet==='manual'&&Boolean(accounts.data?.length))||(sheet==='account'&&accounts.data?.length===0);
   const quickAddError=useQuickAddLaunch(session.state==='ready',openManual,quickAddDisplayed?quickAddRequest:null);
-  // What the bank announced while the app was closed. Asked once on opening and not again until there is
-  // something new, because a prompt that reappears after being dismissed stops being read.
+  // What the bank announced while the app was closed. Asked on opening until the owner closes it, and not
+  // again until there is something new: a prompt that reappears after being dismissed stops being read.
   const noticeQueue = useQuery({ queryKey: ['captured-notices'], queryFn: capturedNotices, enabled: session.state === 'ready' });
   const [noticesDismissed, setNoticesDismissed] = useState('');
   const statementData = useQuery({ queryKey: ['coverage-summary'], queryFn: () => session.run(repo => repo.imports.summaries()), enabled: session.state === 'ready' });
   const manualCount = useQuery({ queryKey: ['manual', 'count'], queryFn: () => session.run(repo => repo.manual.list()).then(list => list.length), enabled: session.state === 'ready' });
   useEffect(()=>{if(sheet==='manual' && accounts.data?.length===0)setSheet('account');},[sheet,accounts.data]);
   const firstAccount = accounts.data?.find(a => !a.archived_at);
-  // Every notice is routed by the one rule the sheet and the shade share: named account, then the main
-  // account, then the first whose currency it reads in. What waits to be asked is anything unanswered
-  // that reads, plus anything approved in the shade that could NOT be recorded — that one is shown among
-  // the messages that were not about a purchase, rather than carried silently for ever.
+  // Routed by the rule the sheet and the shade share. Waiting: unanswered readable notices, plus shade
+  // approvals that could not be read, kept as their own card until added by hand or dismissed.
   const waitingIds = useMemo(() => {
+    // Nothing is counted until the accounts are read: without them every notice looks unreadable.
+    if (!noticeQueue.data || !accounts.data || primaryAccount.isPending) return '';
     const routed = routeNotices(noticeQueue.data ?? [], accounts.data ?? [], primaryAccount.data);
     return [...routed.readable.filter(item => !item.notice.decision), ...routed.unreadable.filter(item => item.notice.decision === 'approved')]
       .map(item => item.notice.id).sort().join(',');
-  }, [noticeQueue.data, accounts.data, primaryAccount.data]);
+  }, [noticeQueue.data, accounts.data, primaryAccount.data, primaryAccount.isPending]);
   const waitingNotices = waitingIds ? waitingIds.split(',').length : 0;
   // Answers given in the shade are carried out here, on the first unlock after they were given: this is
   // the earliest moment the encrypted ledger can receive them. Remembered BY ID, not as one flag: an

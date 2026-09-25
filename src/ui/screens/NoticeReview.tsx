@@ -22,7 +22,7 @@ import type {Account} from '../../core/db/repository';
  * Which account each one hits is decided per notification, not once for the whole sheet. It used to be one
  * dropdown governing every row, defaulting to whichever account happened to be first — so on a phone with
  * two banks, money landed on a coin toss made silently. Now the notice's own text is read first ("ending
- * 189"), then the account the owner nominated, then the first account whose currency the notice can be
+ * 189"), then the one account whose bank sent it, then the account the owner nominated, then the first account whose currency the notice can be
  * read in — one rule, shared with the answers given in the notification shade — and the answer is shown
  * on the row so it can be corrected before anything is recorded. The correction is offered among the
  * accounts in the notice's currency only: an amount the bank wrote in pesos cannot land on a dollar

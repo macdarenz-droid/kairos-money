@@ -87,3 +87,34 @@ it('does not reopen the sheet by itself after Done in the same session', async (
   expect(screen.queryByText('WOOLWORTHS 1234')).toBeNull();
   expect(screen.getByRole('button', {name: 'Check 1 bank notice'})).not.toBeNull();
 });
+
+// Accounts are read after the notices on a device; without them every notice looks unreadable.
+const delayAccounts = (ms: number) => {
+  const repo = native.repo!, read = repo.accounts.bind(repo);
+  repo.accounts = async () => { await new Promise(r => setTimeout(r, ms)); return read(); };
+};
+
+it('never offers a shade Yes on a readable purchase as unreadable while accounts load', async () => {
+  store.held = [{...PURCHASE, decision: 'approved'}];
+  delayAccounts(300);
+  mount(); await unlock();
+  await act(() => new Promise(r => setTimeout(r, 100)));
+  expect(screen.queryByText("You said yes, but the amount couldn't be read.")).toBeNull();
+  expect(screen.queryByRole('button', {name: 'Dismiss'})).toBeNull();
+});
+
+const LOGIN: Notice = {id: 'notice:1790000100:bb', source: 'com.commbank.netbank', title: 'CommBank', decision: 'approved',
+  postedAt: Date.parse('2026-09-25T02:31:00Z'), text: 'You spent $15.00 at CAFE MIKA. Log in to the app for details.'};
+it('does not reopen after Done when a resume reads the accounts slowly', async () => {
+  store.held = [{...PURCHASE}, {...LOGIN}];
+  mount(); await unlock();
+  await screen.findByText('WOOLWORTHS 1234');
+  fireEvent.click(screen.getByRole('button', {name: 'Done'}));
+  await settle();
+  delayAccounts(150);
+  await act(async () => { app.listeners.appStateChange?.({isActive: false}); });
+  await act(async () => { app.listeners.appStateChange?.({isActive: true}); });
+  await screen.findByRole('navigation'); await settle();
+  expect(screen.queryByText('Check these transactions')).toBeNull();
+  expect(screen.getByRole('button', {name: 'Check 2 bank notices'})).not.toBeNull();
+});

@@ -10,13 +10,12 @@ import type {NoticeRecord} from '../ledger/notices';
  * simply already in their history, and they are not asked about it a second time.
  *
  * Each notice lands on the account the same rule the in-app sheet uses would put it on: the account it
- * names, else the main account, else the first account whose currency it can be read in. It used to land
+ * names, else the one account whose bank sent it, else the main account, else the first account whose currency it can be read in. It used to land
  * on the first account by name, read in that account's currency, and a receipt in any other currency was
  * silently dropped — which is how money he had approved arrived nowhere.
  *
  * An approved notice the parser cannot read in any held currency is left alone rather than forced into the
- * ledger: it stays to be shown among the messages that were not about a purchase, where it is visible
- * rather than invented.
+ * ledger: it stays in the sheet as its own card, to be added by hand or dismissed, rather than invented.
  */
 export async function applyShadeDecisions(
   notices: readonly Notice[], accounts: readonly NoticeAccount[], fallbackId: string | null | undefined,
