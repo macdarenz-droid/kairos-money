@@ -78,7 +78,7 @@ export default function App() {
   // What the bank announced while the app was closed. Asked once on opening and not again until there is
   // something new, because a prompt that reappears after being dismissed stops being read.
   const noticeQueue = useQuery({ queryKey: ['captured-notices'], queryFn: capturedNotices, enabled: session.state === 'ready' });
-  const [noticesAsked, setNoticesAsked] = useState('');
+  const [noticesDismissed, setNoticesDismissed] = useState('');
   const statementData = useQuery({ queryKey: ['coverage-summary'], queryFn: () => session.run(repo => repo.imports.summaries()), enabled: session.state === 'ready' });
   const manualCount = useQuery({ queryKey: ['manual', 'count'], queryFn: () => session.run(repo => repo.manual.list()).then(list => list.length), enabled: session.state === 'ready' });
   useEffect(()=>{if(sheet==='manual' && accounts.data?.length===0)setSheet('account');},[sheet,accounts.data]);
@@ -110,8 +110,8 @@ export default function App() {
       .then(async result => { if(result.approved)await queryClient.invalidateQueries(); })
       .catch(()=>{ for(const notice of batch)handledShade.current.delete(notice.id); });
   },[firstAccount,accounts.data,noticeQueue.data,primaryAccount.data,primaryAccount.isPending,session,queryClient]);
-  // Asked once per set of waiting notices, not once per app lifetime: a new notification is a new question.
-  useEffect(()=>{if(noticesAsked !== waitingIds && !sheet && waitingNotices>0){setNoticesAsked(waitingIds);setSheet('notices');}},[noticesAsked,sheet,waitingIds,waitingNotices]);
+  // Counted as seen only when the owner closes it: a close caused by locking or leaving the app is not an answer.
+  useEffect(()=>{if(noticesDismissed !== waitingIds && !sheet && waitingNotices>0)setSheet('notices');},[noticesDismissed,sheet,waitingIds,waitingNotices]);
   const days = coveredDays((statementData.data ?? []).filter(b => b.status === 'committed' && !b.payslip).map(b => b.context.period));
   if (session.state !== 'ready' && session.state !== 'preview' && session.state !== 'background') return <LockScreen/>;
   const count = accounts.data?.length ?? 0;
@@ -134,7 +134,7 @@ export default function App() {
     {accounts.error && <p className="error" role="alert">Accounts could not be read. Lock and reopen Kairos before continuing.</p>}
     {quickAddError && <p className="error" role="alert">{quickAddError}</p>}
     <div className="screen" key={tab} data-direction={nav.current.direction}>
-    {tab === 'Today' && <div className="stack today"><BrainMarker/><Unconverted onFix={() => openSettings('currency')}/><TodayTriage/>{startHere && <TodayStart onStart={startImport}/>}<MoneyBand/><Button variant={startHere ? 'default' : 'primary'} className="add-primary" onClick={()=>openManualSheet()}><Plus size={18}/>Add transaction</Button><SavingsPath/><Surfaces/><WeekStrip/><ManualHistory today/></div>}
+    {tab === 'Today' && <div className="stack today"><BrainMarker/><Unconverted onFix={() => openSettings('currency')}/><TodayTriage/>{startHere && <TodayStart onStart={startImport}/>}{waitingNotices>0 && sheet!=='notices' && <Button onClick={()=>setSheet('notices')}>{waitingNotices===1?'Check 1 bank notice':`Check ${waitingNotices} bank notices`}</Button>}<MoneyBand/><Button variant={startHere ? 'default' : 'primary'} className="add-primary" onClick={()=>openManualSheet()}><Plus size={18}/>Add transaction</Button><SavingsPath/><Surfaces/><WeekStrip/><ManualHistory today/></div>}
     {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Loader label="Reading accounts"/> : <Suspense fallback={<Skeleton label="Opening imports"/>}><ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport} accountsView={<div className="ledger-accounts">{count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Balance now</span></div><ReorderList items={accounts.data ?? []} keyOf={account => account.id} label="Accounts" onReorder={ids => void reorderAccounts(ids)} render={account => { const held = balances.data?.find(b => b.accountId === account.id); return <Row trailing={<Amount value={shown.into(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor.toString(), account.currency) ?? money(BigInt(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor), currency(account.currency))} context={`${account.name} balance`}/>}>{/* The row was a caption. An account is the one thing on this screen a person most expects to be able to open, and nothing happened when he pressed it. */}<button type="button" className="account-open" onClick={() => setEditAccount(account)}><span className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><span><h3>{account.name}</h3><p className="account-meta">{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}{primaryAccount.data === account.id && <span className="tag tag-primary">Primary</span>}{account.archived_at && <span className="tag">Closed</span>}</p></span></span><ChevronRight size={16}/></button></Row>; }}/></> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}<CombinedTotal accounts={accounts.data ?? []} balances={balances.data}/></div>}/></Suspense>}</>}
     {tab === 'Ledger' && count>0 && <Suspense fallback={null}><BulkProposals/></Suspense>}
     {tab === 'Ledger' && <Suspense fallback={null}><Debts accounts={accounts.data??[]}/><People/></Suspense>}
@@ -145,7 +145,7 @@ export default function App() {
     </div>
     </main><Tabs current={tab} onChange={setTab} onQuick={() => { setSearch(''); setSheet('quick'); }}/>
     {sheet === 'manual' && accounts.data && accounts.data.length>0 && <ManualSheet accounts={accounts.data??[]} kind={manualKind} onClose={()=>setSheet(null)}/>}
-    {sheet === 'notices' && <NoticeReview accounts={accounts.data ?? []} onClose={() => setSheet(null)}/>}
+    {sheet === 'notices' && <NoticeReview accounts={accounts.data ?? []} onClose={() => { setNoticesDismissed(waitingIds); setSheet(null); }}/>}
     {sheet === 'account' && <AccountSheet onClose={() => setSheet(null)} onSaved={() => { setTab('Ledger'); setToast('Account saved on this device.'); }}/>}
     {editAccount && <AccountSheet account={editAccount} onClose={() => setEditAccount(null)} onSaved={() => setToast('Account updated on this device.')}/>}
     {sheet === 'quick' && <Sheet title="Quick" onClose={() => setSheet(null)}><Input label="Find an action" placeholder="Search actions or screens" value={search} onChange={e => setSearch(e.target.value)}/><div className="action-list">{quickActions.map(action => <Button key={action.label} onClick={action.act}><action.icon size={18}/><span style={{ flex: 1, textAlign: 'left' }}>{action.label}</span><ChevronRight size={16}/></Button>)}</div>{!quickActions.length && <p className="section-gap"><Search size={16}/> No matching action. Try “account” or “settings”.</p>}</Sheet>}
