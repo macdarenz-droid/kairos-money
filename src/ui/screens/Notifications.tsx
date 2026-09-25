@@ -1,14 +1,51 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
 import {useQuery,useQueryClient} from '@tanstack/react-query';
 import {Capacitor} from '@capacitor/core';
 import {currency} from '../../core/money';
-import {defaultNotices,noticeKinds,notificationPlan,type NoticePreferences} from '../../intelligence/notifications';
+import {defaultNotices,noticeKinds,notificationPlan,type NoticeKind,type NoticePreferences} from '../../intelligence/notifications';
 import {localDay,Reminder} from '../../ingest/reminders';
 import {Row,Switch} from '../design/primitives';
 import {useSession} from '../session';
 import {useDisplayCurrencyState} from '../currency';
 import {brainQuery} from '../money';
 const labels={bill:'Upcoming bills',unusual:'Transactions to review',price:'Recurring price changes',digest:'Monthly review'};
+/**
+ * A switch waiting on Android's permission. The prompt pauses Kairos, which closes the ledger, so the
+ * switch is saved once the app is back and unlocked, not in the moment the prompt answers.
+ */
+type Pending={kind:NoticeKind;stage:'asking'|'granted'|'waiting'};
+const PENDING='kairos.notice-pending',listeners=new Set<()=>void>();
+const pendingStore={value:readPending(),note:''};
+function readPending():Pending|null{try{const kind=localStorage.getItem(PENDING);return noticeKinds.includes(kind as NoticeKind)?{kind:kind as NoticeKind,stage:'waiting'}:null;}catch{return null;}}
+function setPending(value:Pending|null){pendingStore.value=value;try{if(value)localStorage.setItem(PENDING,value.kind);else localStorage.removeItem(PENDING);}catch{/* Kept in memory only. */}listeners.forEach(l=>l());}
+function setNote(note:string){pendingStore.note=note;listeners.forEach(l=>l());}
+const subscribe=(listener:()=>void)=>{listeners.add(listener);return ()=>{listeners.delete(listener);};};
+const usePending=()=>useSyncExternalStore(subscribe,()=>pendingStore.value);
+const useNote=()=>useSyncExternalStore(subscribe,()=>pendingStore.note);
+/** Saves a waiting switch once Kairos is back in front and unlocked; mounted wherever the switch can be. */
+function useSettlePending(){
+ const session=useSession(),client=useQueryClient(),pending=usePending(),previous=useRef<string|null>(null);
+ useEffect(()=>{
+  const returned=previous.current!=='ready';previous.current=session.state;
+  if(!pending||session.state!=='ready'||settling.now)return;
+  if(pending.stage==='granted'||(pending.stage==='waiting'&&returned))void settle(pending);
+ // settle reads the session when it runs, so only the state and the pending switch matter here.
+ },[session.state,pending]);
+ async function settle({kind,stage}:Pending){
+  settling.now=true;
+  try{
+   if(stage==='granted'||(await Reminder.status()).granted){
+    const saved=await session.run(repo=>repo.notifications.preferences());
+    await session.run(repo=>repo.notifications.save({...saved,[kind]:true}));
+    await client.invalidateQueries({queryKey:['money-notice-preferences']});
+    await client.invalidateQueries({queryKey:['money-notice-plan']});
+    setNote(`${labels[kind]} enabled.`);
+   }else setNote(`${labels[kind]} stays off: notifications are off in Android.`);
+   setPending(null);
+  }catch{/* Still pending: the next return to the app tries again. */}finally{settling.now=false;}
+ }
+}
+const settling={now:false};
 /**
  * ONE READ OF THE LEDGER AT UNLOCK, NOT TWO.
  *
@@ -21,6 +58,7 @@ const labels={bill:'Upcoming bills',unusual:'Transactions to review',price:'Recu
  */
 export function NotificationSync(){
  const session=useSession(),client=useQueryClient(),{code:shown,settled}=useDisplayCurrencyState(),[error,setError]=useState('');
+ useSettlePending();
  const plan=useQuery({queryKey:['money-notice-plan',shown],enabled:session.state==='ready'&&settled&&Capacitor.isNativePlatform(),queryFn:async()=>{
   const {preferences,accounts}=await session.run(async repo=>({preferences:await repo.notifications.preferences(),accounts:await repo.accounts()}));
   if(!noticeKinds.some(k=>preferences[k]))return [];
@@ -36,13 +74,20 @@ export function NotificationSync(){
  return error||plan.error?<p role="status">{error||'Notification records could not be read. Open Kairos again to retry.'}</p>:null;
 }
 export function NotificationSettings(){
- const session=useSession(),client=useQueryClient(),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ const session=useSession(),client=useQueryClient(),[busy,setBusy]=useState(false),message=useNote(),setMessage=setNote;
+ useSettlePending();
  const saved=useQuery({queryKey:['money-notice-preferences'],enabled:session.state==='ready',queryFn:()=>session.run(repo=>repo.notifications.preferences())});
  async function toggle(kind:keyof NoticePreferences){
   setBusy(true);setMessage('');
   try{
    const next={...(saved.data??defaultNotices),[kind]:!saved.data?.[kind]};
-   if(next[kind]&&!(await Reminder.request()).granted)throw new Error('Notifications are off in Android settings. Your preference was not changed.');
+   if(next[kind]){
+    setPending({kind,stage:'asking'});
+    const {granted}=await Reminder.request();
+    setPending({kind,stage:granted?'granted':'waiting'});
+    if(!granted)setMessage('Allow notifications for Kairos in Android settings, then come back.');
+    return;
+   }
    await session.run(repo=>repo.notifications.save(next));
    await client.invalidateQueries({queryKey:['money-notice-preferences']});
    await client.invalidateQueries({queryKey:['money-notice-plan']});

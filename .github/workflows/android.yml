@@ -114,7 +114,7 @@ jobs:
         run: node --import tsx scripts/native-ledger-fixture.ts
       - name: Build benchmark, debug and instrumentation APKs
         working-directory: android
-        run: ./gradlew :app:assembleBenchmark :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --no-daemon
+        run: ./gradlew :app:assembleBenchmark :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug :app:testDebugUnitTest --no-daemon
       - name: Verify APK signature
         run: "$ANDROID_HOME/build-tools/34.0.0/apksigner verify --verbose android/app/build/outputs/apk/debug/app-debug.apk"
       - name: Verify the signing identity has not rotated

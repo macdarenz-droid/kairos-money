@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One tap surface for all three widget styles: a grey that reads on dark glass, paper and indigo. -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="@color/widget_ripple">
+    <item><shape><solid android:color="#26888888"/><corners android:radius="999dp"/></shape></item>
+</ripple>

@@ -1,6 +1,7 @@
 import { Backup } from './Backup';
 import { NotificationSettings } from './Notifications';
 import { NoticeSettings } from './NoticeSettings';
+import { WidgetSettings } from './WidgetSettings';
 import { AdvisorLog } from '../advisor/AdvisorLog';
 import { AdvisorSettings, useAdvisor } from '../advisor/AdvisorSettings';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -48,7 +49,7 @@ export function Settings({ onAccount, notify, accounts = [], focus = null, onFoc
     catch (e) { setError(e instanceof Error ? e.message : 'Android could not delete your data. Try again.'); setBusy(false); }
   }
   return <>
-    <section className="settings-section"><h2>Appearance</h2><ThemeChoices preference={preference} choose={value => void theme(value)}/></section>
+    <section className="settings-section"><h2>Appearance</h2><ThemeChoices preference={preference} choose={value => void theme(value)}/><WidgetSettings/></section>
     <AdvisorSettings/>
     <NotificationSettings/>
     <NoticeSettings accounts={accounts}/>

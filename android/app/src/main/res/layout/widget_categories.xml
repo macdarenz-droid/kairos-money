@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- W5, 2×2: four category buttons; each opens Quick add with its category. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="8dp" android:background="@drawable/widget_bg_glass">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:orientation="horizontal">
+        <android.widget.TextView android:id="@+id/w_cat_1" style="@style/Widget.Kairos.WidgetIcon" android:layout_height="match_parent"/>
+        <android.widget.TextView android:id="@+id/w_cat_2" style="@style/Widget.Kairos.WidgetIcon" android:layout_height="match_parent" android:layout_marginStart="6dp"/>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="6dp" android:orientation="horizontal">
+        <android.widget.TextView android:id="@+id/w_cat_3" style="@style/Widget.Kairos.WidgetIcon" android:layout_height="match_parent"/>
+        <android.widget.TextView android:id="@+id/w_cat_4" style="@style/Widget.Kairos.WidgetIcon" android:layout_height="match_parent" android:layout_marginStart="6dp"/>
+    </LinearLayout>
+</LinearLayout>

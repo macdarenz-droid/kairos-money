@@ -214,13 +214,19 @@ export const fx_rates = sqliteTable('fx_rates', {
   fetched_at: text('fetched_at').notNull(),
 }, table => [primaryKey({ columns: [table.as_of, table.base, table.quote] })]);
 
+/** Mirrors migration 0008. Accounts without a row follow those with one, by name. */
+export const account_order = sqliteTable('account_order', {
+  account_id: text('account_id').primaryKey().notNull(),
+  position: integer('position').notNull(),
+});
+
 /** app_settings keys under this prefix hold secrets: never exported, backed up or restored. */
 export const SECRET_PREFIX = 'secret:';
 /** Case-sensitive in SQL as in code: SQLite's LIKE would also match 'SECRET:'. */
 export const SECRET_KEY_SQL = `substr(key,1,${SECRET_PREFIX.length})='${SECRET_PREFIX}'`;
 export const isSecretKey = (key: string) => key.startsWith(SECRET_PREFIX);
-export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings, debts, ious, fx_rates };
+export const schema = { accounts, import_batches, coverage_ranges, categories, merchants, rules, transactions, transaction_sources, staging_rows, payslips, goals, signals, profiles, insights, privacy_log, app_settings, debts, ious, fx_rates, account_order };
 /** The migration each table first appeared in: a table an older backup lacks is left as the phone has it;
  * a table missing from a backup that should have it means the backup is damaged and is refused. */
-export const tableIntroduced: Partial<Record<(typeof tableNames)[number], number>> = { fx_rates: 4, debts: 5, ious: 6 };
-export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings', 'debts', 'ious', 'fx_rates'] as const;
+export const tableIntroduced: Partial<Record<(typeof tableNames)[number], number>> = { fx_rates: 4, debts: 5, ious: 6, account_order: 8 };
+export const tableNames = ['accounts', 'import_batches', 'coverage_ranges', 'categories', 'merchants', 'rules', 'transactions', 'transaction_sources', 'staging_rows', 'payslips', 'goals', 'signals', 'profiles', 'insights', 'privacy_log', 'app_settings', 'debts', 'ious', 'fx_rates', 'account_order'] as const;

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- W3, 2×2: left for today, spent today, and add. Figures are from the last unlock. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:gravity="center_vertical" android:padding="12dp" android:background="@drawable/widget_bg_glass">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <android.widget.TextView android:id="@+id/w_label" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:text="@string/widget_left_today" android:textAllCaps="true" android:textSize="11sp" android:letterSpacing="0.04"
+            android:textColor="@color/widget_glass_meta" android:fontFamily="sans-serif-medium" android:maxLines="1" android:ellipsize="end"/>
+        <android.widget.ImageButton android:id="@+id/w_add" android:layout_width="44dp" android:layout_height="44dp"
+            android:background="@drawable/widget_tap" android:src="@drawable/ic_qa_plus" android:scaleType="centerInside" android:padding="11dp"
+            android:contentDescription="@string/widget_add"/>
+    </LinearLayout>
+    <android.widget.TextView android:id="@+id/w_left" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+        android:text="@string/widget_none" android:textSize="26sp" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_glass_text"
+        android:maxLines="1" android:ellipsize="end"/>
+    <android.widget.TextView android:id="@+id/w_spent" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp"
+        android:textSize="12sp" android:textColor="@color/widget_glass_meta" android:maxLines="1" android:ellipsize="end"/>
+</LinearLayout>

@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.crypto.Cipher;
 
 @CapacitorPlugin(name = "KairosVault")
 public class KairosVaultPlugin extends Plugin {
@@ -103,12 +104,33 @@ public class KairosVaultPlugin extends Plugin {
     @PluginMethod public void lock(PluginCall call) { store.lock(); call.resolve(); }
     @PluginMethod public void setBiometric(PluginCall call) { perform(call, () -> {
         boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled"));
-        if (enabled && !biometricAvailable()) throw new IllegalStateException("Set up a strong fingerprint or face unlock in Android settings first.");
-        store.setBiometric(enabled); call.resolve();
+        if (!enabled) { store.setBiometric(false); call.resolve(); return; }
+        if (!biometricAvailable()) throw new IllegalStateException("Set up a strong fingerprint or face unlock in Android settings first.");
+        // The biometric wraps the database key itself, so turning it on needs one biometric check (ADR 0050).
+        Cipher cipher = store.biometricSealCipher();
+        getActivity().runOnUiThread(() -> new BiometricPrompt(getActivity(), ContextCompat.getMainExecutor(getContext()), new BiometricPrompt.AuthenticationCallback() {
+            @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                perform(call, () -> { store.saveBiometric(result.getCryptoObject().getCipher()); call.resolve(); });
+            }
+            @Override public void onAuthenticationError(int code, CharSequence message) { call.reject("Biometric unlock was not turned on."); }
+        }).authenticate(new BiometricPrompt.PromptInfo.Builder().setTitle("Turn on biometric unlock")
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG).setNegativeButtonText("Cancel").build(), new BiometricPrompt.CryptoObject(cipher)));
     }); }
     @PluginMethod public void authenticate(PluginCall call) {
         perform(call, () -> {
-            if (!store.biometricEnabled() || !biometricAvailable()) throw new IllegalStateException("Use your PIN to unlock Kairos.");
+            if (!biometricAvailable()) throw new IllegalStateException("Use your PIN to unlock Kairos.");
+            if (store.biometricWrapped()) {
+                Cipher cipher = store.biometricOpenCipher();
+                getActivity().runOnUiThread(() -> new BiometricPrompt(getActivity(), ContextCompat.getMainExecutor(getContext()), new BiometricPrompt.AuthenticationCallback() {
+                    @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                        perform(call, () -> { store.biometricUnlock(result.getCryptoObject().getCipher()); pausedAt = -1; call.resolve(); });
+                    }
+                    @Override public void onAuthenticationError(int code, CharSequence message) { call.reject("Biometric unlock was cancelled or unavailable. Use your PIN."); }
+                }).authenticate(new BiometricPrompt.PromptInfo.Builder().setTitle("Unlock Kairos")
+                    .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG).setNegativeButtonText("Use PIN").build(), new BiometricPrompt.CryptoObject(cipher)));
+                return;
+            }
+            if (!store.biometricEnabled()) throw new IllegalStateException("Use your PIN to unlock Kairos.");
             getActivity().runOnUiThread(() -> {
                 BiometricPrompt prompt = new BiometricPrompt(getActivity(), ContextCompat.getMainExecutor(getContext()), new BiometricPrompt.AuthenticationCallback() {
                     @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {

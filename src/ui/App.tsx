@@ -4,6 +4,7 @@ import { applyShadeDecisions, shadeBatch } from './notices';
 import { NoticeReview } from './screens/NoticeReview';
 import {useQuickAddLaunch, useQuickAddOutbox} from './quick-add';
 import { NotificationSync } from './screens/Notifications';
+import { WidgetSync } from './screens/WidgetSettings';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Account } from '../core/db/repository';
 import { create } from 'zustand';
@@ -24,6 +25,7 @@ import { Surfaces } from './design/Surfaces';
 import { Insights } from './screens/Insights';
 import { BrainMarker, TodayStart, TodayTriage, WeekStrip } from './screens/Today';
 import { AccountSheet } from './screens/AccountSheet';
+import { ReorderList } from './design/Reorder';
 import { coveredDays } from '../ingest/reconcile';
 const ImportWorkspace=lazy(()=>import('./screens/ImportWorkspace').then(module=>({default:module.ImportWorkspace})));
 const BulkProposals=lazy(()=>import('./screens/BulkProposals').then(module=>({default:module.BulkProposals})));
@@ -63,6 +65,12 @@ export default function App() {
   useEffect(followSystem, []);
   useEffect(() => { if (session.state !== 'ready' && session.state !== 'preview') { setSheet(null); setQuickAddRequest(null); setSearch(''); setToast(''); setSettingsFocus(null); } }, [session.state]);
   const accounts = useQuery({ queryKey: ['accounts'], queryFn: () => session.run(repo => repo.accounts()), enabled: session.state === 'ready' });
+  async function reorderAccounts(ids: string[]) {
+    const byId = new Map((accounts.data ?? []).map(account => [account.id, account]));
+    queryClient.setQueryData(['accounts'], ids.map(id => byId.get(id)!));
+    try { await session.run(repo => repo.orderAccounts(ids)); } catch { setToast('The new order could not be saved.'); }
+    await queryClient.invalidateQueries();
+  }
   // What each account holds now, not what it opened with. Invalidated by every write, like the rest.
   const balances = useQuery({ queryKey: ['account-balances'], queryFn: () => session.run(repo => repo.accountBalances()), enabled: session.state === 'ready' });
   const quickAddDisplayed=(sheet==='manual'&&Boolean(accounts.data?.length))||(sheet==='account'&&accounts.data?.length===0);
@@ -118,7 +126,7 @@ export default function App() {
   const openSettings = (focus: SettingsFocus) => { setTab('You'); setSheet(null); setSettingsFocus(focus); };
   const quickActions = [{label:'Add transaction',icon:Plus,act:()=>openManualSheet()},{label:'Transfer between accounts',icon:ArrowLeftRight,act:()=>{ if (count < 2) { setSheet('account'); return; } openManualSheet('transfer'); }},{ label: 'Import statements', icon: FileText, act: startImport },{ label: 'Add an account', icon: Plus, act: () => setSheet('account') }, { label: 'Find a transaction', icon: Search, act: () => { setTab('Ledger'); setSheet(null); } }, {label:'Back up your ledger',icon:ShieldPlus,act:()=>openSettings('backup')}, {label:'Restore a backup',icon:ArchiveRestore,act:()=>openSettings('restore')}, {label:'Change display currency',icon:Coins,act:()=>openSettings('currency')}, {label:'Export all data',icon:Download,act:()=>openSettings('export')}, {label:'Open settings',icon:ShieldCheck,act:()=>{setTab('You');setSheet(null);}}].filter(action => action.label.toLowerCase().includes(search.toLowerCase()));
   return <div className="app" aria-hidden={session.state === 'background' || undefined} style={session.state === 'background' ? { display: 'none' } : undefined}><header className="brand-bar"><Brand/><div className="privacy-status"><LockKeyhole size={12}/><span>{session.state === 'preview' ? 'Design preview' : 'On this device'}</span></div></header>
-    <NotificationSync/>
+    <NotificationSync/><WidgetSync/>
     {session.state === 'preview' && <p className="notice">Account storage and security require the Android app.</p>}
     <main>{/* A heading names the screen. The sentence that used to sit under it described the app to itself and
         cost a line of every screen. */}
@@ -127,7 +135,7 @@ export default function App() {
     {quickAddError && <p className="error" role="alert">{quickAddError}</p>}
     <div className="screen" key={tab} data-direction={nav.current.direction}>
     {tab === 'Today' && <div className="stack today"><BrainMarker/><Unconverted onFix={() => openSettings('currency')}/><TodayTriage/>{startHere && <TodayStart onStart={startImport}/>}<MoneyBand/><Button variant={startHere ? 'default' : 'primary'} className="add-primary" onClick={()=>openManualSheet()}><Plus size={18}/>Add transaction</Button><SavingsPath/><Surfaces/><WeekStrip/><ManualHistory today/></div>}
-    {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Loader label="Reading accounts"/> : <Suspense fallback={<Skeleton label="Opening imports"/>}><ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport} accountsView={<div className="ledger-accounts">{count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Balance now</span></div>{accounts.data?.map(account => { const held = balances.data?.find(b => b.accountId === account.id); return <Row key={account.id} trailing={<Amount value={shown.into(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor.toString(), account.currency) ?? money(BigInt(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor), currency(account.currency))} context={`${account.name} balance`}/>}>{/* The row was a caption. An account is the one thing on this screen a person most expects to be able to open, and nothing happened when he pressed it. */}<button type="button" className="account-open" onClick={() => setEditAccount(account)}><span className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><span><h3>{account.name}</h3><p className="account-meta">{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}{primaryAccount.data === account.id && <span className="tag tag-primary">Primary</span>}{account.archived_at && <span className="tag">Closed</span>}</p></span></span><ChevronRight size={16}/></button></Row>; })}</> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}<CombinedTotal accounts={accounts.data ?? []} balances={balances.data}/></div>}/></Suspense>}</>}
+    {tab === 'Ledger' && <>{session.state === 'ready' && accounts.isPending ? <Loader label="Reading accounts"/> : <Suspense fallback={<Skeleton label="Opening imports"/>}><ImportWorkspace accounts={accounts.data ?? []} request={importRequest} consumed={consumeImport} accountsView={<div className="ledger-accounts">{count ? <><div className="list-heading"><h2>Accounts</h2><span className="meta">Balance now</span></div><ReorderList items={accounts.data ?? []} keyOf={account => account.id} label="Accounts" onReorder={ids => void reorderAccounts(ids)} render={account => { const held = balances.data?.find(b => b.accountId === account.id); return <Row trailing={<Amount value={shown.into(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor.toString(), account.currency) ?? money(BigInt(held?.minor ?? fromDatabase(account.opening_balance_minor, currency(account.currency)).minor), currency(account.currency))} context={`${account.name} balance`}/>}>{/* The row was a caption. An account is the one thing on this screen a person most expects to be able to open, and nothing happened when he pressed it. */}<button type="button" className="account-open" onClick={() => setEditAccount(account)}><span className="account-summary"><span className="account-symbol"><WalletCards size={18}/></span><span><h3>{account.name}</h3><p className="account-meta">{account.currency}{account.mask_last4 ? ` · ••${account.mask_last4}` : ''}{primaryAccount.data === account.id && <span className="tag tag-primary">Primary</span>}{account.archived_at && <span className="tag">Closed</span>}</p></span></span><ChevronRight size={16}/></button></Row>; }}/></> : <EmptyState icon={<FileText size={28} strokeWidth={1.3}/>} title="Add an account to import your statement" action={accountAction}>Start with the account your salary arrives in, then import its statements.</EmptyState>}<CombinedTotal accounts={accounts.data ?? []} balances={balances.data}/></div>}/></Suspense>}</>}
     {tab === 'Ledger' && count>0 && <Suspense fallback={null}><BulkProposals/></Suspense>}
     {tab === 'Ledger' && <Suspense fallback={null}><Debts accounts={accounts.data??[]}/><People/></Suspense>}
     {tab === 'Insights' && <><BrainMarker/><Unconverted onFix={() => openSettings('currency')}/><DoubleCounted onReview={() => setTab('Ledger')}/><Insights/></>}

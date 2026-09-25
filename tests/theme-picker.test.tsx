@@ -41,7 +41,8 @@ describe('the Appearance picker', () => {
     expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#EFE9DF');
     expect(localStorage.getItem('kairos-theme')).toBe('paper');
     expect(native.themes).toEqual(['paper']);
-    expect(appearance().getAllByRole('button').filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent)).toEqual(['Paper']);
+    // Appearance also holds the widget amounts switch; only the theme buttons are themes.
+    expect(appearance().getAllByRole('button').filter(b => b.closest('.theme-choices') && b.getAttribute('aria-pressed') === 'true').map(b => b.textContent)).toEqual(['Paper']);
   });
 
   it('says so when the phone cannot save it', async () => {

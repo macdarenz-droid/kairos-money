@@ -21,6 +21,7 @@ public class QuickAddInstrumentedTest {
 
     @Before public void clearStore() {
         context.getSharedPreferences(QuickAddStore.PREFS, Context.MODE_PRIVATE).edit().clear().commit();
+        context.getSharedPreferences(WidgetStore.PREFS, Context.MODE_PRIVATE).edit().clear().commit();
     }
 
     @Test public void theKeypadTypesOneHonestAmount() {
@@ -74,5 +75,42 @@ public class QuickAddInstrumentedTest {
         assertEquals(R.drawable.ic_qa_car, QuickAddWidget.icon("Transport"));
         assertEquals("A category without an icon of its own gets the tag", R.drawable.ic_qa_tag, QuickAddWidget.icon("Pets"));
         assertNotNull("The widget builds without a configured account", QuickAddWidget.build(context));
+    }
+
+    @Test public void everyWidgetBuildsInEachStyleAndAmountsLeaveWhenHidden() {
+        assertEquals("glass", WidgetStore.style(context)); assertTrue(WidgetStore.showAmounts(context));
+        WidgetStore.figures(context, "$42.10", "$18.00", new int[]{0, 13, 0, 50, 4, 25, 100});
+        assertEquals("$42.10", WidgetStore.left(context)); assertArrayEquals(new int[]{0, 13, 0, 50, 4, 25, 100}, WidgetStore.bars(context));
+        for (String style : WidgetStore.STYLES) {
+            WidgetStore.settings(context, style, true);
+            // A launcher inflates these; any view or call it refuses shows "Can't load widget" instead.
+            renders(style + " W2", QuickAddWidget.build(context)); renders(style + " W1", Widgets.add(context));
+            renders(style + " W3", Widgets.today(context)); renders(style + " W4", Widgets.week(context));
+            renders(style + " W5", Widgets.categories(context));
+        }
+        WidgetStore.settings(context, "glass", false);
+        assertNull("Hidden amounts are removed, not just covered", WidgetStore.left(context));
+        assertNull(context.getSharedPreferences(WidgetStore.PREFS, Context.MODE_PRIVATE).getString("left", null));
+        assertArrayEquals(new int[7], WidgetStore.bars(context));
+        WidgetStore.figures(context, "$1.00", "$2.00", new int[7]);
+        assertNull("Nothing is written while amounts are off", WidgetStore.left(context));
+        assertThrows(IllegalArgumentException.class, () -> WidgetStore.settings(context, "neon", true));
+    }
+
+    private void renders(String name, android.widget.RemoteViews views) {
+        Throwable[] failure = new Throwable[1];
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            try {
+                assertNotNull(views.apply(context, new android.widget.FrameLayout(context)));
+                // A launcher applies with a restricted context made for this app, not the app's own.
+                Context remote = context.createPackageContext(context.getPackageName(), Context.CONTEXT_RESTRICTED);
+                assertNotNull(views.apply(remote, new android.widget.FrameLayout(context)));
+            } catch (Throwable error) { failure[0] = error; }
+        });
+        if (failure[0] != null) {
+            StringBuilder why = new StringBuilder(name + " does not render:");
+            for (Throwable t = failure[0]; t != null; t = t.getCause()) why.append(" ").append(t);
+            fail(why.toString());
+        }
     }
 }

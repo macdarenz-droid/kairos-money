@@ -10,11 +10,12 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import java.security.KeyStore;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
+import net.sqlcipher.database.SQLiteDatabase;
 import org.junit.Test;
 import com.getcapacitor.community.database.sqlite.SQLite.UtilsSecret;
 
 public class KeyProtectionInstrumentedTest {
-    @Test public void migratedKeyRequiresAndroidAuthenticationAndHasNoPluginCopy() throws Exception {
+    @Test public void pinAloneOpensTheDatabaseWhileTheRecoveryKeyStillNeedsAndroid() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         KeyStore keys = KeyStore.getInstance("AndroidKeyStore"); keys.load(null);
         SecretKey key = (SecretKey) keys.getKey(AuthenticatedKey.ALIAS, null);
@@ -36,8 +37,19 @@ public class KeyProtectionInstrumentedTest {
         assertFalse(sqlite.contains("secret"));
         Thread.sleep(61000);
         assertThrows(UserNotAuthenticatedException.class, () -> AuthenticatedKey.unwrap(context, wrapped));
-        VaultStore store = new VaultStore(context); store.unlock("246810");
-        assertThrows("An app PIN must not authenticate an Android key", UserNotAuthenticatedException.class, store::protectedSecret);
-        store.lock();
+        // ADR 0050: the PIN unwraps the database key itself, with no second Android prompt.
+        SecretKey pinKey = (SecretKey) keys.getKey(UnlockKeys.PIN_ALIAS, null);
+        assertNotNull(pinKey); assertNull("PIN wrapping key must not be exportable", pinKey.getEncoded());
+        String pinWrapped = vault.getString("pinDbSecret", null); assertNotNull(pinWrapped);
+        VaultStore store = new VaultStore(context);
+        assertThrows(IllegalArgumentException.class, () -> store.unlock("000000")); assertFalse(store.isUnlocked());
+        store.unlock("246810");
+        String secret = store.protectedSecret(); assertFalse(secret.isEmpty()); assertFalse(pinWrapped.contains(secret));
+        SQLiteDatabase.loadLibs(context);
+        SQLiteDatabase db = SQLiteDatabase.openDatabase(context.getDatabasePath("kairos-moneySQLite.db").getPath(), secret, null, SQLiteDatabase.OPEN_READONLY);
+        try (android.database.Cursor rows = db.rawQuery("SELECT COUNT(*) FROM sqlite_master", null)) { assertTrue(rows.moveToFirst()); assertTrue(rows.getLong(0) > 0); }
+        finally { db.close(); }
+        assertThrows("The recovery key must still need Android authentication", UserNotAuthenticatedException.class, () -> AuthenticatedKey.unwrap(context, wrapped));
+        store.lock(); assertThrows(IllegalStateException.class, store::secret);
     }
 }

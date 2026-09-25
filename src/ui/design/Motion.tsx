@@ -11,14 +11,27 @@ export function stillMotion(): boolean {
 /** A coin flipping on its edge, for a button that is working. */
 export function Coin() { return <span className="coin" aria-hidden="true"/>; }
 
-/** Three coins drop and stack, then fade. Decorative; the caller owns the status label. */
-export function CoinStack() {
-  return <span className="coin-stack" aria-hidden="true"><span/><span/><span/></span>;
+/** The logo's ring as a wait: an arc and its dot run round a faint track while the three bars pulse. */
+export function MomentRing() {
+  return <svg className="moment-ring" viewBox="0 0 100 100" aria-hidden="true">
+    <circle className="moment-track" cx="50" cy="50" r="36"/>
+    <g className="moment-spin"><path className="moment-arc" d="M50 14A36 36 0 0 1 86 50"/><circle className="moment-dot" cx="86" cy="50" r="5"/></g>
+    <rect className="moment-bar" x="34" y="56" width="8" height="14" rx="2"/><rect className="moment-bar" x="46" y="47" width="8" height="23" rx="2"/><rect className="moment-bar" x="58" y="37" width="8" height="33" rx="2"/>
+  </svg>;
+}
+
+/** The logo arriving on the lock screen: the C draws, the dot circles once and lands. Plays once per mount. */
+export function LockArrival() {
+  return <svg className="lock-arrival" viewBox="0 0 100 100" aria-hidden="true">
+    <path className="arrival-ring" pathLength={1} d="M73.14 22.42A36 36 0 1 1 50 14"/>
+    <g className="arrival-orbit"><circle className="arrival-dot" cx="62.31" cy="16.17" r="5"/></g>
+    <rect x="34" y="56" width="8" height="14" rx="2"/><rect x="46" y="47" width="8" height="23" rx="2"/><rect x="58" y="37" width="8" height="33" rx="2"/>
+  </svg>;
 }
 
 /** A wait with nothing new on screen yet. */
 export function Loader({ label }: { label: string }) {
-  return <div className="loader" role="status" aria-label={label}><CoinStack/><span className="meta" aria-hidden="true">{label}</span></div>;
+  return <div className="loader" role="status" aria-label={label}><MomentRing/><span className="meta" aria-hidden="true">{label}</span></div>;
 }
 
 const STEPS = 20, ROLL_MS = 600;
@@ -92,7 +105,7 @@ export function BusyOverlay({ message }: { message: string }) {
   const ref = useModal();
   return <dialog ref={ref} className="busy-dialog" aria-label={message} onCancel={event => event.preventDefault()}>
     <div className="busy-overlay" role="status" aria-live="polite" aria-atomic="true">
-      <div className="busy-card"><CoinStack/><p>{message}</p></div>
+      <div className="busy-card"><MomentRing/><p>{message}</p></div>
     </div>
   </dialog>;
 }

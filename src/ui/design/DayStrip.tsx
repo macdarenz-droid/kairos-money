@@ -25,6 +25,8 @@ import type {DaySpend} from './SpendingCalendar';
  * one spoken description that carries every figure, which is the accessible route
  * anyway; the hero answers the question the screen asks.
  */
+const MIN_SPEND_HEIGHT = 4;
+
 export function DayStrip({days, code, today, span = 7}: {days: DaySpend[]; code: Currency; today: string; span?: number}) {
   const {columns, peak} = useMemo(() => {
     const spent = new Map<string, bigint>();
@@ -40,7 +42,9 @@ export function DayStrip({days, code, today, span = 7}: {days: DaySpend[]; code:
     // Dimensionless geometry: displayRatio returns millionths of the peak, never a currency conversion.
     return {peak, columns: window.map(date => {
       const value = spent.get(date) ?? 0n;
-      return {date, spent: value, height: peak > 0n ? Number(displayRatio(value.toString(), peak.toString())) / 10000 : 0};
+      const ratio = peak > 0n ? Number(displayRatio(value.toString(), peak.toString())) / 10000 : 0;
+      // A small spend still reads as a spend, not as an empty day.
+      return {date, spent: value, height: value > 0n ? Math.max(ratio, MIN_SPEND_HEIGHT) : 0};
     })};
   }, [days, today, span]);
 

@@ -5,6 +5,7 @@ import type { Account, AccountKind } from '../../core/db/repository';
 import { fromDatabase, format, money } from '../../core/money';
 import { Button, Input, Sheet } from '../design/primitives';
 import { useSession } from '../session';
+import { moveInOrder } from '../../ledger/account-order';
 /*
  * The currency deliberately does NOT default to the device's region.
  *
@@ -59,6 +60,13 @@ export function AccountSheet({ account, onClose, onSaved }: { account?: Account;
     mutationFn: () => session.run(repo => repo.updateAccount(account!.id, { archived: !account!.archived_at })),
     onSuccess: async () => { await query.invalidateQueries(); onSaved(); onClose(); },
   });
+  const order = useQuery({ queryKey: ['accounts'], enabled: session.state === 'ready', queryFn: () => session.run(repo => repo.accounts()) });
+  const at = account ? (order.data ?? []).findIndex(other => other.id === account.id) : -1;
+  // The same order as press-and-hold on the Ledger, for anyone who cannot drag.
+  const move = useMutation({
+    mutationFn: (steps: number) => session.run(async repo => repo.orderAccounts(moveInOrder((await repo.accounts()).map(other => other.id), account!.id, steps))),
+    onSuccess: () => query.invalidateQueries(),
+  });
   function submit(event: FormEvent) { event.preventDefault(); mutation.mutate(); }
   return <Sheet title={editing ? account.name : 'Add an account'} onClose={onClose}>{session.state === 'preview' ? <div className="stack"><p>Account storage requires the Android app, where your ledger is encrypted. This browser view lets you inspect the design.</p><Button onClick={onClose}>Got it</Button></div> : <form className="stack" onSubmit={submit}>
     <Input label="Account name" placeholder="Everyday account" value={name} onChange={e => setName(e.target.value)} maxLength={80} required/>
@@ -75,7 +83,9 @@ export function AccountSheet({ account, onClose, onSaved }: { account?: Account;
           the account simply stops being offered for new money. */}
       <Button variant={account.archived_at ? 'default' : 'danger'} disabled={archive.isPending} onClick={() => archive.mutate()}>
         {account.archived_at ? 'Reopen this account' : 'Close this account'}</Button>
-      {(setPrimary.error || archive.error) && <p role="alert">{(setPrimary.error ?? archive.error)!.message}</p>}
+      <div className="split-field"><Button disabled={move.isPending || at <= 0} onClick={() => move.mutate(-1)}>Move up</Button>
+        <Button disabled={move.isPending || at < 0 || at >= (order.data?.length ?? 0) - 1} onClick={() => move.mutate(1)}>Move down</Button></div>
+      {(setPrimary.error || archive.error || move.error) && <p role="alert">{(setPrimary.error ?? archive.error ?? move.error)!.message}</p>}
     </div>}
     <div className="form-actions"><Button onClick={onClose} disabled={mutation.isPending}>Cancel</Button><Button variant="primary" type="submit" busy={mutation.isPending} busyLabel="Saving…">Save account</Button></div>
   </form>}</Sheet>;

@@ -186,6 +186,9 @@ details[open] > summary::before { transform: rotate(45deg); }
 .explain:active { color: var(--text-primary); }
 .heading-row { display: flex; align-items: center; gap: 2px; }
 .heading-row h2, .heading-row h3 { flex: 0 1 auto; }
+/* An answer opened in a sheet takes its own line under the heading, not a sliver beside it. */
+.heading-row:has(> .explain-inline) { flex-wrap: wrap; }
+.heading-row > .explain-inline { flex-basis: 100%; }
 
 /* A one-word claim the app is making about a row, where a sentence used to sit. */
 .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--surface-3);
@@ -305,6 +308,7 @@ details[open] > summary::before { transform: rotate(45deg); }
   --motion-grow: 500ms;    /* a chart growing in, once per mount */
   --motion-stagger-bar: 20ms; /* between one bar and the next */
   --motion-flip: 900ms;    /* one turn of a busy button's coin */
+  --motion-ring: 1400ms;   /* one turn of the opening-wait ring */
   --motion-loop: 1600ms;   /* one cycle of a waiting animation */
   --motion-orbit: 2400ms;  /* one turn of the Kairos AI ring */
   --z-sticky: 2;           /* headers and action bars pinned inside a sheet */
@@ -326,13 +330,18 @@ html { scroll-behavior: smooth; }
   animation: coin-flip var(--motion-flip) linear infinite; }
 @keyframes coin-flip { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.12); } }
 .loader { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 0; }
-.coin-stack { position: relative; display: block; width: 36px; height: 36px; }
-.coin-stack > span { position: absolute; left: 4px; bottom: 0; width: 28px; height: 9px; border-radius: 50%;
-  background: var(--accent); border: 1px solid var(--accent-text);
-  animation: coin-drop var(--motion-loop) var(--ease-out) infinite backwards; }
-.coin-stack > span:nth-child(2) { bottom: 9px; animation-delay: calc(var(--motion-loop) / 8); }
-.coin-stack > span:nth-child(3) { bottom: 18px; animation-delay: calc(var(--motion-loop) / 4); }
-@keyframes coin-drop { 0% { opacity: 0; transform: translateY(-18px); } 15%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; transform: none; } }
+.moment-ring { display: block; width: 40px; height: 40px; overflow: visible; }
+.moment-track { fill: none; stroke: var(--border-default); stroke-width: 7; }
+.moment-arc { fill: none; stroke: var(--accent); stroke-width: 7; stroke-linecap: round; }
+.moment-dot { fill: var(--accent-text); }
+.moment-bar { fill: var(--text-primary); }
+.moment-spin { transform-origin: 50px 50px; animation: moment-turn var(--motion-ring) linear infinite; }
+.moment-bar { animation: moment-pulse var(--motion-ring) var(--ease-in-out) infinite; }
+.moment-bar:nth-of-type(2) { animation-delay: calc(var(--motion-ring) / 3); }
+.moment-bar:nth-of-type(3) { animation-delay: calc(var(--motion-ring) * 2 / 3); }
+@keyframes moment-turn { to { transform: rotate(360deg); } }
+@keyframes moment-pulse { 0%, 100% { opacity: .35; } 40% { opacity: 1; } }
+.still .moment-spin, .still .moment-bar { animation: none; }
 .skeleton span { position: relative; overflow: hidden; }
 .skeleton span::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%);
   background: linear-gradient(90deg, transparent, var(--surface-2), transparent);
@@ -624,7 +633,6 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 .explain-inline { padding: 12px; border-radius: 6px; background: var(--surface-2); }
 .today > .surfaces, .today > .savings-path, .today > .button.add-primary { margin-top: 0; }
 .today-start { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-.still .coin-stack > span { animation: none; }
 .savings-hero .hero-amount { margin-top: 2px; }
 .savings-hero { grid-column: 1 / -1; }
 .button.row-action { padding: 0; justify-content: flex-start; }
@@ -632,3 +640,25 @@ input.amount-field { min-height: 60px; font-size: 28px; line-height: 36px; font-
 .history-heading { margin-bottom: 12px; }
 .danger-zone { margin-top: 48px; }
 .row-lead { display: inline-flex; align-items: center; gap: 8px; }
+
+/* Accounts reorder by press and hold. The held row follows the finger; the others slide to make room. */
+.reorder-row { position: relative; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.reorder-row[data-settling] { transition: transform var(--motion-quick) var(--ease-out); }
+.reorder-row[data-dragging] { z-index: var(--z-sticky); border-radius: 10px; background: var(--surface-2); box-shadow: 0 6px 18px oklch(0% 0 0 / .25); }
+
+/* The lock screen's arrival: the C draws, the dot circles once and lands, the form rises. Resting state is the end state. */
+.lock-arrival { display: block; width: 40px; height: 40px; overflow: visible; }
+.lock-arrival path { fill: none; stroke: var(--text-primary); stroke-width: 7; stroke-linecap: round; stroke-dasharray: 1; }
+.lock-arrival rect { fill: var(--text-primary); }
+.arrival-dot { fill: var(--accent-text); }
+.arrival-orbit { transform-origin: 50px 50px; }
+@media (prefers-reduced-motion: no-preference) {
+  .arrival-ring { animation: arrival-draw 900ms var(--ease-out) both; }
+  .arrival-orbit { animation: arrival-orbit 800ms var(--ease-out) 900ms both; }
+  .lock-arrival rect { animation: arrival-fade 300ms var(--ease-out) 600ms both; }
+  .lock-rise { animation: arrival-rise 400ms var(--ease-out) 1600ms both; }
+}
+@keyframes arrival-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes arrival-orbit { from { transform: rotate(-360deg); opacity: 0; } 15% { opacity: 1; } to { transform: rotate(0); opacity: 1; } }
+@keyframes arrival-fade { from { opacity: 0; } }
+@keyframes arrival-rise { from { opacity: 0; transform: translateY(12px); } }

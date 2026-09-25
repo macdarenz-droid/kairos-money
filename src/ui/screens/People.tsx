@@ -4,7 +4,7 @@ import {currency, currencyDigits, money, parseDecimal} from '../../core/money';
 import {netByPerson, unreachableCurrencies, type Direction, type Iou} from '../../ledger/people';
 import {type Rate as FxRate} from '../../core/fx';
 import {localDay} from '../../ingest/reminders';
-import {Amount, Button, Input, Row, Sheet} from '../design/primitives';
+import {Amount, Button, Explain, Input, Row, Sheet} from '../design/primitives';
 import {PersonBalance} from '../design/PersonBalance';
 import {useSession} from '../session';
 import {useDisplayCurrency} from '../currency';
@@ -87,14 +87,16 @@ export function People() {
       </Row>)}
       <Button disabled={busy} onClick={() => void settle(open)}>Settle up with {open}</Button>
     </div>}
-    <Button onClick={() => { setError(''); setDraft(blank(code)); }}>Record money between people</Button>
+    <Button onClick={() => { setError(''); setDraft(blank(code)); }}>Record money lent or borrowed</Button>
     {error && !draft && <p role="alert">{error}</p>}
     {entries.error && <p role="alert">Entries could not be read.</p>}
     {draft && <Sheet title="Money between people" onClose={() => { if (!busy) setDraft(null); }}>
       <div className="stack">
+        <span className="heading-row"><p className="meta">Track money you lent or borrowed, and who still owes whom.</p>
+          <Explain title="Money between people"><p>Saved entries show under Between people on the Ledger, netted per person, until you tap the person and Settle up. It is only a record and never moves real money.</p></Explain></span>
         <Input label="Person" value={draft.person} maxLength={80} onChange={e => setDraft({...draft, person: e.target.value})}/>
         <label className="input-label">Which way<select value={draft.direction} onChange={e => setDraft({...draft, direction: e.target.value as Direction})}>
-          <option value="owed_to_me">They owe me</option><option value="owed_by_me">I owe them</option></select></label>
+          <option value="owed_to_me">I lent money: they owe me</option><option value="owed_by_me">I borrowed money: I owe them</option></select></label>
         <Input label="Amount" inputMode="decimal" value={draft.amount} onChange={e => setDraft({...draft, amount: e.target.value})}/>
         <label className="input-label">Currency<select value={draft.currency} onChange={e => setDraft({...draft, currency: e.target.value})}>{Object.keys(currencyDigits).map(c => <option key={c}>{c}</option>)}</select></label>
         <Input label="What it was for" value={draft.reason} maxLength={200} onChange={e => setDraft({...draft, reason: e.target.value})}/>

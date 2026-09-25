@@ -47,8 +47,13 @@ describe('count-up', () => {
 describe('loaders', () => {
   it('keep role status and their labels', () => {
     render(<><Loader label="Reading your money"/><BusyOverlay message="Discarding this import…"/></>);
-    expect(screen.getByRole('status', {name: 'Reading your money'}).querySelector('.coin-stack')).toBeTruthy();
-    expect(screen.getByText('Discarding this import…').closest('[role="status"]')?.querySelector('.coin-stack')).toBeTruthy();
+    expect(screen.getByRole('status', {name: 'Reading your money'}).querySelector('.moment-ring')).toBeTruthy();
+    expect(screen.getByText('Discarding this import…').closest('[role="status"]')?.querySelector('.moment-ring')).toBeTruthy();
+    // The ring, the arc, the running dot and the three bars; the old coin stack is gone.
+    const ring = document.querySelector('.moment-ring')!;
+    expect(ring.querySelectorAll('.moment-arc, .moment-dot')).toHaveLength(2);
+    expect(ring.querySelectorAll('.moment-bar')).toHaveLength(3);
+    expect(document.querySelector('.coin-stack')).toBeNull();
   });
 
   it('gives Kairos AI waits one fixed label, a changing line and elapsed seconds after 10 s', () => {

@@ -1,5 +1,7 @@
 # Authentication-bound database key
 
+Partly replaced by ADR 0050: the PIN and biometrics now each unwrap the database key; this key remains the Forgot PIN path.
+
 The SQLCipher data key remains the existing random 256-bit value; the app PIN only verifies the app gate. Android Keystore holds a non-exportable AES-256-GCM wrapping key requiring strong biometric/device-credential authentication with a 60-second authorization window. Android Keystore uses the device's available backing; emulator hardware protection is not claimed. SQLCipher necessarily receives usable secret bytes in native process memory, so the wrapping key and the data key are distinct.
 
 On first authenticated open, wrap the existing data key, decrypt to verify equality, then atomically save the wrapped value and remove the old vault entry. Never regenerate a missing wrapping key for an existing ciphertext. Authentication cancellation, lost keys, damaged ciphertext and storage failure cannot open the ledger. A cancelled prompt returns to the app lock. PIN replacement does not touch the data key or database ciphertext.

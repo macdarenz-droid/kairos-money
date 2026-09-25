@@ -11,15 +11,9 @@ import android.os.SystemClock;
 import android.widget.RemoteViews;
 
 /**
- * THE HOME-SCREEN WIDGET. Four category chips and a plus; every one of them opens the quick-add sheet
- * over the home screen, never the app. It shows no money.
- *
- * ANIMATION, WITHIN WHAT A WIDGET ALLOWS. A widget is a RemoteViews: no code runs in it, so nothing
- * can be animated by hand. Two things still move. Every chip and the plus carry a ripple, so a tap
- * answers under the finger. And the label line is a ViewFlipper, which is the one view a widget can
- * switch between children with an animation: after a save it rises in as "Saved $4.50 · Coffee", and
- * a few seconds later the plain label rises back. The amount shown is the one just typed, seconds
- * earlier, on this same screen; it is gone again before anyone else is holding the phone.
+ * W2, the slim 4×1 row: three category chips and add, each opening the quick-add sheet over the home
+ * screen. It keeps its class and ids, so widgets placed before the redesign carry on working.
+ * After a save the chips flip to "Saved $4.50 · Coffee" for a few seconds, unless animations are off.
  */
 public class QuickAddWidget extends AppWidgetProvider {
     /** Kept for MainActivity, which still answers this action from older widgets that were placed before the sheet existed. */
@@ -27,7 +21,7 @@ public class QuickAddWidget extends AppWidgetProvider {
     static final String ACTION_RESTORE_LABEL = "app.kairos.money.widget.RESTORE_LABEL";
     static final String EXTRA_CATEGORY = "category";
     static final long SAVED_LABEL_MS = 6000L;
-    private static final int[] CHIPS = {R.id.widget_chip_1, R.id.widget_chip_2, R.id.widget_chip_3, R.id.widget_chip_4};
+    private static final int[] CHIPS = {R.id.widget_chip_1, R.id.widget_chip_2, R.id.widget_chip_3};
 
     @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
         for (int id : ids) manager.updateAppWidget(id, build(context));
@@ -45,24 +39,22 @@ public class QuickAddWidget extends AppWidgetProvider {
     }
 
     static RemoteViews build(Context context) {
+        Widgets.Look look = Widgets.look(context);
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.quick_add_widget);
-        views.setOnClickPendingIntent(R.id.widget_add, open(context, null, 420));
+        views.setInt(R.id.widget_root, "setBackgroundResource", look.background);
+        Widgets.addButton(context, views, R.id.widget_add, look);
+        views.setTextColor(R.id.widget_saved, look.text);
         String[] categories = QuickAddStore.categories(context);
         for (int i = 0; i < CHIPS.length; i++) {
             String category = i < categories.length ? categories[i] : null;
-            views.setViewVisibility(CHIPS[i], category == null ? android.view.View.GONE : android.view.View.VISIBLE);
+            views.setViewVisibility(CHIPS[i], category == null ? android.view.View.INVISIBLE : android.view.View.VISIBLE);
             if (category == null) continue;
             views.setTextViewText(CHIPS[i], shortLabel(category));
+            views.setTextColor(CHIPS[i], look.text);
             views.setTextViewCompoundDrawablesRelative(CHIPS[i], icon(category), 0, 0, 0);
-            views.setOnClickPendingIntent(CHIPS[i], open(context, category, 430 + i));
+            views.setOnClickPendingIntent(CHIPS[i], Widgets.open(context, category, 430 + i));
         }
         return views;
-    }
-
-    private static PendingIntent open(Context context, String category, int request) {
-        Intent intent = new Intent(context, QuickAddActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        if (category != null) intent.putExtra(EXTRA_CATEGORY, category).setAction("app.kairos.money.QUICK_ADD." + category);
-        return PendingIntent.getActivity(context, request, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     /** A chip has room for one word; "Coffee & snacks" is "Coffee" on it and the full name in the sheet. */
@@ -81,16 +73,13 @@ public class QuickAddWidget extends AppWidgetProvider {
         return R.drawable.ic_qa_tag;
     }
 
-    static void refresh(Context context) {
-        AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        new QuickAddWidget().onUpdate(context, manager, manager.getAppWidgetIds(new ComponentName(context, QuickAddWidget.class)));
-    }
+    static void refresh(Context context) { Widgets.refreshAll(context); }
 
     /** After a save: the label rises to "Saved …" now, and an alarm brings the plain label back. */
     static void showSaved(Context context, String text) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         int[] ids = manager.getAppWidgetIds(new ComponentName(context, QuickAddWidget.class));
-        if (ids.length == 0) return;
+        if (ids.length == 0 || Widgets.still(context)) return;
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.quick_add_widget);
         views.setTextViewText(R.id.widget_saved, text);
         views.setDisplayedChild(R.id.widget_flip, 1);
