@@ -83,8 +83,10 @@ public class QuickAddInstrumentedTest {
         assertEquals("$42.10", WidgetStore.left(context)); assertArrayEquals(new int[]{0, 13, 0, 50, 4, 25, 100}, WidgetStore.bars(context));
         for (String style : WidgetStore.STYLES) {
             WidgetStore.settings(context, style, true);
-            assertNotNull(QuickAddWidget.build(context)); assertNotNull(Widgets.add(context)); assertNotNull(Widgets.today(context));
-            assertNotNull(Widgets.week(context)); assertNotNull(Widgets.categories(context));
+            // A launcher inflates these; any view or call it refuses shows "Can't load widget" instead.
+            renders(style + " W2", QuickAddWidget.build(context)); renders(style + " W1", Widgets.add(context));
+            renders(style + " W3", Widgets.today(context)); renders(style + " W4", Widgets.week(context));
+            renders(style + " W5", Widgets.categories(context));
         }
         WidgetStore.settings(context, "glass", false);
         assertNull("Hidden amounts are removed, not just covered", WidgetStore.left(context));
@@ -93,5 +95,17 @@ public class QuickAddInstrumentedTest {
         WidgetStore.figures(context, "$1.00", "$2.00", new int[7]);
         assertNull("Nothing is written while amounts are off", WidgetStore.left(context));
         assertThrows(IllegalArgumentException.class, () -> WidgetStore.settings(context, "neon", true));
+    }
+
+    private void renders(String name, android.widget.RemoteViews views) {
+        Throwable[] failure = new Throwable[1];
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
+            try { assertNotNull(views.apply(context, new android.widget.FrameLayout(context))); } catch (Throwable error) { failure[0] = error; }
+        });
+        if (failure[0] != null) {
+            StringBuilder why = new StringBuilder(name + " does not render:");
+            for (Throwable t = failure[0]; t != null; t = t.getCause()) why.append(" ").append(t);
+            fail(why.toString());
+        }
     }
 }
