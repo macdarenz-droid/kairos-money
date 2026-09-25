@@ -88,6 +88,19 @@ type Leg = {id: string; key: string; entry: NoticeRecord; group: string | null; 
 const noticeTransactionId = (id: string) => hash('notice-transaction:' + id);
 const legIds = (id: string) => [noticeTransactionId(id), ...['from', 'to'].map(key => hash(`notice-transaction:${key}:` + id))];
 
+const GENERIC_TOKENS = new Set(['THE', 'AND', 'CARD', 'VALUE', 'DATE', 'AUS', 'PTY', 'LTD', 'PURCHASE', 'PAYMENT',
+  'DEBIT', 'CREDIT', 'TRANSFER', 'SPENT', 'YOU', 'YOUR', 'FROM']);
+const tokens = (text: string) => new Set(text.toUpperCase().split(/[^A-Z0-9]+/)
+  .filter(t => t.length >= 3 && /[A-Z]/.test(t) && !GENERIC_TOKENS.has(t)));
+// A different purchase of the same amount must not hide this one; with no merchant to compare, amount and date decide.
+function sameMerchant(entry: NoticeRecord, statement: string): boolean {
+  if (entry.destinationId || entry.merchant === entry.description.slice(0, 60)) return true;
+  const own = tokens(entry.merchant);
+  if (!own.size) return true;
+  for (const t of tokens(statement)) if (own.has(t)) return true;
+  return false;
+}
+
 // Pairs notice legs with settled rows (same account, exact amount, within three days): most pairs first, so
 // no notice stays pending beside its own row; then fewest days apart, so edits reach the closest row.
 async function claims(driver: Driver, legs: Leg[]): Promise<Map<string, string>> {
@@ -99,7 +112,7 @@ async function claims(driver: Driver, legs: Leg[]): Promise<Map<string, string>>
   const paired = new Map<string, string>();
   for (const group of groups.values()) {
     const rows = await driver.query(
-      "SELECT t.id,t.posted_date FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version NOT IN ('manual-entry-v1','notice-v1') AND t.status='settled' AND t.account_id=? AND t.amount_minor=? ORDER BY t.posted_date,t.id",
+      "SELECT t.id,t.posted_date,t.raw_description FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version NOT IN ('manual-entry-v1','notice-v1') AND t.status='settled' AND t.account_id=? AND t.amount_minor=? ORDER BY t.posted_date,t.id",
       [group[0]!.accountId, toDatabase(group[0]!.value)]);
     // best[i][k] pairs the first i legs with the first k rows; both are in date order, and pairs that
     // never cross are enough on a calendar. step: 0 leaves leg i out, 1 leaves row k out, 2 pairs them.
@@ -111,7 +124,7 @@ async function claims(driver: Driver, legs: Leg[]): Promise<Map<string, string>>
       if (better(at(i, k - 1), pick)) pick = {...at(i, k - 1), step: 1};
       const gap = Math.abs(dayNumber(String(row.posted_date)) - dayNumber(leg.entry.date));
       const pair = {count: at(i - 1, k - 1).count + 1, days: at(i - 1, k - 1).days + gap, step: 2};
-      if (gap <= 3 && better(pair, pick)) pick = pair;
+      if (gap <= 3 && sameMerchant(leg.entry, String(row.raw_description ?? '')) && better(pair, pick)) pick = pair;
       best[i]![k] = pick;
     }));
     for (let i = group.length - 1, k = rows.length - 1; i >= 0 && k >= 0;) {
