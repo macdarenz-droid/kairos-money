@@ -186,6 +186,9 @@ details[open] > summary::before { transform: rotate(45deg); }
 .explain:active { color: var(--text-primary); }
 .heading-row { display: flex; align-items: center; gap: 2px; }
 .heading-row h2, .heading-row h3 { flex: 0 1 auto; }
+/* An answer opened in a sheet takes its own line under the heading, not a sliver beside it. */
+.heading-row:has(> .explain-inline) { flex-wrap: wrap; }
+.heading-row > .explain-inline { flex-basis: 100%; }
 
 /* A one-word claim the app is making about a row, where a sentence used to sit. */
 .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--surface-3);
