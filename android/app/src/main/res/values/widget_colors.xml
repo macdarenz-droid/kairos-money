@@ -3,19 +3,16 @@
 <resources>
     <color name="widget_glass_surface">#E6121517</color>
     <color name="widget_glass_border">#33FFFFFF</color>
-    <color name="widget_glass_tap">#1FFFFFFF</color>
     <color name="widget_glass_text">#F4F1EA</color>
     <color name="widget_glass_meta">#B3AEA4</color>
     <color name="widget_glass_accent">#A9AFFF</color>
     <color name="widget_paper_surface">#FFF7F4EE</color>
     <color name="widget_paper_border">#1F000000</color>
-    <color name="widget_paper_tap">#12000000</color>
     <color name="widget_paper_text">#1B1C1E</color>
     <color name="widget_paper_meta">#5E5A53</color>
     <color name="widget_paper_accent">#3F4AC9</color>
     <color name="widget_indigo_surface">#FF2B3180</color>
     <color name="widget_indigo_border">#33FFFFFF</color>
-    <color name="widget_indigo_tap">#29FFFFFF</color>
     <color name="widget_indigo_text">#FFFFFF</color>
     <color name="widget_indigo_meta">#D2D5FA</color>
     <color name="widget_indigo_accent">#FFFFFF</color>

@@ -21,17 +21,17 @@ final class Widgets {
 
     /** One widget style's resources, chosen in You › Appearance. */
     static final class Look {
-        final int background, tap, text, meta, accent;
-        Look(Context context, int background, int tap, int text, int meta, int accent) {
-            this.background = background; this.tap = tap;
+        final int background, text, meta, accent;
+        Look(Context context, int background, int text, int meta, int accent) {
+            this.background = background;
             this.text = context.getColor(text); this.meta = context.getColor(meta); this.accent = context.getColor(accent);
         }
     }
     static Look look(Context context) {
         switch (WidgetStore.style(context)) {
-            case "paper": return new Look(context, R.drawable.widget_bg_paper, R.drawable.widget_tap_paper, R.color.widget_paper_text, R.color.widget_paper_meta, R.color.widget_paper_accent);
-            case "indigo": return new Look(context, R.drawable.widget_bg_indigo, R.drawable.widget_tap_indigo, R.color.widget_indigo_text, R.color.widget_indigo_meta, R.color.widget_indigo_accent);
-            default: return new Look(context, R.drawable.widget_bg_glass, R.drawable.widget_tap_glass, R.color.widget_glass_text, R.color.widget_glass_meta, R.color.widget_glass_accent);
+            case "paper": return new Look(context, R.drawable.widget_bg_paper, R.color.widget_paper_text, R.color.widget_paper_meta, R.color.widget_paper_accent);
+            case "indigo": return new Look(context, R.drawable.widget_bg_indigo, R.color.widget_indigo_text, R.color.widget_indigo_meta, R.color.widget_indigo_accent);
+            default: return new Look(context, R.drawable.widget_bg_glass, R.color.widget_glass_text, R.color.widget_glass_meta, R.color.widget_glass_accent);
         }
     }
 
@@ -48,7 +48,7 @@ final class Widgets {
 
     static void background(RemoteViews views, Look look) { views.setInt(R.id.w_root, "setBackgroundResource", look.background); }
     static void addButton(Context context, RemoteViews views, int id, Look look) {
-        views.setInt(id, "setBackgroundResource", look.tap);
+        // Hosts may inflate AppCompat views, which refuse setBackgroundResource; the tap surface is in the layout.
         views.setInt(id, "setColorFilter", look.accent);
         views.setOnClickPendingIntent(id, open(context, null, 420));
     }
@@ -60,9 +60,7 @@ final class Widgets {
             String category = i < categories.length ? categories[i] : null;
             views.setViewVisibility(id, category == null ? android.view.View.INVISIBLE : android.view.View.VISIBLE);
             if (category == null) continue;
-            views.setImageViewResource(id, QuickAddWidget.icon(category));
-            views.setInt(id, "setBackgroundResource", look.tap);
-            views.setInt(id, "setColorFilter", look.text);
+            views.setTextViewCompoundDrawablesRelative(id, 0, QuickAddWidget.icon(category), 0, 0);
             views.setContentDescription(id, category);
             views.setOnClickPendingIntent(id, open(context, category, 430 + i));
         }

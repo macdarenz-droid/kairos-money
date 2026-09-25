@@ -4,24 +4,24 @@
     android:id="@+id/w_root" android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical" android:padding="10dp" android:background="@drawable/widget_bg_glass">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-        <TextView android:id="@+id/w_label" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        <android.widget.TextView android:id="@+id/w_label" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:text="@string/widget_left_today" android:textAllCaps="true" android:textSize="11sp" android:letterSpacing="0.04"
             android:textColor="@color/widget_glass_meta" android:fontFamily="sans-serif-medium" android:maxLines="1"/>
-        <TextView android:id="@+id/w_left" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="8dp"
+        <android.widget.TextView android:id="@+id/w_left" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="8dp"
             android:text="@string/widget_none" android:textSize="18sp" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_glass_text"
             android:maxLines="1" android:ellipsize="end"/>
-        <ImageButton android:id="@+id/w_add" android:layout_width="44dp" android:layout_height="44dp"
-            android:background="@drawable/widget_tap_glass" android:src="@drawable/ic_qa_plus" android:scaleType="centerInside" android:padding="11dp"
+        <android.widget.ImageButton android:id="@+id/w_add" android:layout_width="44dp" android:layout_height="44dp"
+            android:background="@drawable/widget_tap" android:src="@drawable/ic_qa_plus" android:scaleType="centerInside" android:padding="11dp"
             android:contentDescription="@string/widget_add"/>
     </LinearLayout>
-    <ImageView android:id="@+id/w_bars" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+    <android.widget.ImageView android:id="@+id/w_bars" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
         android:layout_marginTop="4dp" android:layout_marginBottom="6dp" android:scaleType="fitXY" android:importantForAccessibility="no"/>
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-        <ImageButton android:id="@+id/w_cat_1" style="@style/Widget.Kairos.WidgetIcon"/>
-        <ImageButton android:id="@+id/w_cat_2" style="@style/Widget.Kairos.WidgetIcon" android:layout_marginStart="4dp"/>
-        <ImageButton android:id="@+id/w_cat_3" style="@style/Widget.Kairos.WidgetIcon" android:layout_marginStart="4dp"/>
-        <ImageButton android:id="@+id/w_cat_4" style="@style/Widget.Kairos.WidgetIcon" android:layout_marginStart="4dp"/>
-        <ImageButton android:id="@+id/w_cat_5" style="@style/Widget.Kairos.WidgetIcon" android:layout_marginStart="4dp"/>
-        <ImageButton android:id="@+id/w_cat_6" style="@style/Widget.Kairos.WidgetIcon" android:layout_marginStart="4dp"/>
+        <android.widget.TextView android:id="@+id/w_cat_1" style="@style/Widget.Kairos.WidgetIcon"/>
+        <android.widget.TextView android:id="@+id/w_cat_2" style="@style/Widget.Kairos.WidgetIcon" android:layout_marginStart="4dp"/>
+        <android.widget.TextView android:id="@+id/w_cat_3" style="@style/Widget.Kairos.WidgetIcon" android:layout_marginStart="4dp"/>
+        <android.widget.TextView android:id="@+id/w_cat_4" style="@style/Widget.Kairos.WidgetIcon" android:layout_marginStart="4dp"/>
+        <android.widget.TextView android:id="@+id/w_cat_5" style="@style/Widget.Kairos.WidgetIcon" android:layout_marginStart="4dp"/>
+        <android.widget.TextView android:id="@+id/w_cat_6" style="@style/Widget.Kairos.WidgetIcon" android:layout_marginStart="4dp"/>
     </LinearLayout>
 </LinearLayout>

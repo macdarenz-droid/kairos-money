@@ -51,7 +51,6 @@ public class QuickAddWidget extends AppWidgetProvider {
             if (category == null) continue;
             views.setTextViewText(CHIPS[i], shortLabel(category));
             views.setTextColor(CHIPS[i], look.text);
-            views.setInt(CHIPS[i], "setBackgroundResource", look.tap);
             views.setTextViewCompoundDrawablesRelative(CHIPS[i], icon(category), 0, 0, 0);
             views.setOnClickPendingIntent(CHIPS[i], Widgets.open(context, category, 430 + i));
         }
