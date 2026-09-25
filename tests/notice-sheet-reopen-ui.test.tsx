@@ -73,6 +73,12 @@ it('offers a Today button that reopens the sheet after Done, lock and unlock', a
   expect(await screen.findByText('WOOLWORTHS 1234')).not.toBeNull();
 });
 
+it('says when purchases approved in the shade were recorded', async () => {
+  store.held = [{...PURCHASE, decision: 'approved'}];
+  mount(); await unlock();
+  expect(await screen.findByText('Recorded 1 transaction from your bank')).not.toBeNull();
+});
+
 it('does not reopen the sheet by itself after Done in the same session', async () => {
   mount(); await unlock();
   await screen.findByText('WOOLWORTHS 1234');

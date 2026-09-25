@@ -107,7 +107,7 @@ export default function App() {
     for(const notice of batch)handledShade.current.add(notice.id);
     void applyShadeDecisions(batch, accounts.data ?? [], primaryAccount.data,
       record => session.run(repo => repo.notices.approve(record)), forgetNotices)
-      .then(async result => { if(result.approved)await queryClient.invalidateQueries(); })
+      .then(async result => { if(result.approved){ setToast(result.approved===1?'Recorded 1 transaction from your bank':`Recorded ${result.approved} transactions from your bank`); await queryClient.invalidateQueries(); } })
       .catch(()=>{ for(const notice of batch)handledShade.current.delete(notice.id); });
   },[firstAccount,accounts.data,noticeQueue.data,primaryAccount.data,primaryAccount.isPending,session,queryClient]);
   // Counted as seen only when the owner closes it: a close caused by locking or leaving the app is not an answer.
