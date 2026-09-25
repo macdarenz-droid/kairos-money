@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- W1, 2×1: the logo and Add. The whole card is the one tap. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root" android:layout_width="match_parent" android:layout_height="match_parent" android:minHeight="44dp"
+    android:orientation="horizontal" android:gravity="center" android:padding="8dp" android:background="@drawable/widget_bg_glass"
+    android:contentDescription="@string/widget_add">
+    <ImageView android:id="@+id/w_logo" android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/kairos_mark"
+        android:importantForAccessibility="no"/>
+    <TextView android:id="@+id/w_add_label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp"
+        android:text="@string/widget_add_short" android:textSize="16sp" android:fontFamily="sans-serif-medium" android:textColor="@color/widget_glass_text"
+        android:importantForAccessibility="no"/>
+</LinearLayout>

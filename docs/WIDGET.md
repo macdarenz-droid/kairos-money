@@ -10,14 +10,21 @@ A widget is a `RemoteViews`: a layout drawn by the launcher from a fixed list of
 field on that list, so no Android app can take an amount on the widget itself. What the premium apps do
 instead is what this does: the widget is a set of taps, and a tap opens a sheet **over the home screen**.
 
-## What is on the widget (`res/layout/quick_add_widget.xml`)
+## The five widgets (`Widgets.java`, `WidgetStore.java`)
 
-One card in the app's own surface and border, a caps label, a ring with a plus, and four category chips
-with an icon each. It shows no money. Sized four cells by two, with the launcher's own corner radius on
-Android 12 and up.
+| Widget | Provider | Size | Shows |
+|---|---|---|---|
+| W1 | `AddWidget` | 2×1 | Logo and Add |
+| W2 | `QuickAddWidget` | 4×1 | 3 category chips and add (the old widget's class, so placed widgets keep working) |
+| W3 | `TodayWidget` | 2×2 | Left for today, spent today, add |
+| W4 | `WeekWidget` | 4×2 | Left for today, 7-day bars, 6 icon-only categories, add |
+| W5 | `CategoryWidget` | 2×2 | 4 category icons |
 
-Every chip and the plus opens `QuickAddActivity` with that category set. Nothing on the widget opens the
-app.
+A category opens `QuickAddActivity` with that category; Add opens it plain. Nothing opens the app. Every
+tap is at least 44dp. Styles are Dark glass (default), Paper and Indigo, set in You › Appearance.
+
+Amounts are the last unlock's: two formatted figures and seven whole-percent bar heights in a private
+store, nothing else. "Show amounts on widgets" off removes them from the phone and stops new ones.
 
 ## What a tap opens (`QuickAddActivity`, `res/layout/quick_add_sheet.xml`)
 
@@ -47,8 +54,9 @@ the widget always knows where its money goes. None of that is a balance or a tra
 No code runs inside a widget, so nothing in it can be animated by hand. Two things still move:
 
 - every chip and the plus carry a ripple, so a tap answers under the finger;
-- the label line is a `ViewFlipper`, the one view a widget can switch with an animation: after a save it
-  rises in as *Saved $4.50 · Coffee*, and six seconds later the plain label rises back. The amount shown
+- W2's chip row is a `ViewFlipper`, the one view a widget can switch with an animation: after a save it
+  rises in as *Saved $4.50 · Coffee*, and six seconds later the chips rise back. With animations off in
+  Android, the flip is skipped. The amount shown
   is the one typed seconds earlier on the same screen, and it is gone before the phone changes hands.
 
 The sheet, being a real activity, moves freely: it rises from below the screen as the scrim fades in,
@@ -57,6 +65,8 @@ the sheet sinks away and the window fades.
 
 ## Pinned by
 
-- `QuickAddInstrumentedTest` (device): the keypad rules, the outbox round trip, the chips' labels and icons
+- `QuickAddInstrumentedTest` (device): the keypad rules, the outbox round trip, the chips' labels and icons,
+  every widget in every style, and hidden amounts leaving the store
 - `tests/quick-add-outbox.test.tsx`: the outbox as ledger transactions, account choice, draining once
-- `tests/device-test-counts.test.ts`: the gate demands the three device tests
+- `tests/widget-figures.test.ts`, `tests/widget-settings-ui.test.tsx`: what the widgets are given, and the settings
+- `tests/device-test-counts.test.ts`: the gate demands the four device tests

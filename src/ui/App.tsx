@@ -4,6 +4,7 @@ import { applyShadeDecisions, shadeBatch } from './notices';
 import { NoticeReview } from './screens/NoticeReview';
 import {useQuickAddLaunch, useQuickAddOutbox} from './quick-add';
 import { NotificationSync } from './screens/Notifications';
+import { WidgetSync } from './screens/WidgetSettings';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Account } from '../core/db/repository';
 import { create } from 'zustand';
@@ -125,7 +126,7 @@ export default function App() {
   const openSettings = (focus: SettingsFocus) => { setTab('You'); setSheet(null); setSettingsFocus(focus); };
   const quickActions = [{label:'Add transaction',icon:Plus,act:()=>openManualSheet()},{label:'Transfer between accounts',icon:ArrowLeftRight,act:()=>{ if (count < 2) { setSheet('account'); return; } openManualSheet('transfer'); }},{ label: 'Import statements', icon: FileText, act: startImport },{ label: 'Add an account', icon: Plus, act: () => setSheet('account') }, { label: 'Find a transaction', icon: Search, act: () => { setTab('Ledger'); setSheet(null); } }, {label:'Back up your ledger',icon:ShieldPlus,act:()=>openSettings('backup')}, {label:'Restore a backup',icon:ArchiveRestore,act:()=>openSettings('restore')}, {label:'Change display currency',icon:Coins,act:()=>openSettings('currency')}, {label:'Export all data',icon:Download,act:()=>openSettings('export')}, {label:'Open settings',icon:ShieldCheck,act:()=>{setTab('You');setSheet(null);}}].filter(action => action.label.toLowerCase().includes(search.toLowerCase()));
   return <div className="app" aria-hidden={session.state === 'background' || undefined} style={session.state === 'background' ? { display: 'none' } : undefined}><header className="brand-bar"><Brand/><div className="privacy-status"><LockKeyhole size={12}/><span>{session.state === 'preview' ? 'Design preview' : 'On this device'}</span></div></header>
-    <NotificationSync/>
+    <NotificationSync/><WidgetSync/>
     {session.state === 'preview' && <p className="notice">Account storage and security require the Android app.</p>}
     <main>{/* A heading names the screen. The sentence that used to sit under it described the app to itself and
         cost a line of every screen. */}

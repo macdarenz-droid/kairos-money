@@ -29,6 +29,26 @@ public class KairosQuickAddPlugin extends Plugin {
             call.resolve();
         } catch (JSONException broken) { call.reject("The quick-add settings could not be written."); }
     }
+    @PluginMethod public void widgetSettings(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("style", WidgetStore.style(getContext())); result.put("showAmounts", WidgetStore.showAmounts(getContext()));
+        call.resolve(result);
+    }
+    @PluginMethod public void setWidgetSettings(PluginCall call) {
+        try { WidgetStore.settings(getContext(), call.getString("style", "glass"), !Boolean.FALSE.equals(call.getBoolean("showAmounts", true))); }
+        catch (IllegalArgumentException unknown) { call.reject(unknown.getMessage()); return; }
+        Widgets.refreshAll(getContext());
+        call.resolve();
+    }
+    /** Formatted figures and whole-percent bar heights from this unlock; ignored while amounts are off. */
+    @PluginMethod public void widgetFigures(PluginCall call) {
+        JSArray listed = call.getArray("bars");
+        int[] bars = new int[7];
+        if (listed != null) for (int i = 0; i < 7 && i < listed.length(); i++) bars[i] = listed.optInt(i);
+        WidgetStore.figures(getContext(), call.getString("left"), call.getString("spent"), bars);
+        Widgets.refreshAll(getContext());
+        call.resolve();
+    }
     @PluginMethod public void pending(PluginCall call) {
         JSObject result = new JSObject();
         result.put("entries", QuickAddStore.pending(getContext()));

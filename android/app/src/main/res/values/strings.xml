@@ -2,8 +2,22 @@
 <resources>
     <string name="app_name">Kairos Money Tracker</string>
     <string name="widget_add">Add transaction</string>
-    <string name="widget_label">Kairos · Add</string>
     <string name="widget_description">Record a purchase in two taps, without opening the app.</string>
+    <string name="widget_add_short">Add</string>
+    <string name="widget_name_add">Kairos · Add</string>
+    <string name="widget_name_chips">Kairos · Category row</string>
+    <string name="widget_name_today">Kairos · Today</string>
+    <string name="widget_name_week">Kairos · Week</string>
+    <string name="widget_name_categories">Kairos · Categories</string>
+    <string name="widget_left_today">Left for today</string>
+    <string name="widget_spent_today">Spent %1$s today</string>
+    <string name="widget_amounts_hidden">Amounts hidden</string>
+    <string name="widget_not_yet">Open Kairos to update</string>
+    <string name="widget_none">—</string>
+    <string name="widget_add_description">Kairos: one tap to add a transaction.</string>
+    <string name="widget_today_description">Kairos: left for today and spent today.</string>
+    <string name="widget_week_description">Kairos: left for today, the week, and category buttons.</string>
+    <string name="widget_categories_description">Kairos: four category buttons.</string>
     <string name="widget_saved">Saved %1$s · %2$s</string>
     <string name="qa_title">Add</string>
     <string name="qa_spent">Spent</string>

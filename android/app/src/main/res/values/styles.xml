@@ -65,6 +65,32 @@
         <item name="android:maxLines">1</item>
         <item name="android:ellipsize">end</item>
     </style>
+    <!-- Home-screen widget taps: 44dp tall, icon in a grey that reads on all three widget styles. -->
+    <style name="Widget.Kairos.WidgetChip" parent="android:Widget.TextView">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:background">@drawable/widget_tap_glass</item>
+        <item name="android:textColor">@color/widget_glass_text</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:drawablePadding">6dp</item>
+        <item name="android:drawableTint">@color/widget_chip_icon</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+    <style name="Widget.Kairos.WidgetIcon" parent="android:Widget.ImageButton">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:minWidth">44dp</item>
+        <item name="android:background">@drawable/widget_tap_glass</item>
+        <item name="android:scaleType">centerInside</item>
+        <item name="android:padding">10dp</item>
+    </style>
     <style name="Widget.Kairos.Pill" parent="android:Widget.TextView">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">30dp</item>
