@@ -36,7 +36,7 @@ it('does not extend the 60-second deadline when stop follows pause',async()=>{aw
 it('starts an empty Today with one card and one primary, then orders the sections once data exists', async () => {
   await setup(); fireEvent.click(screen.getByRole('button', {name: 'Today'}));
   const start = await screen.findByRole('region', {name: 'Get started'}, {timeout: 5000});
-  expect(start.querySelector('.coin-stack')).toBeTruthy();
+  expect(start.querySelector('.moment-ring')).toBeTruthy();
   expect(screen.getByRole('button', {name: 'Add your first statement'}).className).toContain('button-primary');
   expect(screen.getByRole('button', {name: 'Add transaction'}).className).toContain('button-default');
   cleanup();
