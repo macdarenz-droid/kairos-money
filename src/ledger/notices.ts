@@ -114,26 +114,45 @@ async function claims(driver: Driver, legs: Leg[]): Promise<Map<string, string>>
     const rows = await driver.query(
       "SELECT t.id,t.posted_date,t.raw_description FROM transactions t JOIN import_batches b ON b.id=t.import_batch_id WHERE b.parser_version NOT IN ('manual-entry-v1','notice-v1') AND t.status='settled' AND t.account_id=? AND t.amount_minor=? ORDER BY t.posted_date,t.id",
       [group[0]!.accountId, toDatabase(group[0]!.value)]);
-    // Most pairs, then fewest days: cheapest augmenting paths, since a merchant rule lets pairs cross.
-    const cost = group.map(leg => rows.map(row => {
-      const gap = Math.abs(dayNumber(String(row.posted_date)) - dayNumber(leg.entry.date));
-      return gap <= 3 && sameMerchant(leg.entry, String(row.raw_description ?? '')) ? gap : -1;
-    }));
+    const gaps = group.map(leg => rows.map(row => Math.abs(dayNumber(String(row.posted_date)) - dayNumber(leg.entry.date))));
+    const cost = group.map((leg, i) => rows.map((row, k) =>
+      gaps[i]![k]! <= 3 && sameMerchant(leg.entry, String(row.raw_description ?? '')) ? gaps[i]![k]! : -1));
     const rowOf = group.map(() => -1), legOf = rows.map(() => -1);
-    for (;;) {
-      const dl = group.map((_, i) => rowOf[i]! < 0 ? 0 : Infinity), dr = rows.map(() => Infinity), from = rows.map(() => -1);
-      for (let changed = true; changed;) {
-        changed = false;
-        group.forEach((_, i) => rows.forEach((_, k) => {
-          const c = cost[i]![k]!;
-          if (c >= 0 && rowOf[i] !== k && dl[i]! + c < dr[k]!) { dr[k] = dl[i]! + c; from[k] = i; changed = true; }
-        }));
-        rows.forEach((_, k) => { const i = legOf[k]!; if (i >= 0 && dr[k]! - cost[i]![k]! < dl[i]!) { dl[i] = dr[k]! - cost[i]![k]!; changed = true; } });
+    // With no in-window pair turned away by the merchant rule, pairs never need to cross on a calendar, so the
+    // linear DP is exact; only a group the rule split needs augmenting paths, and those walk allowed pairs only.
+    if (!cost.some((line, i) => line.some((c, k) => c < 0 && gaps[i]![k]! <= 3))) {
+      const best = group.map(() => rows.map(() => ({count: 0, days: 0, step: 0})));
+      const at = (i: number, k: number) => i < 0 || k < 0 ? {count: 0, days: 0, step: 0} : best[i]![k]!;
+      const better = (x: {count: number; days: number}, y: {count: number; days: number}) => x.count !== y.count ? x.count > y.count : x.days < y.days;
+      group.forEach((_, i) => rows.forEach((_, k) => {
+        let pick = {...at(i - 1, k), step: 0};
+        if (better(at(i, k - 1), pick)) pick = {...at(i, k - 1), step: 1};
+        const pair = {count: at(i - 1, k - 1).count + 1, days: at(i - 1, k - 1).days + cost[i]![k]!, step: 2};
+        if (cost[i]![k]! >= 0 && better(pair, pick)) pick = pair;
+        best[i]![k] = pick;
+      }));
+      for (let i = group.length - 1, k = rows.length - 1; i >= 0 && k >= 0;) {
+        const {step} = best[i]![k]!;
+        if (step === 2) { rowOf[i] = k; legOf[k] = i; }
+        if (step !== 1) i -= 1;
+        if (step !== 0) k -= 1;
       }
-      let end = -1;
-      rows.forEach((_, k) => { if (legOf[k]! < 0 && dr[k]! < Infinity && (end < 0 || dr[k]! < dr[end]!)) end = k; });
-      if (end < 0) break;
-      for (let k = end; k >= 0;) { const i = from[k]!, prev = rowOf[i]!; rowOf[i] = k; legOf[k] = i; k = prev; }
+    } else {
+      const allowed = cost.map(line => line.flatMap((c, k) => c >= 0 ? [k] : []));
+      for (;;) {
+        const dl = group.map((_, i) => rowOf[i]! < 0 ? 0 : Infinity), dr = rows.map(() => Infinity), from = rows.map(() => -1);
+        for (let changed = true; changed;) {
+          changed = false;
+          allowed.forEach((ks, i) => { if (dl[i]! < Infinity) for (const k of ks) {
+            if (rowOf[i] !== k && dl[i]! + cost[i]![k]! < dr[k]!) { dr[k] = dl[i]! + cost[i]![k]!; from[k] = i; changed = true; }
+          } });
+          rows.forEach((_, k) => { const i = legOf[k]!; if (i >= 0 && dr[k]! - cost[i]![k]! < dl[i]!) { dl[i] = dr[k]! - cost[i]![k]!; changed = true; } });
+        }
+        let end = -1;
+        rows.forEach((_, k) => { if (legOf[k]! < 0 && dr[k]! < Infinity && (end < 0 || dr[k]! < dr[end]!)) end = k; });
+        if (end < 0) break;
+        for (let k = end; k >= 0;) { const i = from[k]!, prev = rowOf[i]!; rowOf[i] = k; legOf[k] = i; k = prev; }
+      }
     }
     group.forEach((leg, i) => { if (rowOf[i]! >= 0) paired.set(leg.id, String(rows[rowOf[i]!]!.id)); });
   }
