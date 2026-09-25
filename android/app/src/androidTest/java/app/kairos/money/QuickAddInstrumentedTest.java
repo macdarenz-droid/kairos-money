@@ -103,7 +103,7 @@ public class QuickAddInstrumentedTest {
             try {
                 assertNotNull(views.apply(context, new android.widget.FrameLayout(context)));
                 // A launcher applies with a restricted context made for this app, not the app's own.
-                Context remote = context.createApplicationContext(context.getApplicationInfo(), Context.CONTEXT_RESTRICTED);
+                Context remote = context.createPackageContext(context.getPackageName(), Context.CONTEXT_RESTRICTED);
                 assertNotNull(views.apply(remote, new android.widget.FrameLayout(context)));
             } catch (Throwable error) { failure[0] = error; }
         });
