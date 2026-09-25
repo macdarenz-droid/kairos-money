@@ -186,8 +186,7 @@ export type GoalPerPay = {goalId: string; perPayMinor: Minor | null};
 /** paysPerYear follows the employer's own cycle: 12 when monthly, else 365 over the interval. */
 export type PayRise = {employer: string; increaseMinor: Minor; suggestedMinor: Minor; paysPerYear: number; evidence: Evidence};
 export type Plan = {
-  /** 'hidden' while triage is active. */
-  status: 'ok' | 'not_yet' | 'hidden';
+  status: 'ok' | 'not_yet';
   window: Span;
   split: Split;
   findings: readonly Finding[];
@@ -230,13 +229,6 @@ export type AdviceRule = keyof AdviceFigures;
 export type RuleFigures = {[R in AdviceRule]: {rule: R; figures: Readonly<AdviceFigures[R]>}}[AdviceRule];
 export type Advice = RuleFigures & {yearlyMinor: Minor; ease: 1 | 2 | 3; evidence: Evidence};
 
-// ── triage ─────────────────────────────────────────────────────────────
-export type TriageReason = 'low-buffer' | 'rising-high-interest-debt' | 'repeated-overdraft-fees';
-/** When active, advice and plan are hidden; essentials and free help are shown. */
-export type Triage =
-  | {active: false}
-  | {active: true; reasons: readonly TriageReason[]; nextEssential: CommittedBill | null; availableMinor: Minor; evidence: Evidence};
-
 // ── inputs, read once per (date, display currency) ────────────────────
 export type Dismissal = {count: number; last: Day};
 export type BrainInputs = {
@@ -264,7 +256,6 @@ export type Brain = {
   plan: Plan;
   goals: Goals;
   advice: UpTo3<Advice>;
-  triage: Triage;
   coverage: Coverage;
   tier: Tier;
 };
@@ -296,7 +287,6 @@ export type BrainSummary = {
   plan: {split: Split; leaks: readonly Omit<Leak, 'evidence'>[]; next: StepId | null; debtCount: number; owedMinor: Minor} | null;
   goals: readonly {kind: Goal['kind']; targetMinor: Minor; fundedMinor: Minor; targetDate: Day}[];
   advice: UpTo3<RuleFigures & {yearlyMinor: Minor}>;
-  triage: boolean;
   /** Every figure the advisor may cite, by its fact id; a point citing any other id is dropped. */
   facts: readonly SummaryFact[];
 };

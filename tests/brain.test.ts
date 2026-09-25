@@ -70,15 +70,6 @@ describe('the brain', () => {
     expect(JSON.stringify(think(inputs(s)))).toBe(JSON.stringify(think(inputs(s))));
   });
 
-  it('hides advice and plan while triage is active', () => {
-    const fees = [row('f1', day(-10), '-1500', {overdraftFee: true, category: 'Bank fees', kind: 'discretionary'}), row('f2', day(-3), '-1500', {overdraftFee: true, category: 'Bank fees', kind: 'discretionary'})];
-    const brain = think(inputs(snapshot(handEntered(fees)), {holdings: {spendableMinor: '1000', savedMinor: '0'}}));
-    expect(brain.triage).toMatchObject({active: true, reasons: ['low-buffer', 'repeated-overdraft-fees']});
-    expect(brain.advice).toEqual([]);
-    expect(brain.plan.status).toBe('hidden');
-    expect(brain.plan.leaks).toEqual([]);
-  });
-
   it('gives at most three pieces of advice, and honours dismissals', () => {
     const smalls = Array.from({length: 12}, (_, i) => row(`s${i}`, day(-i * 3), '-900', {kind: 'discretionary', category: 'Shopping', description: `Shop ${i}`}));
     const brain = think(inputs(snapshot(handEntered(smalls))));

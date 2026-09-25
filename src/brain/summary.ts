@@ -12,7 +12,7 @@ export function summary(brain: Brain, options: {merchantNames: boolean} = {merch
   const shareFact = (id: string, basisPoints: BasisPoints) => { facts.push({fact: id, basisPoints}); return basisPoints; };
   const flow = (key: string, m: Brain['spending']['thisMonth']) => ({start: m.start, end: m.end,
     inMinor: fact(`${key}.in`, m.inMinor), outMinor: fact(`${key}.out`, m.outMinor), leftMinor: fact(`${key}.left`, m.leftMinor), tier: m.tier});
-  const t = brain.today, sp = brain.spending, hidePlan = brain.triage.active || brain.plan.status !== 'ok';
+  const t = brain.today, sp = brain.spending, hidePlan = brain.plan.status !== 'ok';
   const result: BrainSummary = {
     asOf: brain.asOf, currency: brain.currency, tier: brain.tier,
     coverage: {coveredDays: brain.coverage.coveredDays, totalDays: brain.coverage.totalDays, gapCount: brain.coverage.gaps.length},
@@ -35,7 +35,6 @@ export function summary(brain: Brain, options: {merchantNames: boolean} = {merch
     goals: brain.goals.items.map(g => ({kind: g.kind, targetMinor: g.targetMinor, fundedMinor: g.fundedMinor, targetDate: g.targetDate})),
     // rule and figures come from the same item, so the assertion only restores their pairing.
     advice: upTo3(brain.advice.map(a => ({rule: a.rule, figures: a.figures, yearlyMinor: fact(`advice.${a.rule}`, a.yearlyMinor)}) as BrainSummary['advice'][number])),
-    triage: brain.triage.active,
     facts,
   };
   return result;

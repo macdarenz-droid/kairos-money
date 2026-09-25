@@ -6,8 +6,7 @@ import {coveredDays, tierFor} from './shared';
 import {spending} from './spending';
 import {summary} from './summary';
 import {today} from './today';
-import {triage} from './triage';
-import type {Brain, BrainInputs, Coverage, Plan} from './types';
+import type {Brain, BrainInputs, Coverage} from './types';
 
 export {notificationPlan} from '../intelligence/notifications';
 export {summary};
@@ -17,13 +16,10 @@ export function think(input: BrainInputs): Brain {
   const s = input.snapshot;
   const full = buildPlan(input);
   const now = today(input, full.targets);
-  const help = triage(input, now);
-  // While triage is active the plan and advice are hidden; essentials and free help are shown instead.
-  const shown: Plan = help.active ? {...full, status: 'hidden', findings: [], leaks: [], roadmap: [], next: null, debt: null, targets: [], goalsPerPay: [], payRise: []} : full;
   const c = coverage(input);
   return {
     asOf: s.asOf, currency: s.currency, today: now, attention: attention(input, full), spending: spending(input),
-    plan: shown, goals: goals(input), advice: help.active ? [] : advice(input, full), triage: help, coverage: c, tier: c.tier,
+    plan: full, goals: goals(input), advice: advice(input, full), coverage: c, tier: c.tier,
   };
 }
 
