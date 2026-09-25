@@ -45,6 +45,9 @@ it('shows essentials and free help instead of plan and advice while things are t
   expect(screen.queryByLabelText('Plan')).toBeNull();
   expect(screen.queryByLabelText('Advice')).toBeNull();
   expect(screen.getByText(/1800 007 007/)).toBeTruthy();
+  // The card sits on top; the month and where it went stay readable.
+  for (const section of ['This month', 'Where it went']) expect(screen.getByLabelText(section)).toBeTruthy();
+  expect(screen.queryByLabelText('Money set aside')).toBeNull();
 });
 
 it('flags charges after a cancellation as possible final charges', async () => {

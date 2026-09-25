@@ -40,16 +40,18 @@ export function Insights() {
   if (!brain.data) return <><h2>Still learning</h2><Loader label="Reading your money"/></>;
   const b = brain.data;
   const show = (minor: string | bigint) => format(money(BigInt(minor), currency(code)));
-  if (b.triage.active) return <Triage brain={b} show={show}/>;
+  // While things are tight, essentials lead and advice and the plan step aside; the facts stay readable.
+  const tight = b.triage.active;
   return <div className="stack insights">
-    {b.plan.status !== 'ok' && <h2>Still learning</h2>}
+    {tight && <Triage brain={b} show={show}/>}
+    {!tight && b.plan.status !== 'ok' && <h2>Still learning</h2>}
     <Month brain={b} code={currency(code)} show={show}/>
     <WhereItWent brain={b} code={currency(code)} show={show}/>
     <Bills brain={b} show={show} code={currency(code)}/>
-    <Advice brain={b} show={show}/>
+    {!tight && <><Advice brain={b} show={show}/>
     <AdvisorPanel brain={b}/>
     <Plan brain={b} show={show}/>
-    <SetAside brain={b} code={code} show={show}/>
+    <SetAside brain={b} code={code} show={show}/></>}
   </div>;
 }
 type Part = {brain: Brain; show: (minor: string | bigint) => string};
