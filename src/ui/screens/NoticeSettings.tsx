@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {Notices, noticeAccess, noticesAvailable, installedSources, watchSources} from '../../ingest/notices';
 import {Button, Explain, Input, Row} from '../design/primitives';
@@ -20,6 +20,12 @@ export function NoticeSettings({accounts = []}: {accounts?: readonly Account[]} 
   const session = useSession();
   const [error, setError] = useState(''), [search, setSearch] = useState(''), [all, setAll] = useState(false);
   const access = useQuery({queryKey: ['notice-access'], queryFn: noticeAccess, enabled: noticesAvailable()});
+  // The grant is made in Android settings, away from Kairos; read it again whenever Kairos comes back.
+  const shown = useRef(session.state);
+  useEffect(() => {
+    if (session.state === 'ready' && shown.current !== 'ready') void client.invalidateQueries({queryKey: ['notice-access']});
+    shown.current = session.state;
+  }, [session.state, client]);
   const fallback = useQuery({
     queryKey: ['notice-default-account'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.notices.defaultAccount()),

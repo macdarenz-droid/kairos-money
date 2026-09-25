@@ -17,7 +17,7 @@ it.each(['dark','light'])('keeps opt-ins independent and leaves denied preferenc
  await waitFor(()=>expect((screen.getByRole('button',{name:'Upcoming bills'}) as HTMLButtonElement).disabled).toBe(false));
  expect(state.request).not.toHaveBeenCalled();
  state.request.mockResolvedValue({granted:false});fireEvent.click(screen.getByRole('button',{name:'Upcoming bills'}));
- await screen.findByText('Notifications are off in Android settings. Your preference was not changed.');
+ await screen.findByText('Allow notifications for Kairos in Android settings, then come back.');
  expect((await state.repo!.notifications.preferences()).bill).toBe(false);
  state.request.mockResolvedValue({granted:true});fireEvent.click(screen.getByRole('button',{name:'Upcoming bills'}));
  await waitFor(()=>expect(screen.getByRole('button',{name:'Upcoming bills'}).getAttribute('aria-pressed')).toBe('true'));
