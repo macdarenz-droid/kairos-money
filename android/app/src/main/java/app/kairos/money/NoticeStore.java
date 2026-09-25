@@ -71,8 +71,10 @@ final class NoticeStore {
                 .put("title", title == null ? "" : title).put("text", text == null ? "" : text)
                 .put("postedAt", postedAt).put("decision", JSONObject.NULL);
             JSONArray next = new JSONArray();
-            // Oldest first, so an unanswered backlog sheds its stalest entries rather than its newest.
-            for (int i = Math.max(0, held.length() - (LIMIT - 1)); i < held.length(); i++) next.put(held.get(i));
+            // An answer waits to be applied, so the stalest unanswered entry is shed before any answer.
+            List<Boolean> decided = new ArrayList<>();
+            for (int i = 0; i < held.length(); i++) { JSONObject e = held.optJSONObject(i); decided.add(e != null && !e.isNull("decision") && !e.optString("decision").isEmpty()); }
+            for (int i : NoticeTrim.keep(decided, LIMIT - 1)) next.put(held.get(i));
             // Its own notification slot, so two questions never replace each other or share buttons.
             boolean[] used = new boolean[LIMIT];
             for (int i = 0; i < next.length(); i++) { int taken = next.getJSONObject(i).optInt("slot", -1); if (taken >= 0 && taken < LIMIT) used[taken] = true; }
