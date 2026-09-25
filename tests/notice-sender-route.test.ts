@@ -2,13 +2,14 @@ import {expect, it} from 'vitest';
 import {applyShadeDecisions} from '../src/ui/notices';
 import type {Notice} from '../src/ingest/notices';
 import type {NoticeRecord} from '../src/ledger/notices';
+import type {NoticeAccount} from '../src/ingest/notices/route';
 
 const westpac = {id: 'wbc', name: 'Westpac', institution: 'Westpac', currency: 'AUD', mask_last4: null, archived_at: null};
 const commbank = {id: 'cba', name: 'CommBank', institution: 'CommBank', currency: 'AUD', mask_last4: null, archived_at: null};
 const shade: Notice = {id: 'notice:1790000000:aa', source: 'com.commbank.netbank', title: 'CommBank', decision: 'approved',
   postedAt: Date.parse('2026-09-25T02:30:00Z'), text: 'You spent $12.50 at WOOLWORTHS 1234.'};
 
-async function landed(accounts: typeof westpac[], notice: Notice = shade) {
+async function landed(accounts: NoticeAccount[], notice: Notice = shade) {
   const recorded: NoticeRecord[] = [];
   await applyShadeDecisions([notice], accounts, 'wbc', async r => { recorded.push(r); }, async () => {});
   return recorded.map(r => r.accountId);

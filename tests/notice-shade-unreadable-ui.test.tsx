@@ -55,7 +55,7 @@ const unlockApp = async () => {
 };
 
 it('a purchase approved in the shade that cannot be read is offered to add by hand or dismiss, after every unlock', async () => {
-  for (const _round of [1, 2]) {
+  for (let round = 1; round <= 2; round++) {
     const view = await unlockApp();
     await screen.findByText('Check these transactions');
     await screen.findByText('Purchase of $23.40 at COLES 0456 at 12.30pm.');
