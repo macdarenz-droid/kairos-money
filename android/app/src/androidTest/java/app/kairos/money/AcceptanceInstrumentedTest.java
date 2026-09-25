@@ -114,6 +114,16 @@ public class AcceptanceInstrumentedTest {
      * app must never be asked to come forward. Then, unlocked, the app takes the entry into the ledger and
      * the outbox is empty again. Checked with the app unlocked and with it locked: the sheet does not care.
      */
+    /** The host's own reason when a widget shows its error view; the gate's log keeps only this app's lines. */
+    private static String hostWarnings() {
+        try {
+            Process logcat = Runtime.getRuntime().exec(new String[]{"logcat", "-d", "-t", "300", "AppWidgetHostView:W", "*:S"});
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream(); byte[] block = new byte[4096]; int read;
+            try (java.io.InputStream in = logcat.getInputStream()) { while ((read = in.read(block)) != -1) out.write(block, 0, read); }
+            String text = out.toString("UTF-8");
+            return text.length() > 4000 ? text.substring(text.length() - 4000) : text;
+        } catch (Exception unreadable) { return unreadable.toString(); }
+    }
     private void verifyWidgetLaunch(ActivityScenario<MainActivity> scenario,String theme,boolean locked) throws Exception {
         Intent originalIntent=new Intent(activity.getIntent());
         activity.getSharedPreferences(QuickAddStore.PREFS,android.content.Context.MODE_PRIVATE).edit().remove("pending").commit();
@@ -125,7 +135,7 @@ public class AcceptanceInstrumentedTest {
             assertNotNull("Quick-add widget provider metadata is missing",manager.getAppWidgetInfo(id));
             CountDownLatch attached=new CountDownLatch(1);activity.runOnUiThread(()->{host.startListening();shown[0]=host.createView(activity,id,manager.getAppWidgetInfo(id));int height=Math.round(150*activity.getResources().getDisplayMetrics().density);activity.addContentView(shown[0],new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,height));attached.countDown();});
             assertTrue("Quick-add widget did not render",attached.await(15,TimeUnit.SECONDS));Thread.sleep(500);
-            View add=shown[0].findViewById(R.id.widget_add);assertNotNull("Quick-add widget action is missing",add);assertEquals("Add transaction",String.valueOf(add.getContentDescription()));
+            View add=shown[0].findViewById(R.id.widget_add);assertNotNull("Quick-add widget action is missing: "+hostWarnings(),add);assertEquals("Add transaction",String.valueOf(add.getContentDescription()));
             View chip=shown[0].findViewById(R.id.widget_chip_1);assertNotNull("Quick-add widget chips are missing",chip);assertEquals("Groceries",String.valueOf(((android.widget.TextView)chip).getText()));
             screenshot(theme+"-launcher-widget");
             int[] center=new int[2];boolean[] visible=new boolean[1];CountDownLatch located=new CountDownLatch(1);

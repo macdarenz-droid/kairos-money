@@ -100,7 +100,12 @@ public class QuickAddInstrumentedTest {
     private void renders(String name, android.widget.RemoteViews views) {
         Throwable[] failure = new Throwable[1];
         InstrumentationRegistry.getInstrumentation().runOnMainSync(() -> {
-            try { assertNotNull(views.apply(context, new android.widget.FrameLayout(context))); } catch (Throwable error) { failure[0] = error; }
+            try {
+                assertNotNull(views.apply(context, new android.widget.FrameLayout(context)));
+                // A launcher applies with a restricted context made for this app, not the app's own.
+                Context remote = context.createApplicationContext(context.getApplicationInfo(), Context.CONTEXT_RESTRICTED);
+                assertNotNull(views.apply(remote, new android.widget.FrameLayout(context)));
+            } catch (Throwable error) { failure[0] = error; }
         });
         if (failure[0] != null) {
             StringBuilder why = new StringBuilder(name + " does not render:");
