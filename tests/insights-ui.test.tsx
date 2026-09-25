@@ -9,11 +9,12 @@ import {brainInputs} from './brain-mock';
 
 const AUD = currency('AUD'), today = localDay();
 const back = (days: number) => new Date(Date.parse(today) - days * 86400000).toISOString().slice(0, 10);
-const ledger = vi.hoisted(() => ({cancellations: [] as unknown[], transactions: [] as Transaction[], reads: 0, spendable: '500000'}));
+const ledger = vi.hoisted(() => ({cancellations: [] as unknown[], transactions: [] as Transaction[], reads: 0, spendable: '500000', advisor: null as null | Record<string, unknown>}));
 vi.mock('../src/ui/session', () => ({useSession: () => ({state: 'ready', run: (fn: (repo: unknown) => unknown) => Promise.resolve(fn({
   accounts: () => Promise.resolve([{id: 'a', name: 'Everyday', currency: 'AUD', archived_at: null}]),
   displayCurrency: () => Promise.resolve('AUD'),
   cancellations: {list: () => Promise.resolve(ledger.cancellations)},
+  advisor: {settings: () => Promise.resolve(ledger.advisor ?? {enabled: false}), key: () => Promise.resolve(ledger.advisor ? 'sk-ant-synthetic' : null)},
   intelligence: {inputs: () => { ledger.reads++; return Promise.resolve(brainInputs({asOf: today, currency: AUD, accountIds: ['a'], coverage: [], pays: [],
     transactions: ledger.transactions, savings: {asideMinor: '0', accountIds: [], evidence: []}} satisfies Snapshot,
     {accounts: [{id: 'a', currency: 'AUD'}], balances: [{accountId: 'a', minor: ledger.spendable}]})); }},
@@ -21,7 +22,7 @@ vi.mock('../src/ui/session', () => ({useSession: () => ({state: 'ready', run: (f
 import {Insights} from '../src/ui/screens/Insights';
 HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
 HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
-afterEach(cleanup);
+afterEach(() => { cleanup(); ledger.advisor = null; });
 const row = (id: string, date: string, minor: string, over: Partial<Transaction> = {}): Transaction => ({id, accountId: 'a', date, minor, currency: AUD,
   description: 'Landlord', category: 'Housing', kind: 'essential', status: 'settled', transfer: false, recurring: false, ...over});
 const month = () => [0, 1, 2].flatMap(n => [row(`pay${n}`, back(89 - n * 30), '300000', {kind: 'income', category: 'Salary', description: 'Employer'}),
@@ -39,12 +40,14 @@ it('reads the ledger once per open and shows the sections after the cut', async 
 
 it('shows essentials, without a helpline, instead of plan and advice while things are tight', async () => {
   ledger.transactions = month().concat([row('f1', back(3), '-1500', {overdraftFee: true, category: 'Bank fees', kind: 'discretionary'}), row('f2', back(9), '-1500', {overdraftFee: true, category: 'Bank fees', kind: 'discretionary'})]);
-  ledger.spendable = '1000';
+  ledger.spendable = '1000'; ledger.advisor = {enabled: true, model: 'claude-haiku-4-5', merchantNames: false, sortConsent: false, autoSort: false};
   mount();
   await screen.findByText('Focus on essentials');
   expect(screen.queryByLabelText('Plan')).toBeNull();
   expect(screen.queryByLabelText('Advice')).toBeNull();
   expect(screen.queryByText(/1800 007 007|Helpline/)).toBeNull();
+  // Kairos AI stays: tight weeks are when the owner asks most.
+  expect(await screen.findByLabelText('Kairos AI')).toBeTruthy();
   // The card sits on top; the month and where it went stay readable.
   for (const section of ['This month', 'Where it went']) expect(screen.getByLabelText(section)).toBeTruthy();
   expect(screen.queryByLabelText('Money set aside')).toBeNull();

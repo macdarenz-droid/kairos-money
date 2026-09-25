@@ -40,7 +40,7 @@ export function Insights() {
   if (!brain.data) return <><h2>Still learning</h2><Loader label="Reading your money"/></>;
   const b = brain.data;
   const show = (minor: string | bigint) => format(money(BigInt(minor), currency(code)));
-  // While things are tight, essentials lead and advice and the plan step aside; the facts stay readable.
+  // While things are tight, essentials lead and advice and the plan step aside; the facts and Kairos AI stay.
   const tight = b.triage.active;
   return <div className="stack insights">
     {tight && <Triage brain={b} show={show}/>}
@@ -48,9 +48,9 @@ export function Insights() {
     <Month brain={b} code={currency(code)} show={show}/>
     <WhereItWent brain={b} code={currency(code)} show={show}/>
     <Bills brain={b} show={show} code={currency(code)}/>
-    {!tight && <><Advice brain={b} show={show}/>
+    {!tight && <Advice brain={b} show={show}/>}
     <AdvisorPanel brain={b}/>
-    <Plan brain={b} show={show}/>
+    {!tight && <><Plan brain={b} show={show}/>
     <SetAside brain={b} code={code} show={show}/></>}
   </div>;
 }
