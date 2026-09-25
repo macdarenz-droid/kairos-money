@@ -31,10 +31,10 @@ describe('pairing the two legs of a transfer between the owner\'s own accounts',
       rows: rows.map(([date, description, amount], i) => normalizeRow({sourceId: String(i), date, description, amount, confidence: 10000}, c))};
   };
   it('pairs repeated equal transfers one to one by nearest date, but never a purchase', () => {
-    // "Transfer To Marc" twice on 13 Sep in CommBank, "DEPOSIT-OSKO PAYMENT" twice in Westpac: neither has a unique partner.
-    const out = doc('cba', [['13/09/2026', 'Transfer To Marc PayID Phone from CommBank App g', '-1000.00'], ['14/09/2026', 'Transfer To Marc PayID Phone from CommBank App h', '-1000.00']]);
+    // Two equal transfers out of one account and two in to another: neither has a unique partner.
+    const out = doc('cba', [['13/09/2026', 'Transfer To Synthetic Owner PayID Phone g', '-1000.00'], ['14/09/2026', 'Transfer To Synthetic Owner PayID Phone h', '-1000.00']]);
     const into = (description: string) => doc('wbc', [['13/09/2026', description + ' 1', '1000.00'], ['14/09/2026', description + ' 2', '1000.00']]);
-    const ledger = reconcile([out, into('DEPOSIT-OSKO PAYMENT MARC')]), group = (account: string, date: string) => ledger.find(r => r.accountId === account && r.date === date)!.transferGroup;
+    const ledger = reconcile([out, into('DEPOSIT-OSKO PAYMENT SYNTHETIC OWNER')]), group = (account: string, date: string) => ledger.find(r => r.accountId === account && r.date === date)!.transferGroup;
     expect(ledger.every(r => r.transferGroup)).toBe(true);
     expect(group('cba', '2026-09-13')).toBe(group('wbc', '2026-09-13'));
     expect(group('cba', '2026-09-14')).toBe(group('wbc', '2026-09-14'));
