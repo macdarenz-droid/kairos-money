@@ -41,6 +41,7 @@ Output `Brain` (type in `src/brain/types.ts`, written first):
 - `spending`: this month and last month (in, out, left); categories (split-aware); top merchants; bills (yearly cost, next date, cancelled); small purchases, fees, refunds; busiest weekday; payday effect; 30-day `band`; 7-day `days`.
 - `plan`: monthly keep/save/spend split, leaks, next roadmap step, debt strategy, targets, goals per pay, pay rise.
 - `advice`: at most 3 items, each a closed rule id plus figures and evidence ids. Ranked by yearly impact × ease; hidden after 2 dismissals.
+- `triage`: when distress is active, hide advice and plan, and show essentials plus free help.
 - `coverage` and `tier` for the whole result.
 
 `notificationPlan` stays a pure export, called once per account currency. `summary.ts` builds the redacted `BrainSummary` for the advisor.
@@ -199,11 +200,12 @@ Goal: one clear thing to press on each screen, fewer boxes, and everything in th
 
 **Today**
 - **Order:**
-  1. MoneyBand.
-  2. SavingsPath.
-  3. Attention.
-  4. DayStrip.
-  5. Recorded today.
+  1. The triage card, only when active.
+  2. MoneyBand.
+  3. SavingsPath.
+  4. Attention.
+  5. DayStrip.
+  6. Recorded today.
 - **Numbers.**
   - One hero number at the top: today's spend figure at 40 px, counting up. The other figures stay small.
   - "Recorded today" drops to normal size.
@@ -258,7 +260,7 @@ Goal: one clear thing to press on each screen, fewer boxes, and everything in th
 **Tests:** new or updated focused tests for the button variants, the switch (state and name), Kairos AI steps, Ledger and Today order, and the blocking wait above an open sheet. Update non-frozen tests only alongside the code they test.
 
 ## Screens after the cut (~35 charts → ~9)
-- **Today:** MoneyBand, SavingsPath (single spend/keep today), Attention (≤3, including DueStrip), DayStrip, Recorded today.
+- **Today:** MoneyBand, SavingsPath (single spend/keep today), Attention (≤3, including DueStrip), DayStrip, Recorded today, triage card.
 - **Insights:**
   - Month summary (FlowBar + change vs last month).
   - Where it went (one CategorySplit + top merchants).

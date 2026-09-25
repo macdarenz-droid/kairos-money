@@ -159,7 +159,7 @@ public class IntelligenceInstrumentedTest {
         Uri uri=target.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);assertNotNull(uri);
         try(OutputStream out=target.getContentResolver().openOutputStream(uri)){assertNotNull(out);out.write(csv.getBytes(StandardCharsets.UTF_8));}return uri;
     }
-    private void seed(int count) throws Exception {
+    private void seed(int count, boolean low) throws Exception {
         new BackupTestUi(activity).ready();
         click("You");
         DatabaseDigest.transaction(activity, db -> {
@@ -168,7 +168,7 @@ public class IntelligenceInstrumentedTest {
             db.execSQL("INSERT OR IGNORE INTO categories(id,name,kind) VALUES('s3-essential','Synthetic essentials','essential')");
             db.execSQL("INSERT OR IGNORE INTO categories(id,name,kind) VALUES('s3-disc','Synthetic discretionary','discretionary')");
             db.execSQL("INSERT OR IGNORE INTO categories(id,name,kind) VALUES('s3-income','Synthetic income','income')");
-            db.execSQL("INSERT OR REPLACE INTO import_batches(id,account_id,source_file_hash,file_name,parser_version,period_start,period_end,status,stated_opening_minor,stated_closing_minor,created_at,integrity_tier,source_rank) VALUES('s3-batch','s3','s3-fixture','Synthetic six month source.csv','native-fixture',?,?,'committed',0,?,?,'A',3)",new Object[]{start,end,100000,end});
+            db.execSQL("INSERT OR REPLACE INTO import_batches(id,account_id,source_file_hash,file_name,parser_version,period_start,period_end,status,stated_opening_minor,stated_closing_minor,created_at,integrity_tier,source_rank) VALUES('s3-batch','s3','s3-fixture','Synthetic six month source.csv','native-fixture',?,?,'committed',0,?,?,'A',3)",new Object[]{start,end,low?1000:100000,end});
             db.execSQL("INSERT OR REPLACE INTO coverage_ranges VALUES('s3-coverage','s3',?,?,'s3-batch')",new Object[]{start,end});
             JSONObject metadata=new JSONObject();
             for(int i=0;i<count;i++) {
@@ -186,6 +186,7 @@ public class IntelligenceInstrumentedTest {
             }
             db.execSQL("INSERT OR REPLACE INTO app_settings VALUES('intelligence:metadata',?)",new Object[]{metadata.toString()});
             // Low leaves $10 in the account whatever earlier seeds added: the opening balance cancels every row.
+            if(low) db.execSQL("UPDATE accounts SET opening_balance_minor=1000-(SELECT COALESCE(SUM(amount_minor),0) FROM transactions WHERE account_id='s3') WHERE id='s3'");
             else db.execSQL("UPDATE accounts SET opening_balance_minor=0 WHERE id='s3'");
             return null;
         });
@@ -224,7 +225,7 @@ public class IntelligenceInstrumentedTest {
             // Reuse settled source rows: preserve amounts, coverage and existing profile assertions.
             click("Ledger");
             DatabaseDigest.transaction(activity, db -> {
-                // Start from a zero opening balance so Insights shows its sections.
+                // The triage run leaves $10 in the account; restore it so Insights shows its sections.
                 db.execSQL("UPDATE accounts SET opening_balance_minor=0 WHERE id='s3'");
                 for (int offset : new int[]{28,14,0}) {
                     String id = "s3-" + java.time.LocalDate.now().minusDays(offset) + "-essential";
@@ -337,11 +338,11 @@ public class IntelligenceInstrumentedTest {
     }
     @Test public void a_intelligenceEvidenceAndThemes() throws Exception {
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
-            scenario.onActivity(a->activity=a);unlock();seed(20);selectCurrency();awaitJs("Boolean(document.querySelector('[data-brain=ready]')) && document.body.innerText.includes('Still learning')");
+            scenario.onActivity(a->activity=a);unlock();seed(20,false);selectCurrency();awaitJs("Boolean(document.querySelector('[data-brain=ready]')) && document.body.innerText.includes('Still learning')");
             for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('Still learning')");captureHeading("Still learning",theme.toLowerCase()+"-intelligence-learning");}
         }
         try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
-            scenario.onActivity(a->activity=a);unlock();seed(182);
+            scenario.onActivity(a->activity=a);unlock();seed(182,false);
             for(String theme:new String[]{"Light","Dark"}) {
                 click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('Small buys add up. Try one fewer a week.')");
                 captureHeading("Advice",theme.toLowerCase()+"-intelligence-advice");captureHeading("Plan",theme.toLowerCase()+"-intelligence-plan");
@@ -350,6 +351,10 @@ public class IntelligenceInstrumentedTest {
             // Dismiss hides the card at once.
             js("Array.from(document.querySelectorAll('.advice-list .row')).find(e=>e.textContent.includes('Small buys add up')).querySelector('button').click()");
             awaitJs("!document.body.innerText.includes('Small buys add up. Try one fewer a week.')");
+        }
+        try(ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
+            scenario.onActivity(a->activity=a);unlock();seed(182,true);selectCurrency();awaitJs("document.body.innerText.includes('Focus on essentials')");assertEquals("false",js("Boolean(document.querySelector('section[aria-label=\"Advice\"]'))"));
+            for(String theme:new String[]{"Light","Dark"}){click("You");click(theme);selectCurrency();awaitJs("document.body.innerText.includes('Focus on essentials')");captureHeading("Focus on essentials",theme.toLowerCase()+"-intelligence-triage");}
         }
     }
 }

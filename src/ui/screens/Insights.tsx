@@ -40,15 +40,18 @@ export function Insights() {
   if (!brain.data) return <><h2>Still learning</h2><Loader label="Reading your money"/></>;
   const b = brain.data;
   const show = (minor: string | bigint) => format(money(BigInt(minor), currency(code)));
+  // While things are tight, essentials lead and advice and the plan step aside; the facts stay readable.
+  const tight = b.triage.active;
   return <div className="stack insights">
-    {b.plan.status !== 'ok' && <h2>Still learning</h2>}
+    {tight && <Triage brain={b} show={show}/>}
+    {!tight && b.plan.status !== 'ok' && <h2>Still learning</h2>}
     <Month brain={b} code={currency(code)} show={show}/>
     <WhereItWent brain={b} code={currency(code)} show={show}/>
     <Bills brain={b} show={show} code={currency(code)}/>
-    <Advice brain={b} show={show}/>
+    {!tight && <><Advice brain={b} show={show}/>
     <AdvisorPanel brain={b}/>
     <Plan brain={b} show={show}/>
-    <SetAside brain={b} code={code} show={show}/>
+    <SetAside brain={b} code={code} show={show}/></>}
   </div>;
 }
 type Part = {brain: Brain; show: (minor: string | bigint) => string};
@@ -160,3 +163,15 @@ function GoalSheet({code, bufferMinor, onClose}: {code: string; bufferMinor: str
   </Sheet>;
 }
 
+/** While things are tight: essentials and free help only; plan and advice are hidden. */
+export function Triage({brain, show}: Part) {
+  const t = brain.triage;
+  if (!t.active) return null;
+  return <Surface className="surface-muted">
+    <h2>Focus on essentials</h2>
+    <p>Keep this small. The next essential bill, and the money available for it.</p>
+    {t.nextEssential && <Row trailing={show(t.nextEssential.minor)}>{t.nextEssential.merchant}<p className="meta">{t.nextEssential.date}</p></Row>}
+    <Row trailing={show(t.availableMinor)}>Available now</Row>
+    <p>Free, confidential financial counselling: National Debt Helpline, <a href="tel:1800007007">1800 007 007</a>.</p>
+  </Surface>;
+}
