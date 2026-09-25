@@ -259,6 +259,33 @@ Goal: one clear thing to press on each screen, fewer boxes, and everything in th
 
 **Tests:** new or updated focused tests for the button variants, the switch (state and name), Kairos AI steps, Ledger and Today order, and the blocking wait above an open sheet. Update non-frozen tests only alongside the code they test.
 
+## Owner picks, 25 Sep (lock, opening wait, widgets)
+Options page: https://claude.ai/artifact/1sv9g25MftqvdcAXV4B6Sn
+
+**Lock screen: L1 "The moment arrives"** (plays once each time the lock screen shows)
+- The logo C ring draws itself in about 0.9 s.
+- Then the dot circles once and lands.
+- Then the welcome text, PIN field and buttons rise in.
+
+**Opening wait: U1 "Moment ring"**
+- **Replaces `CoinStack`:** it replaces `CoinStack` as the full-screen and section loader, including the wait after unlock, "Reading your money", "Reading accounts" and `BusyOverlay`. Busy buttons keep their coin.
+- **The mark:** a faint ring track, with an accent arc and the dot running around it (1.4 s a turn) and the three bars pulsing in turn.
+- **Label:** it keeps each loader's label, for example "Opening your ledger".
+
+**Widgets: all five, and the owner adds whichever they like**
+| Widget | Size | Shows |
+|---|---|---|
+| W1 | 2×1 | Logo and an "Add" button |
+| W2 | 4×1 | A slim row: 3 category chips and add |
+| W3 | 2×2 | "Left for today", "Spent … today", and add |
+| W4 | 4×2 | "Left for today", 7-day bars, and a row of **icon-only** category buttons (as many as fit, at least 6), and add |
+| W5 | 2×2 | 4 category icons |
+
+- **Styles:** Dark glass, Paper and Indigo, chosen in You › Appearance › Widget style. The default is Dark glass.
+- **What a tap does:** a category tap opens Quick add with that category. Add opens Quick add.
+- **Amounts on the home screen:** they show the value from the last time Kairos was unlocked. They are stored outside the encrypted ledger (only those two figures and seven bar heights), and there is a switch "Show amounts on widgets" (on).
+- Reduced motion shows every animation at rest.
+
 ## Screens after the cut (~35 charts → ~9)
 - **Today:** MoneyBand, SavingsPath (single spend/keep today), Attention (≤3, including DueStrip), DayStrip, Recorded today, triage card.
 - **Insights:**
