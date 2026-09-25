@@ -83,6 +83,14 @@ export function reconcile(documents: readonly Document[], keep: ReadonlySet<stri
   const transferPool=(row:LedgerRow)=>{const result:LedgerRow[]=[];for(let delta=-3;delta<=3;delta++)result.push(...transferIndex.get(transferKey(row.currency,(-BigInt(row.minor)).toString(),shiftDay(row.date,delta)))??[]);return result;};
   const candidates = (row: LedgerRow) => transferPool(row).filter(other => row.accountId !== other.accountId && row.currency === other.currency && BigInt(row.minor) !== 0n && BigInt(row.minor) === -BigInt(other.minor) && Math.abs(dayNumber(row.date) - dayNumber(other.date)) <= 3 && /\b(?:TRANSFER|TFR|XFER|PAYMENT THANK YOU)\b/i.test(row.description + ' ' + other.description));
   for (const row of ledger) { const matches = candidates(row); if (matches.length === 1 && candidates(matches[0]!).length === 1) row.transferGroup = hash([row.id, matches[0]!.id].sort().join('|')); }
+  // Repeated equal transfers (two $1,000 the same day) have no unique partner; when both sides read as transfers,
+  // any one-to-one pairing is equally true, so the nearest dates pair first.
+  const worded = (row: LedgerRow) => /\b(?:TRANSFER|TFR|XFER|OSKO|PAYID)\b/i.test(row.description);
+  const pairs: [number, LedgerRow, LedgerRow][] = [];
+  for (const row of ledger) if (!row.transferGroup && BigInt(row.minor) < 0n && worded(row))
+    for (const other of candidates(row)) if (!other.transferGroup && worded(other)) pairs.push([Math.abs(dayNumber(row.date) - dayNumber(other.date)), row, other]);
+  pairs.sort((x, y) => x[0] - y[0] || x[1].id.localeCompare(y[1].id) || x[2].id.localeCompare(y[2].id));
+  for (const [, row, other] of pairs) if (!row.transferGroup && !other.transferGroup) row.transferGroup = other.transferGroup = hash([row.id, other.id].sort().join('|'));
   return ledger;
 }
 export function nearDuplicates(row: Document['rows'][number], ledger: readonly LedgerRow[]): LedgerRow[] {
