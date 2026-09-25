@@ -11,7 +11,8 @@ export function WeekStrip() {
   const brain = useBrain(), code = currency(useDisplayCurrency());
   const days = brain.data?.spending.days;
   if (!days || days.every(d => d.outMinor === '0')) return null;
-  return <DayStrip days={days.map(d => ({date: d.date, minor: d.outMinor}))} code={code} today={brain.data!.asOf}/>;
+  // The brain's outMinor is positive; the strip reads money out as negative, as the ledger signs it.
+  return <DayStrip days={days.map(d => ({date: d.date, minor: (-BigInt(d.outMinor)).toString()}))} code={code} today={brain.data!.asOf}/>;
 }
 
 /** The essentials card, on Today too, while triage is active. */
