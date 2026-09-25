@@ -47,6 +47,8 @@ describe('reading a category from the wording a bank actually sends', () => {
     ['JB HI-FI ONLINE', 'Electronics'],
     ['UBER TRIP HELP.UBER.COM', 'Transport'],
     ['UBER EATS ORDER', 'Eating out'],
+    ['WORLDREMIT LTD LONDON', 'Family & friends'],
+    ['WESTERN UNION MONEY TRANSFER', 'Family & friends'],
   ])('reads %s as %s', (description, category) => {
     const result = categorize(spend(description), []);
     expect(result.category).toBe(category);
@@ -101,6 +103,12 @@ describe('the one table every write path reads instead of its own copy', () => {
     expect(editableCategories).not.toContain('Transfer');
     expect(categoryNames).toContain('Transfer');
     expect(new Set(editableCategories).size).toBe(editableCategories.length);
+  });
+
+  it('has a place for money sent to people, which advice treats as a commitment', () => {
+    expect(editableCategories).toContain('Family & friends');
+    expect(expenseCategories).toContain('Family & friends');
+    expect(categoryKind('Family & friends')).toBe('essential');
   });
 
   it('keeps income-only categories off the expense form: a purchase cannot be a salary', () => {

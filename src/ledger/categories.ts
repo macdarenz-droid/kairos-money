@@ -24,6 +24,8 @@ const TABLE: readonly (readonly [string, Exclude<CategoryKind, 'transfer'>])[] =
   ['Childcare & education', 'essential'],
   ['Transport', 'essential'],
   ['Government & tax', 'essential'],
+  // Money sent to family and friends, at home or abroad: a commitment, so advice never suggests cutting it.
+  ['Family & friends', 'essential'],
 
   // Discretionary: chosen spending, the largest and most varied group by far.
   ['Eating out', 'discretionary'],

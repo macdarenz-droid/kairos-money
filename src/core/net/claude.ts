@@ -134,7 +134,8 @@ export function ask(summary: BrainSummary, question: string, key: string, model:
 export type Merchant = {id: string; description: string; direction: 'in' | 'out' | 'both'; band: string; count: number; mcc: string | null; category: string | null};
 export type Answer = {id: string; category: string; confidence: 'high' | 'medium' | 'low'};
 const SORTER = 'You sort bank merchants into one of the given categories. Use the owner\'s examples as the '
-  + 'strongest guide. Answer every merchant id once; if unsure, say low confidence.';
+  + 'strongest guide. Money paid to a named person or through a remittance service is Family & friends. '
+  + 'Answer every merchant id once; if unsure, say low confidence.';
 
 /** A failure part-way keeps the answers already paid for, so they can still be applied. */
 export type SortResult = {ok: true; value: Answer[]; usage: Usage} | {ok: false; reason: FailureReason; usage: Usage | null; partial: Answer[]};
