@@ -34,7 +34,14 @@ final class NoticeStore {
     }
 
     static synchronized void setSources(Context context, JSONArray packages) {
-        prefs(context).edit().putString("sources", packages.toString()).apply();
+        // Unticking an app forgets what it posted, in the same step, so no stale question outlives the choice.
+        List<String> watched = new ArrayList<>();
+        for (int i = 0; i < packages.length(); i++) watched.add(packages.optString(i));
+        JSONArray held = captured(context), next = new JSONArray();
+        List<String> from = new ArrayList<>();
+        for (int i = 0; i < held.length(); i++) { JSONObject e = held.optJSONObject(i); from.add(e == null ? null : e.optString("source", null)); }
+        for (int i : NoticeSources.keep(from, watched)) next.put(held.optJSONObject(i));
+        prefs(context).edit().putString("sources", packages.toString()).putString("captured", next.toString()).apply();
     }
 
     static boolean watched(Context context, String source) {
