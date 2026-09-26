@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {format, money} from '../../core/money';
-import {capturedNotices, forgetNotices, pickedRecord, routeNotices, type NoticeAmount, type UnreadableNotice} from '../../ingest/notices';
+import {capturedNotices, forgetNotices, installedSources, pickedRecord, routeNotices, type NoticeAmount, type UnreadableNotice} from '../../ingest/notices';
 import {pairNotices, type NoticeItem} from '../../ingest/notices/pair';
 import {Button, Explain, Sheet} from '../design/primitives';
 import {CategoryMark} from '../design/CategoryMark';
@@ -40,6 +40,9 @@ export function NoticeReview({accounts, onClose, onManual}: {accounts: readonly 
     queryKey: ['notice-default-account'], enabled: session.state === 'ready',
     queryFn: () => session.run(repo => repo.notices.defaultAccount()),
   });
+
+  const apps = useQuery({queryKey: ['notice-apps'], queryFn: installedSources, enabled: session.state === 'ready'});
+  const from = (source: string) => `From ${apps.data?.find(app => app.id === source)?.label ?? source}`;
 
   const read = useMemo(() => routeNotices(captured.data ?? [], active, fallback.data), [captured.data, active, fallback.data]);
   // A yes given in the shade to a message that cannot be read still needs a way to be acted on.
@@ -123,6 +126,7 @@ export function NoticeReview({accounts, onClose, onManual}: {accounts: readonly 
       {approvedUnread.map(item => <div key={item.notice.id} className="card">
         <strong>{item.notice.title}</strong>
         <p>{item.notice.text}</p>
+        <p className="meta">{from(item.notice.source)}</p>
         <p className="meta">{item.accountId && item.amounts?.length ? 'You said yes. Which amount was it?' : "You said yes, but the amount couldn't be read."}</p>
         <div className="notice-actions">
           {item.accountId && item.amounts?.map(amount => {
@@ -161,6 +165,8 @@ export function NoticeReview({accounts, onClose, onManual}: {accounts: readonly 
                     <p className="meta">{entry.in.notice.title}</p>
                   </Explain>
                 </p>
+                <p className="meta">{from(entry.out.notice.source)}</p>
+                {entry.in.notice.source !== entry.out.notice.source && <p className="meta">{from(entry.in.notice.source)}</p>}
                 {picker(entry.out.notice.id, entry.fromId, 'Money left', entry.out.currency)}
                 {picker(entry.in.notice.id, entry.toId, 'Money arrived in', entry.in.currency)}
                 <div className="notice-actions">
@@ -177,6 +183,7 @@ export function NoticeReview({accounts, onClose, onManual}: {accounts: readonly 
                   <span className="amount">{format(money(BigInt(entry.item.minor), entry.item.currency))}</span>
                 </div>
                 <p className="meta">{entry.item.date} · {entry.item.notice.title}</p>
+                <p className="meta">{from(entry.item.notice.source)}</p>
                 {picker(entry.item.notice.id, entry.accountId,
                   BigInt(entry.item.minor) < 0n ? 'Taken from' : 'Paid into', entry.item.currency)}
                 <div className="notice-actions">
@@ -199,7 +206,7 @@ export function NoticeReview({accounts, onClose, onManual}: {accounts: readonly 
         {/* Said rather than silently dropped, so a notification the app cannot read is visibly a gap
             rather than a purchase that never happened. */}
         {otherUnread.map(item =>
-          <p key={item.notice.id} className="meta">{item.notice.title}: {item.reason} <span>{item.notice.text}</span></p>)}
+          <p key={item.notice.id} className="meta">{item.notice.title}: {item.reason} <span>{item.notice.text}</span> <span>{from(item.notice.source)}</span></p>)}
         <Button disabled={busy} onClick={() => { setError(''); forget.mutate(otherUnread.map(u => u.notice.id)); }}>Clear these</Button>
       </details>}
 
