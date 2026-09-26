@@ -104,7 +104,8 @@ export function NoticeReview({accounts, onClose, onManual}: {accounts: readonly 
   const pick = useMutation({
     mutationFn: async ({item, amount}: {item: UnreadableNotice & {accountId: string}; amount: NoticeAmount}) => {
       await session.run(repo => repo.notices.approve(pickedRecord(item, amount)));
-      await forgetNotices([item.notice.id]);
+      try { await forgetNotices([item.notice.id]); }
+      catch { throw new Error('Recorded, but the notice could not be cleared.'); }
     },
     onSuccess: () => client.invalidateQueries(),
     onError: e => setError(e instanceof Error ? e.message : 'That could not be saved. Nothing was recorded.'),
