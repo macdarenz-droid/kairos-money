@@ -16,4 +16,11 @@ public class NoticeQuestionTest {
         assertTrue(NoticeQuestion.asks(null, "You have received $50.00 from JANE D."));
         assertTrue(NoticeQuestion.asks("Synthetic Bank", "Payment to LOGINOVA PTY $20.00"));
     }
+
+    @Test public void aNoticeWithoutAnAmountIsNotAskedAbout() {
+        assertFalse(NoticeQuestion.asks("Synthetic Bank", "Download in progress."));
+        assertFalse(NoticeQuestion.asks("Synthetic Bank", "Your statement for 2026 is ready."));
+        assertTrue(NoticeQuestion.asks("Synthetic Bank", "Card purchase AUD 40 at CAFE MIKA"));
+        assertTrue(NoticeQuestion.asks("Synthetic Bank", "Purchase 8.20 at KIOSK 12"));
+    }
 }
