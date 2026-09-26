@@ -42,7 +42,7 @@ export function NoticeReview({accounts, onClose, onManual}: {accounts: readonly 
   });
 
   const apps = useQuery({queryKey: ['notice-apps'], queryFn: installedSources, enabled: session.state === 'ready'});
-  const from = (source: string) => `From ${apps.data?.find(app => app.id === source)?.label ?? source}`;
+  const from = (source: string) => `From ${apps.data?.find(app => app.id === source)?.label || source}`;
 
   const read = useMemo(() => routeNotices(captured.data ?? [], active, fallback.data), [captured.data, active, fallback.data]);
   // A yes given in the shade to a message that cannot be read still needs a way to be acted on.
