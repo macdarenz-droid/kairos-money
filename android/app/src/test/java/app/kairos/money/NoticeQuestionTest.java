@@ -22,6 +22,8 @@ public class NoticeQuestionTest {
         assertFalse(NoticeQuestion.asks("Synthetic Bank", "Your statement for 2026 is ready."));
         assertTrue(NoticeQuestion.asks("Synthetic Bank", "Card purchase AUD 40 at CAFE MIKA"));
         assertTrue(NoticeQuestion.asks("Synthetic Bank", "Purchase 8.20 at KIOSK 12"));
+        assertTrue(NoticeQuestion.asks("Synthetic Bank", "Card purchase of 11.95."));
+        assertFalse(NoticeQuestion.asks("Synthetic Bank", "Version 1.2.30 installed."));
     }
 
     @Test public void aPesoAmountIsAskedAbout() {

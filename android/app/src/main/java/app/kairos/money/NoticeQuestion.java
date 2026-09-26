@@ -12,7 +12,7 @@ final class NoticeQuestion {
     // A Yes needs an amount to record: a currency next to digits, or digits with exactly two decimals.
     private static final Pattern MONEY = Pattern.compile(
         "(?:[$\\u20ac\\u00a3\\u00a5\\u20b1]|\\b" + CODE + ")\\s?\\d|\\d\\s?(?:[$\\u20ac\\u00a3\\u00a5\\u20b1]|"
-            + CODE + "\\b)|(?<![\\d.])\\d+\\.\\d{2}(?![\\d.])");
+            + CODE + "\\b)|(?<![\\d.])\\d+\\.\\d{2}(?!\\d|\\.\\d)");
     private NoticeQuestion() {}
 
     static boolean asks(String title, String text) {
