@@ -20,6 +20,7 @@ public class NoticeActionReceiver extends BroadcastReceiver {
     static final String APPROVE = "app.kairos.money.NOTICE_APPROVE";
     static final String REJECT = "app.kairos.money.NOTICE_REJECT";
     static final String EXTRA_ID = "notice";
+    static final String EXTRA_SLOT = "slot";
 
     @Override public void onReceive(Context context, Intent intent) {
         if (intent == null || intent.getAction() == null) return;
@@ -28,8 +29,10 @@ public class NoticeActionReceiver extends BroadcastReceiver {
         String decision = APPROVE.equals(intent.getAction()) ? "approved"
             : REJECT.equals(intent.getAction()) ? "rejected" : null;
         if (decision == null) return;
+        int carried = intent.getIntExtra(EXTRA_SLOT, NoticeAnswerSlot.ABSENT);
+        int shade = NoticeAnswerSlot.cancel(carried, carried == NoticeAnswerSlot.ABSENT ? NoticeStore.slot(context, id) : 0);
         NoticeStore.decide(context, id, decision);
         NotificationManager manager = context.getSystemService(NotificationManager.class);
-        if (manager != null) manager.cancel(900 + NoticeStore.slot(context, id));
+        if (manager != null) manager.cancel(shade);
     }
 }

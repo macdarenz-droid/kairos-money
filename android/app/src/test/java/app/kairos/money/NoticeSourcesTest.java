@@ -16,4 +16,11 @@ public class NoticeSourcesTest {
         assertEquals(Collections.emptyList(), NoticeSources.keep(
             Arrays.asList("com.synthetic.bank", null), Collections.<String>emptyList()));
     }
+
+    @Test public void anApprovedNoticeOutlivesUntickingItsApp() {
+        assertEquals(Arrays.asList(1, 3), NoticeSources.keep(
+            Arrays.asList("com.synthetic.store", "com.synthetic.store", "com.synthetic.store", "com.synthetic.bank"),
+            Arrays.asList(null, "approved", "rejected", null),
+            Collections.singletonList("com.synthetic.bank")));
+    }
 }

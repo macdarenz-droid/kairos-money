@@ -111,14 +111,14 @@ public class KairosNoticeListener extends NotificationListenerService {
             .setAutoCancel(true)
             .setContentIntent(PendingIntent.getActivity(this, slot,
                 new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE))
-            .addAction(answer(slot * 2, id, NoticeActionReceiver.APPROVE, question.yes))
-            .addAction(answer(slot * 2 + 1, id, NoticeActionReceiver.REJECT, "No"));
+            .addAction(answer(slot * 2, slot, id, NoticeActionReceiver.APPROVE, question.yes))
+            .addAction(answer(slot * 2 + 1, slot, id, NoticeActionReceiver.REJECT, "No"));
         manager.notify(slot, builder.build());
     }
 
-    private Notification.Action answer(int request, String id, String action, String label) {
+    private Notification.Action answer(int request, int slot, String id, String action, String label) {
         Intent intent = new Intent(this, NoticeActionReceiver.class).setAction(action)
-            .putExtra(NoticeActionReceiver.EXTRA_ID, id);
+            .putExtra(NoticeActionReceiver.EXTRA_ID, id).putExtra(NoticeActionReceiver.EXTRA_SLOT, slot);
         // Immutable: the answer and the notice it belongs to are fixed when the question is asked.
         PendingIntent pending = PendingIntent.getBroadcast(this, request, intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);

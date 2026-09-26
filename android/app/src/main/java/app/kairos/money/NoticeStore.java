@@ -33,15 +33,26 @@ final class NoticeStore {
         catch (JSONException broken) { return new JSONArray(); }
     }
 
-    static synchronized void setSources(Context context, JSONArray packages) {
+    /** Returns the shade slots of the notices it forgot, so their questions can be withdrawn. */
+    static synchronized List<Integer> setSources(Context context, JSONArray packages) {
         // Unticking an app forgets what it posted, in the same step, so no stale question outlives the choice.
         List<String> watched = new ArrayList<>();
         for (int i = 0; i < packages.length(); i++) watched.add(packages.optString(i));
         JSONArray held = captured(context), next = new JSONArray();
-        List<String> from = new ArrayList<>();
-        for (int i = 0; i < held.length(); i++) { JSONObject e = held.optJSONObject(i); from.add(e == null ? null : e.optString("source", null)); }
-        for (int i : NoticeSources.keep(from, watched)) next.put(held.optJSONObject(i));
+        List<String> from = new ArrayList<>(), decisions = new ArrayList<>();
+        for (int i = 0; i < held.length(); i++) {
+            JSONObject e = held.optJSONObject(i);
+            from.add(e == null ? null : e.optString("source", null));
+            decisions.add(e == null || e.isNull("decision") ? null : e.optString("decision"));
+        }
+        List<Integer> kept = NoticeSources.keep(from, decisions, watched), dropped = new ArrayList<>();
+        for (int i = 0; i < held.length(); i++) {
+            JSONObject e = held.optJSONObject(i);
+            if (kept.contains(i)) next.put(e);
+            else if (e != null) dropped.add(e.has("slot") ? e.optInt("slot") : Math.abs(e.optString("id").hashCode() % 64));
+        }
         prefs(context).edit().putString("sources", packages.toString()).putString("captured", next.toString()).apply();
+        return dropped;
     }
 
     static boolean watched(Context context, String source) {
