@@ -67,6 +67,9 @@ public class KairosNoticeListener extends NotificationListenerService {
         if (notification == null) return;
         Bundle extras = notification.extras;
         if (extras == null) return;
+        if (NoticeSkip.skips(notification.flags, notification.category,
+            extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0),
+            extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false))) return;
         CharSequence title = extras.getCharSequence(Notification.EXTRA_TITLE);
         CharSequence text = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
         if (text == null) text = extras.getCharSequence(Notification.EXTRA_TEXT);
