@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {format, money} from '../../core/money';
-import {capturedNotices, forgetNotices, routeNotices} from '../../ingest/notices';
+import {capturedNotices, forgetNotices, pickedRecord, routeNotices, type NoticeAmount, type UnreadableNotice} from '../../ingest/notices';
 import {pairNotices, type NoticeItem} from '../../ingest/notices/pair';
 import {Button, Explain, Sheet} from '../design/primitives';
 import {CategoryMark} from '../design/CategoryMark';
@@ -98,7 +98,15 @@ export function NoticeReview({accounts, onClose, onManual}: {accounts: readonly 
     onSuccess: () => client.invalidateQueries(),
     onError: e => setError(e instanceof Error ? e.message : 'That could not be cleared.'),
   });
-  const busy = settle.isPending || forget.isPending;
+  const pick = useMutation({
+    mutationFn: async ({item, amount}: {item: UnreadableNotice & {accountId: string}; amount: NoticeAmount}) => {
+      await session.run(repo => repo.notices.approve(pickedRecord(item, amount)));
+      await forgetNotices([item.notice.id]);
+    },
+    onSuccess: () => client.invalidateQueries(),
+    onError: e => setError(e instanceof Error ? e.message : 'That could not be saved. Nothing was recorded.'),
+  });
+  const busy = settle.isPending || forget.isPending || pick.isPending;
 
   const picker = (noticeId: string, value: string, label: string, code: string) => {
     const same = active.filter(a => a.currency === code);
@@ -115,8 +123,15 @@ export function NoticeReview({accounts, onClose, onManual}: {accounts: readonly 
       {approvedUnread.map(item => <div key={item.notice.id} className="card">
         <strong>{item.notice.title}</strong>
         <p>{item.notice.text}</p>
-        <p className="meta">You said yes, but the amount couldn't be read.</p>
+        <p className="meta">{item.accountId && item.amounts?.length ? 'You said yes. Which amount was it?' : "You said yes, but the amount couldn't be read."}</p>
         <div className="notice-actions">
+          {item.accountId && item.amounts?.map(amount => {
+            const minor = BigInt(amount.minor);
+            return <Button key={amount.minor} disabled={busy}
+              onClick={() => { setError(''); pick.mutate({item: {...item, accountId: item.accountId!}, amount}); }}>
+              {minor < 0n ? 'Spent' : 'Received'} {format(money(minor < 0n ? -minor : minor, amount.currency))}
+            </Button>;
+          })}
           <Button disabled={busy} onClick={() => onManual?.()}>Add by hand</Button>
           <Button disabled={busy} onClick={() => { setError(''); forget.mutate([item.notice.id]); }}>Dismiss</Button>
         </div>

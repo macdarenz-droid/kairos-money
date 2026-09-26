@@ -91,16 +91,16 @@ export function routeNotices(
     const candidates = named
       ? [active.find(account => account.id === named)!]
       : [...lead, ...active.filter(account => !lead.includes(account))];
-    let first: string | null = null, landed: RoutedNotice | null = null;
+    let first: UnreadableNotice | null = null, landed: RoutedNotice | null = null;
     const tried = new Set<string>();
     for (const account of candidates) {
       if (tried.has(account.currency)) continue;
       tried.add(account.currency);
       const parsed = parseNotice(notice, currency(account.currency));
       if (parsed.status === 'ok') { landed = {notice, ...parsed, accountId: account.id}; break; }
-      first ??= parsed.reason;
+      first ??= parsed.amounts ? {notice, reason: parsed.reason, amounts: parsed.amounts, accountId: account.id, ...(parsed.merchant ? {merchant: parsed.merchant} : {})} : {notice, reason: parsed.reason};
     }
-    if (landed) readable.push(landed); else unreadable.push({notice, reason: first ?? 'The notification could not be read.'});
+    if (landed) readable.push(landed); else unreadable.push(first ?? {notice, reason: 'The notification could not be read.'});
   }
   return {readable, unreadable};
 }
