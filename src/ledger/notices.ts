@@ -95,7 +95,8 @@ const tokens = (text: string) => new Set(text.toUpperCase().replace(/['’]/g, '
 // A different purchase of the same amount must not hide this one; with no merchant to compare, amount and date decide.
 function sameMerchant(entry: NoticeRecord, statement: string): boolean {
   if (entry.destinationId || entry.merchant === entry.description.slice(0, 60).trim()) return true;
-  const own = tokens(entry.merchant);
+  // A bank-title fallback merchant is not in the notice's words, so it cannot name the shop.
+  const said = tokens(entry.description), own = new Set([...tokens(entry.merchant)].filter(t => said.has(t)));
   if (!own.size) return true;
   for (const t of tokens(statement)) if (own.has(t)) return true;
   return false;

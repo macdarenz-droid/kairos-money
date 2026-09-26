@@ -23,4 +23,9 @@ public class NoticeQuestionTest {
         assertTrue(NoticeQuestion.asks("Synthetic Bank", "Card purchase AUD 40 at CAFE MIKA"));
         assertTrue(NoticeQuestion.asks("Synthetic Bank", "Purchase 8.20 at KIOSK 12"));
     }
+
+    @Test public void aPesoAmountIsAskedAbout() {
+        assertTrue(NoticeQuestion.asks("Synthetic Wallet", "You have received \u20b11,200 from SYNTHETIC PAYEE."));
+        assertTrue(NoticeQuestion.asks("Synthetic Wallet", "You have sent Php 500 to SYNTHETIC MERCHANT."));
+    }
 }

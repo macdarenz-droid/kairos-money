@@ -98,7 +98,9 @@ export function routeNotices(
       tried.add(account.currency);
       const parsed = parseNotice(notice, currency(account.currency));
       if (parsed.status === 'ok') { landed = {notice, ...parsed, accountId: account.id}; break; }
-      first ??= parsed.amounts ? {notice, reason: parsed.reason, amounts: parsed.amounts, accountId: account.id, ...(parsed.merchant ? {merchant: parsed.merchant} : {})} : {notice, reason: parsed.reason};
+      // An account that offers amounts to pick beats an earlier one that offers none.
+      if (parsed.amounts?.length && !first?.amounts) first = {notice, reason: parsed.reason, amounts: parsed.amounts, accountId: account.id, ...(parsed.merchant ? {merchant: parsed.merchant} : {})};
+      else first ??= {notice, reason: parsed.reason};
     }
     if (landed) readable.push(landed); else unreadable.push(first ?? {notice, reason: 'The notification could not be read.'});
   }
