@@ -35,7 +35,7 @@ final class NoticeStore {
 
     /** Returns the shade slots of the notices it forgot, so their questions can be withdrawn. */
     static synchronized List<Integer> setSources(Context context, JSONArray packages) {
-        // Unticking an app forgets what it posted, in the same step, so no stale question outlives the choice.
+        // Unticking forgets the app's unanswered notices in the same step; a Yes not yet recorded stays so it is not lost.
         List<String> watched = new ArrayList<>();
         for (int i = 0; i < packages.length(); i++) watched.add(packages.optString(i));
         JSONArray held = captured(context), next = new JSONArray();
