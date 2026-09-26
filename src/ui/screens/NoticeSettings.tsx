@@ -58,7 +58,10 @@ export function NoticeSettings({accounts = []}: {accounts?: readonly Account[]} 
   async function choose(id: string) {
     setError('');
     const next = watched.includes(id) ? watched.filter(other => other !== id) : [...watched, id];
-    try { await watchSources(next); await client.invalidateQueries({queryKey: ['notice-access']}); }
+    try {
+      await watchSources(next);
+      await Promise.all([client.invalidateQueries({queryKey: ['notice-access']}), client.invalidateQueries({queryKey: ['captured-notices']})]);
+    }
     catch { setError('That choice could not be saved. Try again.'); }
   }
 
