@@ -38,7 +38,16 @@ export function accountFromNotice(text: string, accounts: readonly RoutableAccou
   return matched.size === 1 ? [...matched][0]! : null;
 }
 
-export type NoticeAccount = RoutableAccount & {currency: string; archived_at?: string | null};
+export type NoticeAccount = RoutableAccount & {currency: string; archived_at?: string | null; name?: string | null; institution?: string | null};
+
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** The one active account whose bank or name is a whole word of the notification's title, else null. */
+export function accountFromSender(title: string, active: readonly NoticeAccount[]): string | null {
+  const says = (word: string | null | undefined) => Boolean(word?.trim()) &&
+    new RegExp(`(?:^|[^A-Za-z0-9])${escape(word!.trim())}(?:$|[^A-Za-z0-9])`, 'i').test(title);
+  const matched = active.filter(account => says(account.institution) || says(account.name));
+  return matched.length === 1 ? matched[0]!.id : null;
+}
 export type RoutedNotice = ReadableNotice & {accountId: string};
 
 /**
@@ -59,7 +68,7 @@ export type RoutedNotice = ReadableNotice & {accountId: string};
  *   1. An account the notice names itself ("ending 407") wins outright, and the notice is read in that
  *      account's currency. Where the text disagrees with the account, the notice is unreadable, not
  *      re-routed: the bank has named an account and the app does not overrule it.
- *   2. Otherwise the account the owner nominated as the main one, then the rest in the order given, are
+ *   2. Otherwise the one account whose bank or name the title carries, then the main one, then the rest in the order given, are
  *      tried in turn, one attempt per DISTINCT currency. A notice saying "PHP 500" fails against an AUD
  *      account and succeeds against the first PHP one; a notice saying "$5" succeeds at the first try,
  *      in the main account, exactly as before.
@@ -76,20 +85,24 @@ export function routeNotices(
   for (const notice of notices) {
     if (!active.length) { unreadable.push({notice, reason: 'There is no active account to record this on.'}); continue; }
     const named = accountFromNotice(`${notice.title} ${notice.text}`, active);
+    const sender = named ? undefined : active.find(account => account.id === accountFromSender(notice.title, active));
     const fallback = fallbackId ? active.find(account => account.id === fallbackId) : undefined;
+    const lead = [...new Set([sender, fallback].filter((a): a is NoticeAccount => Boolean(a)))];
     const candidates = named
       ? [active.find(account => account.id === named)!]
-      : [...(fallback ? [fallback] : []), ...active.filter(account => account !== fallback)];
-    let first: string | null = null, landed: RoutedNotice | null = null;
+      : [...lead, ...active.filter(account => !lead.includes(account))];
+    let first: UnreadableNotice | null = null, landed: RoutedNotice | null = null;
     const tried = new Set<string>();
     for (const account of candidates) {
       if (tried.has(account.currency)) continue;
       tried.add(account.currency);
       const parsed = parseNotice(notice, currency(account.currency));
       if (parsed.status === 'ok') { landed = {notice, ...parsed, accountId: account.id}; break; }
-      first ??= parsed.reason;
+      // An account that offers amounts to pick beats an earlier one that offers none.
+      if (parsed.amounts?.length && !first?.amounts) first = {notice, reason: parsed.reason, amounts: parsed.amounts, accountId: account.id, ...(parsed.merchant ? {merchant: parsed.merchant} : {})};
+      else first ??= {notice, reason: parsed.reason};
     }
-    if (landed) readable.push(landed); else unreadable.push({notice, reason: first ?? 'The notification could not be read.'});
+    if (landed) readable.push(landed); else unreadable.push(first ?? {notice, reason: 'The notification could not be read.'});
   }
   return {readable, unreadable};
 }

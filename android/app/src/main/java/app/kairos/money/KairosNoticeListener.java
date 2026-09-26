@@ -67,13 +67,19 @@ public class KairosNoticeListener extends NotificationListenerService {
         if (notification == null) return;
         Bundle extras = notification.extras;
         if (extras == null) return;
+        if (NoticeSkip.skips(notification.flags, notification.category,
+            extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0),
+            extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false))) return;
         CharSequence title = extras.getCharSequence(Notification.EXTRA_TITLE);
         CharSequence text = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
         if (text == null) text = extras.getCharSequence(Notification.EXTRA_TEXT);
 
         String id = NoticeStore.capture(this, posted.getPackageName(),
             title == null ? null : title.toString(), text == null ? null : text.toString(), posted.getPostTime());
-        if (id != null) ask(id, text == null ? "" : text.toString());
+        // Still captured so the app can show it, but a login alert or a notice with no amount
+        // gets no Yes that could never be recorded.
+        if (id != null && NoticeQuestion.asks(title == null ? null : title.toString(), text == null ? null : text.toString()))
+            ask(id, text == null ? "" : text.toString());
     }
 
     /**
@@ -106,14 +112,14 @@ public class KairosNoticeListener extends NotificationListenerService {
             .setAutoCancel(true)
             .setContentIntent(PendingIntent.getActivity(this, slot,
                 new Intent(this, MainActivity.class), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE))
-            .addAction(answer(slot * 2, id, NoticeActionReceiver.APPROVE, question.yes))
-            .addAction(answer(slot * 2 + 1, id, NoticeActionReceiver.REJECT, "No"));
+            .addAction(answer(slot * 2, slot, id, NoticeActionReceiver.APPROVE, question.yes))
+            .addAction(answer(slot * 2 + 1, slot, id, NoticeActionReceiver.REJECT, "No"));
         manager.notify(slot, builder.build());
     }
 
-    private Notification.Action answer(int request, String id, String action, String label) {
+    private Notification.Action answer(int request, int slot, String id, String action, String label) {
         Intent intent = new Intent(this, NoticeActionReceiver.class).setAction(action)
-            .putExtra(NoticeActionReceiver.EXTRA_ID, id);
+            .putExtra(NoticeActionReceiver.EXTRA_ID, id).putExtra(NoticeActionReceiver.EXTRA_SLOT, slot);
         // Immutable: the answer and the notice it belongs to are fixed when the question is asked.
         PendingIntent pending = PendingIntent.getBroadcast(this, request, intent,
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);

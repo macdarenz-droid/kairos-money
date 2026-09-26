@@ -116,3 +116,27 @@ it('lists a peso receipt on the peso wallet when the dollar account sorts first,
   await waitFor(() => expect(approved.calls).toHaveLength(1));
   expect(approved.calls[0]).toMatchObject({accountId: 'w', minor: '50000'});
 });
+
+it('keeps an approved notice that cannot be read visible, with a way to add it by hand or dismiss it', async () => {
+  const onManual = vi.fn();
+  captured.notices = [notice({id: 'sec', decision: 'approved', text: 'You spent $15.00 at CAFE MIKA. Log in to the app for details.'}),
+    notice({id: 'other', text: 'Your available balance is $431.20.'})];
+  render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+    <NoticeReview accounts={accounts} onClose={() => undefined} onManual={onManual}/></QueryClientProvider>);
+  await screen.findByText('You spent $15.00 at CAFE MIKA. Log in to the app for details.');
+  expect(screen.getByText("You said yes, but the amount couldn't be read.")).toBeTruthy();
+  expect(screen.queryByText('Nothing new from your bank to check.')).toBeNull();
+  fireEvent.click(screen.getByRole('button', {name: 'Add by hand'}));
+  expect(onManual).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole('button', {name: 'Dismiss'}));
+  await waitFor(() => expect(captured.forgotten).toEqual(['sec']));
+});
+
+it('clears the messages that were not about a purchase in one press', async () => {
+  captured.notices = [notice({id: 'bal', text: 'Your available balance is $431.20.'}),
+    notice({id: 'sec', decision: 'approved', text: 'A security code was used to log in.'})];
+  await show();
+  await screen.findByText(/Your available balance is \$431\.20\./);
+  fireEvent.click(screen.getByRole('button', {name: 'Clear these'}));
+  await waitFor(() => expect(captured.forgotten).toEqual(['bal']));
+});

@@ -73,7 +73,8 @@ public class KairosNoticesPlugin extends Plugin {
         JSArray sources = call.getArray("sources");
         if (sources == null) { call.reject("Choose which apps to read."); return; }
         if (sources.length() > 16) { call.reject("Choose at most sixteen apps to read."); return; }
-        NoticeStore.setSources(getContext(), sources);
+        android.app.NotificationManager manager = getContext().getSystemService(android.app.NotificationManager.class);
+        for (int slot : NoticeStore.setSources(getContext(), sources)) if (manager != null) manager.cancel(900 + slot);
         call.resolve();
     }
 

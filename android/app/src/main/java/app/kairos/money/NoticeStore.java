@@ -33,8 +33,26 @@ final class NoticeStore {
         catch (JSONException broken) { return new JSONArray(); }
     }
 
-    static synchronized void setSources(Context context, JSONArray packages) {
-        prefs(context).edit().putString("sources", packages.toString()).apply();
+    /** Returns the shade slots of the notices it forgot, so their questions can be withdrawn. */
+    static synchronized List<Integer> setSources(Context context, JSONArray packages) {
+        // Unticking forgets the app's unanswered notices in the same step; a Yes not yet recorded stays so it is not lost.
+        List<String> watched = new ArrayList<>();
+        for (int i = 0; i < packages.length(); i++) watched.add(packages.optString(i));
+        JSONArray held = captured(context), next = new JSONArray();
+        List<String> from = new ArrayList<>(), decisions = new ArrayList<>();
+        for (int i = 0; i < held.length(); i++) {
+            JSONObject e = held.optJSONObject(i);
+            from.add(e == null ? null : e.optString("source", null));
+            decisions.add(e == null || e.isNull("decision") ? null : e.optString("decision"));
+        }
+        List<Integer> kept = NoticeSources.keep(from, decisions, watched), dropped = new ArrayList<>();
+        for (int i = 0; i < held.length(); i++) {
+            JSONObject e = held.optJSONObject(i);
+            if (kept.contains(i)) next.put(e);
+            else if (e != null) dropped.add(e.has("slot") ? e.optInt("slot") : Math.abs(e.optString("id").hashCode() % 64));
+        }
+        prefs(context).edit().putString("sources", packages.toString()).putString("captured", next.toString()).apply();
+        return dropped;
     }
 
     static boolean watched(Context context, String source) {
@@ -71,8 +89,10 @@ final class NoticeStore {
                 .put("title", title == null ? "" : title).put("text", text == null ? "" : text)
                 .put("postedAt", postedAt).put("decision", JSONObject.NULL);
             JSONArray next = new JSONArray();
-            // Oldest first, so an unanswered backlog sheds its stalest entries rather than its newest.
-            for (int i = Math.max(0, held.length() - (LIMIT - 1)); i < held.length(); i++) next.put(held.get(i));
+            // An answer waits to be applied, so the stalest unanswered entry is shed before any answer.
+            List<Boolean> decided = new ArrayList<>();
+            for (int i = 0; i < held.length(); i++) { JSONObject e = held.optJSONObject(i); decided.add(e != null && !e.isNull("decision") && !e.optString("decision").isEmpty()); }
+            for (int i : NoticeTrim.keep(decided, LIMIT - 1)) next.put(held.get(i));
             // Its own notification slot, so two questions never replace each other or share buttons.
             boolean[] used = new boolean[LIMIT];
             for (int i = 0; i < next.length(); i++) { int taken = next.getJSONObject(i).optInt("slot", -1); if (taken >= 0 && taken < LIMIT) used[taken] = true; }

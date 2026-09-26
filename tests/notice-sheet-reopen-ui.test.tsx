@@ -1,0 +1,120 @@
+// @vitest-environment jsdom
+import {afterEach, beforeEach, expect, it, vi} from 'vitest';
+import {act, cleanup, fireEvent, render, screen} from '@testing-library/react';
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
+import App from '../src/ui/App';
+import {SessionProvider} from '../src/ui/session';
+import {memoryDriver} from './db-helper';
+import {migrate} from '../src/core/db/migrate';
+import {repository, type Repository} from '../src/core/db/repository';
+import type {Notice} from '../src/ingest/notices';
+
+const store = vi.hoisted(() => ({held: [] as Notice[], forgetCalls: [] as string[][]}));
+const native = vi.hoisted(() => ({unlocked: false, repo: undefined as Repository | undefined}));
+const app = vi.hoisted(() => ({listeners: {} as Record<string, (e?: unknown) => void>}));
+vi.mock('@capacitor/core', () => ({Capacitor: {isNativePlatform: () => true}, registerPlugin: (name: string) => name === 'KairosNotices' ? {
+  captured: async () => ({notices: store.held.map(n => ({...n}))}),
+  forget: async ({ids}: {ids: string[]}) => { store.forgetCalls.push(ids); store.held = store.held.filter(n => !ids.includes(n.id)); },
+} : {}}));
+vi.mock('@capacitor/app', () => ({App: {addListener: async (event: string, fn: (e?: unknown) => void) => { app.listeners[event] = fn; return {remove() {}}; }}}));
+vi.mock('../src/core/db/native', () => ({openDatabase: async () => native.repo, closeDatabase: async () => {}, deleteDatabase: async () => {}, serial: async <T,>(fn: () => Promise<T>) => fn()}));
+vi.mock('../src/core/crypto/native', () => ({Vault: {
+  status: async () => ({configured: true, unlocked: native.unlocked, biometric: true, biometricEnabled: true, backupCodeRequired: false}),
+  unlock: async () => { native.unlocked = true; }, authenticate: async () => { native.unlocked = true; },
+  lock: async () => { native.unlocked = false; }, setTheme: async () => {},
+}}));
+HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', ''); };
+HTMLDialogElement.prototype.close = function () { this.removeAttribute('open'); };
+
+// Readable and unanswered: the owner cleared the shade question instead of tapping Yes or No.
+const PURCHASE: Notice = {id: 'notice:1790000000:aa', source: 'com.commbank.netbank', title: 'CommBank', decision: null,
+  postedAt: Date.parse('2026-09-25T02:30:00Z'), text: 'You spent $12.50 at WOOLWORTHS 1234.'};
+
+beforeEach(async () => {
+  native.unlocked = false; app.listeners = {};
+  window.matchMedia = vi.fn().mockReturnValue({matches: false, addEventListener() {}, removeEventListener() {}});
+  const {driver} = memoryDriver(); await migrate(driver); native.repo = repository(driver);
+  await native.repo.addAccount({id: 'wbc', name: 'Westpac', institution: 'Westpac', type: 'checking', currency: 'AUD', mask_last4: null, opening_balance_minor: 0n});
+  await native.repo.addAccount({id: 'cba', name: 'CommBank', institution: 'CommBank', type: 'checking', currency: 'AUD', mask_last4: null, opening_balance_minor: 0n});
+  store.held = [{...PURCHASE}]; store.forgetCalls = [];
+});
+afterEach(cleanup);
+
+const mount = () => render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}><SessionProvider><App/></SessionProvider></QueryClientProvider>);
+const unlock = async () => {
+  fireEvent.change(await screen.findByLabelText('PIN'), {target: {value: '246810'}});
+  fireEvent.click(screen.getByRole('button', {name: 'Unlock'}));
+  await screen.findByRole('navigation');
+};
+const settle = () => act(() => new Promise(r => setTimeout(r, 400)));
+
+const lockAndUnlock = async () => {
+  await act(async () => { app.listeners.appStateChange?.({isActive: false}); });
+  native.unlocked = false;
+  await act(async () => { app.listeners.appStateChange?.({isActive: true}); });
+  await unlock(); await settle();
+};
+
+it('shows a waiting purchase again after a quick background and resume', async () => {
+  mount(); await unlock();
+  await screen.findByText('WOOLWORTHS 1234');
+  await act(async () => { app.listeners.appStateChange?.({isActive: false}); });
+  await act(async () => { app.listeners.appStateChange?.({isActive: true}); });
+  await screen.findByRole('navigation'); await settle();
+  expect(screen.queryByText('WOOLWORTHS 1234')).not.toBeNull();
+});
+
+it('offers a Today button that reopens the sheet after Done, lock and unlock', async () => {
+  mount(); await unlock();
+  await screen.findByText('WOOLWORTHS 1234');
+  fireEvent.click(screen.getByRole('button', {name: 'Done'}));
+  await lockAndUnlock();
+  fireEvent.click(await screen.findByRole('button', {name: 'Check 1 bank notice'}));
+  expect(await screen.findByText('WOOLWORTHS 1234')).not.toBeNull();
+});
+
+it('says when purchases approved in the shade were recorded', async () => {
+  store.held = [{...PURCHASE, decision: 'approved'}];
+  mount(); await unlock();
+  expect(await screen.findByText('Recorded 1 transaction from your bank')).not.toBeNull();
+});
+
+it('does not reopen the sheet by itself after Done in the same session', async () => {
+  mount(); await unlock();
+  await screen.findByText('WOOLWORTHS 1234');
+  fireEvent.click(screen.getByRole('button', {name: 'Done'}));
+  await settle();
+  expect(screen.queryByText('WOOLWORTHS 1234')).toBeNull();
+  expect(screen.getByRole('button', {name: 'Check 1 bank notice'})).not.toBeNull();
+});
+
+// Accounts are read after the notices on a device; without them every notice looks unreadable.
+const delayAccounts = (ms: number) => {
+  const repo = native.repo!, read = repo.accounts.bind(repo);
+  repo.accounts = async () => { await new Promise(r => setTimeout(r, ms)); return read(); };
+};
+
+it('never offers a shade Yes on a readable purchase as unreadable while accounts load', async () => {
+  store.held = [{...PURCHASE, decision: 'approved'}];
+  delayAccounts(300);
+  mount(); await unlock();
+  await act(() => new Promise(r => setTimeout(r, 100)));
+  expect(screen.queryByText("You said yes, but the amount couldn't be read.")).toBeNull();
+  expect(screen.queryByRole('button', {name: 'Dismiss'})).toBeNull();
+});
+
+const LOGIN: Notice = {id: 'notice:1790000100:bb', source: 'com.commbank.netbank', title: 'CommBank', decision: 'approved',
+  postedAt: Date.parse('2026-09-25T02:31:00Z'), text: 'You spent $15.00 at CAFE MIKA. Log in to the app for details.'};
+it('does not reopen after Done when a resume reads the accounts slowly', async () => {
+  store.held = [{...PURCHASE}, {...LOGIN}];
+  mount(); await unlock();
+  await screen.findByText('WOOLWORTHS 1234');
+  fireEvent.click(screen.getByRole('button', {name: 'Done'}));
+  await settle();
+  delayAccounts(150);
+  await act(async () => { app.listeners.appStateChange?.({isActive: false}); });
+  await act(async () => { app.listeners.appStateChange?.({isActive: true}); });
+  await screen.findByRole('navigation'); await settle();
+  expect(screen.queryByText('Check these transactions')).toBeNull();
+  expect(screen.getByRole('button', {name: 'Check 2 bank notices'})).not.toBeNull();
+});

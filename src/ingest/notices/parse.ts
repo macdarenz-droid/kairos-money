@@ -5,7 +5,9 @@ import {localDay} from '../reminders';
 export type Notice = {id: string; source: string; title: string; text: string; postedAt: number; decision?: 'approved' | 'rejected' | null};
 export type ParsedNotice =
   | {status: 'ok'; minor: string; currency: Currency; merchant: string; date: string; description: string}
-  | {status: 'skip'; reason: string};
+  | {status: 'skip'; reason: string; amounts?: NoticeAmount[]; merchant?: string};
+/** One amount a notice carries, signed by its wording, so the owner can pick which one moved. */
+export type NoticeAmount = {minor: string; currency: Currency};
 
 /**
  * A bank's own push notification, read as a possible transaction.
@@ -86,7 +88,19 @@ export function parseNotice(notice: Notice, expected: Currency): ParsedNotice {
     })
     .filter(groups => groups.declared || groups.symbol || groups.fraction !== undefined);
   if (!amounts.length) return {status: 'skip', reason: 'No amount could be read from the notification.'};
-  if (amounts.length > 1) return {status: 'skip', reason: 'The notification carries more than one amount, so which one was spent is unclear.'};
+  if (amounts.length > 1) {
+    const offered: NoticeAmount[] = [];
+    for (const {declared, whole, fraction} of amounts) {
+      if (declared && declared !== expected) continue;
+      let value;
+      try { value = parseDecimal((whole ?? '').replace(/,/g, '') + (fraction === undefined ? '' : `.${fraction}`), currency(expected)); }
+      catch { continue; }
+      const minor = (outward ? -value.minor : value.minor).toString();
+      if (value.minor !== 0n && !offered.some(a => a.minor === minor)) offered.push({minor, currency: value.currency});
+    }
+    const merchant = nameIn(body);
+    return {status: 'skip', reason: 'The notification carries more than one amount, so which one was spent is unclear.', amounts: offered, ...(merchant ? {merchant} : {})};
+  }
 
   const {declared, whole, fraction} = amounts[0]!;
   if (declared && declared !== expected) return {status: 'skip', reason: `The notification is in ${declared}, not ${expected}.`};
@@ -97,16 +111,14 @@ export function parseNotice(notice: Notice, expected: Currency): ParsedNotice {
   catch { return {status: 'skip', reason: 'The amount could not be read exactly.'}; }
   if (value.minor === 0n) return {status: 'skip', reason: 'The notification reports no money moving.'};
 
-  const candidate = MERCHANT.exec(body)?.[1]?.trim();
-  const shouted = STATEMENT_STYLE.exec(body.replace(/^[^ ]+ /, ''))?.[0]?.trim();
-  const named = candidate && !GENERIC.test(candidate) ? candidate : shouted;
+  const named = nameIn(body);
   return {
     status: 'ok',
     minor: money(outward ? -value.minor : value.minor, value.currency).minor.toString(),
     currency: value.currency,
     // Where the bank did not name anyone, its own words stand in. Inventing a merchant would put a name in
     // the ledger that no statement will ever confirm.
-    merchant: named && !/^\d+$/.test(named) ? named : body.slice(0, 60),
+    merchant: named ?? body.slice(0, 60),
     // THE PHONE'S OWN DAY, not the UTC one. This took the UTC date of the moment the notice was shown, so
     // on a phone eight hours ahead every notification before eight in the morning was dated yesterday:
     // absent from "Recorded today", and the day's own figures a day out. The ledger's idea of today is
@@ -114,4 +126,12 @@ export function parseNotice(notice: Notice, expected: Currency): ParsedNotice {
     date: localDay(new Date(notice.postedAt)),
     description: body,
   };
+}
+
+/** Who the bank says was paid or paid you, or undefined when it names no one. */
+function nameIn(body: string): string | undefined {
+  const candidate = MERCHANT.exec(body)?.[1]?.trim();
+  const shouted = STATEMENT_STYLE.exec(body.replace(/^[^ ]+ /, ''))?.[0]?.trim();
+  const named = candidate && !GENERIC.test(candidate) ? candidate : shouted;
+  return named && !/^\d+$/.test(named) ? named : undefined;
 }

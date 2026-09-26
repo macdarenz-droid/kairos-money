@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {format, money} from '../../core/money';
-import {capturedNotices, forgetNotices, routeNotices} from '../../ingest/notices';
+import {capturedNotices, forgetNotices, installedSources, pickedRecord, routeNotices, type NoticeAmount, type UnreadableNotice} from '../../ingest/notices';
 import {pairNotices, type NoticeItem} from '../../ingest/notices/pair';
 import {Button, Explain, Sheet} from '../design/primitives';
 import {CategoryMark} from '../design/CategoryMark';
@@ -22,13 +22,13 @@ import type {Account} from '../../core/db/repository';
  * Which account each one hits is decided per notification, not once for the whole sheet. It used to be one
  * dropdown governing every row, defaulting to whichever account happened to be first — so on a phone with
  * two banks, money landed on a coin toss made silently. Now the notice's own text is read first ("ending
- * 189"), then the account the owner nominated, then the first account whose currency the notice can be
+ * 189"), then the one account whose bank sent it, then the account the owner nominated, then the first account whose currency the notice can be
  * read in — one rule, shared with the answers given in the notification shade — and the answer is shown
  * on the row so it can be corrected before anything is recorded. The correction is offered among the
  * accounts in the notice's currency only: an amount the bank wrote in pesos cannot land on a dollar
  * account, and the transfer legs already hold that line.
  */
-export function NoticeReview({accounts, onClose}: {accounts: readonly Account[]; onClose: () => void}) {
+export function NoticeReview({accounts, onClose, onManual}: {accounts: readonly Account[]; onClose: () => void; onManual?: () => void}) {
   const session = useSession(), client = useQueryClient();
   const active = useMemo(() => accounts.filter(a => !a.archived_at), [accounts]);
   const [chosen, setChosen] = useState<Record<string, string>>({});
@@ -41,8 +41,13 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
     queryFn: () => session.run(repo => repo.notices.defaultAccount()),
   });
 
+  const apps = useQuery({queryKey: ['notice-apps'], queryFn: installedSources, enabled: session.state === 'ready'});
+  const from = (source: string) => `From ${apps.data?.find(app => app.id === source)?.label || source}`;
+
   const read = useMemo(() => routeNotices(captured.data ?? [], active, fallback.data), [captured.data, active, fallback.data]);
-  const unreadable = read.unreadable;
+  // A yes given in the shade to a message that cannot be read still needs a way to be acted on.
+  const approvedUnread = read.unreadable.filter(u => u.notice.decision === 'approved');
+  const otherUnread = read.unreadable.filter(u => u.notice.decision !== 'approved');
   const routed = useMemo(() => new Map(read.readable.map(item => [item.notice.id, item.accountId])), [read.readable]);
 
   const accountFor = useMemo(() => (item: ReadableNotice) =>
@@ -91,7 +96,21 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
   });
 
   const decide = (entries: readonly NoticeItem[], approve: boolean) => { setError(''); settle.mutate({entries, approve}); };
-  const busy = settle.isPending;
+  const forget = useMutation({
+    mutationFn: (ids: string[]) => forgetNotices(ids),
+    onSuccess: () => client.invalidateQueries(),
+    onError: e => setError(e instanceof Error ? e.message : 'That could not be cleared.'),
+  });
+  const pick = useMutation({
+    mutationFn: async ({item, amount}: {item: UnreadableNotice & {accountId: string}; amount: NoticeAmount}) => {
+      await session.run(repo => repo.notices.approve(pickedRecord(item, amount)));
+      try { await forgetNotices([item.notice.id]); }
+      catch { throw new Error('Recorded, but the notice could not be cleared.'); }
+    },
+    onSuccess: () => client.invalidateQueries(),
+    onError: e => setError(e instanceof Error ? e.message : 'That could not be saved. Nothing was recorded.'),
+  });
+  const busy = settle.isPending || forget.isPending || pick.isPending;
 
   const picker = (noticeId: string, value: string, label: string, code: string) => {
     const same = active.filter(a => a.currency === code);
@@ -105,8 +124,25 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
 
   return <Sheet title="Check these transactions" onClose={() => { if (!busy) onClose(); }}>
     <div className="stack" aria-busy={busy || undefined}>
+      {approvedUnread.map(item => <div key={item.notice.id} className="card">
+        <strong>{item.notice.title}</strong>
+        <p>{item.notice.text}</p>
+        <p className="meta">{from(item.notice.source)}</p>
+        <p className="meta">{item.accountId && item.amounts?.length ? 'You said yes. Which amount was it?' : "You said yes, but the amount couldn't be read."}</p>
+        <div className="notice-actions">
+          {item.accountId && item.amounts?.map(amount => {
+            const minor = BigInt(amount.minor);
+            return <Button key={amount.minor} disabled={busy}
+              onClick={() => { setError(''); pick.mutate({item: {...item, accountId: item.accountId!}, amount}); }}>
+              {minor < 0n ? 'Spent' : 'Received'} {format(money(minor < 0n ? -minor : minor, amount.currency))}
+            </Button>;
+          })}
+          <Button disabled={busy} onClick={() => onManual?.()}>Add by hand</Button>
+          <Button disabled={busy} onClick={() => { setError(''); forget.mutate([item.notice.id]); }}>Dismiss</Button>
+        </div>
+      </div>)}
       {captured.isPending ? <p>Reading what your bank told you.</p> : !items.length
-        ? <p>Nothing new from your bank to check.</p>
+        ? !approvedUnread.length && <p>Nothing new from your bank to check.</p>
         : <>
           {items.map(entry => entry.kind === 'transfer'
             ? <div key={entry.out.notice.id} className="card">
@@ -130,6 +166,8 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
                     <p className="meta">{entry.in.notice.title}</p>
                   </Explain>
                 </p>
+                <p className="meta">{from(entry.out.notice.source)}</p>
+                {entry.in.notice.source !== entry.out.notice.source && <p className="meta">{from(entry.in.notice.source)}</p>}
                 {picker(entry.out.notice.id, entry.fromId, 'Money left', entry.out.currency)}
                 {picker(entry.in.notice.id, entry.toId, 'Money arrived in', entry.in.currency)}
                 <div className="notice-actions">
@@ -146,6 +184,7 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
                   <span className="amount">{format(money(BigInt(entry.item.minor), entry.item.currency))}</span>
                 </div>
                 <p className="meta">{entry.item.date} · {entry.item.notice.title}</p>
+                <p className="meta">{from(entry.item.notice.source)}</p>
                 {picker(entry.item.notice.id, entry.accountId,
                   BigInt(entry.item.minor) < 0n ? 'Taken from' : 'Paid into', entry.item.currency)}
                 <div className="notice-actions">
@@ -163,12 +202,13 @@ export function NoticeReview({accounts, onClose}: {accounts: readonly Account[];
           </Button>}
         </>}
 
-      {unreadable.length > 0 && <details>
-        <summary>{unreadable.length} {unreadable.length === 1 ? 'message was' : 'messages were'} not about a purchase</summary>
+      {otherUnread.length > 0 && <details>
+        <summary>{otherUnread.length} {otherUnread.length === 1 ? 'message was' : 'messages were'} not about a purchase</summary>
         {/* Said rather than silently dropped, so a notification the app cannot read is visibly a gap
             rather than a purchase that never happened. */}
-        {unreadable.map(item =>
-          <p key={item.notice.id} className="meta">{item.notice.title}: {item.reason}</p>)}
+        {otherUnread.map(item =>
+          <p key={item.notice.id} className="meta">{item.notice.title}: {item.reason} <span>{item.notice.text}</span> <span>{from(item.notice.source)}</span></p>)}
+        <Button disabled={busy} onClick={() => { setError(''); forget.mutate(otherUnread.map(u => u.notice.id)); }}>Clear these</Button>
       </details>}
 
       {error && <p role="alert">{error}</p>}
