@@ -9,6 +9,14 @@ import java.io.File;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
@@ -86,4 +94,61 @@ final class VaultStore {
         unlocked = true;
     }
     synchronized String secret() throws Exception { requireUnlocked(); return prefs().getString("dbSecret", ""); }
+    synchronized boolean aiConfigured() throws Exception { return configured() && !prefs().getString("aiApiKey", "").isEmpty(); }
+    synchronized String aiModel() throws Exception { return prefs().getString("aiModel", "gpt-4o-mini"); }
+    synchronized void configureAi(String apiKey, String model) throws Exception {
+        requireUnlocked();
+        String selectedModel = model == null || model.trim().isEmpty() ? "gpt-4o-mini" : model.trim();
+        if (!selectedModel.matches("[A-Za-z0-9._-]{2,80}")) throw new IllegalArgumentException("Enter a valid OpenAI model name.");
+        String selectedKey = apiKey == null ? "" : apiKey.trim();
+        if (!selectedKey.isEmpty() && !selectedKey.matches("[A-Za-z0-9._-]{20,256}")) throw new IllegalArgumentException("The API key does not look valid.");
+        SharedPreferences preferences = prefs();
+        if (selectedKey.isEmpty() && preferences.getString("aiApiKey", "").isEmpty()) throw new IllegalArgumentException("Enter an OpenAI API key first.");
+        SharedPreferences.Editor edit = preferences.edit().putString("aiModel", selectedModel);
+        if (!selectedKey.isEmpty()) edit.putString("aiApiKey", selectedKey);
+        if (!edit.commit()) throw new IllegalStateException("Could not save AI settings. Free some device storage and try again.");
+    }
+    synchronized void clearAi() throws Exception {
+        requireUnlocked();
+        if (!prefs().edit().remove("aiApiKey").remove("aiModel").commit()) throw new IllegalStateException("Could not remove AI settings.");
+    }
+    String completeAi(String system, String prompt, boolean json) throws Exception {
+        final String apiKey, model;
+        synchronized (this) {
+            requireUnlocked(); SharedPreferences preferences = prefs();
+            apiKey = preferences.getString("aiApiKey", ""); model = preferences.getString("aiModel", "gpt-4o-mini");
+        }
+        if (apiKey.isEmpty()) throw new IllegalStateException("Add an OpenAI API key in Settings to use the AI assistant.");
+        if (system == null || system.length() > 12000 || prompt == null || prompt.length() > 30000) throw new IllegalArgumentException("The AI request is too large.");
+        JSONObject body = new JSONObject(); body.put("model", model); body.put("temperature", 0); body.put("max_tokens", 700);
+        JSONArray messages = new JSONArray(); messages.put(new JSONObject().put("role", "system").put("content", system)); messages.put(new JSONObject().put("role", "user").put("content", prompt)); body.put("messages", messages);
+        if (json) body.put("response_format", new JSONObject().put("type", "json_object"));
+        HttpURLConnection connection = null;
+        try {
+            connection = (HttpURLConnection) new URL("https://api.openai.com/v1/chat/completions").openConnection();
+            connection.setRequestMethod("POST"); connection.setConnectTimeout(15000); connection.setReadTimeout(30000); connection.setUseCaches(false); connection.setDoOutput(true);
+            connection.setRequestProperty("Authorization", "Bearer " + apiKey); connection.setRequestProperty("Content-Type", "application/json; charset=utf-8"); connection.setRequestProperty("Accept", "application/json");
+            byte[] payload = body.toString().getBytes(StandardCharsets.UTF_8);
+            try (OutputStream output = connection.getOutputStream()) { output.write(payload); }
+            int status = connection.getResponseCode(); InputStream stream = status >= 400 ? connection.getErrorStream() : connection.getInputStream();
+            String response = stream == null ? "" : new String(readLimited(stream, 1048576), StandardCharsets.UTF_8);
+            if (status == 401) throw new IllegalStateException("OpenAI rejected this API key. Check the key in Settings.");
+            if (status == 429) throw new IllegalStateException("OpenAI is rate-limiting this request or the account has no available quota.");
+            if (status < 200 || status >= 300) throw new IllegalStateException("OpenAI could not complete the request (HTTP " + status + "). Try again shortly.");
+            String content = new JSONObject(response).getJSONArray("choices").getJSONObject(0).getJSONObject("message").optString("content", "").trim();
+            if (content.isEmpty()) throw new IllegalStateException("The AI service returned an empty answer. Try again.");
+            return content;
+        } catch (java.net.SocketTimeoutException error) { throw new IllegalStateException("The AI request timed out. Check your connection and try again."); }
+        catch (java.net.UnknownHostException error) { throw new IllegalStateException("OpenAI could not be reached. Check your connection and try again."); }
+        catch (java.io.IOException error) { throw new IllegalStateException("The AI request failed. Check your connection and try again."); }
+        catch (org.json.JSONException error) { throw new IllegalStateException("OpenAI returned unreadable data. Try again."); }
+        finally { if (connection != null) connection.disconnect(); }
+    }
+    private static byte[] readLimited(InputStream stream, int maximum) throws Exception {
+        try (InputStream input = stream; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192]; int read;
+            while ((read = input.read(buffer)) != -1) { if (output.size() + read > maximum) throw new IllegalStateException("The AI response exceeded the supported size."); output.write(buffer, 0, read); }
+            return output.toByteArray();
+        }
+    }
 }
