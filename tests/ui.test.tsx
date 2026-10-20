@@ -34,7 +34,7 @@ describe('Foundation interactions using real SQLite and simulated native boundar
     await setup(); fireEvent.click(screen.getByRole('button', { name: 'Ledger' })); fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
     fireEvent.change(screen.getByLabelText('Account name'), { target: { value: 'Everyday' } }); fireEvent.change(screen.getByLabelText('Opening balance'), { target: { value: '123.45' } }); fireEvent.click(screen.getByRole('button', { name: 'Save account' }));
     await screen.findByText('Everyday'); expect((await native.repo!.accounts())[0]?.opening_balance_minor).toBe(12345);
-    fireEvent.click(screen.getByRole('button', { name: 'Insights' })); await screen.findByRole('heading', { name: 'Cash-flow outlook' });
+    fireEvent.click(screen.getByRole('button', { name: 'Insights' })); expect(screen.getByText('Still learning')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'You' })); fireEvent.click(screen.getByRole('button', { name: 'Light' }));
     await waitFor(() => expect(document.documentElement.dataset.theme).toBe('light'));
     fireEvent.click(screen.getByRole('button', { name: 'Dark' })); await waitFor(() => expect(document.documentElement.dataset.theme).toBe('dark'));
