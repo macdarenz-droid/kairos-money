@@ -86,6 +86,18 @@ public class KairosVaultPlugin extends Plugin {
         }
         call.resolve();
     }
+    @PluginMethod public void aiStatus(PluginCall call) { perform(call, () -> {
+        JSObject response = new JSObject(); response.put("configured", store.aiConfigured()); response.put("model", store.aiModel()); call.resolve(response);
+    }); }
+    @PluginMethod public void configureAi(PluginCall call) { perform(call, () -> {
+        store.configureAi(call.getString("apiKey"), call.getString("model")); call.resolve();
+    }); }
+    @PluginMethod public void clearAi(PluginCall call) { perform(call, () -> { store.clearAi(); call.resolve(); }); }
+    @PluginMethod public void completeAi(PluginCall call) { perform(call, () -> {
+        String system = call.getString("system"), prompt = call.getString("prompt");
+        boolean json = Boolean.TRUE.equals(call.getBoolean("json"));
+        JSObject response = new JSObject(); response.put("content", store.completeAi(system, prompt, json)); call.resolve(response);
+    }); }
     @PluginMethod public void exportFile(PluginCall call) { perform(call, () -> {
         store.requireUnlocked();
         if (exportBytes != null) throw new IllegalStateException("Finish the current export first.");

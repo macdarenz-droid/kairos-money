@@ -10,5 +10,9 @@ export interface VaultPlugin {
   erase(): Promise<void>;
   exportFile(options: { base64: string; fileName: string }): Promise<{ saved: boolean }>;
   setTheme(options: { theme: 'system' | 'dark' | 'light' }): Promise<void>;
+  aiStatus(): Promise<{ configured: boolean; model: string }>;
+  configureAi(options: { apiKey: string; model: string }): Promise<void>;
+  clearAi(): Promise<void>;
+  completeAi(options: { system: string; prompt: string; json: boolean }): Promise<{ content: string }>;
 }
 export const Vault = registerPlugin<VaultPlugin>('KairosVault');

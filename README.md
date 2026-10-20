@@ -1,6 +1,6 @@
 # Kairos Money Tracker
 
-A private, on-device money tracker with exact money math, an encrypted Android ledger, account setup, app lock, export/delete and a quiet two-theme interface. Session 2 adds local file extraction, mandatory import review, reconciliation and reversible commits. Session 2 passed its native gate; Session 2.5 adds export-first updates and has passed its native and both-theme visual gates. Intelligence has not started.
+A money tracker with exact money math, an encrypted Android ledger, account setup, app lock, export/delete and a quiet two-theme interface. Session 2 adds local file extraction, mandatory import review, reconciliation and reversible commits. Session 2.5 adds export-first updates and has passed its native and both-theme visual gates. An optional AI assistant and basic cash-flow outlook are documented in `docs/AI_ASSISTANT.md`; the full research-backed behavioural profile remains future work.
 
 **Session 1 gate: PASS** on Android 34 AOSP; [verified run](https://github.com/macdarenz-droid/kairos-money/actions/runs/34747556681).
 
@@ -65,9 +65,10 @@ It proves encrypted-file behavior on the host, not native Android execution. Nat
 - `core/db`: canonical SQL migrations, typed Drizzle query schema, Capacitor SQLite driver, repositories and export.
 - `core/crypto`: native vault boundary and resume-time policy. Android implements this in `KairosVaultPlugin` / `VaultStore`.
 - `ui/design`: OKLCH tokens, contrast aliases, primitives and persisted theme.
-- `ui/screens`: native lock, account setup, settings and development-only kitchen sink.
+- `ui/screens`: native lock, account setup, settings, import review, insights and development-only kitchen sink.
 - `ingest`: offline extraction, parser registry, normalization, encrypted staging, reconciliation and review.
-- `ledger`: deterministic categorisation rules and merchant/MCC suggestions.
+- `ledger`: deterministic categorisation, cash-flow estimates, possible recurring payments and unusual-charge signals.
+- `ai`: OpenAI-assisted natural-language query parsing and transaction category suggestions; money calculations stay local.
 - `tests`: property, database, privacy and interaction verification. Synthetic data never enters the production import graph.
 - `ADR`: rationale for non-obvious choices. `docs/SCHEMA.md` is regenerated from SQL.
 
@@ -75,7 +76,7 @@ Ingest writes staging only until confirmation. Intelligence will consume a read-
 
 ## Privacy and recovery
 
-No account, analytics, financial-data network calls or internet permission. A native PIN protects opening the database; optional strong biometrics can be enabled after setup. On background, financial UI and query caches are cleared. A 60-second background interval requires re-authentication on resume.
+No bank connections or analytics. The optional AI assistant uses an OpenAI API key. Questions, account identifiers/names/currencies and the current date are sent to interpret a query; category requests send fields from one selected transaction. Ledger queries, totals and cash-flow estimates run on the device. A native PIN protects opening the database; optional strong biometrics can be enabled after setup. On background, financial UI and query caches are cleared. A 60-second background interval requires re-authentication on resume.
 
 Exports contain readable JSON and per-table CSV inside a ZIP and are written to the Android document location explicitly chosen by the user. Keep those files private. Delete all data clears the app's database, files, preferences and keys, then Android closes it. User-created exports outside the app must be deleted separately.
 
@@ -83,7 +84,7 @@ There is no account-based PIN recovery. Encrypted backup/restore is Session 4. i
 
 ## Weekly export workflow
 
-Manual file imports are the only v1 data path. Direct bank API integration is outside v1 because its accredited-provider/server architecture does not fit this local-only app. Kairos will never request internet-banking credentials or use credential-scraping aggregators.
+Manual file imports are the only v1 bank-data path. Direct bank API integration is outside v1 because its accredited-provider/server architecture does not fit this app. Kairos will never request internet-banking credentials or use credential-scraping aggregators.
 
 Use **Update accounts** from Today or Quick. For each account, copy the displayed date range into internet banking and download OFX/QIF or CSV/XLSX. The range deliberately repeats the last covered week. Choose or drop multiple files, confirm each file's account and dates, review any uncertain columns/rows, then confirm the update. Nothing auto-commits. PDFs and offline scanned statements remain available for historical periods.
 
@@ -91,6 +92,6 @@ Leave stated balances blank for transaction exports. Tier A verifies a statement
 
 Pending transactions are retained as commitments. A matching settlement updates the original ID and records its prior values; ambiguous candidates need review. The import result explains additions, already-known transactions and superseded pending rows. An optional local weekday reminder is off by default and skipped while data is fresh. Android may delay delivery; open the app after reboot to restore scheduling.
 
-The new UI uses the existing design primitives. Session 2.5's device/visual acceptance is tracked in `docs/GATE_SESSION_2_5.md`. Do not start Session 3 before that gate passes.
+The new UI uses the existing design primitives. Session 2.5's device/visual acceptance is tracked in `docs/GATE_SESSION_2_5.md`. The optional assistant patch adds on-demand AI queries/category suggestions and a deterministic cash-flow outlook; it does not implement the full Session 3 behavioural profile.
 
-**Session 2.5 gate: PASS.** 100 source tests, eight native tests and 39 reviewed screenshots. [Regression report](docs/GATE_SESSION_2_5.md) · [Verified workflow](https://github.com/macdarenz-droid/kairos-money/actions/runs/34754456134). Session 3 has not started.
+**Session 2.5 gate: PASS.** 100 source tests, eight native tests and 39 reviewed screenshots. [Regression report](docs/GATE_SESSION_2_5.md) · [Verified workflow](https://github.com/macdarenz-droid/kairos-money/actions/runs/34754456134). The full Session 3 research-backed signal profile remains future work; the assistant patch is documented in [AI_ASSISTANT.md](docs/AI_ASSISTANT.md).
