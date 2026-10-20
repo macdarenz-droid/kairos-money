@@ -22,7 +22,7 @@ export function Insights({ accounts, batches, rows, today, onConfigure }: { acco
         <Row trailing={<span>{format(money(-item.spending30, item.currency))}</span>}>Projected spending · next 30 days</Row>
         <Row trailing={<span>{format(money(-item.commitments, item.currency))}</span>}>Pending commitments</Row>
         <Row trailing={<span>{format(money(item.current + item.income30 - item.spending30 - item.commitments, item.currency))}</span>}>Projected balance in 30 days</Row>
-      </div>) : <div className="outlook-empty"><p>There is not enough recent statement coverage for a useful forecast. Import at least 45 covered days from the last 90, update an account in the past week, and include a verified statement closing balance.</p></div>}
+      </div>) : <div className="outlook-empty"><h3>Still learning</h3><p>There is not enough recent statement coverage for a useful forecast. Import at least 45 covered days from the last 90, update an account in the past week, and include a verified statement closing balance.</p></div>}
       {outlook.excludedAccounts.length > 0 && <p className="meta">Not included because coverage is incomplete, out of date or lacks a verified closing balance: {outlook.excludedAccounts.join(', ')}.</p>}
       <p className="meta">Starts from a verified closing balance and adds subsequent covered transactions. Assumes recent income and spending continue at the same pace, subtracts known pending commitments and keeps a one-week spending buffer. This is a scenario, not a promise. Credit, loan and investment accounts are excluded.</p>
     </section>
